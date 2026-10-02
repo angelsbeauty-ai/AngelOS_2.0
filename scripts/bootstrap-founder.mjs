@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 
 const required = (name) => {
   const value = process.env[name]?.trim();
