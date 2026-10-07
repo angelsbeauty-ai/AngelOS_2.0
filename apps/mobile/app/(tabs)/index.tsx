@@ -75,7 +75,7 @@ export default function HomeScreen() {
       <Card premium>
         <View style={styles.cardHeader}>
           <SectionTitle>AngelOS Assistant</SectionTitle>
-          <Pill>AI ready</Pill>
+          <Pill>AI preview</Pill>
         </View>
         <BodyText>
           Ask what needs attention, draft a client reply, prepare content, or review today's schedule.
@@ -199,4 +199,5 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   }
 });
+
 
