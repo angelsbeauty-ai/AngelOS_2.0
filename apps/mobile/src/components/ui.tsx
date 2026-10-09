@@ -4,6 +4,7 @@ import { colors, radius, shadow, spacing, tokens, typography } from '../design/t
 
 const palette = colors.light;
 type TextTone = 'primary' | 'secondary' | 'gold' | 'success' | 'warning' | 'critical';
+
 function toneColor(tone: TextTone) {
   switch (tone) {
     case 'gold': return palette.gold;
@@ -14,6 +15,7 @@ function toneColor(tone: TextTone) {
     default: return palette.primaryText;
   }
 }
+
 const textProps = { maxFontSizeMultiplier: tokens.type.maxFontScale } as const;
 
 export function AppTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.appTitle}>{children}</Text>; }
@@ -27,9 +29,20 @@ export function Pill({ children, tone = 'secondary' }: PropsWithChildren<{ tone?
 export function Row({ children, accessory }: PropsWithChildren<{ accessory?: ReactNode }>) { return <View style={styles.row}><View style={styles.rowContent}>{children}</View>{accessory}</View>; }
 export function PrimaryActionLabel({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.primaryAction}>{children}</Text>; }
 export function SecondaryActionLabel({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.secondaryAction}>{children}</Text>; }
-export function EmptyState({ icon, title, message, action }: { icon?: string; title: string; message: string; action?: { label: string; onPress: () => void } }) {
-  return <View style={styles.emptyState}><Text {...textProps} style={styles.emptyTitle}>{title}</Text><SupportText>{message}</SupportText>{action && <Pressable onPress={action.onPress} style={styles.emptyButton}><SecondaryActionLabel>{action.label}</SecondaryActionLabel></Pressable>}</View>;
+export function EmptyState({ title, message, action }: { title: string; message: string; action?: { label: string; onPress: () => void } }) {
+  return (
+    <View style={styles.emptyState}>
+      <Text {...textProps} style={styles.emptyTitle}>{title}</Text>
+      <SupportText>{message}</SupportText>
+      {action && (
+        <Pressable onPress={action.onPress} style={styles.emptyButton}>
+          <SecondaryActionLabel>{action.label}</SecondaryActionLabel>
+        </Pressable>
+      )}
+    </View>
+  );
 }
+
 export const ui = { colors: palette, spacing, radius, typography };
 
 const styles = StyleSheet.create({
@@ -48,5 +61,8 @@ const styles = StyleSheet.create({
   row: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: palette.border },
   rowContent: { flex: 1, gap: 2 },
   primaryAction: { minHeight: 44, overflow: 'hidden', borderRadius: radius.pill, backgroundColor: palette.primaryText, color: palette.elevated, fontFamily: tokens.font.uiBold, fontSize: typography.body, textAlign: 'center', textAlignVertical: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
-  secondaryAction: { minHeight: 44, overflow: 'hidden', borderRadius: radius.pill, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.elevated, color: palette.primaryText, fontFamily: tokens.font.uiBold, fontSize: typography.body, textAlign: 'center', textAlignVertical: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm }
+  secondaryAction: { minHeight: 44, overflow: 'hidden', borderRadius: radius.pill, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.elevated, color: palette.primaryText, fontFamily: tokens.font.uiBold, fontSize: typography.body, textAlign: 'center', textAlignVertical: 'center', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  emptyState: { alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, paddingHorizontal: spacing.sm },
+  emptyTitle: { color: palette.primaryText, fontFamily: tokens.font.uiSemibold, fontSize: typography.section, textAlign: 'center' },
+  emptyButton: { marginTop: spacing.sm, width: '100%', maxWidth: 200 },
 });

@@ -10,7 +10,6 @@ export default function CampaignsScreen() {
       
       <Card>
         <EmptyState
-          icon="Target"
           title="Coming soon"
           message="Create a campaign with a goal and date range. AngelOS will fill your calendar with balanced, coordinated posts."
           action={{ label: 'Create campaign', onPress: () => {} }}

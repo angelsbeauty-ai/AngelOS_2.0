@@ -10,7 +10,6 @@ export default function BeforeAfterScreen() {
       
       <Card>
         <EmptyState
-          icon="Image"
           title="Coming soon"
           message="Select 2 photos tagged before/after from your client to create a watermarked composite."
           action={{ label: 'Learn more', onPress: () => {} }}
