@@ -1,7 +1,7 @@
 import { Link, Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Gear } from 'phosphor-react-native';
+import { Gear } from 'phosphor-react-native/src/icons/Gear';
 import { Screen } from '../../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system-health';

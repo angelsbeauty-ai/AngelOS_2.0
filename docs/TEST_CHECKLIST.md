@@ -6,7 +6,8 @@ Before testing: the database updates listed at the bottom must be approved and a
 ## DONE vs LEFT (kept up to date)
 **DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule · C1 AngelOS tools with approval cards · C2 your voice used everywhere · C3 "Ask" button on every screen · Live voice (web, off until the OpenAI key is set) · B9 Student role + Academy (courses, lessons, video, checklist, progress, practice photos, review, student invites)
 **Also DONE:** B10 setup wizard + invite links · B11 Settings + English/日本語 · B12 honest Beta plan screen
-**LEFT (in order):** Design polish + smaller web bundle
+**Also DONE:** web bundle 7.8MB → 2.1MB (icon imports) · A4 label clean-up
+**LEFT:** A1 full component set (Skeleton/Sheet/TextField eye toggle/Header collapse), A2 per-screen mockup matching, A3 Today redesign (next-appointment hero), pull-to-refresh
 
 ---
 
@@ -112,6 +113,10 @@ Student (second account)
 7. **Settings → Help / Privacy policy / Terms**: they open. They are DRAFTS and still need legal review + your privacy contact email.
 8. **Settings → Subscription** says "Beta: free during testing". No prices, no checkout, nothing can be charged.
 9. Only the main tabs, Settings and a few screens are translated so far; other screens are English (LEFT).
+
+## 10. Bundle and labels
+1. Open the web app: it loads noticeably faster (JS 2.1MB instead of 7.8MB). Icons in the tab bar still show.
+2. Login and Feedback no longer show a "Private Beta" tag. No "Demo" buttons show for owners.
 
 ## Database updates waiting for Angel's yes (written, NOT applied)
 - 0015_v1_messaging_inbox.sql — saved replies; unread and archive for conversations.

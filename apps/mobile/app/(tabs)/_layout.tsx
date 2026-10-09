@@ -1,7 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { Calendar, GearSix, GraduationCap, House, Users, Sparkle } from 'phosphor-react-native';
+import { Calendar } from 'phosphor-react-native/src/icons/Calendar';
+import { GearSix } from 'phosphor-react-native/src/icons/GearSix';
+import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
+import { House } from 'phosphor-react-native/src/icons/House';
+import { Users } from 'phosphor-react-native/src/icons/Users';
+import { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
 import { useRole } from '../../src/lib/me';
 import { GlassSurface } from '../../src/components/Glass';
 import { colors } from '../../src/design/theme';
