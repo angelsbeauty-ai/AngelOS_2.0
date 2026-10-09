@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Screen } from '../src/components/Screen';
 import { ErrorState } from '../src/components/ErrorState';
 import { ActionButton } from '../src/components/MessagingBits';
@@ -15,6 +16,8 @@ const FIRST = 8, LAST = 21, HOUR = 52;
 type Mode = 'day' | 'week';
 
 export default function CalendarScreen() {
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const { focusLabel } = useLocalSearchParams<{ focusLabel?: string }>();
   const [mode, setMode] = useState<Mode>('day');
   const [anchor, setAnchor] = useState(dayString(new Date()));
@@ -40,14 +43,14 @@ export default function CalendarScreen() {
 
   const step = mode === 'day' ? 1 : 7;
   return <Screen onRefresh={() => load()}>
-    <View style={styles.header}><View style={fieldStyles.grow}><ScreenTitle>Calendar</ScreenTitle><SupportText>{mode === 'day' ? prettyDay(anchor) : `Week of ${prettyDay(days[0])}`}</SupportText></View>
-      <ActionButton kind="primary" label="New booking" onPress={() => router.push('/bookings/new')} /></View>
-    {focusLabel ? <Card premium><SectionTitle>Checking availability</SectionTitle><BodyText>{focusLabel}</BodyText></Card> : null}
+    <View style={styles.header}><View style={fieldStyles.grow}><ScreenTitle>{t('calendar.title')}</ScreenTitle><SupportText>{mode === 'day' ? prettyDay(anchor) : t('calendar.weekOf', { day: prettyDay(days[0]) })}</SupportText></View>
+      <ActionButton kind="primary" label={t('calendar.newBooking')} onPress={() => router.push('/bookings/new')} /></View>
+    {focusLabel ? <Card premium><SectionTitle>{t('calendar.checking')}</SectionTitle><BodyText>{focusLabel}</BodyText></Card> : null}
     <View style={fieldStyles.row}>
-      <Tabs value={mode} onChange={setMode} options={[{ id: 'day', label: 'Day' }, { id: 'week', label: 'Week' }]} />
-      <ActionButton kind="quiet" label="‹ Back" onPress={() => setAnchor(addDayString(anchor, -step))} />
-      <ActionButton kind="quiet" label="Today" onPress={() => setAnchor(dayString(new Date()))} />
-      <ActionButton kind="quiet" label="Next ›" onPress={() => setAnchor(addDayString(anchor, step))} />
+      <Tabs value={mode} onChange={setMode} options={[{ id: 'day', label: t('calendar.day') }, { id: 'week', label: t('calendar.week') }]} />
+      <ActionButton kind="quiet" label={t('calendar.back')} onPress={() => setAnchor(addDayString(anchor, -step))} />
+      <ActionButton kind="quiet" label={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} />
+      <ActionButton kind="quiet" label={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} />
     </View>
     {loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
     <Card>
@@ -59,32 +62,32 @@ export default function CalendarScreen() {
             const h = hours.find((x) => x.day_of_week === dow);
             const closed = h?.is_closed;
             return <View key={d} style={[styles.dayCol, mode === 'week' && styles.weekCol]}>
-              {mode === 'week' ? <Text style={[styles.dayHead, d === dayString(new Date()) && { color: ui.colors.gold }]} onPress={() => { setAnchor(d); setMode('day'); }}>{new Date(`${d}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' })}</Text> : null}
+              {mode === 'week' ? <Text style={[styles.dayHead, d === dayString(new Date()) && { color: ui.colors.gold }]} onPress={() => { setAnchor(d); setMode('day'); }}>{new Date(`${d}T12:00:00`).toLocaleDateString(loc, { weekday: 'short', day: 'numeric' })}</Text> : null}
               <View style={{ height: (LAST - FIRST) * HOUR }}>
                 {Array.from({ length: LAST - FIRST }, (_, i) => <View key={i} style={[styles.slot, { top: i * HOUR }, (closed || (h && !closed && h.start_time && h.end_time && (FIRST + i < Number(h.start_time.slice(0, 2)) || FIRST + i >= Number(h.end_time.slice(0, 2))))) ? styles.closed : null]} />)}
-                {blocks.filter((b) => overlapsDay(b.start_at, b.end_at, d)).map((b) => <View key={b.id} style={[styles.event, styles.block, pos(b.start_at, b.end_at, d)]}><Text numberOfLines={2} style={styles.blockText}>{b.title || 'Blocked'}</Text></View>)}
-                {appointments.filter((a) => overlapsDay(a.start_at, a.end_at, d)).map((a) => <Pressable key={a.id} accessibilityRole="button" accessibilityLabel={`${a.client?.display_name ?? 'Client'}, ${a.service_name}`} onPress={() => router.push(`/bookings/${a.id}` as any)} style={[styles.event, styles.appt, a.status === 'request' || a.status === 'confirmation_pending' ? styles.pending : null, pos(a.start_at, a.end_at, d)]}>
-                  <Text numberOfLines={1} style={styles.apptTitle}>{a.client?.display_name ?? 'Client'}</Text>
-                  {mode === 'day' ? <Text numberOfLines={1} style={styles.apptSub}>{time(a.start_at)} · {a.service_name}{a.status !== 'confirmed' ? ` · ${a.status.replaceAll('_', ' ')}` : ''}</Text> : null}
+                {blocks.filter((b) => overlapsDay(b.start_at, b.end_at, d)).map((b) => <View key={b.id} style={[styles.event, styles.block, pos(b.start_at, b.end_at, d)]}><Text numberOfLines={2} style={styles.blockText}>{b.title || t('calendar.blocked')}</Text></View>)}
+                {appointments.filter((a) => overlapsDay(a.start_at, a.end_at, d)).map((a) => <Pressable key={a.id} accessibilityRole="button" accessibilityLabel={`${a.client?.display_name ?? t('calendar.client')}, ${a.service_name}`} onPress={() => router.push(`/bookings/${a.id}` as any)} style={[styles.event, styles.appt, a.status === 'request' || a.status === 'confirmation_pending' ? styles.pending : null, pos(a.start_at, a.end_at, d)]}>
+                  <Text numberOfLines={1} style={styles.apptTitle}>{a.client?.display_name ?? t('calendar.client')}</Text>
+                  {mode === 'day' ? <Text numberOfLines={1} style={styles.apptSub}>{time(a.start_at, loc)} · {a.service_name}{a.status !== 'confirmed' ? ` · ${a.status.replaceAll('_', ' ')}` : ''}</Text> : null}
                 </Pressable>)}
               </View>
             </View>;
           })}
         </View>
       </ScrollView>
-      {!busy && !appointments.length && !blocks.length ? <SupportText>Nothing booked {mode === 'day' ? 'this day' : 'this week'}.</SupportText> : null}
-      <SupportText>Grey = outside your hours or a day off. Tap a booking to open it.</SupportText>
+      {!busy && !appointments.length && !blocks.length ? <SupportText>{mode === 'day' ? t('calendar.nothingDay') : t('calendar.nothingWeek')}</SupportText> : null}
+      <SupportText>{t('calendar.legend')}</SupportText>
     </Card>
     <View style={fieldStyles.row}>
-      <ActionButton label="Business hours" onPress={() => router.push('/business-hours' as any)} />
-      <ActionButton label="Days off & blocks" onPress={() => router.push('/time-off' as any)} />
-      <ActionButton label="Services" onPress={() => router.push('/services')} />
+      <ActionButton label={t('calendar.hours')} onPress={() => router.push('/business-hours' as any)} />
+      <ActionButton label={t('calendar.daysOff')} onPress={() => router.push('/time-off' as any)} />
+      <ActionButton label={t('calendar.services')} onPress={() => router.push('/services')} />
     </View>
   </Screen>;
 }
 
 function weekStart(day: string) { const dow = new Date(`${day}T12:00:00`).getDay(); return addDayString(day, -((dow + 6) % 7)); }
-function time(iso: string) { return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); }
+function time(iso: string, loc: string) { return new Date(iso).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' }); }
 function overlapsDay(start: string, end: string, day: string) { const s = new Date(`${day}T00:00:00`).getTime(); return Date.parse(start) < s + 86400000 && Date.parse(end) > s; }
 function pos(start: string, end: string, day: string) {
   const base = new Date(`${day}T00:00:00`).getTime() + FIRST * 3600000;

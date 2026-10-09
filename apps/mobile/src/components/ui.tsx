@@ -1,5 +1,6 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, Animated, ActivityIndicator, Platform, StyleSheet, Text, TextInput, View, Pressable, type TextInputProps, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing, tokens, typography } from '../design/theme';
 
@@ -57,12 +58,13 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
 /** Labelled input with error text and an eye toggle for passwords. */
 export function TextField({ label, error, hint, secure, style, ...props }: TextInputProps & { label: string; error?: string | null; hint?: string; secure?: boolean }) {
   const [shown, setShown] = useState(false);
+  const { t } = useTranslation();
   return (
     <View style={{ gap: 4 }}>
       <Text {...textProps} style={styles.fieldLabel}>{label}</Text>
       <View style={[styles.fieldBox, !!error && { borderColor: palette.critical }]}>
         <TextInput {...props} secureTextEntry={secure && !shown} accessibilityLabel={label} placeholderTextColor={palette.secondaryText} maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.fieldInput, props.multiline && { minHeight: 80, textAlignVertical: 'top' }, style]} />
-        {secure ? <Pressable accessibilityRole="button" accessibilityLabel={shown ? 'Hide password' : 'Show password'} onPress={() => setShown((v) => !v)} hitSlop={8}><Text {...textProps} style={styles.eye}>{shown ? 'Hide' : 'Show'}</Text></Pressable> : null}
+        {secure ? <Pressable accessibilityRole="button" accessibilityLabel={shown ? t('ui.hidePassword') : t('ui.showPassword')} onPress={() => setShown((v) => !v)} hitSlop={8}><Text {...textProps} style={styles.eye}>{shown ? t('ui.hide') : t('ui.show')}</Text></Pressable> : null}
       </View>
       {error ? <Text {...textProps} style={[styles.fieldHint, { color: palette.critical }]}>{error}</Text> : hint ? <Text {...textProps} style={styles.fieldHint}>{hint}</Text> : null}
     </View>
@@ -120,6 +122,7 @@ export function Overline({ children }: PropsWithChildren) { return <Text {...tex
 
 /** Pulsing placeholder rows. Static when reduced motion is on. */
 export function Skeleton({ rows = 3, height = 64 }: { rows?: number; height?: number }) {
+  const { t } = useTranslation();
   const v = useRef(new Animated.Value(0.5)).current;
   useEffect(() => {
     let loop: Animated.CompositeAnimation | null = null;
@@ -131,7 +134,7 @@ export function Skeleton({ rows = 3, height = 64 }: { rows?: number; height?: nu
     }).catch(() => undefined);
     return () => { live = false; loop?.stop(); };
   }, [v]);
-  return <View accessibilityRole="progressbar" accessibilityLabel="Loading" style={{ gap: spacing.xs }}>{Array.from({ length: rows }, (_, i) => <Animated.View key={i} style={{ height, borderRadius: radius.card, backgroundColor: 'rgba(42,39,37,0.08)', opacity: v }} />)}</View>;
+  return <View accessibilityRole="progressbar" accessibilityLabel={t('ui.loading')} style={{ gap: spacing.xs }}>{Array.from({ length: rows }, (_, i) => <Animated.View key={i} style={{ height, borderRadius: radius.card, backgroundColor: 'rgba(42,39,37,0.08)', opacity: v }} />)}</View>;
 }
 
 export const ui = { colors: palette, spacing, radius, typography };

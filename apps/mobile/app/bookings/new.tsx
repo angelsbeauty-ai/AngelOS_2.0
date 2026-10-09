@@ -1,151 +1,106 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { dialog } from '../../src/lib/dialog';
+import { useEffect, useState } from 'react';
+import { StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Screen } from '../../src/components/Screen';
-import {
-  BodyText,
-  Card,
-  Pill,
-  PrimaryActionLabel,
-  ScreenTitle,
-  SecondaryActionLabel,
-  SectionTitle,
-  SupportText,
-  ui
-} from '../../src/components/ui';
+import { Chip } from '../../src/components/MessagingBits';
+import { DateField, TimeField, addDayString, dayString } from '../../src/components/DateField';
+import { Badge, BodyText, Button, Card, Header, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { ApiError } from '../../src/lib/api';
 import { createAppointment, listServices, type ServiceItem } from '../../src/lib/bookings';
 import { listClients, type ClientSummary } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { dialog } from '../../src/lib/dialog';
+
+const two = (n: number) => String(n).padStart(2, '0');
 
 export default function NewBookingScreen() {
-  const params = useLocalSearchParams<{ clientId?: string }>();
+  const { t } = useTranslation();
+  const params = useLocalSearchParams<{ clientId?: string; start?: string }>();
+  const startParam = typeof params.start === 'string' && !Number.isNaN(Date.parse(params.start)) ? new Date(params.start) : null;
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
+  const [search, setSearch] = useState('');
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [clientId, setClientId] = useState<string | null>(typeof params.clientId === 'string' ? params.clientId : null);
   const [serviceId, setServiceId] = useState<string | null>(null);
-  const [date, setDate] = useState(defaultDate());
-  const [time, setTime] = useState('10:00');
+  const [date, setDate] = useState(startParam ? dayString(startParam) : addDayString(dayString(new Date()), 1));
+  const [time, setTime] = useState(startParam ? `${two(startParam.getHours())}:${two(startParam.getMinutes())}` : '10:00');
   const [softConflict, setSoftConflict] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!workspaceId) return;
+    const h = setTimeout(() => { listClients(workspaceId, search).then(setClients).catch(() => undefined); }, search ? 300 : 0);
+    return () => clearTimeout(h);
+  }, [search, workspaceId]);
+
   async function load() {
     try {
       const workspace = await getActiveWorkspace();
       setWorkspaceId(workspace.id);
-      const [clientRows, serviceRows] = await Promise.all([listClients(workspace.id), listServices(workspace.id)]);
-      setClients(clientRows); setServices(serviceRows);
-    } catch (error) { void dialog.notify('Booking setup needs attention', error instanceof Error ? error.message : 'Unknown error'); }
+      setServices(await listServices(workspace.id));
+    } catch (error) { void dialog.notify(t('booking.setupFail'), error instanceof Error ? error.message : ''); }
   }
 
-  const selectedClient = useMemo(() => clients.find((item) => item.id === clientId), [clients, clientId]);
-  const selectedService = useMemo(() => services.find((item) => item.id === serviceId), [services, serviceId]);
+  const selectedClient = clients.find((c) => c.id === clientId);
+  const selectedService = services.find((s) => s.id === serviceId);
 
   async function save(overrideSoftConflict = false) {
     if (!workspaceId || !clientId || !serviceId) return;
     setBusy(true); setSoftConflict(false);
     try {
-      const startAt = localDateTimeToIso(date, time);
-      const result = await createAppointment(workspaceId, { clientId, serviceId, startAt, source: 'owner', overrideSoftConflict });
-      void dialog.notify('Booking created', `${selectedClient?.display_name ?? 'Client'} | ${selectedService?.name ?? 'Service'}`);
+      const startAt = new Date(`${date}T${time}:00`).toISOString();
+      await createAppointment(workspaceId, { clientId, serviceId, startAt, source: 'owner', overrideSoftConflict });
+      void dialog.notify(t('booking.created'), `${selectedClient?.display_name ?? ''} · ${selectedService?.name ?? ''}`);
       router.replace('/calendar');
-      return result;
     } catch (error) {
-      if (error instanceof ApiError && error.status === 409 && typeof error.payload === 'object' && error.payload && (error.payload as any).code === 'SOFT_CONFLICT') {
-        setSoftConflict(true); return;
-      }
-      void dialog.notify('Could not create booking', error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof ApiError && error.status === 409 && typeof error.payload === 'object' && error.payload && (error.payload as any).code === 'SOFT_CONFLICT') { setSoftConflict(true); return; }
+      void dialog.notify(t('booking.createFail'), error instanceof Error ? error.message : '');
     } finally { setBusy(false); }
   }
 
   return <Screen>
-    <View style={styles.hero}>
-      <Pill tone="gold">Conflict Protected</Pill>
-      <ScreenTitle>New Booking</ScreenTitle>
-      <SupportText>Choose the client, service and time. AngelOS checks the schedule before creating it.</SupportText>
-    </View>
+    <Header title={t('booking.newTitle')} subtitle={t('booking.newSub')} />
 
     <Card>
-      <SectionTitle>Client</SectionTitle>
-      {clients.length === 0 ? <SupportText>Create a client first, then return to booking.</SupportText> : null}
+      <SectionTitle>{t('booking.client')}</SectionTitle>
+      <TextInput value={search} onChangeText={setSearch} placeholder={t('booking.searchClient')} accessibilityLabel={t('booking.searchClient')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+      {clients.length === 0 ? <SupportText>{t('booking.createClientFirst')}</SupportText> : null}
       <View style={styles.options}>
-        {clients.slice(0, 12).map((client) => (
-          <Pressable key={client.id} onPress={() => setClientId(client.id)} style={[styles.option, clientId === client.id && styles.selected]}>
-            <Text style={[styles.optionTitle, clientId === client.id && styles.selectedText]}>{client.display_name}</Text>
-          </Pressable>
-        ))}
+        {clients.slice(0, 20).map((client) => <Chip key={client.id} label={client.display_name} selected={clientId === client.id} onPress={() => setClientId(client.id)} />)}
       </View>
     </Card>
 
     <Card>
-      <SectionTitle>Service</SectionTitle>
-      {services.length === 0 ? <SupportText>Create a service from the Services screen first.</SupportText> : null}
+      <SectionTitle>{t('booking.service')}</SectionTitle>
+      {services.length === 0 ? <SupportText>{t('booking.noServices')}</SupportText> : null}
       <View style={styles.options}>
-        {services.map((service) => (
-          <Pressable key={service.id} onPress={() => setServiceId(service.id)} style={[styles.option, serviceId === service.id && styles.selected]}>
-            <Text style={[styles.optionTitle, serviceId === service.id && styles.selectedText]}>{service.name}</Text>
-            <SupportText>{service.duration_minutes} min | {service.currency} {service.standard_price}</SupportText>
-          </Pressable>
-        ))}
+        {services.map((service) => <Chip key={service.id} label={`${service.name} · ${t('booking.min', { n: service.duration_minutes })}`} selected={serviceId === service.id} onPress={() => setServiceId(service.id)} />)}
       </View>
     </Card>
 
     <Card>
-      <SectionTitle>Date & Time</SectionTitle>
-      <SupportText>Use 24-hour time so the booking is stored clearly.</SupportText>
-      <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
-      <TextInput value={time} onChangeText={setTime} placeholder="HH:mm" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+      <SectionTitle>{t('booking.when')}</SectionTitle>
+      <DateField label={t('booking.day')} value={date} onChange={setDate} />
+      <TimeField label={t('booking.start')} value={time} onChange={setTime} />
     </Card>
 
     {softConflict ? (
       <Card>
-        <View style={styles.warningHeader}>
-          <SectionTitle>Flexible Conflict</SectionTitle>
-          <Pill tone="warning">review</Pill>
-        </View>
-        <BodyText>This time has a soft or conditional block. If you checked it and still want this booking, you can continue.</BodyText>
-        <Pressable onPress={() => void save(true)} style={styles.primaryAction}>
-          <SecondaryActionLabel>Book Anyway</SecondaryActionLabel>
-        </Pressable>
+        <View style={styles.warningHeader}><SectionTitle>{t('booking.softTitle')}</SectionTitle><Badge status="request" label={t('booking.review')} /></View>
+        <BodyText>{t('booking.softMsg')}</BodyText>
+        <Button variant="secondary" label={t('booking.bookAnyway')} onPress={() => void save(true)} />
       </Card>
     ) : null}
 
-    <Pressable disabled={busy || !clientId || !serviceId} onPress={() => void save(false)} style={styles.primaryAction}>
-      <PrimaryActionLabel>{busy ? 'Checking...' : 'Check & Create Booking'}</PrimaryActionLabel>
-    </Pressable>
+    <Button loading={busy} disabled={!clientId || !serviceId} label={busy ? t('booking.checking') : t('booking.check')} onPress={() => void save(false)} />
   </Screen>;
 }
 
-function defaultDate() { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-function localDateTimeToIso(date: string, time: string) { const parsed = new Date(`${date}T${time}:00`); if (Number.isNaN(parsed.getTime())) throw new Error('Enter a valid date and time'); return parsed.toISOString(); }
-
 const styles = StyleSheet.create({
-  hero: { gap: ui.spacing.xs },
-  options: { gap: ui.spacing.xs },
-  option: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderColor: ui.colors.border,
-    borderRadius: ui.radius.control,
-    padding: ui.spacing.sm,
-    gap: 2,
-    backgroundColor: ui.colors.elevated
-  },
-  selected: { borderColor: ui.colors.gold, backgroundColor: ui.colors.softGold },
-  optionTitle: { color: ui.colors.primaryText, fontSize: 16, fontWeight: '700' },
-  selectedText: { color: ui.colors.primaryText },
-  input: {
-    borderWidth: 1,
-    borderColor: ui.colors.border,
-    borderRadius: ui.radius.control,
-    backgroundColor: ui.colors.elevated,
-    color: ui.colors.primaryText,
-    padding: ui.spacing.sm,
-    fontSize: 16
-  },
+  options: { flexDirection: 'row', flexWrap: 'wrap', gap: ui.spacing.xs },
+  input: { minHeight: 48, borderWidth: 1, borderColor: ui.colors.border, borderRadius: ui.radius.control, backgroundColor: '#FFFFFF', color: ui.colors.primaryText, paddingHorizontal: ui.spacing.sm, fontSize: 16 },
   warningHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ui.spacing.sm },
-  primaryAction: { marginTop: ui.spacing.xs }
 });

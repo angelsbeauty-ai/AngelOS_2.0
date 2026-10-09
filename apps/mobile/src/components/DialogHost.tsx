@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import React, { useState, useCallback } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { tokens } from '../design/theme';
@@ -71,19 +72,19 @@ export function DialogHost() {
                   style={[styles.button, styles.cancelButton]}
                   onPress={() => handleResolve(false)}
                   accessibilityRole="button"
-                  accessibilityLabel={current.cancelText || 'Cancel'}
+                  accessibilityLabel={current.cancelText || i18n.t('dialog.cancel')}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>{current.cancelText || 'Cancel'}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>{current.cancelText || i18n.t('dialog.cancel')}</Text>
                 </Pressable>
               )}
               <Pressable
                 style={[styles.button, styles.primaryButton, current.destructive && styles.destructiveButton]}
                 onPress={() => handleResolve(true)}
                 accessibilityRole="button"
-                accessibilityLabel={current.confirmText || 'OK'}
+                accessibilityLabel={current.confirmText || i18n.t('dialog.ok')}
               >
                 <Text maxFontSizeMultiplier={1.3} style={[styles.buttonText, current.destructive && styles.destructiveText]}>
-                  {current.confirmText || 'OK'}
+                  {current.confirmText || i18n.t('dialog.ok')}
                 </Text>
               </Pressable>
             </View>

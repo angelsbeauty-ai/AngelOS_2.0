@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import i18n from '../i18n';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Chip } from './MessagingBits';
 import { ui } from './ui';
@@ -20,7 +21,7 @@ export function toIso(day: string, time: string) {
 }
 export function prettyDay(day: string) {
   const [y, m, d] = day.split('-').map(Number);
-  return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(y, m - 1, d));
+  return new Intl.DateTimeFormat(i18n.language === 'ja' ? 'ja-JP' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(y, m - 1, d));
 }
 
 const TIMES = Array.from({ length: 27 }, (_, i) => `${String(8 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
@@ -34,11 +35,11 @@ export function DateField({ label, value, onChange, min }: { label: string; valu
   return <View style={styles.wrap}>
     <Text style={styles.label}>{label}: {prettyDay(value)}</Text>
     <View style={styles.row}>
-      <Chip label="‹ Day" onPress={() => onChange(addDayString(value, -1))} />
-      <Chip label="Today" selected={value === today} onPress={() => onChange(today)} />
-      <Chip label="Tomorrow" selected={value === addDayString(today, 1)} onPress={() => onChange(addDayString(today, 1))} />
-      <Chip label="+1 week" onPress={() => onChange(addDayString(value, 7))} />
-      <Chip label="Day ›" onPress={() => onChange(addDayString(value, 1))} />
+      <Chip label={i18n.t('calendar.prevDay')} onPress={() => onChange(addDayString(value, -1))} />
+      <Chip label={i18n.t('calendar.today')} selected={value === today} onPress={() => onChange(today)} />
+      <Chip label={i18n.t('calendar.tomorrow')} selected={value === addDayString(today, 1)} onPress={() => onChange(addDayString(today, 1))} />
+      <Chip label={i18n.t('calendar.plusWeek')} onPress={() => onChange(addDayString(value, 7))} />
+      <Chip label={i18n.t('calendar.nextDay')} onPress={() => onChange(addDayString(value, 1))} />
     </View>
   </View>;
 }

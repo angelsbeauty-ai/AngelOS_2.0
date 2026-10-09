@@ -1,13 +1,17 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import { Link, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Screen } from '../src/components/Screen';
-import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, SupportText, ui } from '../src/components/ui';
+import { Button, Card, Overline, ScreenTitle, SectionTitle, SupportText, TextField, ui } from '../src/components/ui';
 import { notify } from '../src/lib/dialog';
 import { supabase } from '../src/lib/supabase';
 import { apiFetch } from '../src/lib/api';
+import { toFriendly } from '../src/lib/friendly-error';
+import { authRedirect } from '../src/lib/auth-redirect';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -18,7 +22,8 @@ export default function LoginScreen() {
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
     if (error) {
-      await notify('Sign in failed', error.message);
+      const f = toFriendly(error, { action: 'signin' });
+      await notify(f.title || t('auth.signInFailed'), f.message);
       return;
     }
     try {
@@ -31,21 +36,27 @@ export default function LoginScreen() {
 
   async function signUp() {
     setBusy(true);
-    const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+    const { error } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: authRedirect('') } });
     setBusy(false);
     if (error) {
-      await notify('Account could not be created', error.message);
+      await notify(t('auth.createFailed'), toFriendly(error, { action: 'signin' }).message);
       return;
     }
-    await notify('Account created', 'Check your email if verification is enabled, then return here to sign in.');
+    await notify(t('auth.created'), t('auth.createdMsg'));
   }
 
-  return <Screen><View style={styles.stack}>
-    <ScreenTitle>Welcome to AngelOS</ScreenTitle><SupportText>Your calm business operating system. Sign in securely to continue to your private workspace.</SupportText>
-    <Card premium><SectionTitle>Sign in</SectionTitle><View style={styles.field}><Text style={styles.label}>Email</Text><TextInput autoCapitalize="none" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" placeholderTextColor={ui.colors.secondaryText} style={styles.input}/></View><View style={styles.field}><Text style={styles.label}>Password</Text><TextInput secureTextEntry autoCapitalize="none" value={password} onChangeText={setPassword} placeholder="Your password" placeholderTextColor={ui.colors.secondaryText} style={styles.input}/></View><Pressable disabled={busy || !ready} onPress={() => void signIn()} style={({pressed})=>[(busy||!ready||pressed)&&styles.muted]}><PrimaryActionLabel>{busy?'Working...':'Sign In'}</PrimaryActionLabel></Pressable></Card>
-    <Card><SectionTitle>New beta tester?</SectionTitle><BodyText>Create your secure account first. Your founder-approved beta invite and business workspace come next.</BodyText><Pressable disabled={busy || !ready} onPress={() => void signUp()} style={({pressed})=>[(busy||!ready||pressed)&&styles.muted]}><SecondaryActionLabel>Create Account</SecondaryActionLabel></Pressable></Card>
-    <Card><SectionTitle>Private by design</SectionTitle><SupportText>Your business workspace is isolated from other subscribers. AngelOS never exposes private client records inside Founder Admin.</SupportText></Card>
+  return <Screen hideAsk><View style={styles.stack}>
+    <View style={{ gap: 4 }}><Overline>{t('auth.beta')}</Overline><ScreenTitle>{t('auth.welcome')}</ScreenTitle><SupportText>{t('auth.welcomeSub')}</SupportText></View>
+    <Card premium>
+      <SectionTitle>{t('auth.signIn')}</SectionTitle>
+      <TextField label={t('auth.email')} autoCapitalize="none" autoComplete="email" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" />
+      <TextField label={t('auth.password')} secure autoCapitalize="none" autoComplete="current-password" value={password} onChangeText={setPassword} onSubmitEditing={() => ready && void signIn()} />
+      <Button label={busy ? t('auth.working') : t('auth.signIn')} loading={busy} disabled={!ready} onPress={() => void signIn()} />
+      <Link href="/forgot-password" accessibilityRole="link" style={styles.link}>{t('auth.forgot')}</Link>
+    </Card>
+    <Card><SectionTitle>{t('auth.newHere')}</SectionTitle><SupportText>{t('auth.newHereMsg')}</SupportText><Button variant="secondary" label={t('auth.create')} disabled={busy || !ready} onPress={() => void signUp()} /></Card>
+    <Card><SectionTitle>{t('auth.private')}</SectionTitle><SupportText>{t('auth.privateMsg')}</SupportText></Card>
   </View></Screen>;
 }
 
-const styles=StyleSheet.create({stack:{gap:ui.spacing.md},field:{gap:ui.spacing.xs},label:{color:ui.colors.primaryText,fontSize:13,fontWeight:'700'},input:{minHeight:52,borderWidth:1,borderColor:ui.colors.border,borderRadius:ui.radius.control,paddingHorizontal:ui.spacing.sm,color:ui.colors.primaryText,backgroundColor:ui.colors.elevated,fontSize:16},muted:{opacity:.55}});
+const styles = StyleSheet.create({ stack: { gap: ui.spacing.md }, link: { color: ui.colors.gold, fontFamily: 'Manrope_600SemiBold', fontSize: 15, textAlign: 'center', paddingVertical: 8 } });

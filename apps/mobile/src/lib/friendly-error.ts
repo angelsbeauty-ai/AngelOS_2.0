@@ -1,4 +1,5 @@
 import { ApiError } from './api';
+import i18n from '../i18n';
 
 export type FriendlyContext = { action: 'load' | 'save' | 'send' | 'signin'; thing?: string };
 export type FriendlyResult = { title: string; message: string; retry: boolean; kind: 'offline' | 'error' | 'auth' };
@@ -7,17 +8,17 @@ export function toFriendly(error: unknown, ctx: FriendlyContext): FriendlyResult
   if (__DEV__) console.warn(error);
   const status = error instanceof ApiError ? error.status : undefined;
   const code = typeof error === 'object' && error && 'code' in error ? String((error as { code?: unknown }).code) : '';
-  if (status === 0 || error instanceof TypeError) return { title: "You're offline", message: 'Check your connection and try again. Nothing has been lost.', retry: true, kind: 'offline' };
-  if (code === 'invalid_credentials') return { title: "That didn't match", message: 'Check your email and password, or tap "Forgot password?".', retry: false, kind: 'auth' };
-  if (code === 'email_not_confirmed') return { title: 'Please confirm your email', message: 'Open the email we sent you, then sign in.', retry: false, kind: 'auth' };
-  if (code === 'over_email_send_rate_limit') return { title: 'Too many emails', message: 'Please wait a few minutes before asking again.', retry: true, kind: 'auth' };
-  if (status === 403) return { title: "This isn't available yet", message: "Your account doesn't have access to this. Nothing has changed.", retry: false, kind: 'error' };
-  if (status === 404) return { title: "We couldn't find that", message: 'It may have been removed. Pull down to refresh.', retry: true, kind: 'error' };
-  if (status === 409) return { title: 'This changed a moment ago', message: 'Refresh and try again.', retry: true, kind: 'error' };
-  if (status === 400 || status === 422) return { title: 'Some details need a look', message: 'Please check the fields and try again.', retry: false, kind: 'error' };
-  if (status === 429) return { title: 'Too many tries', message: 'Please wait a minute and try again.', retry: true, kind: 'error' };
-  if (status && status >= 500) return { title: 'Something went wrong on our side', message: 'Nothing has been lost. Try again in a moment.', retry: true, kind: 'error' };
-  if (ctx.action === 'load') return { title: `We couldn't load your ${ctx.thing ?? 'information'}`, message: 'Check your connection and try again. Nothing has been lost.', retry: true, kind: 'error' };
-  if (ctx.action === 'save') return { title: "That didn't save", message: 'We kept what you typed. Try again in a moment.', retry: true, kind: 'error' };
-  return { title: 'Something needs attention', message: 'Please try again in a moment.', retry: true, kind: 'error' };
+  if (status === 0 || error instanceof TypeError) return { title: i18n.t('errors.offline'), message: i18n.t('errors.offlineMsg'), retry: true, kind: 'offline' };
+  if (code === 'invalid_credentials') return { title: i18n.t('errors.badLogin'), message: i18n.t('errors.badLoginMsg'), retry: false, kind: 'auth' };
+  if (code === 'email_not_confirmed') return { title: i18n.t('errors.confirmEmail'), message: i18n.t('errors.confirmEmailMsg'), retry: false, kind: 'auth' };
+  if (code === 'over_email_send_rate_limit') return { title: i18n.t('errors.tooManyEmails'), message: i18n.t('errors.tooManyEmailsMsg'), retry: true, kind: 'auth' };
+  if (status === 403) return { title: i18n.t('errors.forbidden'), message: i18n.t('errors.forbiddenMsg'), retry: false, kind: 'error' };
+  if (status === 404) return { title: i18n.t('errors.notFound'), message: i18n.t('errors.notFoundMsg'), retry: true, kind: 'error' };
+  if (status === 409) return { title: i18n.t('errors.conflict'), message: i18n.t('errors.conflictMsg'), retry: true, kind: 'error' };
+  if (status === 400 || status === 422) return { title: i18n.t('errors.invalid'), message: i18n.t('errors.invalidMsg'), retry: false, kind: 'error' };
+  if (status === 429) return { title: i18n.t('errors.rate'), message: i18n.t('errors.rateMsg'), retry: true, kind: 'error' };
+  if (status && status >= 500) return { title: i18n.t('errors.server'), message: i18n.t('errors.serverMsg'), retry: true, kind: 'error' };
+  if (ctx.action === 'load') return { title: i18n.t('errors.load', { thing: ctx.thing ?? i18n.t('errors.information') }), message: i18n.t('errors.loadMsg'), retry: true, kind: 'error' };
+  if (ctx.action === 'save') return { title: i18n.t('errors.save'), message: i18n.t('errors.saveMsg'), retry: true, kind: 'error' };
+  return { title: i18n.t('errors.generic'), message: i18n.t('errors.genericMsg'), retry: true, kind: 'error' };
 }

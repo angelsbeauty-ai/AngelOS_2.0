@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import { Alert, Platform } from 'react-native';
 import * as DialogHost from '../components/DialogHost';
 
@@ -35,9 +36,9 @@ export async function confirm(options: {
     }
     return new Promise((resolve) => {
       Alert.alert(options.title, options.message || '', [
-        { text: options.cancelText || 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        { text: options.cancelText || i18n.t('dialog.cancel'), style: 'cancel', onPress: () => resolve(false) },
         {
-          text: options.confirmText || 'OK',
+          text: options.confirmText || i18n.t('dialog.ok'),
           style: options.destructive ? 'destructive' : 'default',
           onPress: () => resolve(true),
         },

@@ -112,11 +112,20 @@ Student (second account)
 6. **Settings → Business**: change business name, currency, time zone → Save.
 7. **Settings → Help / Privacy policy / Terms**: they open. They are DRAFTS and still need legal review + your privacy contact email.
 8. **Settings → Subscription** says "Beta: free during testing". No prices, no checkout, nothing can be charged.
-9. Only the main tabs, Settings and a few screens are translated so far; other screens are English (LEFT).
+9. Translated to 日本語 so far: tabs, Settings, Today, Clients list, Calendar, Bookings (new + detail), Messages list, Login / Forgot / Reset password, dialogs, error messages, photo viewer. Other screens are still English (LEFT): client detail/new/edit/health, conversation, AI chat, Social/content, Money, Insights, Reminders, Services, Academy, Founder controls.
 
 ## 10. Bundle and labels
 1. Open the web app: it loads noticeably faster (JS 2.1MB instead of 7.8MB). Icons in the tab bar still show.
 2. Login and Feedback no longer show a "Private Beta" tag. No "Demo" buttons show for owners.
+
+## 11. Design batch (A1 / A3 / viewer)
+1. **Today**: greeting with your first name, big Cormorant time for the next appointment, Confirm / Message buttons, 4 tiles (bookings, needs reply, this week's income, touch-ups due). Empty day shows "No bookings today · New booking".
+2. **Pull to refresh** (iPhone: drag down; web: "↻ Refresh" button) on Today, Clients, Calendar, Messages, Social, Media, Money, Insights, Reminders, Academy, Services.
+3. **Clients**: avatar rows, badges, skeleton while loading, empty state with "New client".
+4. **Photos → tap a photo**: full viewer. Change the tag (Before/After/Healed…), toggle "OK for marketing", link/unlink a client, "Remove from library" (asks first; hidden, not erased).
+5. **New booking**: search clients by name, real date picker + time picker (no typing dates), `?start=` prefill. Switch to 日本語 and check it reads naturally.
+6. **Login**: Show/Hide password, "Forgot password?" link, wrong password shows a kind dialog. Create account sends the verification email back to the web address.
+7. **Founder controls**: tabs Overview · Invites & testers · Feedback · Feature flags · Discount codes. Everything still works the same.
 
 ## Database updates waiting for Angel's yes (written, NOT applied)
 - 0015_v1_messaging_inbox.sql — saved replies; unread and archive for conversations.

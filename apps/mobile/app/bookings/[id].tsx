@@ -1,21 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Screen } from '../../src/components/Screen';
 import { ActionButton, Banner, Chip } from '../../src/components/MessagingBits';
 import { DateField, TimeField, dayString } from '../../src/components/DateField';
 import { Field, fieldStyles } from '../../src/components/Field';
-import { BodyText, Card, Pill, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
+import { Badge, BodyText, Card, Skeleton, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
 import { cancelAppointment, completeAppointment, confirmAppointment, getAppointment, markNoShow, rescheduleAppointment, updateAppointment, type AppointmentDetail } from '../../src/lib/bookings';
 import { formatYen, recordFinanceEntry } from '../../src/lib/finance';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 
 const ACTIVE = ['request', 'confirmation_pending', 'confirmed', 'arrival_info_sent', 'checked_in'];
-const METHODS = [['cash', 'Cash'], ['card', 'Card'], ['paypay', 'PayPay'], ['bank_transfer', 'Bank transfer']] as const;
+const METHODS = ['cash', 'card', 'paypay', 'bank_transfer'] as const;
 const two = (n: number) => String(n).padStart(2, '0');
 
 export default function BookingDetailScreen() {
+  const { t, i18n } = useTranslation();
+  const loc = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [detail, setDetail] = useState<AppointmentDetail | null>(null);
@@ -33,11 +36,11 @@ export default function BookingDetailScreen() {
       const d = await getAppointment(wsId, id!); setDetail(d);
       const start = new Date(d.appointment.start_at);
       setDay(dayString(start)); setTime(`${two(start.getHours())}:${two(start.getMinutes())}`); setNotes(d.appointment.notes ?? '');
-    } catch (e) { void dialog.notify('Could not load booking', e instanceof Error ? e.message : ''); }
+    } catch (e) { void dialog.notify(t('booking.couldNotLoad'), e instanceof Error ? e.message : ''); }
   }
   async function act(label: string, fn: () => Promise<unknown>) {
     setBusy(true);
-    try { await fn(); await load(); } catch (e) { void dialog.notify(label, e instanceof Error ? e.message : 'Please try again.'); }
+    try { await fn(); await load(); } catch (e) { void dialog.notify(label, e instanceof Error ? e.message : t('booking.tryAgain')); }
     finally { setBusy(false); }
   }
   async function reschedule(override = false): Promise<void> {
@@ -46,75 +49,75 @@ export default function BookingDetailScreen() {
     try { await rescheduleAppointment(workspaceId, id, { startAt, overrideSoftConflict: override }); setMoving(false); await load(); }
     catch (e: any) {
       if (e?.payload?.code === 'SOFT_CONFLICT' && !override) {
-        if (await confirm({ title: 'Book anyway?', message: 'This time is outside your hours or overlaps a flexible block.', confirmText: 'Book anyway' })) return reschedule(true);
+        if (await confirm({ title: t('booking.bookAnyway') + '?', message: t('booking.bookAnywayMsg'), confirmText: t('booking.bookAnyway') })) return reschedule(true);
         return;
       }
-      void dialog.notify(e?.payload?.code === 'HARD_CONFLICT' ? 'That time is taken' : 'Could not move booking', e?.payload?.code === 'HARD_CONFLICT' ? 'Another booking or a day off is already there. Pick another time.' : e instanceof Error ? e.message : '');
+      void dialog.notify(e?.payload?.code === 'HARD_CONFLICT' ? t('booking.taken') : t('booking.couldNotMove'), e?.payload?.code === 'HARD_CONFLICT' ? t('booking.takenMsg') : e instanceof Error ? e.message : '');
     }
   }
 
-  if (!detail || !workspaceId || !id) return <Screen><Card><BodyText>Loading booking…</BodyText></Card></Screen>;
+  if (!detail || !workspaceId || !id) return <Screen><Skeleton rows={3} height={90} /></Screen>;
   const a = detail.appointment;
   const active = ACTIVE.includes(a.status);
   const started = Date.parse(a.start_at) <= Date.now();
-  const clientName = a.client?.display_name ?? 'Client';
-  return <Screen>
+  const clientName = a.client?.display_name ?? t('booking.clientDefault');
+  return <Screen onRefresh={load}>
     <Card premium>
-      <Pill tone={a.status === 'confirmed' ? 'success' : a.status === 'cancelled' || a.status === 'no_show' ? 'warning' : 'gold'}>{a.status.replaceAll('_', ' ')}</Pill>
+      <Badge status={a.status} label={t(`booking.status.${a.status}`, { defaultValue: a.status.replaceAll('_', ' ') })} />
       <ScreenTitle>{clientName}</ScreenTitle>
       <BodyText>{a.service_name}</BodyText>
-      <SupportText>{new Date(a.start_at).toLocaleString(undefined, { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} – {new Date(a.end_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</SupportText>
-      {detail.health.status === 'check_before_treatment' ? <Banner tone="warning">Health: check before treatment ({detail.health.redFlags.map((f) => f.replaceAll('_', ' ')).join(', ')})</Banner> : null}
-      {detail.health.status === 'missing' ? <Banner>No health form yet for this client.</Banner> : null}
+      <SupportText>{new Date(a.start_at).toLocaleString(loc, { weekday: 'long', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} – {new Date(a.end_at).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' })}</SupportText>
+      {detail.health.status === 'check_before_treatment' ? <Banner tone="warning">{t('booking.healthCheck', { flags: detail.health.redFlags.map((f) => f.replaceAll('_', ' ')).join(', ') })}</Banner> : null}
+      {detail.health.status === 'missing' ? <Banner>{t('booking.healthMissing')}</Banner> : null}
       <View style={fieldStyles.row}>
-        {['request', 'confirmation_pending'].includes(a.status) ? <ActionButton kind="primary" label="Confirm" disabled={busy} onPress={() => void act('Could not confirm', () => confirmAppointment(workspaceId, id))} /> : null}
-        {active ? <ActionButton label="Reschedule" onPress={() => setMoving(!moving)} /> : null}
-        {active && started ? <ActionButton kind="primary" label="Mark done" disabled={busy} onPress={() => void act('Could not mark done', () => completeAppointment(workspaceId, id))} /> : null}
-        {active && started ? <ActionButton label="No-show" disabled={busy} onPress={async () => { if (await confirm({ title: `Mark ${clientName} as no-show?`, message: 'This is saved in the booking history.', confirmText: 'Mark no-show', destructive: true })) void act('Could not update', () => markNoShow(workspaceId, id)); }} /> : null}
-        {a.client?.id || a.client_id ? <ActionButton label="Message" onPress={() => router.push({ pathname: '/messages/new', params: { clientId: a.client_id } } as any)} /> : null}
-        <ActionButton label="Client" onPress={() => router.push(`/clients/${a.client_id}` as any)} />
+        {['request', 'confirmation_pending'].includes(a.status) ? <ActionButton kind="primary" label={t('booking.confirm')} disabled={busy} onPress={() => void act(t('booking.couldNotConfirm'), () => confirmAppointment(workspaceId, id))} /> : null}
+        {active ? <ActionButton label={t('booking.reschedule')} onPress={() => setMoving(!moving)} /> : null}
+        {active && started ? <ActionButton kind="primary" label={t('booking.markDone')} disabled={busy} onPress={() => void act(t('booking.couldNotDone'), () => completeAppointment(workspaceId, id))} /> : null}
+        {active && started ? <ActionButton label={t('booking.noShow')} disabled={busy} onPress={async () => { if (await confirm({ title: t('booking.noShowTitle', { name: clientName }), message: t('booking.noShowMsg'), confirmText: t('booking.noShow'), destructive: true })) void act(t('booking.couldNotUpdate'), () => markNoShow(workspaceId, id)); }} /> : null}
+        {a.client?.id || a.client_id ? <ActionButton label={t('booking.message')} onPress={() => router.push({ pathname: '/messages/new', params: { clientId: a.client_id } } as any)} /> : null}
+        <ActionButton label={t('booking.clientBtn')} onPress={() => router.push(`/clients/${a.client_id}` as any)} />
       </View>
-      {active ? <ActionButton kind="quiet" label="Cancel booking" onPress={async () => { if (await confirm({ title: `Cancel ${clientName}'s booking?`, message: 'The time opens up again. No message is sent to the client.', confirmText: 'Cancel booking', destructive: true })) void act('Could not cancel', () => cancelAppointment(workspaceId, id)); }} /> : null}
+      {active ? <ActionButton kind="quiet" label={t('booking.cancel')} onPress={async () => { if (await confirm({ title: t('booking.cancelTitle', { name: clientName }), message: t('booking.cancelMsg'), confirmText: t('booking.cancel'), destructive: true })) void act(t('booking.couldNotCancel'), () => cancelAppointment(workspaceId, id)); }} /> : null}
     </Card>
 
     {moving ? <Card>
-      <SectionTitle>New time</SectionTitle>
-      <DateField label="Day" value={day} onChange={setDay} />
-      <TimeField label="Start" value={time} onChange={setTime} />
-      <ActionButton kind="primary" label="Move booking" onPress={() => void reschedule()} />
+      <SectionTitle>{t('booking.newTime')}</SectionTitle>
+      <DateField label={t('booking.day')} value={day} onChange={setDay} />
+      <TimeField label={t('booking.start')} value={time} onChange={setTime} />
+      <ActionButton kind="primary" label={t('booking.moveBooking')} onPress={() => void reschedule()} />
     </Card> : null}
 
     <Card>
-      <SectionTitle>Money</SectionTitle>
-      <View style={fieldStyles.line}><BodyText>Price</BodyText><Text style={fieldStyles.strong}>{formatYen(detail.money.price, a.currency)}</Text></View>
-      <View style={fieldStyles.line}><BodyText>Received</BodyText><Text style={fieldStyles.strong}>{formatYen(detail.money.received, a.currency)}</Text></View>
-      <View style={fieldStyles.line}><BodyText>Still to pay</BodyText><Text style={fieldStyles.strong}>{formatYen(detail.money.due, a.currency)}</Text></View>
+      <SectionTitle>{t('booking.money')}</SectionTitle>
+      <View style={fieldStyles.line}><BodyText>{t('booking.price')}</BodyText><Text style={fieldStyles.strong}>{formatYen(detail.money.price, a.currency)}</Text></View>
+      <View style={fieldStyles.line}><BodyText>{t('booking.received')}</BodyText><Text style={fieldStyles.strong}>{formatYen(detail.money.received, a.currency)}</Text></View>
+      <View style={fieldStyles.line}><BodyText>{t('booking.due')}</BodyText><Text style={fieldStyles.strong}>{formatYen(detail.money.due, a.currency)}</Text></View>
       {!pay.open ? <View style={fieldStyles.row}>
-        <ActionButton kind="primary" label="Record payment" onPress={() => setPay({ ...pay, open: true, type: 'payment', amount: String(detail.money.due || '') })} />
-        <ActionButton label="Record deposit" onPress={() => setPay({ ...pay, open: true, type: 'deposit', amount: '' })} />
+        <ActionButton kind="primary" label={t('booking.recordPayment')} onPress={() => setPay({ ...pay, open: true, type: 'payment', amount: String(detail.money.due || '') })} />
+        <ActionButton label={t('booking.recordDeposit')} onPress={() => setPay({ ...pay, open: true, type: 'deposit', amount: '' })} />
       </View> : <>
-        <Field label={pay.type === 'deposit' ? 'Deposit received' : 'Payment received'} value={pay.amount} onChangeText={(amount) => setPay({ ...pay, amount })} keyboardType="number-pad" />
-        <View style={fieldStyles.row}>{METHODS.map(([v, l]) => <Chip key={v} label={l} selected={pay.method === v} onPress={() => setPay({ ...pay, method: v })} />)}</View>
+        <Field label={pay.type === 'deposit' ? t('booking.depositReceived') : t('booking.paymentReceived')} value={pay.amount} onChangeText={(amount) => setPay({ ...pay, amount })} keyboardType="number-pad" />
+        <View style={fieldStyles.row}>{METHODS.map((v) => <Chip key={v} label={t(`booking.method.${v}`)} selected={pay.method === v} onPress={() => setPay({ ...pay, method: v })} />)}</View>
         <View style={fieldStyles.row}>
-          <ActionButton kind="primary" label="Save" disabled={!(Number(pay.amount) > 0)} onPress={() => void act('Could not record', async () => {
+          <ActionButton kind="primary" label={t('booking.save')} disabled={!(Number(pay.amount) > 0)} onPress={() => void act(t('booking.couldNotRecord'), async () => {
             await recordFinanceEntry(workspaceId, { clientId: a.client_id, appointmentId: id, entryType: pay.type, amount: Number(pay.amount), method: pay.method, idempotencyKey: `appt-${pay.type}:${id}:${Date.now()}` });
             if (pay.type === 'deposit') await updateAppointment(workspaceId, id, { depositAmount: Number(pay.amount), depositMethod: pay.method }).catch(() => undefined);
             setPay({ ...pay, open: false, amount: '' });
           })} />
-          <ActionButton kind="quiet" label="Close" onPress={() => setPay({ ...pay, open: false })} />
+          <ActionButton kind="quiet" label={t('booking.close')} onPress={() => setPay({ ...pay, open: false })} />
         </View>
       </>}
     </Card>
 
     <Card>
-      <SectionTitle>Booking notes</SectionTitle>
-      <Field label="Notes (only you see these)" value={notes} onChangeText={setNotes} multiline />
-      <ActionButton label="Save notes" disabled={notes === (a.notes ?? '')} onPress={() => void act('Could not save notes', () => updateAppointment(workspaceId, id, { notes }))} />
+      <SectionTitle>{t('booking.notesTitle')}</SectionTitle>
+      <Field label={t('booking.notes')} value={notes} onChangeText={setNotes} multiline />
+      <ActionButton label={t('booking.saveNotes')} disabled={notes === (a.notes ?? '')} onPress={() => void act(t('booking.couldNotSaveNotes'), () => updateAppointment(workspaceId, id, { notes }))} />
     </Card>
 
     <Card>
-      <SectionTitle>History</SectionTitle>
-      {detail.events.map((e) => <SupportText key={e.id}>{new Date(e.created_at).toLocaleString()} · {e.event_type.replaceAll('_', ' ')}</SupportText>)}
+      <SectionTitle>{t('booking.history')}</SectionTitle>
+      {detail.events.map((e) => <SupportText key={e.id}>{new Date(e.created_at).toLocaleString(loc)} · {e.event_type.replaceAll('_', ' ')}</SupportText>)}
     </Card>
   </Screen>;
 }
