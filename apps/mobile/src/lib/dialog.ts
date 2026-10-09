@@ -1,41 +1,47 @@
 import { Alert, Platform } from 'react-native';
+import * as DialogHost from '../components/DialogHost';
 
 /**
- * Cross-platform dialogs: native Alert.alert on iOS/Android, styled modal on web.
- * On web: prefers an in-app modal (future); falls back to window.confirm for now.
+ * Cross-platform dialogs: uses DialogHost on all platforms for a consistent A1 look.
+ * Fallback: native Alert on iOS/Android if host isn't mounted, window.alert on web.
  */
 
 export async function notify(title: string, message: string): Promise<void> {
-  if (Platform.OS === 'web') {
-    // Fallback: window.alert. Future: styled in-app toast/modal.
-    return;
+  try {
+    return await DialogHost.notify(title, message);
+  } catch {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      return new Promise<void>((resolve) => {
+        Alert.alert(title, message, [{ text: 'OK', onPress: () => resolve() }]);
+      });
+    }
   }
-  return new Promise<void>((resolve) => {
-    Alert.alert(title, message, [{ text: 'OK', onPress: () => resolve() }]);
-  });
 }
 
 export async function confirm(options: {
   title: string;
-  message: string;
+  message?: string;
   confirmText?: string;
   cancelText?: string;
   destructive?: boolean;
 }): Promise<boolean> {
-  const { title, message, confirmText = 'OK', cancelText = 'Cancel', destructive = false } = options;
-
-  if (Platform.OS === 'web') {
-    // Fallback: window.confirm. Future: styled in-app modal matching `11-cancel-dialog.png`.
-    return window.confirm(`${title}\n\n${message}`);
+  try {
+    return await DialogHost.confirm(options);
+  } catch {
+    if (Platform.OS === 'web') {
+      return window.confirm(`${options.title}\n\n${options.message || ''}`);
+    }
+    return new Promise((resolve) => {
+      Alert.alert(options.title, options.message || '', [
+        { text: options.cancelText || 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+        {
+          text: options.confirmText || 'OK',
+          style: options.destructive ? 'destructive' : 'default',
+          onPress: () => resolve(true),
+        },
+      ]);
+    });
   }
-  return new Promise((resolve) => {
-    Alert.alert(title, message, [
-      { text: cancelText, style: 'cancel', onPress: () => resolve(false) },
-      {
-        text: confirmText,
-        style: destructive ? 'destructive' : 'default',
-        onPress: () => resolve(true),
-      },
-    ]);
-  });
 }
