@@ -1,6 +1,8 @@
-import { clearMe } from '../src/lib/me';
+import { clearMe, useRole } from '../src/lib/me';
 import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import Constants from 'expo-constants';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, Row, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
@@ -28,6 +30,8 @@ const tools = [
 export default function SettingsScreen() {
   const [email, setEmail] = useState<string | null>(null);
   const [isFounder, setIsFounder] = useState(false);
+  const { t } = useTranslation();
+  const role = useRole();
 
   useEffect(() => {
     void loadAccount();
@@ -46,9 +50,9 @@ export default function SettingsScreen() {
 
   async function signOut() {
     const doSignOut = await confirm({
-      title: 'Sign out?',
-      message: 'You will need to sign in again to access AngelOS.',
-      confirmText: 'Sign out',
+      title: t('settings.signOutTitle'),
+      message: t('settings.signOutMsg'),
+      confirmText: t('settings.signOut'),
     });
     if (doSignOut) {
       clearMe();
@@ -58,12 +62,15 @@ export default function SettingsScreen() {
   }
 
   return <Screen>
-    <Pill tone="gold">Owner Control</Pill><ScreenTitle>Settings</ScreenTitle><SupportText>Keep AngelOS aligned with how you work and how much control you want.</SupportText>
+    <Pill tone="gold">{t('settings.pill')}</Pill><ScreenTitle>{t('settings.title')}</ScreenTitle><SupportText>{t('settings.intro')}</SupportText>
+    <Card><SectionTitle>{t('settings.account')}</SectionTitle>{[{ href: '/settings/account', title: t('settings.account'), detail: t('settings.accountDetail') }, ...(role === 'student' ? [] : [{ href: '/settings/business', title: t('settings.business'), detail: t('settings.businessDetail') }])].map((item) => <Link key={item.href} href={item.href as never} asChild><Pressable accessibilityRole="link"><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>{item.title}</BodyText><SupportText>{item.detail}</SupportText></Row></Pressable></Link>)}</Card>
     <Card premium><SectionTitle>Calm by default</SectionTitle><BodyText>Business-changing actions still follow approval and safety rules. Settings shape your experience without weakening workspace protection.</BodyText></Card>
-    <Card><SectionTitle>Workspace settings</SectionTitle><View>{settings.map((area) => <Link key={area.href} href={area.href} asChild><Pressable><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>{area.title}</BodyText><SupportText>{area.detail}</SupportText></Row></Pressable></Link>)}</View></Card>
-    <Card><SectionTitle>Tools & Controls</SectionTitle><View>{tools.map((tool) => <Link key={tool.href} href={tool.href} asChild><Pressable><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>{tool.title}</BodyText><SupportText>{tool.detail}</SupportText></Row></Pressable></Link>)}</View></Card>
-    {isFounder ? <Card><SectionTitle>Founder controls</SectionTitle><Link href="/founder-admin" asChild><Pressable><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>Founder Control Center</BodyText><SupportText>Platform rollout, beta access and launch safety controls</SupportText></Row></Pressable></Link></Card> : null}
-    <Card><SectionTitle>Account</SectionTitle><BodyText>{email ?? 'Signed in on this device'}</BodyText><Pressable onPress={() => void signOut()} style={styles.signOut}><Text style={styles.signOutText}>Sign out</Text></Pressable></Card>
+    {role === 'student' ? null : <><Card><SectionTitle>{t('settings.workspace')}</SectionTitle><View>{settings.map((area) => <Link key={area.href} href={area.href} asChild><Pressable><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>{area.title}</BodyText><SupportText>{area.detail}</SupportText></Row></Pressable></Link>)}</View></Card>
+    <Card><SectionTitle>{t('settings.tools')}</SectionTitle><View>{tools.map((tool) => <Link key={tool.href} href={tool.href} asChild><Pressable><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>{tool.title}</BodyText><SupportText>{tool.detail}</SupportText></Row></Pressable></Link>)}</View></Card>
+    </>}
+    {isFounder ? <Card><SectionTitle>{t('settings.founder')}</SectionTitle><Link href="/founder-admin" asChild><Pressable><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>Founder Control Center</BodyText><SupportText>Platform rollout, beta access and launch safety controls</SupportText></Row></Pressable></Link></Card> : null}
+    <Card><SectionTitle>{t('settings.legal')}</SectionTitle>{[{ href: '/help', title: t('settings.help') }, { href: '/privacy', title: t('settings.privacy') }, { href: '/terms', title: t('settings.terms') }].map((item) => <Link key={item.href} href={item.href as never} asChild><Pressable accessibilityRole="link"><Row accessory={<Text style={styles.chevron}>{'>'}</Text>}><BodyText>{item.title}</BodyText></Row></Pressable></Link>)}<SupportText>{t('settings.version', { v: Constants.expoConfig?.version ?? '—' })}</SupportText></Card>
+    <Card><BodyText>{email ?? ''}</BodyText><Pressable onPress={() => void signOut()} style={styles.signOut}><Text style={styles.signOutText}>{t('settings.signOut')}</Text></Pressable></Card>
   </Screen>;
 }
 

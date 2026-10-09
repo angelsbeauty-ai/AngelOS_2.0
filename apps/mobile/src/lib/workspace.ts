@@ -18,3 +18,6 @@ export async function getActiveWorkspace(): Promise<WorkspaceSummary> {
   }
   return workspace;
 }
+
+export const updateWorkspace = (id: string, input: { name?: string; currency?: string; timezone?: string; locale?: string }) =>
+  apiFetch<WorkspaceSummary>(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify(input) });

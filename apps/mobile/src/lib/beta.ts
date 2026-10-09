@@ -32,7 +32,7 @@ export const submitBetaFeedback = (workspaceId: string, input: { category: strin
 
 export const getFounderBetaOverview = () => apiFetch<BetaOverview>('/founder/beta/overview');
 export const listBetaInvites = () => apiFetch<any[]>('/founder/beta/invites');
-export const createBetaInvite = (input: { emailHint?: string; cohort?: string; label?: string; region?: string; expiresInDays?: number }) => apiFetch<any>('/founder/beta/invites', { method: 'POST', body: JSON.stringify(input) });
+export const createBetaInvite = (input: { emailHint?: string; cohort?: string; label?: string; region?: string; expiresInDays?: number; inviteType?: 'business_owner' | 'student'; workspaceId?: string }) => apiFetch<any>('/founder/beta/invites', { method: 'POST', body: JSON.stringify(input) });
 export const revokeBetaInvite = (id: string) => apiFetch<any>(`/founder/beta/invites/${id}/revoke`, { method: 'POST' });
 export const revokeBetaTester = (userId: string) => apiFetch<any>(`/founder/beta/testers/${userId}/revoke`, { method: 'POST' });
 export const listBetaFeedback = () => apiFetch<any[]>('/founder/beta/feedback');

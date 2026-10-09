@@ -5,7 +5,8 @@ Before testing: the database updates listed at the bottom must be approved and a
 
 ## DONE vs LEFT (kept up to date)
 **DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule · C1 AngelOS tools with approval cards · C2 your voice used everywhere · C3 "Ask" button on every screen · Live voice (web, off until the OpenAI key is set) · B9 Student role + Academy (courses, lessons, video, checklist, progress, practice photos, review, student invites)
-**LEFT (in order):** B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
+**Also DONE:** B10 setup wizard + invite links · B11 Settings + English/日本語 · B12 honest Beta plan screen
+**LEFT (in order):** Design polish + smaller web bundle
 
 ---
 
@@ -100,6 +101,17 @@ Student (second account)
 6. Open the invite link → sign up → enter the invite → you only see Academy and Settings tabs. Typing /clients in the address bar sends you back to the Academy.
 7. Open the course → progress bar → open a lesson → watch the video → tick checklist steps → "Mark lesson done": progress goes up.
 8. "Choose photo and send" → the teacher sees it; their reply shows under the lesson (Waiting / Approved / Try again).
+
+## 9. Setup, settings, language, plan (B10–B12)
+1. Sign up with a new email → the **setup wizard** opens: Business → Services → Hours → Done. Pick yen, Asia/Tokyo, a language.
+2. In Services edit a preset price, tap Next; set opening hours; tap Finish. You land on Today.
+3. **Settings → Founder Control Center → Invites**: choose **Business owner** or **Student**, tap Create. The link is copied/shared. Open it in a private window: the wizard (owner) or Academy (student) opens.
+4. **Settings → Account**: change your name → Save. Switch **English / 日本語**: tabs and Settings change language and it stays after reload.
+5. **Account → New password**: set one (8+ characters). **Delete account**: type DELETE, confirm. (Founder accounts can't be deleted here.)
+6. **Settings → Business**: change business name, currency, time zone → Save.
+7. **Settings → Help / Privacy policy / Terms**: they open. They are DRAFTS and still need legal review + your privacy contact email.
+8. **Settings → Subscription** says "Beta: free during testing". No prices, no checkout, nothing can be charged.
+9. Only the main tabs, Settings and a few screens are translated so far; other screens are English (LEFT).
 
 ## Database updates waiting for Angel's yes (written, NOT applied)
 - 0015_v1_messaging_inbox.sql — saved replies; unread and archive for conversations.

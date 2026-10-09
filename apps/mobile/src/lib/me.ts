@@ -1,3 +1,4 @@
+import { applyLanguage } from '../i18n';
 import { useEffect, useState } from 'react';
 import { apiFetch } from './api';
 
@@ -5,11 +6,11 @@ export interface Me { userId: string; email: string | null; founder: boolean; di
 
 let cached: Promise<Me> | null = null;
 export function getMe(force = false) {
-  if (!cached || force) cached = apiFetch<Me>('/me').catch((e) => { cached = null; throw e; });
+  if (!cached || force) cached = apiFetch<Me>('/me').then((me) => { applyLanguage(me.language); return me; }).catch((e) => { cached = null; throw e; });
   return cached;
 }
 export function clearMe() { cached = null; }
-export const updateMe = (input: { displayName?: string; language?: 'en' | 'ja' }) => apiFetch<Me>('/me', { method: 'PATCH', body: JSON.stringify(input) }).then((me) => { cached = Promise.resolve(me); return me; });
+export const updateMe = (input: { displayName?: string; language?: 'en' | 'ja' }) => apiFetch<Me>('/me', { method: 'PATCH', body: JSON.stringify(input) }).then((me) => { cached = Promise.resolve(me); applyLanguage(me.language); return me; });
 export const deleteMe = () => apiFetch<{ deleted: boolean }>('/me', { method: 'DELETE', body: JSON.stringify({ confirm: 'DELETE' }) });
 
 /** 'student' only when the user is a student and owns no studio. null while loading or signed out. */

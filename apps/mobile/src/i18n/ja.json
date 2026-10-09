@@ -1,0 +1,58 @@
+{
+ "tabs": {
+  "today": "今日",
+  "clients": "お客さま",
+  "calendar": "カレンダー",
+  "social": "SNS",
+  "settings": "設定",
+  "academy": "アカデミー"
+ },
+ "common": {
+  "save": "保存",
+  "saved": "保存しました",
+  "cancel": "キャンセル",
+  "error": "うまくいきませんでした",
+  "loading": "読み込み中…"
+ },
+ "settings": {
+  "pill": "オーナー設定",
+  "title": "設定",
+  "intro": "あなたの働き方に合わせて AngelOS を整えます。",
+  "account": "アカウント",
+  "accountDetail": "名前・言語・パスワード・アカウント削除",
+  "business": "お店の情報",
+  "businessDetail": "店名・通貨・タイムゾーン",
+  "workspace": "ワークスペース設定",
+  "tools": "ツール",
+  "founder": "ファウンダー",
+  "legal": "ヘルプと規約",
+  "help": "ヘルプ",
+  "privacy": "プライバシーポリシー",
+  "terms": "利用規約",
+  "version": "バージョン {{v}}",
+  "signOut": "ログアウト",
+  "signOutTitle": "ログアウトしますか？",
+  "signOutMsg": "もう一度ログインが必要になります。"
+ },
+ "account": {
+  "title": "アカウント",
+  "name": "お名前",
+  "language": "アプリの言語",
+  "password": "新しいパスワード",
+  "passwordHint": "8文字以上",
+  "changePassword": "パスワードを変更",
+  "passwordDone": "パスワードを変更しました",
+  "danger": "アカウント削除",
+  "dangerText": "アカウントとお店のデータが削除され、元に戻せません。確認のため DELETE と入力してください。",
+  "deleteBtn": "アカウントを完全に削除",
+  "deleted": "アカウントを削除しました"
+ },
+ "business": {
+  "title": "お店の情報",
+  "name": "店名",
+  "currency": "通貨",
+  "timezone": "タイムゾーン",
+  "locale": "お店の言語",
+  "ownerOnly": "変更できるのはオーナーだけです。"
+ }
+}

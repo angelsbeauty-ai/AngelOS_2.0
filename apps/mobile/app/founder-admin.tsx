@@ -1,5 +1,8 @@
+import { Tabs } from '../src/components/Field';
+import { getActiveWorkspace } from '../src/lib/workspace';
+import { inviteLink } from '../src/lib/academy';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, Share, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { Pill, ScreenTitle, SupportText, ui } from '../src/components/ui';
@@ -17,6 +20,7 @@ export default function FounderAdminScreen() {
   const [email, setEmail] = useState('');
   const [inviteLabel, setInviteLabel] = useState('');
   const [inviteRegion, setInviteRegion] = useState('');
+  const [inviteType, setInviteType] = useState<'business_owner'|'student'>('business_owner');
   const [inviteCohort, setInviteCohort] = useState<'student'|'outside'|'partner'|'angels_beauty'>('outside');
   const [lastToken, setLastToken] = useState<string | null>(null);
   const [lastBetaToken, setLastBetaToken] = useState<string | null>(null);
@@ -30,7 +34,16 @@ export default function FounderAdminScreen() {
   }
   async function toggleFlag(flag:any, enabled:boolean) { try { await updateFeatureFlag(flag.key,{ enabled, stage: enabled && ['off','paused'].includes(flag.stage) ? 'beta' : flag.stage }); await load(); } catch (error) { void dialog.notify('Could not update feature', error instanceof Error ? error.message : 'Unknown error'); } }
   async function makeStudentDiscount() { try { const created=await createStudentDiscount({emailHint:email.trim()||undefined,discountPercent:20}); setLastToken(created.token); setEmail(''); } catch(error){void dialog.notify('Could not create student discount',error instanceof Error?error.message:'Unknown error');} }
-  async function makeBetaInvite() { try { const created=await createBetaInvite({ emailHint: email.trim() || undefined, cohort:inviteCohort, label: inviteLabel.trim() || undefined, region: inviteRegion.trim() || undefined, expiresInDays: 60 }); setLastBetaToken(created.token); setInviteLabel(''); setInviteRegion(''); setEmail(''); await load(); } catch(error){void dialog.notify('Could not create beta invite',error instanceof Error?error.message:'Unknown error');} }
+  async function shareInvite(token: string) {
+    const url = inviteLink(token);
+    const nav: any = Platform.OS === 'web' ? (globalThis as any).navigator : null;
+    try {
+      if (nav?.share) await nav.share({ title: 'Your AngelOS invite', url });
+      else if (nav?.clipboard) { await nav.clipboard.writeText(url); void dialog.notify('Invite link copied', 'Send it to the person. It works once.'); }
+      else await Share.share({ message: url });
+    } catch { /* user closed the share sheet */ }
+  }
+  async function makeBetaInvite() { try { const created=await createBetaInvite({ emailHint: email.trim() || undefined, cohort:inviteCohort, label: inviteLabel.trim() || undefined, region: inviteRegion.trim() || undefined, expiresInDays: 60, inviteType, workspaceId: inviteType==='student' ? (await getActiveWorkspace()).id : undefined }); setLastBetaToken(created.token); void shareInvite(created.token); setInviteLabel(''); setInviteRegion(''); setEmail(''); await load(); } catch(error){void dialog.notify('Could not create beta invite',error instanceof Error?error.message:'Unknown error');} }
   async function revokeInvite(id:string){ try{ await revokeBetaInvite(id); await load(); }catch(error){void dialog.notify('Could not revoke invite',error instanceof Error?error.message:'Unknown error');} }
   async function revokeTester(userId:string){ const ok=await dialog.confirm({title:'Revoke beta access?',message:'The tester workspace will become read-only. Their data will not be deleted.',cancelText:'Keep access',confirmText:'Revoke access',destructive:true}); if(!ok)return; try{await revokeBetaTester(userId);await load();}catch(error){void dialog.notify('Could not revoke beta access',error instanceof Error?error.message:'Unknown error');} }
 
@@ -57,9 +70,10 @@ export default function FounderAdminScreen() {
       <TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="Approved email (recommended)" autoCapitalize="none"/>
       <TextInput style={styles.input} value={inviteLabel} onChangeText={setInviteLabel} placeholder="Business / tester label"/>
       <TextInput style={styles.input} value={inviteRegion} onChangeText={setInviteRegion} placeholder="Region, e.g. Manila or Tokyo"/>
+      <Tabs value={inviteType} options={[{id:'business_owner',label:'Business owner'},{id:'student',label:'Student (joins my Academy)'}]} onChange={setInviteType} />
       <View style={styles.row}>{(['outside','student','partner','angels_beauty'] as const).map((value)=><Pressable key={value} onPress={()=>setInviteCohort(value)} style={[styles.cohort,inviteCohort===value&&styles.selected]}><Text>{humanize(value)}</Text></Pressable>)}</View>
       <Pressable style={styles.button} onPress={()=>void makeBetaInvite()}><Text style={styles.buttonText}>Create beta invite</Text></Pressable>
-      {lastBetaToken ? <View style={styles.token}><Text style={styles.bold}>Share this beta token once:</Text><Text selectable>{lastBetaToken}</Text></View>:null}
+      {lastBetaToken ? <View style={styles.token}><Text style={styles.bold}>Share this beta token once:</Text><Text selectable>{lastBetaToken}</Text><Text selectable>{inviteLink(lastBetaToken)}</Text><Pressable accessibilityRole="button" onPress={()=>void shareInvite(lastBetaToken)}><Text style={styles.bold}>Copy / share link</Text></Pressable></View>:null}
       {invites.slice(0,8).map((invite)=><View key={invite.id} style={styles.item}><View style={{flex:1}}><Text style={styles.bold}>{invite.label || invite.email_hint || 'Approved beta tester'}</Text><Text style={styles.subtle}>{invite.cohort} · {invite.region || 'region not set'} · {invite.redeemed_at?'redeemed':invite.revoked_at?'revoked':'unused'}</Text></View>{!invite.redeemed_at&&!invite.revoked_at?<Pressable onPress={()=>void revokeInvite(invite.id)}><Text style={styles.danger}>Revoke invite</Text></Pressable>:invite.redeemed_by?<Pressable onPress={()=>void revokeTester(invite.redeemed_by)}><Text style={styles.danger}>Revoke access</Text></Pressable>:null}</View>)}
     </View>
 

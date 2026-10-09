@@ -1,0 +1,58 @@
+{
+ "tabs": {
+  "today": "Today",
+  "clients": "Clients",
+  "calendar": "Calendar",
+  "social": "Social",
+  "settings": "Settings",
+  "academy": "Academy"
+ },
+ "common": {
+  "save": "Save",
+  "saved": "Saved",
+  "cancel": "Cancel",
+  "error": "Something went wrong",
+  "loading": "Loading…"
+ },
+ "settings": {
+  "pill": "Owner Control",
+  "title": "Settings",
+  "intro": "Keep AngelOS aligned with how you work.",
+  "account": "Account",
+  "accountDetail": "Your name, language, password, delete account",
+  "business": "Business",
+  "businessDetail": "Name, currency, time zone",
+  "workspace": "Workspace settings",
+  "tools": "Tools & Controls",
+  "founder": "Founder controls",
+  "legal": "Help & legal",
+  "help": "Help",
+  "privacy": "Privacy policy",
+  "terms": "Terms of use",
+  "version": "Version {{v}}",
+  "signOut": "Sign out",
+  "signOutTitle": "Sign out?",
+  "signOutMsg": "You will need to sign in again to use AngelOS."
+ },
+ "account": {
+  "title": "Your account",
+  "name": "Your name",
+  "language": "App language",
+  "password": "New password",
+  "passwordHint": "At least 8 characters",
+  "changePassword": "Change password",
+  "passwordDone": "Password changed",
+  "danger": "Delete account",
+  "dangerText": "This deletes your account and your business data. It cannot be undone. Type DELETE to confirm.",
+  "deleteBtn": "Delete my account forever",
+  "deleted": "Your account was deleted"
+ },
+ "business": {
+  "title": "Business details",
+  "name": "Business name",
+  "currency": "Currency",
+  "timezone": "Time zone",
+  "locale": "Business language",
+  "ownerOnly": "Only the business owner can change this."
+ }
+}
