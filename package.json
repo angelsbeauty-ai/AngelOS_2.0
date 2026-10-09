@@ -12,7 +12,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "verify:static": "node scripts/verify-static.mjs && node scripts/verify-migrations.mjs && node scripts/verify-staging-contract.mjs && node scripts/verify-no-secrets.mjs && node scripts/verify-deployment-pack.mjs",
     "build:api": "npm --workspace @angelos/api run build",
-    "check": "npm run verify:static && npm run typecheck && npm run build:api",
+    "check": "npm run verify:static && npm run typecheck && npm run build:api && npm run test:api",
     "verify:migrations": "node scripts/verify-migrations.mjs",
     "verify:staging": "node scripts/verify-staging-contract.mjs",
     "test:staging": "node scripts/staging-smoke.mjs",
@@ -30,7 +30,8 @@
     "verify:eas-project-link": "node scripts/verify-eas-project-link.mjs",
     "verify:deployment-pack": "node scripts/verify-deployment-pack.mjs",
     "test:post-deploy": "node scripts/post-deploy-smoke.mjs",
-    "prepare:networked-release": "bash scripts/prepare-networked-release.sh"
+    "prepare:networked-release": "bash scripts/prepare-networked-release.sh",
+    "test:api": "npm --workspace @angelos/api run test"
   },
   "engines": {
     "node": ">=22.13.0"

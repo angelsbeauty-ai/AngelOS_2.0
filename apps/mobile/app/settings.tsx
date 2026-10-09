@@ -9,13 +9,14 @@ import { supabase } from '../src/lib/supabase';
 
 const settings = [
   { href: '/ai-settings', title: 'AI Assistant', detail: 'Personality, roles, proactivity and guidance' },
+  { href: '/settings/connections', title: 'Connections', detail: 'LINE, Instagram, Facebook: what is really connected' },
   { href: '/marketing-profile', title: 'Marketing Profile', detail: 'Goals, ideal client, experience and service area' },
   { href: '/subscription', title: 'Subscription', detail: 'Plan, student discount and account access' },
   { href: '/system-health', title: 'System Health', detail: 'Connections, Needs Attention and emergency controls' }
 ] as const;
 
 const tools = [
-  { href: '/messages', title: 'Messages', detail: 'LINE, Instagram and email conversations' },
+  { href: '/messages', title: 'Messages', detail: 'Client conversations and AI reply drafts' },
   { href: '/content', title: 'Content', detail: 'AI recommendation, approval and publishing' },
   { href: '/media', title: 'Media', detail: 'Before/after, healed photos and library' },
   { href: '/analytics', title: 'Analytics', detail: 'Views, saves, inquiries and growth trends' },

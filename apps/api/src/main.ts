@@ -5,7 +5,8 @@ import { validateRuntimeEnvironment } from './config/env';
 
 async function bootstrap() {
   const runtime = validateRuntimeEnvironment();
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // rawBody: needed to verify webhook signatures (LINE x-line-signature) over the exact bytes received.
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   const express = app.getHttpAdapter().getInstance();
 
   express.disable('x-powered-by');

@@ -1,11 +1,15 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { AiProviderRequest, AiProviderResponse } from './ai.types';
+import { mockTaskResponse } from './mock-provider';
 
 @Injectable()
 export class AiProviderService {
   async generate(request: AiProviderRequest): Promise<AiProviderResponse> {
     const mode = process.env.AI_PROVIDER_MODE ?? 'mock';
     if (mode !== 'openai') {
+      // Deterministic, free mock for dev and tests. Task-specific mocks first (reply drafts, translation, captions).
+      const task = mockTaskResponse(request);
+      if (task !== null) return { text: task, provider: 'mock', model: 'angelos-dev-mock' };
       return this.mockResponse(request.input);
     }
 

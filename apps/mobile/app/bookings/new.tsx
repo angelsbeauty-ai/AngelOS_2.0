@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dialog } from '../../src/lib/dialog';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import {
   BodyText,
@@ -20,10 +20,11 @@ import { listClients, type ClientSummary } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 
 export default function NewBookingScreen() {
+  const params = useLocalSearchParams<{ clientId?: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [services, setServices] = useState<ServiceItem[]>([]);
-  const [clientId, setClientId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(typeof params.clientId === 'string' ? params.clientId : null);
   const [serviceId, setServiceId] = useState<string | null>(null);
   const [date, setDate] = useState(defaultDate());
   const [time, setTime] = useState('10:00');
