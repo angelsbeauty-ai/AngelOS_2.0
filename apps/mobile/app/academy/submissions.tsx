@@ -27,7 +27,7 @@ export default function SubmissionsScreen() {
     try { await reviewSubmission(ws, id, { status: next, feedback: comments[id]?.trim() || undefined }); await load(status); }
     catch (e) { void dialog.notify('Could not save', e instanceof Error ? e.message : ''); }
   }
-  return <Screen>
+  return <Screen onRefresh={() => load(status)}>
     <ScreenTitle>Practice photos</ScreenTitle>
     <Tabs value={status} onChange={setStatus} options={[{ id: 'pending', label: 'To review' }, { id: 'approved', label: 'Approved' }, { id: 'try_again', label: 'Try again' }]} />
     {items === null ? <Card><BodyText>Loading…</BodyText></Card> : null}

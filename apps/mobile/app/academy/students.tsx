@@ -31,7 +31,7 @@ export default function StudentsScreen() {
     } catch (e) { void dialog.notify('Could not make an invite', e instanceof Error ? e.message : ''); }
   }
 
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <ScreenTitle>Students</ScreenTitle>
     <Card>
       <SectionTitle>Invite a student</SectionTitle>

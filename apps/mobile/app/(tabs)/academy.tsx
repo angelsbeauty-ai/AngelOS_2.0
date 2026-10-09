@@ -27,7 +27,7 @@ export default function AcademyScreen() {
     catch (e) { void dialog.notify('Could not create course', e instanceof Error ? e.message : ''); }
   }
 
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <ScreenTitle>Academy</ScreenTitle>
     {error ? <Banner tone="warning">{error}</Banner> : null}
     {role === 'owner' ? <View style={fieldStyles.row}>

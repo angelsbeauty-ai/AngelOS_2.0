@@ -16,7 +16,7 @@ export default function AnalyticsScreen() {
   async function askCoach() { setCoachBusy(true); try { const workspace = await getActiveWorkspace(); const result = await runMarketingCoach(workspace.id, 30); setCoach(result.recommendation); setOverview(result.evidence); } catch (error) { void dialog.notify('Marketing Coach unavailable', error instanceof Error ? error.message : 'Unknown error'); } finally { setCoachBusy(false); } }
   const totals = overview?.totals;
 
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <View style={styles.header}><View style={styles.headerCopy}><Pill tone="gold">Last 30 Days</Pill><ScreenTitle>Analytics</ScreenTitle><SupportText>Business outcomes first—then one clear next move.</SupportText></View><Pressable onPress={() => void load()} style={styles.refresh}><SecondaryActionLabel>Refresh</SecondaryActionLabel></Pressable></View>
     {busy ? <Card><BodyText>Loading analytics...</BodyText></Card> : null}
     {wsId ? <BusinessInsightsCard workspaceId={wsId} /> : null}

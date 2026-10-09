@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { dialog } from '../../src/lib/dialog';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, StatCard, SupportText, ui } from '../../src/components/ui';
+import { BodyText, Button, Card, EmptyState, Header, Pill, SectionTitle, Skeleton, StatTile, SupportText, ui } from '../../src/components/ui';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 
@@ -13,17 +13,15 @@ export default function MediaLibraryScreen() {
   async function load() { setBusy(true); try { const workspace = workspaceId ? { id: workspaceId } : await getActiveWorkspace(); if (!workspaceId) setWorkspaceId(workspace.id); const rows = await listMedia(workspace.id); setAssets(rows); const imageRows = rows.filter((row) => row.media_type === 'image' && row.upload_status === 'uploaded').slice(0, 24); const urls = await Promise.all(imageRows.map(async (row) => [row.id, (await getMediaViewUrl(workspace.id, row.id)).url] as const)); setPreviews(Object.fromEntries(urls)); } catch (error) { void dialog.notify('Could not load media', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
   const approvedCount = assets.filter((asset) => asset.marketing_permission === 'marketing_approved').length;
 
-  return <Screen>
-    <View style={styles.header}><View style={styles.headerCopy}><Pill tone="gold">Secure Library</Pill><ScreenTitle>Media</ScreenTitle><SupportText>Your photos, videos and business assets in one calm workspace.</SupportText></View><Link href="/media/import" asChild><Pressable style={styles.importButton}><PrimaryActionLabel>Import</PrimaryActionLabel></Pressable></Link></View>
-    <Card premium><SectionTitle>Business copies, safely kept</SectionTitle><BodyText>Import from your phone once. AngelOS preserves the business copy without changing the original on your device.</BodyText></Card>
-    <View style={styles.summaryRow}><StatCard label="Total assets" value={String(assets.length)} detail="Secure business copies" /><StatCard label="Marketing ready" value={String(approvedCount)} detail="Approved for use" /></View>
-    <View style={styles.libraryHeader}><SectionTitle>Your library</SectionTitle><Pressable onPress={() => void load()} style={styles.refreshButton}><SecondaryActionLabel>Refresh</SecondaryActionLabel></Pressable></View>
-    {busy ? <Card><BodyText>Loading media...</BodyText></Card> : null}
-    {!busy && assets.length === 0 ? <Card><SectionTitle>No media yet</SectionTitle><SupportText>Import from Photos or take a new business photo to begin.</SupportText></Card> : null}
-    <View style={styles.grid}>{assets.map((asset) => <View key={asset.id} style={styles.assetCard}>
+  return <Screen onRefresh={() => load()}>
+    <Header eyebrow="Secure Library" title="Media" subtitle="Your photos, videos and business assets in one calm workspace." action={<Button small label="Import" onPress={() => router.push('/media/import')} />} />
+    <View style={styles.summaryRow}><StatTile label="Total assets" value={assets.length} detail="Secure business copies" /><StatTile label="Marketing ready" value={approvedCount} detail="Approved for use" /></View>
+    {busy && assets.length === 0 ? <Skeleton rows={2} height={160} /> : null}
+    {!busy && assets.length === 0 ? <EmptyState title="No media yet" message="Import from Photos or take a new business photo to begin." action={{ label: 'Import', onPress: () => router.push('/media/import') }} /> : null}
+    <View style={styles.grid}>{assets.map((asset) => <Pressable key={asset.id} accessibilityRole="button" accessibilityLabel={`Open ${asset.original_filename}`} onPress={() => router.push(`/media/${asset.id}` as any)} style={styles.assetCard}>
       {asset.media_type === 'image' && previews[asset.id] ? <Image source={{ uri: previews[asset.id] }} style={styles.preview} /> : <View style={styles.placeholder}><Pill>{asset.media_type === 'video' ? 'Video' : 'File'}</Pill></View>}
       <View style={styles.assetCopy}><Text numberOfLines={1} style={styles.filename}>{asset.original_filename}</Text><SupportText>{asset.links?.[0]?.client?.display_name ?? 'Not linked'}</SupportText><Pill tone={asset.marketing_permission === 'marketing_approved' ? 'success' : asset.marketing_permission === 'private' ? 'critical' : 'secondary'}>{asset.marketing_permission.replaceAll('_', ' ')}</Pill></View>
-    </View>)}</View>
+    </Pressable>)}</View>
   </Screen>;
 }
 

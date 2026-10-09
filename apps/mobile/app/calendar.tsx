@@ -39,7 +39,7 @@ export default function CalendarScreen() {
   }
 
   const step = mode === 'day' ? 1 : 7;
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <View style={styles.header}><View style={fieldStyles.grow}><ScreenTitle>Calendar</ScreenTitle><SupportText>{mode === 'day' ? prettyDay(anchor) : `Week of ${prettyDay(days[0])}`}</SupportText></View>
       <ActionButton kind="primary" label="New booking" onPress={() => router.push('/bookings/new')} /></View>
     {focusLabel ? <Card premium><SectionTitle>Checking availability</SectionTitle><BodyText>{focusLabel}</BodyText></Card> : null}

@@ -48,7 +48,7 @@ export default function MessagesScreen() {
   const line = connections.find((item) => item.provider === 'line');
   const unreadCount = threads.filter((thread) => thread.unread).length;
 
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <View style={styles.header}>
       <View style={{ flex: 1, gap: 4 }}>
         <ScreenTitle>Messages</ScreenTitle>

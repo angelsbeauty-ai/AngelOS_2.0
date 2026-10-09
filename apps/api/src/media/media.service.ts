@@ -138,7 +138,28 @@ export class MediaService {
     if (dto.lifecycleStatus !== undefined) updates.lifecycle_status = dto.lifecycleStatus;
     const { data, error } = await supabase.from('media_assets').update(updates).eq('workspace_id', workspaceId).eq('id', assetId).select('*').single();
     if (error || !data) throw new NotFoundException('Media asset not found');
+    if (dto.role !== undefined || dto.clientId !== undefined) await this.updateLink(user, workspaceId, assetId, dto);
     return data;
+  }
+
+  /** Tag (role) and client link live on media_asset_links; no schema change needed. */
+  private async updateLink(user: AuthUser, workspaceId: string, assetId: string, dto: UpdateMediaAssetDto) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    if (dto.clientId) {
+      const { data: client } = await supabase.from('clients').select('id').eq('workspace_id', workspaceId).eq('id', dto.clientId).maybeSingle();
+      if (!client) throw new BadRequestException('Client does not belong to this workspace');
+    }
+    const { data: existing } = await supabase.from('media_asset_links').select('id,client_id,role').eq('workspace_id', workspaceId).eq('media_asset_id', assetId).order('created_at', { ascending: true }).limit(1).maybeSingle();
+    if (existing) {
+      const patch: Record<string, unknown> = {};
+      if (dto.role !== undefined) patch.role = dto.role;
+      if (dto.clientId !== undefined) patch.client_id = dto.clientId;
+      const { error } = await supabase.from('media_asset_links').update(patch).eq('workspace_id', workspaceId).eq('id', existing.id);
+      if (error) throw new InternalServerErrorException(error.message);
+    } else {
+      const { error } = await supabase.from('media_asset_links').insert({ workspace_id: workspaceId, media_asset_id: assetId, client_id: dto.clientId ?? null, role: dto.role ?? 'other', created_by: user.id });
+      if (error) throw new InternalServerErrorException(error.message);
+    }
   }
 
   private async getAsset(user: AuthUser, workspaceId: string, assetId: string) {

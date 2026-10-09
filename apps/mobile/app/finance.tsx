@@ -39,7 +39,7 @@ export default function FinanceScreen() {
   }
   const cur = data?.currency ?? 'JPY';
   const money = (n: number) => formatYen(n, cur);
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <View style={fieldStyles.line}><View style={fieldStyles.grow}><ScreenTitle>Money</ScreenTitle><SupportText>Only money you actually received. Booked prices don't count until paid.</SupportText></View></View>
     <View style={fieldStyles.row}>
       <View style={{ flex: 1, minWidth: 140 }}><StatCard label="Today" value={data ? money(data.income.today) : '—'} detail="received" /></View>

@@ -49,7 +49,7 @@ export default function ServicesScreen() {
   }
 
   const canAdd = Boolean(workspace && name.trim() && duration.trim() && price.trim() && !busy);
-  return <Screen><View style={styles.stack}>
+  return <Screen onRefresh={() => load()}><View style={styles.stack}>
     <Pill tone="gold">Booking Rules</Pill><ScreenTitle>Services</ScreenTitle><SupportText>Your real services, timing and prices power reliable availability. AngelOS never fills in missing business facts.</SupportText>
     <Card premium><View style={styles.summary}><View style={styles.summaryItem}><SupportText>Active services</SupportText><Text style={styles.stat}>{services.filter((s) => s.active !== false).length}</Text></View><View style={styles.summaryItem}><SupportText>Workspace currency</SupportText><Text style={styles.stat}>{workspace?.currency ?? '—'}</Text></View></View><BodyText>Changes apply to future booking choices. Existing appointments keep the service, duration and price captured when they were booked.</BodyText></Card>
     {busy && !services.length ? <Card><BodyText>Loading services...</BodyText></Card> : null}

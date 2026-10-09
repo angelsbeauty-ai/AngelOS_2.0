@@ -84,7 +84,7 @@ export default function SocialHubScreen() {
   const selectedLabel = new Date(selYear, selMonth - 1, selDate).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' });
 
   return (
-    <Screen>
+    <Screen onRefresh={() => load()}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Pill tone="gold">Content & Social</Pill>

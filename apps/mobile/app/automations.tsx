@@ -48,7 +48,7 @@ export default function AutomationsScreen() {
     catch (e) { void dialog.notify('Could not save', e instanceof Error ? e.message : ''); }
   }
 
-  return <Screen>
+  return <Screen onRefresh={() => load()}>
     <ScreenTitle>Reminders</ScreenTitle>
     <SupportText>AngelOS suggests client messages at the right time. Nothing is sent until you approve it in the conversation.</SupportText>
     <Tabs value={tab} onChange={setTab} options={[{ id: 'today', label: 'Today' }, { id: 'messages', label: 'Message types' }, { id: 'tasks', label: 'Tasks' }]} />
