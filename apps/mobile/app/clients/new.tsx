@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { dialog } from '../../src/lib/dialog';
@@ -8,6 +9,7 @@ import { createClient } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 
 export default function NewClientScreen() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -28,7 +30,7 @@ export default function NewClientScreen() {
       });
       router.replace({ pathname: '/clients/[id]', params: { id: client.id } });
     } catch (error) {
-      void dialog.notify('Could not create client', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify(t('cf.createFail'), error instanceof Error ? error.message : t('cf.unknown'));
     } finally {
       setBusy(false);
     }
@@ -36,19 +38,19 @@ export default function NewClientScreen() {
 
   return (
     <Screen>
-      <Pill tone="gold">Quick Record</Pill>
-      <ScreenTitle>New Client</ScreenTitle>
-      <SupportText>Start with what you know. AngelOS can complete the profile over time.</SupportText>
+      <Pill tone="gold">{t('cf.quick')}</Pill>
+      <ScreenTitle>{t('cf.newTitle')}</ScreenTitle>
+      <SupportText>{t('cf.newSub')}</SupportText>
 
       <Card>
-        <TextInput value={name} onChangeText={setName} placeholder="Client name" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
-        <TextInput value={phone} onChangeText={setPhone} placeholder="Phone (optional)" placeholderTextColor={ui.colors.secondaryText} keyboardType="phone-pad" style={styles.input} />
-        <TextInput value={email} onChangeText={setEmail} placeholder="Email (optional)" placeholderTextColor={ui.colors.secondaryText} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
-        <TextInput value={language} onChangeText={setLanguage} placeholder="Language, e.g. en / ja" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+        <TextInput value={name} onChangeText={setName} placeholder={t('cf.namePh')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+        <TextInput value={phone} onChangeText={setPhone} placeholder={t('cf.phoneOpt')} placeholderTextColor={ui.colors.secondaryText} keyboardType="phone-pad" style={styles.input} />
+        <TextInput value={email} onChangeText={setEmail} placeholder={t('cf.emailOpt')} placeholderTextColor={ui.colors.secondaryText} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
+        <TextInput value={language} onChangeText={setLanguage} placeholder={t('cf.langPh')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
       </Card>
 
       <Pressable disabled={busy || !name.trim()} onPress={() => void save()}>
-        <PrimaryActionLabel>{busy ? 'Saving...' : 'Create Client'}</PrimaryActionLabel>
+        <PrimaryActionLabel>{busy ? t('cf.saving') : t('cf.create')}</PrimaryActionLabel>
       </Pressable>
     </Screen>
   );

@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
+import { SuggestionsCard } from '../../src/components/SuggestionsCard';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
@@ -178,7 +179,7 @@ export default function SocialHubScreen() {
             </Link>
           )}
         </View>
-        {activeView === 'ideas' ? <SupportText>Ideas bank: coming soon.</SupportText> : null}
+        {activeView === 'ideas' ? <IdeasBank /> : null}
         {activeView !== 'ideas' && state === 'ready' && !listedPosts.length ? (
           <SupportText>{activeView ? 'Nothing here yet.' : 'No posts planned for this day.'}</SupportText>
         ) : null}
@@ -421,3 +422,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
 });
+
+function IdeasBank() {
+  const [ws, setWs] = useState<string | null>(null);
+  useEffect(() => { void getActiveWorkspace().then((w) => setWs(w.id)).catch(() => undefined); }, []);
+  return <SuggestionsCard workspaceId={ws} showAllLink={false} />;
+}
