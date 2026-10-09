@@ -373,6 +373,39 @@ export class MessagingService {
     return { message: data, requiresApproval: true, language, reason: mixed ? 'This draft mixes English and Japanese. Please edit it before approving.' : sensitive ? 'Please read this one carefully before approving.' : 'Nothing is sent until you tap Approve.' };
   }
 
+  /**
+   * Reminder / follow-up outreach (B7): puts a ready-made message in the client's conversation as a
+   * DRAFT waiting for Angel's Approve. Japanese text carries its English meaning. Nothing is sent here.
+   */
+  async draftOutreach(user: AuthUser, workspaceId: string, input: { clientId: string; body: string; language: 'en' | 'ja'; meaningEn?: string | null; reason: string }) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: client } = await supabase.from('clients').select('id,display_name,language,do_not_auto_message').eq('workspace_id', workspaceId).eq('id', input.clientId).maybeSingle();
+    if (!client) throw new NotFoundException('Client not found');
+    if (client.do_not_auto_message) throw new ConflictException(`${client.display_name} asked not to get automatic messages.`);
+    if (mixesLanguages(input.body, input.language)) throw new BadRequestException('This message mixes English and Japanese. Edit the template first.');
+    const channel = await this.ensureManualChannel(supabase, workspaceId, user.id);
+    const service = createServiceSupabaseClient();
+    const externalThreadId = `manual:line:${client.id}`;
+    let { data: thread } = await service.from('message_threads').select('id').eq('workspace_id', workspaceId).eq('channel_id', channel.id).eq('external_thread_id', externalThreadId).maybeSingle();
+    if (!thread) {
+      const created = await service.from('message_threads').insert({
+        workspace_id: workspaceId, channel_id: channel.id, client_id: client.id, external_thread_id: externalThreadId, contact_external_user_id: externalThreadId,
+        contact_display_name: client.display_name, intent: 'follow_up', priority: 'today', status: 'needs_reply', needs_owner: false, last_message_at: new Date().toISOString()
+      }).select('id').single();
+      if (created.error || !created.data) throw new InternalServerErrorException(created.error?.message ?? 'Could not prepare the conversation');
+      thread = created.data;
+    }
+    await service.from('client_messages').update({ status: 'cancelled' }).eq('workspace_id', workspaceId).eq('thread_id', thread!.id).eq('sender_type', 'ai').eq('status', 'pending_approval');
+    const translation = input.language === 'ja' ? (input.meaningEn ?? (await this.aiProvider.generate({ instructions: buildTranslateInstructions('en'), input: input.body })).text.trim()) : null;
+    const { data, error } = await service.from('client_messages').insert({
+      workspace_id: workspaceId, thread_id: thread!.id, client_id: client.id, direction: 'outbound', sender_type: 'ai', body: input.body.trim(),
+      original_language: input.language, translated_body: translation, status: 'pending_approval', sensitive: false,
+      metadata: { draft_reason: input.reason, language: input.language, translation_target: translation ? 'en' : null, source: 'reminder' }, created_by: user.id
+    }).select('*').single();
+    if (error) throw new InternalServerErrorException(error.message);
+    return { threadId: thread!.id, message: data };
+  }
+
   /** The owner's reply style (manual + learned) and her approved saved replies, kept under ~2.4k tokens. */
   private async replyStyleContext(user: AuthUser, workspaceId: string, intent: string, language: ClientLanguage): Promise<string | undefined> {
     try { return await this.style.replyContext(user, workspaceId, intent, language); }

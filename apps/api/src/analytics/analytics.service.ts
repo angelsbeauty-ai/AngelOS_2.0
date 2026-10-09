@@ -1,3 +1,4 @@
+import { businessMetrics } from './business-metrics';
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
@@ -108,6 +109,24 @@ export class AnalyticsService {
     }).select('*').single();
     if (error || !data) throw new InternalServerErrorException(error?.message ?? 'Could not record audience activity');
     return data;
+  }
+
+  /** Insights: business numbers first (B6). */
+  async business(user: AuthUser, workspaceId: string, days = 30) {
+    const safe = Math.min(Math.max(Number.isFinite(days) ? days : 30, 7), 365);
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const now = new Date();
+    const since = new Date(now.getTime() - safe * 2 * 86400000).toISOString();
+    const [appts, payments] = await Promise.all([
+      supabase.from('appointments').select('id,client_id,service_name,status,start_at,price_snapshot').eq('workspace_id', workspaceId).gte('start_at', since).lte('start_at', new Date(now.getTime() + 120 * 86400000).toISOString()).limit(5000),
+      supabase.from('client_payment_entries').select('entry_type,amount,method,occurred_at,correction_effect,appointment_id').eq('workspace_id', workspaceId).gte('occurred_at', since).limit(5000)
+    ]);
+    if (appts.error) throw new InternalServerErrorException(appts.error.message);
+    if (payments.error) throw new InternalServerErrorException(payments.error.message);
+    const clientIds = Array.from(new Set((appts.data ?? []).map((a: any) => a.client_id)));
+    const history = clientIds.length ? await supabase.from('appointments').select('id,client_id,service_name,status,start_at,price_snapshot').eq('workspace_id', workspaceId).in('client_id', clientIds.slice(0, 500)).limit(10000) : { data: [] as any[] };
+    const ws = await supabase.from('workspaces').select('currency').eq('id', workspaceId).maybeSingle();
+    return { currency: ws.data?.currency ?? 'JPY', ...businessMetrics({ now, days: safe, appointments: (appts.data ?? []) as any, history: (history.data ?? []) as any, payments: (payments.data ?? []) as any }) };
   }
 
   async overview(user: AuthUser, workspaceId: string, days = 30) {

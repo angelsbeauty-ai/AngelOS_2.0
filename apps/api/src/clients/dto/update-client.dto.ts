@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsDateString, IsBoolean, IsEmail, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 export class UpdateClientDto {
   @IsOptional() @IsString() @MaxLength(80) firstName?: string | null;
@@ -10,4 +10,7 @@ export class UpdateClientDto {
   @IsOptional() @IsIn(['lead','warm','booking_intent','booked','active','returning','inactive']) status?: string;
   @IsOptional() @IsString() @MaxLength(120) source?: string | null;
   @IsOptional() @IsBoolean() doNotAutoMessage?: boolean;
+  @IsOptional() @IsString() @MaxLength(80) lineId?: string | null;
+  @IsOptional() @IsString() @MaxLength(80) instagramHandle?: string | null;
+  @IsOptional() @IsDateString() birthday?: string | null;
 }

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Card, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { ActionButton, Avatar, Chip } from '../../src/components/MessagingBits';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
-import { listClients, type ClientSummary } from '../../src/lib/clients';
+import { getClient, listClients, type ClientSummary } from '../../src/lib/clients';
 import { startConversation } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
@@ -24,7 +24,12 @@ export default function NewConversationScreen() {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const { clientId } = useLocalSearchParams<{ clientId?: string }>();
   useEffect(() => { void getActiveWorkspace().then((ws) => setWorkspaceId(ws.id)).catch(() => undefined); }, []);
+  useEffect(() => {
+    if (!workspaceId || !clientId || client) return;
+    void getClient(workspaceId, clientId).then((d) => { setClient(d.client); if (d.client.line_id) setPlatform('line'); else if (d.client.instagram_handle) setPlatform('instagram'); }).catch(() => undefined);
+  }, [workspaceId, clientId]);
   useEffect(() => {
     if (!workspaceId) return;
     const handle = setTimeout(() => { void listClients(workspaceId, search).then(setClients).catch(() => setClients([])); }, 250);

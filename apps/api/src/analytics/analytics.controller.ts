@@ -12,6 +12,9 @@ import { UpdateMarketingProfileDto } from './dto/update-marketing-profile.dto';
 export class AnalyticsController {
   constructor(private readonly analytics: AnalyticsService) {}
 
+  @Get('business')
+  business(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('days') days?: string) { return this.analytics.business(user, workspaceId, Number(days) || 30); }
+
   @Get('overview')
   overview(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('days') days?: string) {
     return this.analytics.overview(user, workspaceId, Number(days ?? 30));

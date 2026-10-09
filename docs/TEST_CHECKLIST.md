@@ -4,8 +4,8 @@ Branch `feat/design-a1`. Test on laptop Chrome and iPhone Safari.
 Before testing: the database updates listed at the bottom must be approved and applied first. Until then, those screens say "needs database update".
 
 ## DONE vs LEFT (kept up to date)
-**DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics
-**LEFT (in order):** B3 Clients · B2 Bookings · B1 Calendar · B4 Services · B5 Money · B6 Insights · B7 Reminders · C1–C3 AI assistant + live voice · B9 Academy/students · B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
+**DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule
+**LEFT (in order):** C1–C3 AI assistant + live voice · B9 Academy/students · B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
 
 ---
 
@@ -46,12 +46,45 @@ Before testing: the database updates listed at the bottom must be approved and a
 
 ---
 
+## 6. Clients, bookings, calendar, money, reminders (B1–B7)
+Clients
+1. Clients → type part of a name, phone or email: the list filters as you type.
+2. Tap the chips New / Active / Touch-up due / Archived: the list changes.
+3. Open a client → tabs Overview / Visits / Notes / Money / Forms. Tap Call / Email / Instagram / LINE (if saved): the right app opens.
+4. Edit → add LINE ID, Instagram, birthday (1990-05-21) → Save: shows on Overview.
+5. Forms → Fill health form → answer every question (Japanese for the client, English for you) → type the name → Save. A "Yes" on blood thinners etc. shows "Health: check before treatment".
+6. Forms → Add consent → choose Yes/No → type name → Save: consent list shows "signed <name>".
+7. Visits → add a treatment with area, pigments, needle, numbing, reaction → it shows in history.
+8. Overview → Archive client → it moves to the Archived chip; Unarchive brings it back.
+Bookings and calendar
+9. Calendar → Day view shows 08:00–21:00; grey = closed or outside hours. Tap Week, then Back/Today/Next.
+10. Business hours → turn Sunday off, set Monday 10:00–19:00 → Save. Try booking outside hours: it asks "Book anyway?".
+11. Days off & blocks → add a whole day off: that day can't be booked. Delete it: bookable again.
+12. Tap a booking → Confirm (if a request) → Reschedule to a new time → it moves.
+13. After the start time: Mark done, or No-show (asks first). Cancel asks first and sends nothing to the client.
+14. Booking → Record deposit / Record payment (Cash, Card, PayPay, Bank transfer) → "Still to pay" goes down.
+Services
+15. Services → Edit → change price, add a deposit, turn "Show for new bookings" off → it disappears from New booking.
+Money
+16. Money → Today / This week / This month show only money received.
+17. Record expense → pick Supplies + Cash → Save: shows in Recent with a minus.
+18. "Who still owes" lists finished bookings not fully paid. Export CSV downloads a file (opens in Excel/Numbers).
+Insights
+19. Insights → "Your business": bookings, no-shows, new vs returning, rebook rate, money vs before (7/30/90 days).
+Reminders (suggest only, never auto-sent)
+20. Reminders → Today: day-before, aftercare (day 0/3/7), healing check, touch-up due, colour boost, birthday cards appear when due. Japanese ones show the English meaning.
+21. Approve → opens the conversation with the message as a draft. Nothing is sent until you approve it there and copy/send it.
+22. Message types → switch types on/off; Edit wording → change the English meaning → "Make Japanese version" → Save.
+23. Home "AngelOS suggests" also shows these reminders, plus "Time to post" when a scheduled post's time has come.
+24. Tasks tab: these run by themselves every 15 minutes and only make tasks for you (no "Process due" button anymore).
+
 ## Database updates waiting for Angel's yes (written, NOT applied)
 - 0015_v1_messaging_inbox.sql — saved replies; unread and archive for conversations.
 - 0016_v1_ai_reply_style.sql — your reply style settings and suggested saved replies.
 - 0017_v1_ai_suggestion_dismissals.sql — remembers "Dismiss" on suggestions for the day.
 - 0018_v1_ai_brain_summaries.sql — summaries-only memory; private per studio; anonymous counts for the founder.
 - 0019_v1_social_campaigns.sql — campaigns and saved hashtag sets.
+- 0020_v1_clients_bookings_money.sql — client LINE/Instagram/birthday/archive, health forms, treatment details, deposits, service descriptions, expenses.
 
 ## Needs Angel's accounts
 - LINE: set LINE_MESSAGING_ENABLED=true, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN on the API host; webhook `<API>/webhooks/line`; then Settings → Connections → Connect LINE.

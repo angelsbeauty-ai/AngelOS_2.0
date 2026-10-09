@@ -2,7 +2,7 @@ import { apiFetch } from './api';
 
 export interface Suggestion {
   key: string;
-  kind: 'create_post_draft' | 'draft_reply';
+  kind: 'create_post_draft' | 'draft_reply' | 'client_message' | 'post_now';
   title: string;
   detail: string;
   preview?: string | null;

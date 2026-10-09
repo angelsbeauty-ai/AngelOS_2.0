@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, InternalServerError
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { BrainService } from '../ai/brain/brain.service';
+import { AutomationsService } from '../automations/automations.service';
 import { computeSuggestions, localDate, type Suggestion } from '../ai/suggestions/suggestion-rules';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import { ContentService } from '../content/content.service';
@@ -18,7 +19,8 @@ export class SuggestionsService {
     private readonly messaging: MessagingService,
     private readonly content: ContentService,
     private readonly provider: AiProviderService,
-    private readonly brain: BrainService
+    private readonly brain: BrainService,
+    private readonly automations: AutomationsService
   ) {}
 
   /** AngelOS brain: a short marketing angle from summaries/counts (never message text). */
@@ -32,11 +34,13 @@ export class SuggestionsService {
     const now = new Date();
     const windowStart = new Date(now.getTime() - 86400000).toISOString();
     const windowEnd = new Date(now.getTime() + 4 * 86400000).toISOString();
-    const [threads, variants, pending, dismissals] = await Promise.all([
+    const [threads, variants, pending, dismissals, reminders, overdue] = await Promise.all([
       this.messaging.listThreads(user, workspaceId, 'active'),
       supabase.from('content_variants').select('scheduled_for,status').eq('workspace_id', workspaceId).gte('scheduled_for', windowStart).lte('scheduled_for', windowEnd).not('status', 'in', '(failed,archived)'),
       supabase.from('client_messages').select('thread_id').eq('workspace_id', workspaceId).eq('sender_type', 'ai').eq('status', 'pending_approval'),
-      supabase.from('ai_suggestion_dismissals').select('suggestion_key').eq('workspace_id', workspaceId).eq('dismissed_on', localDate(now, timeZone))
+      supabase.from('ai_suggestion_dismissals').select('suggestion_key').eq('workspace_id', workspaceId).eq('dismissed_on', localDate(now, timeZone)),
+      this.automations.dueReminders(user, workspaceId, now).catch(() => []),
+      supabase.from('content_variants').select('id,platform,scheduled_for,post:content_posts(id,title)').eq('workspace_id', workspaceId).eq('status', 'scheduled').lte('scheduled_for', now.toISOString()).gte('scheduled_for', new Date(now.getTime() - 3 * 86400000).toISOString()).limit(5)
     ]);
     if (variants.error) throw new InternalServerErrorException(variants.error.message);
     const pendingThreads = new Set((pending.data ?? []).map((row: any) => row.thread_id));
@@ -51,6 +55,19 @@ export class SuggestionsService {
       dismissedKeys: new Set((dismissals.error ? [] : dismissals.data ?? []).map((row: any) => row.suggestion_key)),
       marketingHint: await this.marketingHint(user, workspaceId).catch(() => null)
     });
+    const dismissed = new Set((dismissals.error ? [] : dismissals.data ?? []).map((row: any) => row.suggestion_key));
+    // Scheduled posts whose time has come: AngelOS can't post to Instagram yet, so it reminds Angel.
+    for (const v of (overdue.data ?? []) as any[]) {
+      const key = `post_now:${v.id}`;
+      if (dismissed.has(key)) continue;
+      suggestions.push({ key, kind: 'post_now', priority: 0, title: `Time to post: ${v.post?.title ?? 'scheduled post'}`, detail: 'Open it, tap "Copy caption & open", post it, then "Mark as posted".', input: { contentPostId: v.post?.id ?? '', variantId: v.id } });
+    }
+    // B7 reminders: suggested client messages. Approve only puts a draft in the conversation.
+    for (const r of reminders) {
+      if (dismissed.has(r.key)) continue;
+      suggestions.push({ key: r.key, kind: 'client_message', priority: 5, title: r.title, detail: r.language === 'ja' ? `English meaning: ${r.meaningEn ?? ''}` : 'Approve puts this message in the conversation as a draft. Nothing is sent yet.', preview: r.message, input: { clientId: r.clientId, language: r.language, message: r.message, meaningEn: r.meaningEn ?? '', type: r.type } });
+    }
+    suggestions.sort((a, b) => a.priority - b.priority);
     return { suggestions, dismissRemembered: !dismissals.error };
   }
 
@@ -85,6 +102,11 @@ export class SuggestionsService {
     if (suggestion.kind === 'draft_reply') {
       const draft = await this.messaging.draftReply(user, workspaceId, suggestion.input.threadId);
       result = { kind: 'draft_reply', threadId: suggestion.input.threadId, messageId: draft.message.id, sent: false };
+    } else if (suggestion.kind === 'client_message') {
+      const draft = await this.messaging.draftOutreach(user, workspaceId, { clientId: suggestion.input.clientId, body: suggestion.input.message, language: suggestion.input.language === 'ja' ? 'ja' : 'en', meaningEn: suggestion.input.meaningEn || null, reason: `reminder:${suggestion.input.type}` });
+      result = { kind: 'client_message', threadId: draft.threadId, messageId: draft.message.id, sent: false };
+    } else if (suggestion.kind === 'post_now') {
+      result = { kind: 'post_now', contentPostId: suggestion.input.contentPostId, published: false };
     } else if (suggestion.kind === 'create_post_draft') {
       const caption = await this.writeCaption(user, workspaceId, suggestion);
       const post: any = await this.content.createComposerDraft(user, workspaceId, {

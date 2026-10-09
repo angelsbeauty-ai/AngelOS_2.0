@@ -93,3 +93,6 @@ export function updateMarketingProfile(workspaceId: string, input: Record<string
 export function recordDemoContentMetrics(workspaceId: string, variantId: string, input: Record<string, unknown>) {
   return apiFetch(`/workspaces/${workspaceId}/analytics/content/${variantId}/metrics`, { method: 'POST', body: JSON.stringify(input) });
 }
+
+export interface BusinessInsights { days: number; bookings: number; completed: number; cancelled: number; noShows: number; noShowRate: number | null; newClients: number; returningClients: number; rebookRate: number | null; income: number; previousIncome: number; incomeChange: number | null; incomeByService: Array<{ service: string; amount: number }>; currency?: string }
+export function getBusinessInsights(workspaceId: string, days = 30) { return apiFetch<BusinessInsights>(`/workspaces/${workspaceId}/analytics/business?days=${days}`); }

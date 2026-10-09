@@ -7,6 +7,8 @@ import type { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto'
 import type { CreateCalendarBlockDto } from './dto/create-block.dto';
 import type { AvailabilityDto } from './dto/availability.dto';
 import type { SetBusinessHoursDto } from './dto/set-business-hours.dto';
+import type { UpdateAppointmentDto, UpdateServiceDto } from './dto/update-appointment.dto';
+import { isMissingRelation } from '../messaging/saved-replies.service';
 import { AutomationsService } from '../automations/automations.service';
 
 const ACTIVE_APPOINTMENT_STATUSES = ['confirmation_pending','confirmed','arrival_info_sent','checked_in'];
@@ -204,6 +206,87 @@ export class BookingsService {
     return { appointment: data, softConflictsAccepted: conflicts.soft };
   }
 
+  /** All services (also hidden ones) for the Services screen. */
+  async listAllServices(user: AuthUser, workspaceId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase.from('services').select('*').eq('workspace_id', workspaceId).order('active', { ascending: false }).order('name');
+    if (error) throw new InternalServerErrorException(error.message);
+    return data ?? [];
+  }
+
+  async updateService(user: AuthUser, workspaceId: string, serviceId: string, dto: UpdateServiceDto) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (dto.name !== undefined) { if (!dto.name.trim()) throw new ConflictException('Service name cannot be empty'); updates.name = dto.name.trim(); }
+    if (dto.durationMinutes !== undefined) updates.duration_minutes = dto.durationMinutes;
+    if (dto.bufferBeforeMinutes !== undefined) updates.buffer_before_minutes = dto.bufferBeforeMinutes;
+    if (dto.bufferAfterMinutes !== undefined) updates.buffer_after_minutes = dto.bufferAfterMinutes;
+    if (dto.standardPrice !== undefined) updates.standard_price = dto.standardPrice;
+    if (dto.active !== undefined) updates.active = dto.active;
+    if (dto.description !== undefined) updates.description = dto.description?.trim() || null;
+    if (dto.depositAmount !== undefined) updates.deposit_amount = dto.depositAmount;
+    const { data, error } = await supabase.from('services').update(updates).eq('workspace_id', workspaceId).eq('id', serviceId).select('*').single();
+    if (error && isMissingRelation(error)) throw new ConflictException("Description and deposit need the database update 0020_v1_clients_bookings_money (waiting for Angel's yes). Nothing was changed.");
+    if (error || !data) throw new NotFoundException('Service not found');
+    return data;
+  }
+
+  async deleteBlock(user: AuthUser, workspaceId: string, blockId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase.from('calendar_blocks').delete().eq('workspace_id', workspaceId).eq('id', blockId).select('id');
+    if (error) throw new InternalServerErrorException(error.message);
+    if (!data?.length) throw new NotFoundException('Time off not found');
+    return { deleted: true };
+  }
+
+  async getAppointment(user: AuthUser, workspaceId: string, appointmentId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase.from('appointments').select('*,client:clients(id,display_name,language,phone,email,status)').eq('workspace_id', workspaceId).eq('id', appointmentId).maybeSingle();
+    if (error) throw new InternalServerErrorException(error.message);
+    if (!data) throw new NotFoundException('Appointment not found');
+    const [events, payments, health] = await Promise.all([
+      supabase.from('appointment_events').select('event_type,created_at,note').eq('workspace_id', workspaceId).eq('appointment_id', appointmentId).order('created_at', { ascending: false }).limit(20),
+      supabase.from('client_payment_entries').select('entry_type,amount,method,occurred_at,correction_effect').eq('workspace_id', workspaceId).eq('appointment_id', appointmentId),
+      supabase.from('client_health_forms').select('red_flags,created_at').eq('workspace_id', workspaceId).eq('client_id', (data as any).client_id).order('created_at', { ascending: false }).limit(1)
+    ]);
+    let received = 0;
+    for (const p of (payments.data ?? []) as any[]) {
+      if (p.entry_type === 'deposit' || p.entry_type === 'payment') received += Number(p.amount);
+      if (p.entry_type === 'refund') received -= Number(p.amount);
+    }
+    const form = health.error ? null : (health.data ?? [])[0] ?? null;
+    return {
+      appointment: data,
+      events: events.data ?? [],
+      money: { price: Number((data as any).price_snapshot), received, due: Math.max(0, Number((data as any).price_snapshot) - received), entries: payments.data ?? [] },
+      health: { status: form ? (form.red_flags?.length ? 'check_before_treatment' : 'ok') : 'missing', redFlags: form?.red_flags ?? [] }
+    };
+  }
+
+  async noShow(user: AuthUser, workspaceId: string, appointmentId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: current } = await supabase.from('appointments').select('status,start_at').eq('workspace_id', workspaceId).eq('id', appointmentId).maybeSingle();
+    if (!current) throw new NotFoundException('Appointment not found');
+    if (!ACTIVE_APPOINTMENT_STATUSES.includes(current.status)) throw new ConflictException('Only upcoming or today\'s bookings can be marked as no-show');
+    if (Date.parse(current.start_at) > Date.now()) throw new ConflictException('You can mark a no-show after the start time');
+    const appointment = await this.transition(user, workspaceId, appointmentId, 'no_show', 'status_changed');
+    await this.automations.cancelAppointmentJobs(user, workspaceId, appointmentId);
+    return { appointment };
+  }
+
+  async updateAppointment(user: AuthUser, workspaceId: string, appointmentId: string, dto: UpdateAppointmentDto) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (dto.notes !== undefined) updates.notes = dto.notes.trim() || null;
+    if (dto.price !== undefined) updates.price_snapshot = dto.price;
+    if (dto.depositAmount !== undefined) updates.deposit_amount = dto.depositAmount;
+    if (dto.depositMethod !== undefined) updates.deposit_method = dto.depositMethod;
+    const { data, error } = await supabase.from('appointments').update(updates).eq('workspace_id', workspaceId).eq('id', appointmentId).select('*').single();
+    if (error && isMissingRelation(error)) throw new ConflictException("Deposit needs the database update 0020_v1_clients_bookings_money (waiting for Angel's yes). Nothing was changed.");
+    if (error || !data) throw new NotFoundException('Appointment not found');
+    return data;
+  }
+
   async confirm(user: AuthUser, workspaceId: string, appointmentId: string) {
     const appointment = await this.transition(user, workspaceId, appointmentId, 'confirmed', 'confirmed');
     try {
@@ -215,12 +298,14 @@ export class BookingsService {
   }
 
   async cancel(user: AuthUser, workspaceId: string, appointmentId: string) {
+    await this.assertStatus(user, workspaceId, appointmentId, ['request', ...ACTIVE_APPOINTMENT_STATUSES], 'This booking is already finished or cancelled');
     const appointment = await this.transition(user, workspaceId, appointmentId, 'cancelled', 'cancelled');
     await this.automations.cancelAppointmentJobs(user, workspaceId, appointmentId);
     return { appointment };
   }
 
   async complete(user: AuthUser, workspaceId: string, appointmentId: string) {
+    await this.assertStatus(user, workspaceId, appointmentId, ACTIVE_APPOINTMENT_STATUSES, 'Only an active booking can be marked done');
     const appointment = await this.transition(user, workspaceId, appointmentId, 'completed', 'completed');
     try {
       const automationJobs = await this.automations.queueForAppointmentEvent(user, workspaceId, appointmentId, 'appointment_completed');
@@ -257,6 +342,12 @@ export class BookingsService {
     }
     await this.appendEvent(supabase, user.id, workspaceId, appointmentId, 'rescheduled', appointmentSnapshot(current), appointmentSnapshot(data));
     return { appointment: data, softConflictsAccepted: conflicts.soft };
+  }
+
+  private async assertStatus(user: AuthUser, workspaceId: string, appointmentId: string, allowed: string[], message: string) {
+    const { data } = await createUserSupabaseClient(user.accessToken).from('appointments').select('status').eq('workspace_id', workspaceId).eq('id', appointmentId).maybeSingle();
+    if (!data) throw new NotFoundException('Appointment not found');
+    if (!allowed.includes(data.status)) throw new ConflictException(message);
   }
 
   private async transition(user: AuthUser, workspaceId: string, appointmentId: string, status: string, eventType: string) {

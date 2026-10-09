@@ -5,4 +5,5 @@ export class CreateConsentDto {
   @IsIn(['granted','denied','withdrawn']) status!: string;
   @IsOptional() @IsObject() scope?: Record<string, unknown>;
   @IsOptional() @IsString() @MaxLength(80) formVersion?: string;
+  @IsOptional() @IsString() @MaxLength(160) signedName?: string;
 }

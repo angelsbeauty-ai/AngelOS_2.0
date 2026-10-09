@@ -3,7 +3,7 @@ import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { AutomationsService } from './automations.service';
-import { UpdateAutomationRuleDto } from './dto/update-automation-rule.dto';
+import { UpdateAutomationRuleDto, UpdateReminderDto } from './dto/update-automation-rule.dto';
 
 @Controller('workspaces/:workspaceId/automations')
 @UseGuards(SupabaseAuthGuard)
@@ -13,5 +13,8 @@ export class AutomationsController {
   @Get('rules') rules(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.automations.listRules(user, workspaceId); }
   @Patch('rules/:ruleId') updateRule(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('ruleId') ruleId: string, @Body() dto: UpdateAutomationRuleDto) { return this.automations.updateRule(user, workspaceId, ruleId, dto); }
   @Get('jobs') jobs(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.automations.listJobs(user, workspaceId); }
+  @Get('reminders') reminders(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.automations.reminderRules(user, ws); }
+  @Get('reminders/due') due(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.automations.dueReminders(user, ws); }
+  @Patch('reminders/:type') updateReminder(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('type') type: string, @Body() dto: UpdateReminderDto) { return this.automations.updateReminder(user, ws, type, dto); }
   @Post('process-due') process(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('limit') limit?: string) { return this.automations.processDue(user, workspaceId, Number(limit ?? 20)); }
 }

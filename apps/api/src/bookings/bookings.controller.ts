@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { UpdateAppointmentDto, UpdateServiceDto } from './dto/update-appointment.dto';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
@@ -14,6 +15,13 @@ import { SetBusinessHoursDto } from './dto/set-business-hours.dto';
 @UseGuards(SupabaseAuthGuard)
 export class BookingsController {
   constructor(private readonly bookings: BookingsService) {}
+
+  @Get('services/all') allServices(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.bookings.listAllServices(user, ws); }
+  @Patch('services/:serviceId') updateService(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('serviceId') id: string, @Body() dto: UpdateServiceDto) { return this.bookings.updateService(user, ws, id, dto); }
+  @Delete('calendar/blocks/:blockId') deleteBlock(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('blockId') id: string) { return this.bookings.deleteBlock(user, ws, id); }
+  @Get('appointments/:appointmentId') appointment(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('appointmentId') id: string) { return this.bookings.getAppointment(user, ws, id); }
+  @Patch('appointments/:appointmentId') updateAppointment(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('appointmentId') id: string, @Body() dto: UpdateAppointmentDto) { return this.bookings.updateAppointment(user, ws, id, dto); }
+  @Post('appointments/:appointmentId/no-show') noShow(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('appointmentId') id: string) { return this.bookings.noShow(user, ws, id); }
 
   @Get('services')
   services(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {

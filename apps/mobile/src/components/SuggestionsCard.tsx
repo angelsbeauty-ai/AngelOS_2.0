@@ -44,6 +44,8 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
 
   function edit(item: Suggestion) {
     if (item.kind === 'draft_reply') router.push(`/messages/${item.input.threadId}` as any);
+    else if (item.kind === 'client_message') router.push(`/clients/${item.input.clientId}` as any);
+    else if (item.kind === 'post_now') router.push(`/content/${item.input.contentPostId}` as any);
     else router.push({ pathname: '/content/new', params: { date: item.input.date } } as any);
   }
 
@@ -63,7 +65,7 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
       {item.preview ? <Text numberOfLines={2} style={styles.preview}>"{item.preview}"</Text> : null}
       <SupportText>{item.detail}</SupportText>
       <View style={styles.actions}>
-        <ActionButton kind="primary" label={busy === item.key ? 'Working…' : 'Approve'} disabled={Boolean(busy)} onPress={() => void approve(item)} />
+        <ActionButton kind="primary" label={busy === item.key ? 'Working…' : item.kind === 'post_now' ? 'Open' : 'Approve'} disabled={Boolean(busy)} onPress={() => void approve(item)} />
         <ActionButton label="Edit" onPress={() => edit(item)} />
         <ActionButton kind="quiet" label="Dismiss" onPress={() => void dismiss(item)} />
       </View>

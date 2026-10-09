@@ -1,7 +1,11 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
-import type { UpdateAutomationRuleDto } from './dto/update-automation-rule.dto';
+import type { UpdateAutomationRuleDto, UpdateReminderDto } from './dto/update-automation-rule.dto';
+import { Cron } from '@nestjs/schedule';
+import { Logger } from '@nestjs/common';
+import { computeReminders, mergeRules, REMINDER_DEFAULTS, type ReminderType } from './reminders';
+import { isMissingRelation } from '../messaging/saved-replies.service';
 
 const DEFAULT_RULES = [
   { name: 'Booking confirmation', category: 'appointment', trigger_type: 'appointment_confirmed', action_type: 'owner_prompt', delay_minutes: 0, routine_category: 'booking_confirmation', action_config: { messageTemplate: 'Confirm the appointment and prepare the approved confirmation message.' } },
@@ -11,6 +15,7 @@ const DEFAULT_RULES = [
 
 @Injectable()
 export class AutomationsService {
+  private readonly logger = new Logger(AutomationsService.name);
   async seedDefaults(user: AuthUser, workspaceId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data: existing, error } = await supabase.from('automation_rules').select('name').eq('workspace_id', workspaceId);
@@ -94,11 +99,11 @@ export class AutomationsService {
     const { data: jobs, error } = await service.from('automation_jobs').select('*,rule:automation_rules(*)').eq('workspace_id', workspaceId).eq('status', 'pending').lte('scheduled_for', new Date().toISOString()).order('scheduled_for').limit(Math.min(Math.max(limit, 1), 100));
     if (error) throw new InternalServerErrorException(error.message);
     const results = [];
-    for (const job of jobs ?? []) results.push(await this.runOne(user, workspaceId, job as any));
+    for (const job of jobs ?? []) results.push(await this.runOne(user.id, workspaceId, job as any));
     return results;
   }
 
-  private async runOne(user: AuthUser, workspaceId: string, job: any) {
+  private async runOne(actorId: string | null, workspaceId: string, job: any) {
     const service = createServiceSupabaseClient();
     await service.from('automation_jobs').update({ status: 'running', attempt_count: job.attempt_count + 1, updated_at: new Date().toISOString() }).eq('workspace_id', workspaceId).eq('id', job.id);
     try {
@@ -111,7 +116,7 @@ export class AutomationsService {
       }
       if (job.rule.action_type === 'create_followup') {
         const reason = job.rule.action_config?.reason || job.rule.name;
-        const { error } = await service.from('client_followups').insert({ workspace_id: workspaceId, client_id: job.client_id, reason, due_at: new Date().toISOString(), status: 'open', auto_message_allowed: false, created_by: user.id });
+        const { error } = await service.from('client_followups').insert({ workspace_id: workspaceId, client_id: job.client_id, reason, due_at: new Date().toISOString(), status: 'open', auto_message_allowed: false, created_by: actorId });
         if (error) throw new Error(error.message);
         return await this.finishJob(service, workspaceId, job.id, 'succeeded', { action: 'followup_created', reason });
       }
@@ -127,6 +132,77 @@ export class AutomationsService {
       await service.from('automation_jobs').update({ status: 'failed', last_error: message, updated_at: new Date().toISOString() }).eq('workspace_id', workspaceId).eq('id', job.id);
       return { id: job.id, status: 'failed', error: message };
     }
+  }
+
+  // ---------- B7 reminders (suggested messages only) ----------
+  async reminderRules(user: AuthUser, workspaceId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase.from('automation_rules').select('id,routine_category,enabled,action_config').eq('workspace_id', workspaceId).eq('action_type', 'client_message');
+    if (error) throw new InternalServerErrorException(error.message);
+    return mergeRules((data ?? []) as any).map((rule) => ({ ...rule, name: REMINDER_DEFAULTS.find((d) => d.type === rule.type)!.name }));
+  }
+
+  async updateReminder(user: AuthUser, workspaceId: string, type: string, dto: UpdateReminderDto) {
+    const def = REMINDER_DEFAULTS.find((d) => d.type === type);
+    if (!def) throw new NotFoundException('Unknown reminder');
+    if (dto.templateJa !== undefined && dto.templateJaMeaning === undefined) throw new ConflictException('Update the English meaning of the Japanese message first.');
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: existing } = await supabase.from('automation_rules').select('id,action_config,enabled').eq('workspace_id', workspaceId).eq('action_type', 'client_message').eq('routine_category', type).maybeSingle();
+    const config = { ...(existing?.action_config ?? {}) } as Record<string, string>;
+    if (dto.templateEn !== undefined) config.template_en = dto.templateEn.trim();
+    if (dto.templateJa !== undefined) config.template_ja = dto.templateJa.trim();
+    if (dto.templateJaMeaning !== undefined) config.template_ja_meaning = dto.templateJaMeaning.trim();
+    if (/[\u3040-\u30ff\u4e00-\u9faf]/.test(config.template_en ?? '')) throw new ConflictException('The English message has Japanese in it. Keep each message in one language.');
+    const enabled = dto.enabled ?? existing?.enabled ?? true;
+    const write = existing
+      ? supabase.from('automation_rules').update({ enabled, action_config: config, updated_at: new Date().toISOString() }).eq('workspace_id', workspaceId).eq('id', existing.id)
+      : supabase.from('automation_rules').insert({ workspace_id: workspaceId, name: def.name, category: def.category, trigger_type: 'manual', action_type: 'client_message', enabled, routine_category: type, action_config: config, created_by: user.id });
+    const { error } = await write;
+    if (error) throw new InternalServerErrorException(error.message);
+    return (await this.reminderRules(user, workspaceId)).find((r) => r.type === type);
+  }
+
+  /** Today's reminder candidates (read with the member's RLS client). */
+  async dueReminders(user: AuthUser, workspaceId: string, now = new Date()) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const [ws, rules] = await Promise.all([supabase.from('workspaces').select('timezone').eq('id', workspaceId).maybeSingle(), this.reminderRules(user, workspaceId)]);
+    if (!ws.data) throw new NotFoundException('Workspace not found');
+    const from = new Date(now.getTime() - 400 * 86400000).toISOString();
+    const to = new Date(now.getTime() + 3 * 86400000).toISOString();
+    const [appts, treatments] = await Promise.all([
+      supabase.from('appointments').select('id,client_id,service_name,status,start_at,created_at,client:clients(display_name,language,do_not_auto_message)').eq('workspace_id', workspaceId).gte('start_at', from).lte('start_at', to).limit(5000),
+      supabase.from('treatment_records').select('client_id,stage').eq('workspace_id', workspaceId).eq('stage', 'first_session').gte('performed_at', new Date(now.getTime() - 70 * 86400000).toISOString()).limit(2000)
+    ]);
+    if (appts.error) throw new InternalServerErrorException(appts.error.message);
+    let clients: any[] = [];
+    const bd = await supabase.from('clients').select('id,display_name,language,birthday,do_not_auto_message').eq('workspace_id', workspaceId).not('birthday', 'is', null).limit(5000);
+    if (!bd.error) clients = bd.data ?? []; else if (!isMissingRelation(bd.error)) throw new InternalServerErrorException(bd.error.message);
+    const firstSession = treatments.error || !(treatments.data ?? []).length ? undefined : new Set((treatments.data ?? []).map((t: any) => t.client_id));
+    return computeReminders({ now, timeZone: ws.data.timezone || 'Asia/Tokyo', rules, appointments: (appts.data ?? []) as any, clients, firstSessionClientIds: firstSession });
+  }
+
+  /**
+   * Server schedule (every 15 min): runs due automation jobs for every workspace that is not paused.
+   * Jobs only create follow-up tasks or "needs owner" items. No client message is ever sent here.
+   */
+  @Cron('0 */15 * * * *', { name: 'automations-process-due', disabled: process.env.NODE_ENV === 'test' || process.env.AUTOMATIONS_CRON === 'off' })
+  async processAllDue(limit = 200) {
+    const service = createServiceSupabaseClient();
+    const { data: jobs, error } = await service.from('automation_jobs').select('*,rule:automation_rules(*)').eq('status', 'pending').lte('scheduled_for', new Date().toISOString()).order('scheduled_for').limit(limit);
+    if (error) { this.logger.warn(`cron: could not list jobs (${error.code ?? 'error'})`); return { processed: 0 }; }
+    const workspaces = Array.from(new Set((jobs ?? []).map((j: any) => j.workspace_id)));
+    const { data: controls } = workspaces.length ? await service.from('workspace_operational_controls').select('workspace_id,pause_automations,emergency_read_only').in('workspace_id', workspaces) : { data: [] as any[] };
+    const blocked = new Set((controls ?? []).filter((c: any) => c.pause_automations || c.emergency_read_only).map((c: any) => c.workspace_id));
+    let processed = 0;
+    for (const job of jobs ?? []) {
+      if (blocked.has((job as any).workspace_id)) continue;
+      // Claim first so two API instances cannot run the same job.
+      const claim = await service.from('automation_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', (job as any).id).eq('status', 'pending').select('id');
+      if (!claim.data?.length) continue;
+      await this.runOne(null, (job as any).workspace_id, { ...(job as any), attempt_count: (job as any).attempt_count });
+      processed += 1;
+    }
+    return { processed };
   }
 
   private async finishJob(service: ReturnType<typeof createServiceSupabaseClient>, workspaceId: string, jobId: string, status: string, evidence: Record<string, unknown>) {

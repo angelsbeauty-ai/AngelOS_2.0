@@ -2,7 +2,7 @@
  * C4 "AngelOS suggests": free, rule-based candidates. Marketing first, then messages.
  * Pure function so it is fully testable without a database or AI calls.
  */
-export type SuggestionKind = 'create_post_draft' | 'draft_reply';
+export type SuggestionKind = 'create_post_draft' | 'draft_reply' | 'client_message' | 'post_now';
 
 export interface Suggestion {
   key: string;

@@ -1,14 +1,16 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
-import { createService, listServices, type ServiceItem } from '../src/lib/bookings';
+import { createService, listAllServices as listServices, type ServiceItem } from '../src/lib/bookings';
 import { getActiveWorkspace, type WorkspaceSummary } from '../src/lib/workspace';
 
 export default function ServicesScreen() {
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
-  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [services, setServices] = useState<Array<ServiceItem & { active?: boolean }>>([]);
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
   const [bufferBefore, setBufferBefore] = useState('');
@@ -16,7 +18,7 @@ export default function ServicesScreen() {
   const [price, setPrice] = useState('');
   const [busy, setBusy] = useState(true);
 
-  useEffect(() => { void load(); }, []);
+  useFocusEffect(useCallback(() => { void load(); }, []));
   async function load() {
     setBusy(true);
     try {
@@ -49,9 +51,9 @@ export default function ServicesScreen() {
   const canAdd = Boolean(workspace && name.trim() && duration.trim() && price.trim() && !busy);
   return <Screen><View style={styles.stack}>
     <Pill tone="gold">Booking Rules</Pill><ScreenTitle>Services</ScreenTitle><SupportText>Your real services, timing and prices power reliable availability. AngelOS never fills in missing business facts.</SupportText>
-    <Card premium><View style={styles.summary}><View style={styles.summaryItem}><SupportText>Active services</SupportText><Text style={styles.stat}>{services.length}</Text></View><View style={styles.summaryItem}><SupportText>Workspace currency</SupportText><Text style={styles.stat}>{workspace?.currency ?? '—'}</Text></View></View><BodyText>Changes apply to future booking choices. Existing appointments keep the service, duration and price captured when they were booked.</BodyText></Card>
+    <Card premium><View style={styles.summary}><View style={styles.summaryItem}><SupportText>Active services</SupportText><Text style={styles.stat}>{services.filter((s) => s.active !== false).length}</Text></View><View style={styles.summaryItem}><SupportText>Workspace currency</SupportText><Text style={styles.stat}>{workspace?.currency ?? '—'}</Text></View></View><BodyText>Changes apply to future booking choices. Existing appointments keep the service, duration and price captured when they were booked.</BodyText></Card>
     {busy && !services.length ? <Card><BodyText>Loading services...</BodyText></Card> : null}
-    <Card><SectionTitle>Current services</SectionTitle>{services.map((service) => <View key={service.id} style={styles.service}><View style={styles.serviceTop}><View style={styles.serviceCopy}><Text style={styles.serviceName}>{service.name}</Text><SupportText>{service.duration_minutes} min service</SupportText></View><Text style={styles.price}>{formatMoney(Number(service.standard_price), service.currency)}</Text></View><View style={styles.pills}><Pill>{service.buffer_before_minutes} min before</Pill><Pill>{service.buffer_after_minutes} min after</Pill></View></View>)}{!busy && !services.length ? <SupportText>No services yet. Add only what you currently offer.</SupportText> : null}</Card>
+    <Card><SectionTitle>Current services</SectionTitle>{services.map((service) => <View key={service.id} style={styles.service}><View style={styles.serviceTop}><View style={styles.serviceCopy}><Text style={styles.serviceName}>{service.name}</Text>{service.active===false?<SupportText tone="warning">Hidden from booking</SupportText>:null}<Text accessibilityRole="link" onPress={()=>router.push(`/services/${service.id}` as any)} style={{color:ui.colors.gold,fontWeight:'700',paddingVertical:4}}>Edit</Text><SupportText>{service.duration_minutes} min service</SupportText></View><Text style={styles.price}>{formatMoney(Number(service.standard_price), service.currency)}</Text></View><View style={styles.pills}><Pill>{service.buffer_before_minutes} min before</Pill><Pill>{service.buffer_after_minutes} min after</Pill></View></View>)}{!busy && !services.length ? <SupportText>No services yet. Add only what you currently offer.</SupportText> : null}</Card>
     <Card premium><Pill tone="gold">Add One Service</Pill><SectionTitle>Booking details</SectionTitle><SupportText>Use the exact public name, real appointment length and standard price.</SupportText><Field label="Service name"><TextInput value={name} onChangeText={setName} placeholder="e.g. service name" placeholderTextColor={ui.colors.secondaryText} autoCapitalize="words" style={styles.input}/></Field><View style={styles.inputRow}><View style={styles.flex}><Field label="Duration (min)"><TextInput value={duration} onChangeText={setDuration} placeholder="Required" placeholderTextColor={ui.colors.secondaryText} keyboardType="number-pad" style={styles.input}/></Field></View><View style={styles.flex}><Field label={`Price (${workspace?.currency ?? 'currency'})`}><TextInput value={price} onChangeText={setPrice} placeholder="Required" placeholderTextColor={ui.colors.secondaryText} keyboardType="decimal-pad" style={styles.input}/></Field></View></View><SectionTitle>Protected time</SectionTitle><SupportText>Optional buffers reserve preparation and reset time around the appointment.</SupportText><View style={styles.inputRow}><View style={styles.flex}><Field label="Before (min)"><TextInput value={bufferBefore} onChangeText={setBufferBefore} placeholder="0" placeholderTextColor={ui.colors.secondaryText} keyboardType="number-pad" style={styles.input}/></Field></View><View style={styles.flex}><Field label="After (min)"><TextInput value={bufferAfter} onChangeText={setBufferAfter} placeholder="0" placeholderTextColor={ui.colors.secondaryText} keyboardType="number-pad" style={styles.input}/></Field></View></View><Pressable disabled={!canAdd} onPress={() => void add()} style={({ pressed }) => [styles.action, (!canAdd || pressed) && styles.muted]}><PrimaryActionLabel>{busy ? 'Saving...' : 'Add Service'}</PrimaryActionLabel></Pressable></Card>
     <Card><SectionTitle>Availability safeguard</SectionTitle><SupportText>Hard calendar conflicts and personal busy time remain unavailable. AngelOS does not create business hours or overbook without an explicit owner-reviewed action.</SupportText></Card>
   </View></Screen>;
