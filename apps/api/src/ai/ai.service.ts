@@ -5,6 +5,7 @@ import { planSafeAssistantAction } from './action-planner';
 import { buildOperatingInstructions } from './angelos-operating-contract';
 import { AiProviderService } from './ai-provider.service';
 import { StyleLearningService } from './style/style-learning.service';
+import { BrainService } from './brain/brain.service';
 import type { AssistantProfile, AssistantRoleRow, AiMessageRow } from './ai.types';
 import type { CreateConversationDto } from './dto/create-conversation.dto';
 import type { CreateMemoryDto } from './dto/create-memory.dto';
@@ -14,7 +15,7 @@ import type { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
 
 @Injectable()
 export class AiService {
-  constructor(private readonly provider: AiProviderService, private readonly style: StyleLearningService) {}
+  constructor(private readonly provider: AiProviderService, private readonly style: StyleLearningService, private readonly brain: BrainService) {}
 
   async getProfile(user: AuthUser, workspaceId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
@@ -53,6 +54,7 @@ export class AiService {
       .select('*')
       .single();
     if (error) throw new InternalServerErrorException(error.message);
+    this.brain.rememberPreferences(workspaceId, { assistant_tone: dto.tone, assistant_length: dto.responseLength });
     return data;
   }
 
@@ -135,6 +137,8 @@ export class AiService {
       metadata: dto.context ? { context: dto.context } : {}
     });
     if (userMessageError) throw new InternalServerErrorException(userMessageError.message);
+    // Brain: only topic keys + counts are kept (see brain-taxonomy). The words themselves are not stored there.
+    this.brain.rememberOwnerRequest(workspaceId, message);
 
     const [workspaceResult, profileResult, rolesResult, memoryResult, historyResult] = await Promise.all([
       supabase.from('workspaces').select('id,name').eq('id', workspaceId).single(),
@@ -162,6 +166,8 @@ export class AiService {
       .join('\n');
 
     const contextFacts = await this.loadAuthorizedContextFacts(user, supabase, workspaceId, dto.context);
+    const brainLine = await this.brain.contextLine(user, workspaceId);
+    if (brainLine) contextFacts.push(brainLine);
     const instructions = buildOperatingInstructions({
       workspaceName: workspaceResult.data.name,
       profile: profileResult.data as AssistantProfile,

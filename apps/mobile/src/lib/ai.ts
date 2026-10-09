@@ -141,3 +141,8 @@ export const approveSuggestedReply = (workspaceId: string, id: string, edits?: {
   apiFetch(`/workspaces/${workspaceId}/ai/style/suggested-replies/${id}/approve`, { method: 'POST', body: JSON.stringify(edits ?? {}) });
 export const rejectSuggestedReply = (workspaceId: string, id: string) =>
   apiFetch(`/workspaces/${workspaceId}/ai/style/suggested-replies/${id}/reject`, { method: 'POST' });
+
+/** AngelOS brain: short summaries, tags and counts only (never message text or voice). */
+export interface BrainSummary { kind: 'owner_request' | 'owner_preference' | 'client_request'; topic: string; summary: string; tags: string[]; request_count: number; first_seen_at: string; last_seen_at: string }
+export const getBrainSummaries = (workspaceId: string) =>
+  apiFetch<{ summaries: BrainSummary[]; needsMigration: string | null }>(`/workspaces/${workspaceId}/ai/brain`);

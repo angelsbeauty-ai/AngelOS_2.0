@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { StyleLearningService } from '../ai/style/style-learning.service';
+import { BrainService } from '../ai/brain/brain.service';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import type { CreateDemoChannelDto } from './dto/create-demo-channel.dto';
 import type { IngestMessageDto } from './dto/ingest-message.dto';
@@ -39,7 +40,7 @@ interface InboundRecordInput {
 export class MessagingService {
   private readonly logger = new Logger('MessagingService');
   private readonly manualAdapter = new ManualMessagingAdapter();
-  constructor(private readonly aiProvider: AiProviderService, private readonly style: StyleLearningService) {}
+  constructor(private readonly aiProvider: AiProviderService, private readonly style: StyleLearningService, private readonly brain: BrainService) {}
 
   private adapterFor(provider: string): MessagingProviderAdapter {
     if (provider === 'line') return new LineMessagingAdapter(readLineConfig());
@@ -326,6 +327,11 @@ export class MessagingService {
       match_confidence: input.matchConfidence ?? 'verified'
     }, { onConflict: 'workspace_id,channel_id,external_user_id' });
     if (identityUpsertError) throw new InternalServerErrorException(identityUpsertError.message);
+    // Brain: count the TOPIC of the request only (intent key, platform, language). No message text.
+    if (!phishing) {
+      const platform = input.externalThreadId.startsWith('manual:') ? input.externalThreadId.split(':')[1] : channel.provider;
+      this.brain.rememberClientRequest(workspaceId, intent, platform, message?.original_language ?? null);
+    }
     return { threadId, message, intent, sensitive, phishing, priority, clientId };
   }
 

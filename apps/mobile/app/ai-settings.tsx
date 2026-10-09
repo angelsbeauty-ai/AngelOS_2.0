@@ -8,8 +8,8 @@ import { ActionButton, Banner, BilingualBlock, Chip } from '../src/components/Me
 import { dialog } from '../src/lib/dialog';
 import { toFriendly } from '../src/lib/friendly-error';
 import {
-  approveSuggestedReply, getAssistantProfile, getReplyStyle, learnReplyStyleNow, listSuggestedReplies, rejectSuggestedReply,
-  updateAssistantProfile, updateAssistantRoles, updateReplyStyle, type AssistantProfile, type AssistantRole, type AssistantRoleKey, type ReplyStyle
+  approveSuggestedReply, getAssistantProfile, getBrainSummaries, getReplyStyle, learnReplyStyleNow, listSuggestedReplies, rejectSuggestedReply,
+  updateAssistantProfile, updateAssistantRoles, updateReplyStyle, type AssistantProfile, type AssistantRole, type AssistantRoleKey, type BrainSummary, type ReplyStyle
 } from '../src/lib/ai';
 import { translateText, type SavedReply } from '../src/lib/messaging';
 import { getActiveWorkspace } from '../src/lib/workspace';
@@ -36,6 +36,7 @@ export default function AiSettingsScreen() {
   const [style, setStyle] = useState<ReplyStyle | null>(null);
   const [styleMigration, setStyleMigration] = useState<string | null>(null);
   const [suggested, setSuggested] = useState<SavedReply[]>([]);
+  const [memory, setMemory] = useState<{ summaries: BrainSummary[]; needsMigration: string | null } | null>(null);
   const [notes, setNotes] = useState('');
   const [personality, setPersonality] = useState('');
   const [name, setName] = useState('');
@@ -46,9 +47,11 @@ export default function AiSettingsScreen() {
   const load = useCallback(async () => {
     try {
       const ws = (await getActiveWorkspace()).id; setWorkspaceId(ws);
-      const [data, styleResult, suggestions] = await Promise.all([
-        getAssistantProfile(ws), getReplyStyle(ws).catch(() => null), listSuggestedReplies(ws).catch(() => ({ replies: [], needsMigration: null }))
+      const [data, styleResult, suggestions, brain] = await Promise.all([
+        getAssistantProfile(ws), getReplyStyle(ws).catch(() => null), listSuggestedReplies(ws).catch(() => ({ replies: [], needsMigration: null })),
+        getBrainSummaries(ws).catch(() => null)
       ]);
+      setMemory(brain);
       setProfile(data.profile); setRoles(data.roles); setName(data.profile.display_name); setPersonality(data.profile.personality_prompt ?? '');
       if (styleResult) { setStyle(styleResult.style); setStyleMigration(styleResult.needsMigration); setNotes(styleResult.style.style_notes ?? ''); }
       setSuggested(suggestions.replies);
@@ -155,6 +158,17 @@ export default function AiSettingsScreen() {
     </Card>
 
     <Card>
+      <SectionTitle>What AngelOS remembers</SectionTitle>
+      <SupportText>AngelOS keeps short usage summaries (not voice recordings or message text) to improve the assistant.</SupportText>
+      {memory?.needsMigration ? <Banner><SupportText>Memory starts after a database update ({memory.needsMigration}).</SupportText></Banner> : null}
+      {memory && !memory.needsMigration && memory.summaries.length === 0 ? <SupportText>Nothing yet. It fills in as you use AngelOS.</SupportText> : null}
+      {(memory?.summaries ?? []).slice(0, 8).map((item) => <View key={`${item.kind}:${item.topic}`} style={styles.memoryRow}>
+        <Text style={[styles.body, { flex: 1 }]}>{item.summary}</Text>
+        <Text style={styles.count}>{item.request_count}×</Text>
+      </View>)}
+    </Card>
+
+    <Card>
       <SectionTitle>Everyday guidance</SectionTitle>
       <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>Ask useful follow-up questions</Text></View><Switch accessibilityLabel="Ask useful follow-up questions" value={profile.guidance_questions_enabled} onValueChange={(value) => void saveProfile({ guidanceQuestionsEnabled: value })} /></View>
       <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>Explain recommendations</Text></View><Switch accessibilityLabel="Explain recommendations" value={profile.explain_recommendations} onValueChange={(value) => void saveProfile({ explainRecommendations: value })} /></View>
@@ -171,5 +185,7 @@ const styles = StyleSheet.create({
   learned: { gap: 4, padding: 12, borderRadius: 16, backgroundColor: tokens.color.glassTint },
   learnedTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: ui.colors.primaryText },
   suggestion: { gap: 8, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ui.colors.border },
-  body: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 21, color: ui.colors.primaryText }
+  body: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 21, color: ui.colors.primaryText },
+  memoryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ui.colors.border },
+  count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: ui.colors.secondaryText }
 });

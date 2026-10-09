@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { StyleLearningService } from './style/style-learning.service';
+import { BrainService } from './brain/brain.service';
 import { ApproveSuggestedReplyDto, UpdateReplyStyleDto } from './dto/update-reply-style.dto';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -14,7 +15,13 @@ import { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
 @Controller('workspaces/:workspaceId/ai')
 @UseGuards(SupabaseAuthGuard)
 export class AiController {
-  constructor(private readonly ai: AiService, private readonly style: StyleLearningService) {}
+  constructor(private readonly ai: AiService, private readonly style: StyleLearningService, private readonly brain: BrainService) {}
+
+  /** What AngelOS remembers about this workspace: short summaries, tags and counts only. */
+  @Get('brain')
+  brainSummaries(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
+    return this.brain.listForWorkspace(user, workspaceId);
+  }
 
   // How the assistant writes to clients: manual settings + what it learned from the owner's replies.
   @Get('style') getStyle(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.style.getStyle(user, workspaceId); }

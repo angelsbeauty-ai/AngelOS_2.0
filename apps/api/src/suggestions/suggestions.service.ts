@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { BrainService } from '../ai/brain/brain.service';
 import { computeSuggestions, localDate, type Suggestion } from '../ai/suggestions/suggestion-rules';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import { ContentService } from '../content/content.service';
@@ -16,11 +17,12 @@ export class SuggestionsService {
   constructor(
     private readonly messaging: MessagingService,
     private readonly content: ContentService,
-    private readonly provider: AiProviderService
+    private readonly provider: AiProviderService,
+    private readonly brain: BrainService
   ) {}
 
-  /** Hook for the AngelOS brain (Step 4): a short marketing hint from summaries. */
-  protected async marketingHint(_workspaceId: string): Promise<string | null> { return null; }
+  /** AngelOS brain: a short marketing angle from summaries/counts (never message text). */
+  protected async marketingHint(user: AuthUser, workspaceId: string): Promise<string | null> { return this.brain.marketingHint(user, workspaceId); }
 
   async list(user: AuthUser, workspaceId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
@@ -47,7 +49,7 @@ export class SuggestionsService {
         hasPendingDraft: pendingThreads.has(t.id), preview: t.last_preview
       })),
       dismissedKeys: new Set((dismissals.error ? [] : dismissals.data ?? []).map((row: any) => row.suggestion_key)),
-      marketingHint: await this.marketingHint(workspaceId).catch(() => null)
+      marketingHint: await this.marketingHint(user, workspaceId).catch(() => null)
     });
     return { suggestions, dismissRemembered: !dismissals.error };
   }
@@ -109,7 +111,7 @@ export class SuggestionsService {
       supabase.from('workspaces').select('name').eq('id', workspaceId).maybeSingle(),
       supabase.from('content_posts').select('title').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(5)
     ]);
-    const hint = await this.marketingHint(workspaceId).catch(() => null);
+    const hint = await this.marketingHint(user, workspaceId).catch(() => null);
     const response = await this.provider.generate({
       instructions: [
         'POST_CAPTION_DRAFT', 'language=en', `angle=${hint ?? 'healed results and booking'}`,

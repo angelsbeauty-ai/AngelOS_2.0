@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, InternalServerError
 import type { AuthUser } from '../../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../../config/supabase';
 import { AiProviderService } from '../ai-provider.service';
+import { BrainService } from '../brain/brain.service';
 import type { ApproveSuggestedReplyDto, UpdateReplyStyleDto } from '../dto/update-reply-style.dto';
 import { analyzeStyle, buildReplyStyleContext, findRepeatedReplies, similarity, type ReplySample } from './style-analyzer';
 
@@ -19,7 +20,7 @@ const MIGRATION = '0016_v1_ai_reply_style.sql';
 export class StyleLearningService {
   private readonly logger = new Logger('StyleLearning');
   private readonly running = new Set<string>();
-  constructor(private readonly provider: AiProviderService) {}
+  constructor(private readonly provider: AiProviderService, private readonly brain: BrainService) {}
 
   async getStyle(user: AuthUser, workspaceId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
@@ -46,6 +47,7 @@ export class StyleLearningService {
       if (missing(error)) throw new ConflictException(`This needs the database update ${MIGRATION} (waiting for Angel's yes). Nothing was changed.`);
       throw new InternalServerErrorException(error.message);
     }
+    this.brain.rememberPreferences(workspaceId, { reply_tone: dto.replyTone, emoji_level: dto.emojiLevel, reply_length: dto.replyLength, learn_from_replies: dto.learnFromReplies });
     return data;
   }
 

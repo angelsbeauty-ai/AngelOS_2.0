@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-nati
 import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { Pill, ScreenTitle, SupportText, ui } from '../src/components/ui';
-import { createStudentDiscount, getFounderOverview, listFeatureFlags, listFounderWorkspaces, updateFeatureFlag } from '../src/lib/founder';
+import { createStudentDiscount, getBrainAggregates, getFounderOverview, type BrainAggregateTopic, listFeatureFlags, listFounderWorkspaces, updateFeatureFlag } from '../src/lib/founder';
 import { createBetaInvite, getFounderBetaOverview, listBetaFeedback, listBetaInvites, revokeBetaInvite, revokeBetaTester, type BetaOverview } from '../src/lib/beta';
 
 export default function FounderAdminScreen() {
@@ -13,6 +13,7 @@ export default function FounderAdminScreen() {
   const [flags, setFlags] = useState<any[]>([]);
   const [invites, setInvites] = useState<any[]>([]);
   const [feedback, setFeedback] = useState<any[]>([]);
+  const [brain, setBrain] = useState<{ topics: BrainAggregateTopic[]; needsMigration: string | null } | null>(null);
   const [email, setEmail] = useState('');
   const [inviteLabel, setInviteLabel] = useState('');
   const [inviteRegion, setInviteRegion] = useState('');
@@ -24,6 +25,7 @@ export default function FounderAdminScreen() {
     try {
       const [o,b,w,f,i,fb] = await Promise.all([getFounderOverview(), getFounderBetaOverview(), listFounderWorkspaces(), listFeatureFlags(), listBetaInvites(), listBetaFeedback()]);
       setOverview(o); setBeta(b); setWorkspaces(w); setFlags(f); setInvites(i); setFeedback(fb);
+      setBrain(await getBrainAggregates().catch(() => null));
     } catch (error) { void dialog.notify('Founder Admin unavailable', error instanceof Error ? error.message : 'Unknown error'); }
   }
   async function toggleFlag(flag:any, enabled:boolean) { try { await updateFeatureFlag(flag.key,{ enabled, stage: enabled && ['off','paused'].includes(flag.stage) ? 'beta' : flag.stage }); await load(); } catch (error) { void dialog.notify('Could not update feature', error instanceof Error ? error.message : 'Unknown error'); } }
@@ -64,6 +66,7 @@ export default function FounderAdminScreen() {
     <View style={styles.card}><Text style={styles.section}>Private beta feedback</Text><Text style={styles.subtle}>{feedback.length} recent feedback item{feedback.length===1?'':'s'}. Quote permission is separate from ordinary feedback.</Text>{feedback.slice(0,6).map((item)=><View key={item.id} style={styles.item}><View style={{flex:1}}><Text style={styles.bold}>{humanize(item.category)} · {item.rating ? `${item.rating}/5` : 'no rating'}</Text><Text numberOfLines={3}>{item.message}</Text><Text style={styles.subtle}>{item.permission_to_quote?'Public quote allowed':'Private only'} · {item.status}</Text></View></View>)}</View>
 
     <View style={styles.card}><Text style={styles.section}>Usage · last 30 days</Text><Text>{overview?.usage30d?.activeWorkspaces ?? 0} active workspaces · {overview?.usage30d?.events ?? 0} privacy-safe usage events</Text>{overview?.usage30d?.topScreens?.slice(0,5).map((row:any)=><View style={styles.row} key={row.screen}><Text style={{flex:1}}>{row.screen}</Text><Text>{row.views} views</Text></View>)}</View>
+    <View style={styles.card}><Text style={styles.section}>AngelOS brain · anonymised</Text><Text style={styles.subtle}>What studios and their clients ask for most, as counts only (last 90 days). No studio names, people, emails or message text.</Text>{brain?.needsMigration?<Text style={styles.subtle}>Starts after database update {brain.needsMigration}.</Text>:null}{brain && !brain.needsMigration && brain.topics.length===0?<Text style={styles.subtle}>No data yet.</Text>:null}{(['client_request','owner_request','owner_preference'] as const).map((kind)=>{const rows=(brain?.topics??[]).filter((t)=>t.kind===kind).slice(0,6); if(!rows.length)return null; return <View key={kind} style={{gap:4}}><Text style={styles.bold}>{kind==='client_request'?'Clients ask about':kind==='owner_request'?'Owners ask AngelOS for':'Owners prefer'}</Text>{rows.map((row)=><View style={styles.row} key={row.topic}><Text style={{flex:1}}>{row.label}</Text><Text>{row.workspaces} studio{row.workspaces===1?'':'s'} · {row.requests}×</Text></View>)}</View>;})}</View>
     <View style={[styles.card,styles.premium]}><Pill tone="warning">Approval Required</Pill><Text style={styles.section}>Platform feature controls</Text><Text style={styles.subtle}>A rollout never becomes public automatically. Every stage remains Founder-controlled and reversible.</Text>{flags.map((flag)=><View key={flag.key} style={styles.flag}><View style={{flex:1}}><Text style={styles.bold}>{flag.name}</Text><Text style={styles.subtle}>{flag.description} · {flag.stage}</Text></View><Switch value={flag.enabled && !['off','paused'].includes(flag.stage)} trackColor={{false:ui.colors.border,true:ui.colors.softGold}} thumbColor={flag.enabled?ui.colors.gold:ui.colors.secondaryText} onValueChange={(value)=>void toggleFlag(flag,value)}/></View>)}</View>
     <View style={styles.card}><Text style={styles.section}>Student discount</Text><Text style={styles.subtle}>Create a one-time private 20% token for a verified Angels Beauty student/alumnus.</Text><TextInput style={styles.input} value={email} onChangeText={setEmail} placeholder="Student email (optional)" autoCapitalize="none"/><Pressable style={styles.button} onPress={()=>void makeStudentDiscount()}><Text style={styles.buttonText}>Create private discount token</Text></Pressable>{lastToken ? <View style={styles.token}><Text style={styles.bold}>Share this token once:</Text><Text selectable>{lastToken}</Text></View> : null}</View>
     <View style={styles.card}><Text style={styles.section}>Recent workspaces</Text>{workspaces.slice(0,10).map((workspace)=><View key={workspace.id} style={styles.item}><Text style={styles.bold}>{workspace.name}</Text><Text style={styles.subtle}>{workspace.subscription?.status ?? 'unknown'} · {workspace.attentionCount} open attention item{workspace.attentionCount===1?'':'s'}</Text></View>)}</View>
