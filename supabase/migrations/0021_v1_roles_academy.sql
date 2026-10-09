@@ -29,7 +29,7 @@ begin
   end loop;
 end $$;
 
-create table if not exists public.academy_courses (
+create table if not exists public.lms_courses (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references public.workspaces(id) on delete cascade,
   title text not null check (char_length(title) between 1 and 160),
@@ -42,7 +42,7 @@ create table if not exists public.academy_courses (
   updated_at timestamptz not null default now(),
   unique (id, workspace_id)
 );
-create table if not exists public.academy_lessons (
+create table if not exists public.lms_lessons (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null,
   course_id uuid not null,
@@ -54,19 +54,19 @@ create table if not exists public.academy_lessons (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (id, workspace_id),
-  foreign key (course_id, workspace_id) references public.academy_courses(id, workspace_id) on delete cascade
+  foreign key (course_id, workspace_id) references public.lms_courses(id, workspace_id) on delete cascade
 );
-create index if not exists academy_lessons_course_idx on public.academy_lessons(course_id, position);
-create table if not exists public.academy_enrollments (
+create index if not exists lms_lessons_course_idx on public.lms_lessons(course_id, position);
+create table if not exists public.lms_enrollments (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null,
   course_id uuid not null,
   user_id uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
   unique (course_id, user_id),
-  foreign key (course_id, workspace_id) references public.academy_courses(id, workspace_id) on delete cascade
+  foreign key (course_id, workspace_id) references public.lms_courses(id, workspace_id) on delete cascade
 );
-create table if not exists public.academy_progress (
+create table if not exists public.lms_progress (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null,
   lesson_id uuid not null,
@@ -75,9 +75,9 @@ create table if not exists public.academy_progress (
   done_at timestamptz,
   updated_at timestamptz not null default now(),
   unique (lesson_id, user_id),
-  foreign key (lesson_id, workspace_id) references public.academy_lessons(id, workspace_id) on delete cascade
+  foreign key (lesson_id, workspace_id) references public.lms_lessons(id, workspace_id) on delete cascade
 );
-create table if not exists public.academy_submissions (
+create table if not exists public.lms_submissions (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null,
   lesson_id uuid not null,
@@ -89,28 +89,28 @@ create table if not exists public.academy_submissions (
   reviewed_by uuid references auth.users(id) on delete set null,
   reviewed_at timestamptz,
   created_at timestamptz not null default now(),
-  foreign key (lesson_id, workspace_id) references public.academy_lessons(id, workspace_id) on delete cascade
+  foreign key (lesson_id, workspace_id) references public.lms_lessons(id, workspace_id) on delete cascade
 );
-create index if not exists academy_submissions_status_idx on public.academy_submissions(workspace_id, status, created_at desc);
+create index if not exists lms_submissions_status_idx on public.lms_submissions(workspace_id, status, created_at desc);
 
-alter table public.academy_courses enable row level security;
-alter table public.academy_lessons enable row level security;
-alter table public.academy_enrollments enable row level security;
-alter table public.academy_progress enable row level security;
-alter table public.academy_submissions enable row level security;
+alter table public.lms_courses enable row level security;
+alter table public.lms_lessons enable row level security;
+alter table public.lms_enrollments enable row level security;
+alter table public.lms_progress enable row level security;
+alter table public.lms_submissions enable row level security;
 
 -- Owners manage everything in their workspace; students read published courses they are enrolled in and their own rows.
-create policy academy_courses_owner on public.academy_courses for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
-create policy academy_courses_student on public.academy_courses for select to authenticated using (published and exists (select 1 from public.academy_enrollments e where e.course_id = academy_courses.id and e.user_id = auth.uid()));
-create policy academy_lessons_owner on public.academy_lessons for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
-create policy academy_lessons_student on public.academy_lessons for select to authenticated using (exists (select 1 from public.academy_enrollments e join public.academy_courses c on c.id = e.course_id where e.course_id = academy_lessons.course_id and e.user_id = auth.uid() and c.published));
-create policy academy_enrollments_owner on public.academy_enrollments for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
-create policy academy_enrollments_self on public.academy_enrollments for select to authenticated using (user_id = auth.uid());
-create policy academy_progress_owner on public.academy_progress for select to authenticated using (public.is_workspace_owner(workspace_id));
-create policy academy_progress_self on public.academy_progress for all to authenticated using (user_id = auth.uid() and public.is_workspace_member(workspace_id)) with check (user_id = auth.uid() and public.is_workspace_member(workspace_id));
-create policy academy_submissions_owner on public.academy_submissions for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
-create policy academy_submissions_self_read on public.academy_submissions for select to authenticated using (user_id = auth.uid());
-create policy academy_submissions_self_insert on public.academy_submissions for insert to authenticated with check (user_id = auth.uid() and status = 'pending' and public.is_workspace_member(workspace_id));
+create policy lms_courses_owner on public.lms_courses for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
+create policy lms_courses_student on public.lms_courses for select to authenticated using (published and exists (select 1 from public.lms_enrollments e where e.course_id = lms_courses.id and e.user_id = auth.uid()));
+create policy lms_lessons_owner on public.lms_lessons for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
+create policy lms_lessons_student on public.lms_lessons for select to authenticated using (exists (select 1 from public.lms_enrollments e join public.lms_courses c on c.id = e.course_id where e.course_id = lms_lessons.course_id and e.user_id = auth.uid() and c.published));
+create policy lms_enrollments_owner on public.lms_enrollments for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
+create policy lms_enrollments_self on public.lms_enrollments for select to authenticated using (user_id = auth.uid());
+create policy lms_progress_owner on public.lms_progress for select to authenticated using (public.is_workspace_owner(workspace_id));
+create policy lms_progress_self on public.lms_progress for all to authenticated using (user_id = auth.uid() and public.is_workspace_member(workspace_id)) with check (user_id = auth.uid() and public.is_workspace_member(workspace_id));
+create policy lms_submissions_owner on public.lms_submissions for all to authenticated using (public.is_workspace_owner(workspace_id)) with check (public.is_workspace_owner(workspace_id));
+create policy lms_submissions_self_read on public.lms_submissions for select to authenticated using (user_id = auth.uid());
+create policy lms_submissions_self_insert on public.lms_submissions for insert to authenticated with check (user_id = auth.uid() and status = 'pending' and public.is_workspace_member(workspace_id));
 
 -- Practice photos: private bucket; the API uploads and hands out short signed links.
 insert into storage.buckets (id, name, public) values ('academy-submissions', 'academy-submissions', false) on conflict (id) do nothing;

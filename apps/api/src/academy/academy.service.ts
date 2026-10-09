@@ -28,13 +28,13 @@ export class AcademyService {
   async listCourses(user: AuthUser, workspaceId: string) {
     const role = await this.role(user, workspaceId);
     const db = this.db(user);
-    const courses = await db.from('academy_courses').select('id,title,description,published,position,created_at').eq('workspace_id', workspaceId).order('position').order('created_at');
+    const courses = await db.from('lms_courses').select('id,title,description,published,position,created_at').eq('workspace_id', workspaceId).order('position').order('created_at');
     if (courses.error) this.fail(courses.error);
     const ids = (courses.data ?? []).map((c: any) => c.id);
     const [lessons, progress, enrollments] = await Promise.all([
-      ids.length ? db.from('academy_lessons').select('id,course_id').in('course_id', ids) : Promise.resolve({ data: [] as any[] }),
-      db.from('academy_progress').select('lesson_id,user_id,done_at').eq('workspace_id', workspaceId).not('done_at', 'is', null),
-      ids.length ? db.from('academy_enrollments').select('course_id,user_id').in('course_id', ids) : Promise.resolve({ data: [] as any[] })
+      ids.length ? db.from('lms_lessons').select('id,course_id').in('course_id', ids) : Promise.resolve({ data: [] as any[] }),
+      db.from('lms_progress').select('lesson_id,user_id,done_at').eq('workspace_id', workspaceId).not('done_at', 'is', null),
+      ids.length ? db.from('lms_enrollments').select('course_id,user_id').in('course_id', ids) : Promise.resolve({ data: [] as any[] })
     ]);
     return {
       role,
@@ -49,7 +49,7 @@ export class AcademyService {
   async createCourse(user: AuthUser, workspaceId: string, dto: CourseDto) {
     await this.owner(user, workspaceId);
     if (!dto.title?.trim()) throw new BadRequestException('Give the course a title.');
-    const { data, error } = await this.db(user).from('academy_courses').insert({ workspace_id: workspaceId, title: dto.title.trim(), description: dto.description?.trim() || null, published: Boolean(dto.published), created_by: user.id }).select('*').single();
+    const { data, error } = await this.db(user).from('lms_courses').insert({ workspace_id: workspaceId, title: dto.title.trim(), description: dto.description?.trim() || null, published: Boolean(dto.published), created_by: user.id }).select('*').single();
     if (error) this.fail(error);
     return data;
   }
@@ -60,7 +60,7 @@ export class AcademyService {
     if (dto.title !== undefined) patch.title = dto.title.trim();
     if (dto.description !== undefined) patch.description = dto.description?.trim() || null;
     if (dto.published !== undefined) patch.published = dto.published;
-    const { data, error } = await this.db(user).from('academy_courses').update(patch).eq('workspace_id', workspaceId).eq('id', courseId).select('*').maybeSingle();
+    const { data, error } = await this.db(user).from('lms_courses').update(patch).eq('workspace_id', workspaceId).eq('id', courseId).select('*').maybeSingle();
     if (error) this.fail(error);
     if (!data) throw new NotFoundException('Course not found');
     return data;
@@ -68,7 +68,7 @@ export class AcademyService {
 
   async deleteCourse(user: AuthUser, workspaceId: string, courseId: string) {
     await this.owner(user, workspaceId);
-    const { error } = await this.db(user).from('academy_courses').delete().eq('workspace_id', workspaceId).eq('id', courseId);
+    const { error } = await this.db(user).from('lms_courses').delete().eq('workspace_id', workspaceId).eq('id', courseId);
     if (error) this.fail(error);
     return { deleted: true };
   }
@@ -77,9 +77,9 @@ export class AcademyService {
     const role = await this.role(user, workspaceId);
     const db = this.db(user);
     const [course, lessons, progress] = await Promise.all([
-      db.from('academy_courses').select('*').eq('workspace_id', workspaceId).eq('id', courseId).maybeSingle(),
-      db.from('academy_lessons').select('id,title,position,video_url,checklist').eq('workspace_id', workspaceId).eq('course_id', courseId).order('position'),
-      db.from('academy_progress').select('lesson_id,done_at').eq('workspace_id', workspaceId).eq('user_id', user.id)
+      db.from('lms_courses').select('*').eq('workspace_id', workspaceId).eq('id', courseId).maybeSingle(),
+      db.from('lms_lessons').select('id,title,position,video_url,checklist').eq('workspace_id', workspaceId).eq('course_id', courseId).order('position'),
+      db.from('lms_progress').select('lesson_id,done_at').eq('workspace_id', workspaceId).eq('user_id', user.id)
     ]);
     if (course.error) this.fail(course.error);
     if (!course.data) throw new NotFoundException('Course not found');
@@ -92,8 +92,8 @@ export class AcademyService {
     await this.owner(user, workspaceId);
     if (!dto.title?.trim()) throw new BadRequestException('Give the lesson a title.');
     const db = this.db(user);
-    const { data: last } = await db.from('academy_lessons').select('position').eq('course_id', courseId).order('position', { ascending: false }).limit(1);
-    const { data, error } = await db.from('academy_lessons').insert({ workspace_id: workspaceId, course_id: courseId, title: dto.title.trim(), body: dto.body ?? null, video_url: dto.videoUrl || null, checklist: sanitizeChecklist(dto.checklist), position: ((last ?? [])[0]?.position ?? -1) + 1 }).select('*').single();
+    const { data: last } = await db.from('lms_lessons').select('position').eq('course_id', courseId).order('position', { ascending: false }).limit(1);
+    const { data, error } = await db.from('lms_lessons').insert({ workspace_id: workspaceId, course_id: courseId, title: dto.title.trim(), body: dto.body ?? null, video_url: dto.videoUrl || null, checklist: sanitizeChecklist(dto.checklist), position: ((last ?? [])[0]?.position ?? -1) + 1 }).select('*').single();
     if (error) this.fail(error);
     return data;
   }
@@ -105,7 +105,7 @@ export class AcademyService {
     if (dto.body !== undefined) patch.body = dto.body;
     if (dto.videoUrl !== undefined) patch.video_url = dto.videoUrl || null;
     if (dto.checklist !== undefined) patch.checklist = sanitizeChecklist(dto.checklist);
-    const { data, error } = await this.db(user).from('academy_lessons').update(patch).eq('workspace_id', workspaceId).eq('id', lessonId).select('*').maybeSingle();
+    const { data, error } = await this.db(user).from('lms_lessons').update(patch).eq('workspace_id', workspaceId).eq('id', lessonId).select('*').maybeSingle();
     if (error) this.fail(error);
     if (!data) throw new NotFoundException('Lesson not found');
     return data;
@@ -113,7 +113,7 @@ export class AcademyService {
 
   async deleteLesson(user: AuthUser, workspaceId: string, lessonId: string) {
     await this.owner(user, workspaceId);
-    const { error } = await this.db(user).from('academy_lessons').delete().eq('workspace_id', workspaceId).eq('id', lessonId);
+    const { error } = await this.db(user).from('lms_lessons').delete().eq('workspace_id', workspaceId).eq('id', lessonId);
     if (error) this.fail(error);
     return { deleted: true };
   }
@@ -121,11 +121,11 @@ export class AcademyService {
   async reorder(user: AuthUser, workspaceId: string, courseId: string, lessonIds: string[]) {
     await this.owner(user, workspaceId);
     const db = this.db(user);
-    const { data, error } = await db.from('academy_lessons').select('id').eq('workspace_id', workspaceId).eq('course_id', courseId);
+    const { data, error } = await db.from('lms_lessons').select('id').eq('workspace_id', workspaceId).eq('course_id', courseId);
     if (error) this.fail(error);
     if (!validReorder((data ?? []).map((l: any) => l.id), lessonIds)) throw new BadRequestException('The lesson list changed. Reload and try again.');
     for (const [position, id] of lessonIds.entries()) {
-      const res = await db.from('academy_lessons').update({ position }).eq('workspace_id', workspaceId).eq('id', id);
+      const res = await db.from('lms_lessons').update({ position }).eq('workspace_id', workspaceId).eq('id', id);
       if (res.error) this.fail(res.error);
     }
     return { reordered: true };
@@ -138,10 +138,10 @@ export class AcademyService {
     if (error) this.fail(error);
     const db = this.db(user);
     const [courses, lessons, enrollments, progress] = await Promise.all([
-      db.from('academy_courses').select('id,title').eq('workspace_id', workspaceId),
-      db.from('academy_lessons').select('id,course_id').eq('workspace_id', workspaceId),
-      db.from('academy_enrollments').select('course_id,user_id').eq('workspace_id', workspaceId),
-      db.from('academy_progress').select('lesson_id,user_id,done_at').eq('workspace_id', workspaceId).not('done_at', 'is', null)
+      db.from('lms_courses').select('id,title').eq('workspace_id', workspaceId),
+      db.from('lms_lessons').select('id,course_id').eq('workspace_id', workspaceId),
+      db.from('lms_enrollments').select('course_id,user_id').eq('workspace_id', workspaceId),
+      db.from('lms_progress').select('lesson_id,user_id,done_at').eq('workspace_id', workspaceId).not('done_at', 'is', null)
     ]);
     if (courses.error) this.fail(courses.error);
     const out = [];
@@ -164,14 +164,14 @@ export class AcademyService {
     await this.owner(user, workspaceId);
     const db = this.db(user);
     if (remove) {
-      const { error } = await db.from('academy_enrollments').delete().eq('workspace_id', workspaceId).eq('course_id', courseId).eq('user_id', studentId);
+      const { error } = await db.from('lms_enrollments').delete().eq('workspace_id', workspaceId).eq('course_id', courseId).eq('user_id', studentId);
       if (error) this.fail(error);
       return { enrolled: false };
     }
     const service = createServiceSupabaseClient();
     const { data: member } = await service.from('workspace_memberships').select('role').eq('workspace_id', workspaceId).eq('user_id', studentId).maybeSingle();
     if (member?.role !== 'student') throw new BadRequestException('This person is not a student in your studio yet. Send them a student invite first.');
-    const { error } = await db.from('academy_enrollments').upsert({ workspace_id: workspaceId, course_id: courseId, user_id: studentId }, { onConflict: 'course_id,user_id' });
+    const { error } = await db.from('lms_enrollments').upsert({ workspace_id: workspaceId, course_id: courseId, user_id: studentId }, { onConflict: 'course_id,user_id' });
     if (error) this.fail(error);
     return { enrolled: true };
   }
@@ -188,7 +188,7 @@ export class AcademyService {
 
   async submissions(user: AuthUser, workspaceId: string, status = 'pending') {
     await this.owner(user, workspaceId);
-    const { data, error } = await this.db(user).from('academy_submissions').select('id,lesson_id,user_id,photo_path,note,status,feedback,created_at,lesson:academy_lessons(title)').eq('workspace_id', workspaceId).eq('status', status === 'all' ? 'pending' : status).order('created_at', { ascending: false }).limit(50);
+    const { data, error } = await this.db(user).from('lms_submissions').select('id,lesson_id,user_id,photo_path,note,status,feedback,created_at,lesson:lms_lessons(title)').eq('workspace_id', workspaceId).eq('status', status === 'all' ? 'pending' : status).order('created_at', { ascending: false }).limit(50);
     if (error) this.fail(error);
     return Promise.all((data ?? []).map((s: any) => this.withPhoto(s)));
   }
@@ -196,7 +196,7 @@ export class AcademyService {
   async review(user: AuthUser, workspaceId: string, submissionId: string, dto: ReviewDto) {
     await this.owner(user, workspaceId);
     if (dto.status === 'try_again' && !dto.feedback?.trim()) throw new BadRequestException('Add a short comment so the student knows what to change.');
-    const { data, error } = await this.db(user).from('academy_submissions').update({ status: dto.status, feedback: dto.feedback?.trim() || null, reviewed_by: user.id, reviewed_at: new Date().toISOString() }).eq('workspace_id', workspaceId).eq('id', submissionId).eq('status', 'pending').select('id,status').maybeSingle();
+    const { data, error } = await this.db(user).from('lms_submissions').update({ status: dto.status, feedback: dto.feedback?.trim() || null, reviewed_by: user.id, reviewed_at: new Date().toISOString() }).eq('workspace_id', workspaceId).eq('id', submissionId).eq('status', 'pending').select('id,status').maybeSingle();
     if (error) this.fail(error);
     if (!data) throw new ConflictException('This submission was already reviewed.');
     return data;
@@ -206,9 +206,9 @@ export class AcademyService {
   async getLesson(user: AuthUser, workspaceId: string, lessonId: string) {
     const db = this.db(user);
     const [lesson, progress, subs] = await Promise.all([
-      db.from('academy_lessons').select('*').eq('workspace_id', workspaceId).eq('id', lessonId).maybeSingle(),
-      db.from('academy_progress').select('checklist_done,done_at').eq('lesson_id', lessonId).eq('user_id', user.id).maybeSingle(),
-      db.from('academy_submissions').select('id,photo_path,note,status,feedback,created_at').eq('lesson_id', lessonId).eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
+      db.from('lms_lessons').select('*').eq('workspace_id', workspaceId).eq('id', lessonId).maybeSingle(),
+      db.from('lms_progress').select('checklist_done,done_at').eq('lesson_id', lessonId).eq('user_id', user.id).maybeSingle(),
+      db.from('lms_submissions').select('id,photo_path,note,status,feedback,created_at').eq('lesson_id', lessonId).eq('user_id', user.id).order('created_at', { ascending: false }).limit(10)
     ]);
     if (lesson.error) this.fail(lesson.error);
     if (!lesson.data) throw new NotFoundException('Lesson not found');
@@ -217,13 +217,13 @@ export class AcademyService {
 
   async saveProgress(user: AuthUser, workspaceId: string, lessonId: string, dto: ProgressDto) {
     const db = this.db(user);
-    const { data: lesson } = await db.from('academy_lessons').select('id,checklist').eq('workspace_id', workspaceId).eq('id', lessonId).maybeSingle();
+    const { data: lesson } = await db.from('lms_lessons').select('id,checklist').eq('workspace_id', workspaceId).eq('id', lessonId).maybeSingle();
     if (!lesson) throw new NotFoundException('Lesson not found');
     const max = Array.isArray(lesson.checklist) ? lesson.checklist.length : 0;
     const row: Record<string, unknown> = { workspace_id: workspaceId, lesson_id: lessonId, user_id: user.id, updated_at: new Date().toISOString() };
     if (dto.checklistDone) row.checklist_done = Array.from(new Set(dto.checklistDone.filter((i) => i >= 0 && i < max)));
     if (dto.done !== undefined) row.done_at = dto.done ? new Date().toISOString() : null;
-    const { data, error } = await db.from('academy_progress').upsert(row, { onConflict: 'lesson_id,user_id' }).select('checklist_done,done_at').single();
+    const { data, error } = await db.from('lms_progress').upsert(row, { onConflict: 'lesson_id,user_id' }).select('checklist_done,done_at').single();
     if (error) this.fail(error);
     return data;
   }
@@ -231,7 +231,7 @@ export class AcademyService {
   async submit(user: AuthUser, workspaceId: string, lessonId: string, dto: SubmissionDto) {
     if (!dto.photoBase64 && !dto.note?.trim()) throw new BadRequestException('Add a photo or a note.');
     const db = this.db(user);
-    const { data: lesson } = await db.from('academy_lessons').select('id').eq('workspace_id', workspaceId).eq('id', lessonId).maybeSingle();
+    const { data: lesson } = await db.from('lms_lessons').select('id').eq('workspace_id', workspaceId).eq('id', lessonId).maybeSingle();
     if (!lesson) throw new NotFoundException('Lesson not found');
     let photoPath: string | null = null;
     if (dto.photoBase64) {
@@ -241,7 +241,7 @@ export class AcademyService {
       const up = await createServiceSupabaseClient().storage.from(BUCKET).upload(photoPath, photo.buffer, { contentType: photo.contentType, upsert: false });
       if (up.error) throw new ConflictException(/not found/i.test(up.error.message) ? `Photo upload needs the database update ${MIGRATION} (waiting for Angel's yes).` : 'The photo could not be uploaded. Please try again.');
     }
-    const { data, error } = await db.from('academy_submissions').insert({ workspace_id: workspaceId, lesson_id: lessonId, user_id: user.id, photo_path: photoPath, note: dto.note?.trim() || null }).select('id,status,created_at').single();
+    const { data, error } = await db.from('lms_submissions').insert({ workspace_id: workspaceId, lesson_id: lessonId, user_id: user.id, photo_path: photoPath, note: dto.note?.trim() || null }).select('id,status,created_at').single();
     if (error) this.fail(error);
     return data;
   }
