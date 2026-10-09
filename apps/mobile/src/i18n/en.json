@@ -249,7 +249,23 @@
   "save": "Save",
   "linkExpired": "This link has expired. Ask for a new one.",
   "min8": "Use at least 8 characters",
-  "noMatch": "Passwords don’t match"
+  "noMatch": "Passwords don’t match",
+  "loginTitle": "Welcome back",
+  "loginSub": "Log in to AngelOS",
+  "logIn": "Log in",
+  "showPw": "Show",
+  "tagline": "Permanent makeup & academy",
+  "signupTitle": "Create your account",
+  "signupSub": "Start with your email. Your invite and business setup come next.",
+  "confirmPassword": "Confirm password",
+  "haveAccount": "Already have an account? Log in",
+  "newHereLink": "New here? Create an account",
+  "fillBoth": "Enter your email and a password (8+ characters).",
+  "verifying": "Checking your link…",
+  "resetOk": "Password updated",
+  "resetOkMsg": "You're signed in with your new password.",
+  "requestNew": "Ask for a new link",
+  "emailInvalid": "Enter a valid email address."
  },
  "nav": {
   "login": "Sign in",
@@ -615,5 +631,11 @@
   "academy": "Academy",
   "settingsBack": "Settings",
   "back": "Back"
+ },
+ "nav3": {
+  "notFound": "Page not found",
+  "notFoundMsg": "The page you're looking for doesn't exist.",
+  "home": "Go home",
+  "signup": "Create account"
  }
 }

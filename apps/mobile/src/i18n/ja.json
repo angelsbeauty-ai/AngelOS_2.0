@@ -249,7 +249,23 @@
   "save": "保存",
   "linkExpired": "このリンクは期限切れです。もう一度リンクを送ってください。",
   "min8": "8文字以上にしてください",
-  "noMatch": "パスワードが一致しません"
+  "noMatch": "パスワードが一致しません",
+  "loginTitle": "おかえりなさい",
+  "loginSub": "AngelOSにログイン",
+  "logIn": "ログイン",
+  "showPw": "表示",
+  "tagline": "パーマネントメイク＆アカデミー",
+  "signupTitle": "アカウントを作成",
+  "signupSub": "まずはメールアドレスから。招待コードとビジネス設定はこのあとです。",
+  "confirmPassword": "パスワード（確認）",
+  "haveAccount": "アカウントをお持ちの方はログイン",
+  "newHereLink": "はじめての方はアカウント作成",
+  "fillBoth": "メールアドレスと8文字以上のパスワードを入力してね。",
+  "verifying": "リンクを確認中…",
+  "resetOk": "パスワードを更新しました",
+  "resetOkMsg": "新しいパスワードでログインしました。",
+  "requestNew": "新しいリンクをもらう",
+  "emailInvalid": "正しいメールアドレスを入力してください。"
  },
  "nav": {
   "login": "ログイン",
@@ -615,5 +631,11 @@
   "academy": "アカデミー",
   "settingsBack": "設定",
   "back": "戻る"
+ },
+ "nav3": {
+  "notFound": "ページが見つかりません",
+  "notFoundMsg": "お探しのページは存在しません。",
+  "home": "ホームへ",
+  "signup": "アカウント作成"
  }
 }
