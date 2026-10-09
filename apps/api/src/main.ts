@@ -1,12 +1,15 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { validateRuntimeEnvironment } from './config/env';
 
 async function bootstrap() {
   const runtime = validateRuntimeEnvironment();
   // rawBody: needed to verify webhook signatures (LINE x-line-signature) over the exact bytes received.
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
+  // Academy practice photos are sent as base64 (max 5 MB image); everything else stays small.
+  app.useBodyParser('json', { limit: '8mb' });
   const express = app.getHttpAdapter().getInstance();
 
   express.disable('x-powered-by');

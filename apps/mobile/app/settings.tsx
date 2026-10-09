@@ -1,3 +1,4 @@
+import { clearMe } from '../src/lib/me';
 import { Link, router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -50,6 +51,7 @@ export default function SettingsScreen() {
       confirmText: 'Sign out',
     });
     if (doSignOut) {
+      clearMe();
       await supabase.auth.signOut();
       router.replace('/login');
     }

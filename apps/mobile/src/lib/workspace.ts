@@ -7,6 +7,7 @@ export interface WorkspaceSummary {
   timezone: string;
   currency: string;
   locale: string;
+  role?: 'owner' | 'student';
 }
 
 export async function getActiveWorkspace(): Promise<WorkspaceSummary> {

@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { createHash, randomBytes } from 'crypto';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
@@ -14,7 +14,7 @@ type AttentionOverviewRow = { severity: string; status: string };
 
 @Injectable()
 export class BetaService {
-  private async isFounder(userId: string) {
+  async isFounder(userId: string) {
     const envFounders = String(process.env.FOUNDER_USER_IDS ?? '').split(',').map((v) => v.trim()).filter(Boolean);
     const service = createServiceSupabaseClient();
     if (envFounders.includes(userId)) {
@@ -47,6 +47,9 @@ export class BetaService {
   async redeem(user: AuthUser, dto: RedeemBetaInviteDto) {
     const tokenHash = createHash('sha256').update(dto.token.trim()).digest('hex');
     const service = createServiceSupabaseClient();
+    // B10: student invites also add the person to that studio as a student (needs migration 0021).
+    const typed = await service.from('beta_invites').select('invite_type,workspace_id').eq('token_hash', tokenHash).maybeSingle();
+    const studentWorkspace = !typed.error && typed.data?.invite_type === 'student' ? (typed.data.workspace_id as string | null) : null;
     const { data, error } = await service.rpc('redeem_beta_invite', { p_token_hash: tokenHash, p_user_id: user.id, p_user_email: user.email ?? '' });
     if (error) {
       const message = String(error.message ?? '');
@@ -54,6 +57,14 @@ export class BetaService {
       if (message.includes('beta_invite_email_mismatch')) throw new ForbiddenException('This beta invite was approved for a different email address.');
       if (message.includes('invalid_beta_invite')) throw new NotFoundException('Beta invite is invalid, revoked, or already used.');
       throw new InternalServerErrorException(error.message);
+    }
+    if (studentWorkspace) {
+      const existing = await service.from('workspace_memberships').select('role').eq('workspace_id', studentWorkspace).eq('user_id', user.id).maybeSingle();
+      if (!existing.data) {
+        const added = await service.from('workspace_memberships').insert({ workspace_id: studentWorkspace, user_id: user.id, role: 'student' });
+        if (added.error) throw new InternalServerErrorException(added.error.message);
+      }
+      return { ...(typeof data === 'object' && data ? data : {}), role: 'student', workspaceId: studentWorkspace };
     }
     return data;
   }
@@ -78,11 +89,12 @@ export class BetaService {
   }
 
   async createInvite(user: AuthUser, dto: CreateBetaInviteDto) {
+    if (dto.inviteType === 'student' && !dto.workspaceId) throw new BadRequestException('A student invite needs the studio it is for.');
     const service = createServiceSupabaseClient();
     const rawToken = randomBytes(24).toString('base64url');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
     const expiresAt = dto.expiresInDays ? new Date(Date.now() + dto.expiresInDays * 86400000).toISOString() : null;
-    const { data, error } = await service.from('beta_invites').insert({ token_hash: tokenHash, email_hint: dto.emailHint ?? null, cohort: dto.cohort ?? 'outside', label: dto.label ?? null, region: dto.region ?? null, created_by: user.id, expires_at: expiresAt }).select('id,email_hint,cohort,label,region,expires_at,redeemed_at,revoked_at,created_at').single();
+    const { data, error } = await service.from('beta_invites').insert({ token_hash: tokenHash, email_hint: dto.emailHint ?? null, cohort: dto.cohort ?? 'outside', label: dto.label ?? null, region: dto.region ?? null, created_by: user.id, expires_at: expiresAt, ...(dto.inviteType === 'student' || dto.workspaceId ? { invite_type: dto.inviteType ?? 'business_owner', workspace_id: dto.workspaceId ?? null } : {}) }).select('id,email_hint,cohort,label,region,expires_at,redeemed_at,revoked_at,created_at').single();
     if (error) throw new InternalServerErrorException(error.message);
     return { ...data, token: rawToken };
   }

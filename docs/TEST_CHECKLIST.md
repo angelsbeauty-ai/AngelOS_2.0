@@ -4,8 +4,8 @@ Branch `feat/design-a1`. Test on laptop Chrome and iPhone Safari.
 Before testing: the database updates listed at the bottom must be approved and applied first. Until then, those screens say "needs database update".
 
 ## DONE vs LEFT (kept up to date)
-**DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule · C1 AngelOS tools with approval cards · C2 your voice used everywhere · C3 "Ask" button on every screen · Live voice (web, off until the OpenAI key is set)
-**LEFT (in order):** B9 Academy/students · B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
+**DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule · C1 AngelOS tools with approval cards · C2 your voice used everywhere · C3 "Ask" button on every screen · Live voice (web, off until the OpenAI key is set) · B9 Student role + Academy (courses, lessons, video, checklist, progress, practice photos, review, student invites)
+**LEFT (in order):** B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
 
 ---
 
@@ -89,12 +89,25 @@ Reminders (suggest only, never auto-sent)
 8. Assistant settings → "Your voice": change tone/emoji → new captions, LINE drafts and message drafts follow it.
 9. Live voice (laptop Chrome): AngelOS screen → "Talk to AngelOS" → Start talking → allow the microphone → talk → Stop. Until the OpenAI key is set on the server it says "Live voice is off". Voice is never recorded or saved and there is no transcript. iPhone app: says "works in the web app for now".
 
+## 8. Academy and students (B9)
+Owner
+1. Academy tab → "New course" → title → Create → add lessons → open a lesson → add a YouTube/Vimeo link, text, checklist (one step per line) → Save.
+2. Course → ↑ / ↓ moves lessons. Turn "Published" on (students only see published courses).
+3. Academy → Students → "Make invite link" → send the link to a test student (use a second, throwaway email).
+4. When they have joined: Students → tap a course chip under their name to add them to it.
+5. Academy → "Practice photos to review" → Approve, or write a comment and tap "Try again".
+Student (second account)
+6. Open the invite link → sign up → enter the invite → you only see Academy and Settings tabs. Typing /clients in the address bar sends you back to the Academy.
+7. Open the course → progress bar → open a lesson → watch the video → tick checklist steps → "Mark lesson done": progress goes up.
+8. "Choose photo and send" → the teacher sees it; their reply shows under the lesson (Waiting / Approved / Try again).
+
 ## Database updates waiting for Angel's yes (written, NOT applied)
 - 0015_v1_messaging_inbox.sql — saved replies; unread and archive for conversations.
 - 0016_v1_ai_reply_style.sql — your reply style settings and suggested saved replies.
 - 0017_v1_ai_suggestion_dismissals.sql — remembers "Dismiss" on suggestions for the day.
 - 0018_v1_ai_brain_summaries.sql — summaries-only memory; private per studio; anonymous counts for the founder.
 - 0019_v1_social_campaigns.sql — campaigns and saved hashtag sets.
+- 0021_v1_roles_academy.sql — student role, Academy tables, private practice-photo storage, invite types; studio data (clients, bookings, money, messages, posts…) becomes owner-only (students can't see it). Current owners see no change.
 - 0020_v1_clients_bookings_money.sql — client LINE/Instagram/birthday/archive, health forms, treatment details, deposits, service descriptions, expenses.
 
 ## Needs Angel's accounts

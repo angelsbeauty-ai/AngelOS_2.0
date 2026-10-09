@@ -35,13 +35,14 @@ export class WorkspacesService {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase
       .from('workspace_memberships')
-      .select('workspace:workspaces(id,name,business_type,timezone,currency,locale)')
+      .select('role,workspace:workspaces(id,name,business_type,timezone,currency,locale)')
       .eq('user_id', user.id);
 
     if (error) {
       throw new InternalServerErrorException(error.message);
     }
 
-    return data?.map((row: any) => row.workspace).filter(Boolean) ?? [];
+    // Owner studios first, then studios where the user is a student.
+    return (data ?? []).filter((row: any) => row.workspace).map((row: any) => ({ ...row.workspace, role: row.role === 'student' ? 'student' : 'owner' })).sort((a: any, b: any) => (a.role === b.role ? 0 : a.role === 'owner' ? -1 : 1));
   }
 }

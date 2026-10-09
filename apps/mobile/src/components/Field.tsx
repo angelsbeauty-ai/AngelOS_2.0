@@ -14,6 +14,12 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
   return <View style={styles.tabs} accessibilityRole="tablist">{options.map((o) => <Text key={o.id} accessibilityRole="tab" accessibilityState={{ selected: o.id === value }} onPress={() => onChange(o.id)} style={[styles.tab, o.id === value && styles.tabOn]}>{o.label}</Text>)}</View>;
 }
 
+/** Simple progress bar (Academy). */
+export function ProgressBar({ value }: { value: number }) {
+  return <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: value }} style={{ height: 8, borderRadius: 4, backgroundColor: ui.colors.border, overflow: 'hidden' }}><View style={{ width: `${Math.max(0, Math.min(100, value))}%`, height: 8, backgroundColor: ui.colors.gold }} /></View>;
+}
+
+
 export const fieldStyles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: ui.spacing.xs, alignItems: 'center' },
   line: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ui.spacing.sm, paddingVertical: ui.spacing.xs, borderBottomWidth: 1, borderBottomColor: ui.colors.border },

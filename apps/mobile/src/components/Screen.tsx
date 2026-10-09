@@ -1,4 +1,5 @@
-import type { PropsWithChildren } from 'react';
+import { useEffect, type PropsWithChildren } from 'react';
+import { STUDENT_ALLOWED, useRole } from '../lib/me';
 import { Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { colors, spacing, tokens } from '../design/theme';
@@ -7,7 +8,10 @@ const NO_ASK = /^\/(ai|login|onboarding|forgot-password|reset-password)(\/|$)/;
 
 export function Screen({ children, hideAsk }: PropsWithChildren<{ hideAsk?: boolean }>) {
   const pathname = usePathname() ?? '/';
-  const showAsk = !hideAsk && !NO_ASK.test(pathname);
+  const role = useRole();
+  // B9 route guard: students only reach the Academy and their own settings.
+  useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
+  const showAsk = !hideAsk && role !== 'student' && !NO_ASK.test(pathname);
   return <SafeAreaView style={styles.safe}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} /> : null}
