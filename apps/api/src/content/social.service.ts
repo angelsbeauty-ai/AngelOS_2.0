@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { StyleLearningService } from '../ai/style/style-learning.service';
 import { eveningSlot, localDate } from '../ai/suggestions/suggestion-rules';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import { LineMessagingAdapter, readLineConfig } from '../messaging/line-messaging.adapter';
@@ -21,7 +22,7 @@ const SOCIAL_SOURCES = ['instagram', 'facebook', 'line', 'tiktok'];
  */
 @Injectable()
 export class SocialService {
-  constructor(private readonly content: ContentService, private readonly provider: AiProviderService) {}
+  constructor(private readonly content: ContentService, private readonly provider: AiProviderService, private readonly style: StyleLearningService) {}
 
   private db(user: AuthUser) { return createUserSupabaseClient(user.accessToken); }
 
@@ -38,7 +39,7 @@ export class SocialService {
   }
 
   /** One model call for all captions; free templates if AI is off or the answer is unusable. */
-  private async captions(posts: PlannedPost[], studio: string, offer?: string | null): Promise<string[]> {
+  private async captions(posts: PlannedPost[], studio: string, offer?: string | null, voice = ''): Promise<string[]> {
     try {
       const response = await this.provider.generate({
         instructions: [
@@ -46,6 +47,7 @@ export class SocialService {
           `Write one Instagram caption in English for each title, for "${studio}", a permanent makeup studio.`,
           'Warm, natural, max 500 characters each, no medical claims, no invented prices or dates, soft call to book via DM or LINE, no hashtags.',
           offer ? `Mention this offer where it fits: ${offer}` : '',
+          voice,
           'Answer ONLY with a JSON array of strings, same order and length as the titles.'
         ].filter(Boolean).join('\n'),
         input: posts.map((p, i) => `${i + 1}. ${p.title} (${p.category})`).join('\n')
@@ -55,7 +57,7 @@ export class SocialService {
   }
 
   private async createDrafts(user: AuthUser, workspaceId: string, posts: PlannedPost[], timeZone: string, studio: string, offer?: string | null, campaignId?: string) {
-    const texts = await this.captions(posts, studio, offer);
+    const texts = await this.captions(posts, studio, offer, await this.style.voiceLine(user, workspaceId).catch(() => ''));
     const created: Array<{ id: string; date: string; title: string }> = [];
     for (const [i, post] of posts.entries()) {
       const draft = await this.content.createComposerDraft(user, workspaceId, {
@@ -207,7 +209,7 @@ export class SocialService {
     const ws = await this.workspace(user, workspaceId);
     const response = await this.provider.generate({
       instructions: ['LINE_BROADCAST_DRAFT', `Write one short LINE broadcast message in Japanese for "${ws.name}", a permanent makeup studio in Okinawa.`,
-        'Friendly casual salon tone (です/ます, soft, warm, 1–2 emoji like ✨🌸), no stiff keigo, no English, max 250 characters, no invented prices or dates, end with an invitation to reply on LINE.'].join('\n'),
+        'Friendly casual salon tone (です/ます, soft, warm, 1–2 emoji like ✨🌸), no stiff keigo, no English, max 250 characters, no invented prices or dates, end with an invitation to reply on LINE.', await this.style.voiceLine(user, workspaceId).catch(() => '')].join('\n'),
       input: dto.topic?.trim() || 'Bookings are open this month.'
     });
     const ja = response.text.trim().slice(0, 500);

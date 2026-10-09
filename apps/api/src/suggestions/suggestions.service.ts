@@ -3,6 +3,7 @@ import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { BrainService } from '../ai/brain/brain.service';
 import { AutomationsService } from '../automations/automations.service';
+import { StyleLearningService } from '../ai/style/style-learning.service';
 import { computeSuggestions, localDate, type Suggestion } from '../ai/suggestions/suggestion-rules';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import { ContentService } from '../content/content.service';
@@ -20,7 +21,8 @@ export class SuggestionsService {
     private readonly content: ContentService,
     private readonly provider: AiProviderService,
     private readonly brain: BrainService,
-    private readonly automations: AutomationsService
+    private readonly automations: AutomationsService,
+    private readonly style: StyleLearningService
   ) {}
 
   /** AngelOS brain: a short marketing angle from summaries/counts (never message text). */
@@ -139,6 +141,7 @@ export class SuggestionsService {
         'POST_CAPTION_DRAFT', 'language=en', `angle=${hint ?? 'healed results and booking'}`,
         `Write one Instagram caption (max 600 characters) in English for "${workspace?.name ?? 'the studio'}", a permanent makeup studio.`,
         'Warm, natural, no medical claims, no invented prices or dates. End with a soft call to book via DM or LINE. No hashtags.',
+        await this.style.voiceLine(user, workspaceId).catch(() => ''),
         recent?.length ? `Avoid repeating these recent post topics: ${recent.map((r: any) => r.title).join(' | ')}` : ''
       ].filter(Boolean).join('\n'),
       input: `Draft a post for ${suggestion.input.date}.`

@@ -4,6 +4,7 @@ import { createServiceSupabaseClient, createUserSupabaseClient } from '../../con
 import { AiProviderService } from '../ai-provider.service';
 import { BrainService } from '../brain/brain.service';
 import type { ApproveSuggestedReplyDto, UpdateReplyStyleDto } from '../dto/update-reply-style.dto';
+import { brandVoiceLine } from './brand-voice';
 import { analyzeStyle, buildReplyStyleContext, findRepeatedReplies, similarity, type ReplySample } from './style-analyzer';
 
 const STYLE_DEFAULTS = { learn_from_replies: true, reply_tone: 'casual_friendly', emoji_level: 'light', reply_length: 'short', style_notes: '', learned: {}, sample_count: 0, learned_at: null };
@@ -162,6 +163,13 @@ export class StyleLearningService {
   }
 
   /** Style + approved saved replies for reply drafts (tolerant before migrations are applied). */
+  /** C2: brand voice line for captions, broadcasts and drafts ('' when nothing is set). */
+  async voiceLine(user: AuthUser, workspaceId: string): Promise<string> {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase.from('ai_style_profiles').select('reply_tone,emoji_level,reply_length,style_notes,learned,learn_from_replies').eq('workspace_id', workspaceId).maybeSingle();
+    return error ? '' : brandVoiceLine(data as any);
+  }
+
   async replyContext(user: AuthUser, workspaceId: string, intent: string, language: 'en' | 'ja') {
     const supabase = createUserSupabaseClient(user.accessToken);
     const [styleResult, repliesResult] = await Promise.all([

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
+import { LiveVoice } from '../src/components/LiveVoice';
+import { Chip } from '../src/components/MessagingBits';
 import { Screen } from '../src/components/Screen';
 import {
   BodyText,
@@ -20,6 +22,8 @@ import {
   cancelAiAction,
   createConversation,
   getAssistantProfile,
+  listAiTools,
+  type AiTool,
   sendAiMessage,
   type AiActionProposal,
   type AiMessage,
@@ -42,6 +46,7 @@ export default function AiScreen() {
   const [composer, setComposer] = useState('');
   const [action, setAction] = useState<AiActionProposal | null>(null);
   const [busy, setBusy] = useState(true);
+  const [tools, setTools] = useState<AiTool[]>([]);
 
   useEffect(() => {
     void initialize();
@@ -56,6 +61,7 @@ export default function AiScreen() {
         createConversation(workspace.id, screenContext)
       ]);
       setAssistantName(profile.display_name);
+      void listAiTools(workspace.id).then((r) => setTools(r.tools)).catch(() => undefined);
       setConversationId(conversation.id);
       setMessages([
         {
@@ -103,7 +109,10 @@ export default function AiScreen() {
     setBusy(true);
     try {
       if (approved) {
-        await approveAiAction(workspaceId, action.id);
+        const done = await approveAiAction(workspaceId, action.id);
+        const result = done?.result ?? {};
+        if (result.threadId) setTimeout(() => router.push(`/messages/${result.threadId}` as any), 400);
+        else if (result.contentPostId) setTimeout(() => router.push(`/content/${result.contentPostId}` as any), 400);
         if (action.action_key === 'update_assistant_name') {
           const nextName = String(action.input.displayName ?? 'AngelOS');
           setAssistantName(nextName);
@@ -116,7 +125,7 @@ export default function AiScreen() {
         {
           id: `action-${Date.now()}`,
           author_type: 'system_action',
-          content: approved ? 'Approved action completed and verified.' : 'Action cancelled.',
+          content: approved ? (action.kind === 'draft' ? 'Done. The draft is ready for you to check. Nothing was sent or posted.' : 'Done and checked.') : 'Cancelled. Nothing changed.',
           metadata: { actionId: action.id },
           created_at: new Date().toISOString()
         }
@@ -143,10 +152,10 @@ export default function AiScreen() {
         </View>
       </Card>
 
+      {workspaceId ? <LiveVoice workspaceId={workspaceId} screen={screenContext.screen} /> : null}
+
       <View style={styles.shortcuts}>
-        <Pill>What needs attention?</Pill>
-        <Pill>Draft a reply</Pill>
-        <Pill>Prepare content</Pill>
+        {(tools.length ? tools.slice(0, 7) : []).map((tool) => <Chip key={tool.key} label={tool.example} onPress={() => setComposer(tool.example)} />)}
       </View>
 
       <View style={styles.thread}>
@@ -174,7 +183,7 @@ export default function AiScreen() {
             </Pill>
           </View>
           <BodyText>{action.summary ?? action.action_key}</BodyText>
-          <SupportText>AngelOS needs your approval before completing this action.</SupportText>
+          <SupportText>{action.kind === 'draft' ? 'Approve makes a draft only. Nothing is sent or posted until you approve it again.' : 'Nothing changes until you tap Approve.'}</SupportText>
           <View style={styles.actionButtons}>
             <Pressable disabled={busy} onPress={() => void resolveAction(true)} style={styles.actionButton}>
               <PrimaryActionLabel>Approve</PrimaryActionLabel>

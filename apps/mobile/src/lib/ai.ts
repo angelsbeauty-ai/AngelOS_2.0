@@ -41,6 +41,7 @@ export interface AiActionProposal {
   risk_level: 'low' | 'medium' | 'high';
   status: string;
   summary?: string;
+  kind?: 'draft' | 'change';
   requiresApproval?: boolean;
   input: Record<string, unknown>;
 }
@@ -98,7 +99,7 @@ export async function sendAiMessage(workspaceId: string, conversationId: string,
 }
 
 export async function approveAiAction(workspaceId: string, actionId: string) {
-  return apiFetch(`/workspaces/${workspaceId}/ai/actions/${actionId}/approve`, { method: 'POST' });
+  return apiFetch<{ result?: Record<string, any> }>(`/workspaces/${workspaceId}/ai/actions/${actionId}/approve`, { method: 'POST' });
 }
 
 export async function cancelAiAction(workspaceId: string, actionId: string) {
@@ -146,3 +147,10 @@ export const rejectSuggestedReply = (workspaceId: string, id: string) =>
 export interface BrainSummary { kind: 'owner_request' | 'owner_preference' | 'client_request'; topic: string; summary: string; tags: string[]; request_count: number; first_seen_at: string; last_seen_at: string }
 export const getBrainSummaries = (workspaceId: string) =>
   apiFetch<{ summaries: BrainSummary[]; needsMigration: string | null }>(`/workspaces/${workspaceId}/ai/brain`);
+
+// C1 tools registry + live voice (ephemeral session minted by the server; nothing recorded or stored).
+export interface AiTool { key: string; kind: 'read' | 'draft' | 'change'; risk: 'low' | 'medium' | 'high'; label: string; example: string; touchesClients: boolean }
+export const listAiTools = (workspaceId: string) => apiFetch<{ tools: AiTool[] }>(`/workspaces/${workspaceId}/ai/tools`);
+export interface VoiceSession { available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; expiresAt: number | null; model: string | null; stored: false }
+export const getVoiceStatus = (workspaceId: string) => apiFetch<Omit<VoiceSession, 'clientSecret' | 'expiresAt' | 'model'>>(`/workspaces/${workspaceId}/ai/voice/status`);
+export const createVoiceSession = (workspaceId: string, screen?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen }) });

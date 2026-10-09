@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
-import { planSafeAssistantAction } from './action-planner';
+import { planTool } from './tools/registry';
+import { AssistantToolsService } from './tools/assistant-tools.service';
 import { buildOperatingInstructions } from './angelos-operating-contract';
 import { AiProviderService } from './ai-provider.service';
 import { StyleLearningService } from './style/style-learning.service';
@@ -15,7 +16,7 @@ import type { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
 
 @Injectable()
 export class AiService {
-  constructor(private readonly provider: AiProviderService, private readonly style: StyleLearningService, private readonly brain: BrainService) {}
+  constructor(private readonly provider: AiProviderService, private readonly style: StyleLearningService, private readonly brain: BrainService, private readonly tools: AssistantToolsService) {}
 
   async getProfile(user: AuthUser, workspaceId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
@@ -141,7 +142,7 @@ export class AiService {
     this.brain.rememberOwnerRequest(workspaceId, message);
 
     const [workspaceResult, profileResult, rolesResult, memoryResult, historyResult] = await Promise.all([
-      supabase.from('workspaces').select('id,name').eq('id', workspaceId).single(),
+      supabase.from('workspaces').select('id,name,timezone').eq('id', workspaceId).single(),
       supabase.from('ai_assistant_profiles').select('*').eq('workspace_id', workspaceId).single(),
       supabase.from('ai_assistant_roles').select('role_key,enabled').eq('workspace_id', workspaceId),
       supabase.from('ai_memory_items').select('content').eq('workspace_id', workspaceId).eq('status', 'approved').limit(50),
@@ -177,12 +178,14 @@ export class AiService {
       contextFacts
     });
 
-    const providerResponse = await this.provider.generate({
-      instructions,
-      input: transcript || `Owner: ${message}`
-    });
+    // C1: tools registry. Read tools answer from her records (no AI cost); others become approval cards.
+    const timeZone = (workspaceResult.data as any).timezone || 'Asia/Tokyo';
+    const planned = planTool(message, new Date(), timeZone);
+    const providerResponse = planned?.kind === 'read'
+      ? { text: await this.tools.read(user, workspaceId, planned, timeZone), provider: 'angelos-tools', model: 'records' }
+      : await this.provider.generate({ instructions, input: transcript || `Owner: ${message}` });
 
-    const plannedAction = planSafeAssistantAction(message);
+    const plannedAction = planned && planned.kind !== 'read' ? { actionKey: planned.key, riskLevel: planned.risk, input: planned.input, summary: planned.summary, kind: planned.kind } : null;
     let actionRun: any = null;
     if (plannedAction) {
       const serviceSupabase = createServiceSupabaseClient();
@@ -200,7 +203,7 @@ export class AiService {
         .select('*')
         .single();
       if (error) throw new InternalServerErrorException(error.message);
-      actionRun = { ...data, summary: plannedAction.summary, requiresApproval: true };
+      actionRun = { ...data, summary: plannedAction.summary, kind: plannedAction.kind, requiresApproval: true };
     }
 
     const assistantMetadata = {
@@ -281,11 +284,11 @@ export class AiService {
         if (memoryError) throw memoryError;
         result = { memory: data };
       } else {
-        throw new Error(`Unsupported action: ${action.action_key}`);
+        result = await this.tools.execute(user, workspaceId, action as any);
       }
 
       // Verification is a fresh read after mutation, not an assumption based on the write call.
-      const verification = await this.verifyAction(user, workspaceId, action.action_key, action.input);
+      const verification = await this.verifyAction(user, workspaceId, action.action_key, action.input, result);
       if (!verification.verified) {
         throw new Error('Action mutation could not be verified');
       }
@@ -434,7 +437,7 @@ export class AiService {
     if (error || !data) throw new NotFoundException('Workspace not found');
   }
 
-  private async verifyAction(user: AuthUser, workspaceId: string, actionKey: string, input: any) {
+  private async verifyAction(user: AuthUser, workspaceId: string, actionKey: string, input: any, result: Record<string, any> = {}) {
     const supabase = createUserSupabaseClient(user.accessToken);
     if (actionKey === 'update_assistant_name') {
       const { data, error } = await supabase
@@ -461,6 +464,16 @@ export class AiService {
       return { verified: Boolean(data?.length), memoryId: data?.[0]?.id ?? null };
     }
 
+    // C1 tools: a fresh read of the row the tool created.
+    const check = async (table: string, id: unknown) => {
+      if (!id) return false;
+      const { data } = await supabase.from(table).select('id').eq('workspace_id', workspaceId).eq('id', String(id)).maybeSingle();
+      return Boolean(data);
+    };
+    if (actionKey === 'block_time') return { verified: await check('calendar_blocks', result.blockId) };
+    if (actionKey === 'record_expense') return { verified: result.duplicatePrevented === true || await check('business_expenses', result.expenseId) };
+    if (actionKey === 'create_post_draft') return { verified: await check('content_posts', result.contentPostId) };
+    if (actionKey === 'draft_client_message') return { verified: await check('client_messages', result.messageId), sent: false };
     return { verified: false, reason: 'No verifier registered' };
   }
 }

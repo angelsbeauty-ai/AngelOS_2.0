@@ -6,6 +6,8 @@ import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { AiService } from './ai.service';
+import { TOOLS } from './tools/registry';
+import { VoiceService } from './voice/voice.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { CreateMemoryDto } from './dto/create-memory.dto';
 import { SendAiMessageDto } from './dto/send-ai-message.dto';
@@ -15,7 +17,7 @@ import { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
 @Controller('workspaces/:workspaceId/ai')
 @UseGuards(SupabaseAuthGuard)
 export class AiController {
-  constructor(private readonly ai: AiService, private readonly style: StyleLearningService, private readonly brain: BrainService) {}
+  constructor(private readonly ai: AiService, private readonly style: StyleLearningService, private readonly brain: BrainService, private readonly voice: VoiceService) {}
 
   /** What AngelOS remembers about this workspace: short summaries, tags and counts only. */
   @Get('brain')
@@ -31,6 +33,9 @@ export class AiController {
   @Post('style/suggested-replies/:replyId/approve') approveSuggested(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('replyId') replyId: string, @Body() dto: ApproveSuggestedReplyDto) { return this.style.decideSuggested(user, workspaceId, replyId, 'approved', dto); }
   @Post('style/suggested-replies/:replyId/reject') rejectSuggested(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('replyId') replyId: string) { return this.style.decideSuggested(user, workspaceId, replyId, 'rejected'); }
 
+  @Get('tools') listTools() { return { tools: TOOLS }; }
+  @Get('voice/status') voiceStatus() { return this.voice.status(); }
+  @Post('voice/session') voiceSession(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() body: { screen?: string }) { return this.voice.createSession(user, workspaceId, typeof body?.screen === 'string' ? body.screen.slice(0, 60) : null); }
   @Get('profile')
   getProfile(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
     return this.ai.getProfile(user, workspaceId);

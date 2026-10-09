@@ -93,8 +93,8 @@ export default function AiSettingsScreen() {
     </Card>
 
     <Card>
-      <SectionTitle>Replies to clients</SectionTitle>
-      <SupportText>Used for every AI reply draft. Japanese drafts stay in a friendly salon tone and never mix in English.</SupportText>
+      <SectionTitle>Your voice</SectionTitle>
+      <SupportText>Used for client reply drafts, reminder and assistant message drafts, post captions and LINE broadcasts, so everything sounds like you. Japanese drafts stay in a friendly salon tone and never mix in English.</SupportText>
       {styleMigration ? <Banner tone="warning"><SupportText tone="warning">These settings need the database update {styleMigration}. It is waiting for your yes. Until then drafts use "Casual & friendly".</SupportText></Banner> : null}
       <Text style={styles.label}>Tone</Text>
       <View style={styles.chips}>{REPLY_TONES.map(([key, label]) => <Chip key={key} label={label} selected={style?.reply_tone === key} onPress={() => void saveStyle({ replyTone: key })} />)}</View>

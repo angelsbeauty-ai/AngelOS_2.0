@@ -30,6 +30,12 @@ export function mockTaskResponse(request: AiProviderRequest): string | null {
     try { list = JSON.parse(titles ?? '[]'); } catch { list = []; }
     return JSON.stringify(list.map((title) => `${title}. Soft, natural results made for you. DM or LINE us to book.`));
   }
+  if (instructions.startsWith('CLIENT_OUTREACH_DRAFT')) {
+    const language = /language=(ja|en)/.exec(instructions)?.[1] ?? 'en';
+    const name = /Client name: ([^\n]*)/.exec(instructions)?.[1]?.trim() ?? '';
+    if (language === 'ja') return `${name ? `${name}さん、` : ''}こんにちは✨ ご連絡です！気になることがあれば気軽にメッセージくださいね🌸`;
+    return `Hi ${name || 'there'}, a quick note from the studio: ${request.input}. Let me know if you have any questions!`;
+  }
   if (instructions.startsWith('LINE_BROADCAST_DRAFT')) {
     return 'こんにちは✨ 今月のご予約受付中です！気になる方はこのLINEから気軽にメッセージくださいね🌸';
   }

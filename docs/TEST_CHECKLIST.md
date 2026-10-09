@@ -4,8 +4,8 @@ Branch `feat/design-a1`. Test on laptop Chrome and iPhone Safari.
 Before testing: the database updates listed at the bottom must be approved and applied first. Until then, those screens say "needs database update".
 
 ## DONE vs LEFT (kept up to date)
-**DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule
-**LEFT (in order):** C1–C3 AI assistant + live voice · B9 Academy/students · B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
+**DONE:** Messages inbox (LINE ready but off) · AI learns your reply style · AngelOS suggests · AngelOS memory (summaries only) · B0 Social: campaigns, 30-day plan, ideas, hashtag sets, before/after maker (web), LINE broadcast drafts, "Copy caption & open" + "Mark as posted", Social insights basics · B1–B7: Clients (filters, health form, consent, archive), Bookings (detail, no-show, reschedule, payments/deposits), Calendar day/week + hours + days off, Services edit/hide, Money (income, expenses, who owes, CSV), Business insights, Reminder messages (suggest only) + server task schedule · C1 AngelOS tools with approval cards · C2 your voice used everywhere · C3 "Ask" button on every screen · Live voice (web, off until the OpenAI key is set)
+**LEFT (in order):** B9 Academy/students · B10 Setup/invites · B11 Settings/日本語 · B12 Plan · Design polish + smaller web bundle
 
 ---
 
@@ -78,6 +78,17 @@ Reminders (suggest only, never auto-sent)
 23. Home "AngelOS suggests" also shows these reminders, plus "Time to post" when a scheduled post's time has come.
 24. Tasks tab: these run by themselves every 15 minutes and only make tasks for you (no "Process due" button anymore).
 
+## 7. AngelOS assistant: tools, your voice, Ask everywhere, live voice (C1–C3)
+1. Any screen → bottom-right "✦ Ask" → AngelOS opens knowing which screen you came from (on a client, it knows the client).
+2. Tap an example chip, e.g. "What's on today?" → answer comes straight from your bookings (no approval needed, only reading).
+3. "Who still owes me?" and "How much did I make this week?" → answers from your money records.
+4. "Block tomorrow 2-4pm" → approval card → Approve → Calendar shows the block; Cancel instead → nothing changes.
+5. "I spent 3000 yen on pigments" → approval card → Approve → Money → Recent shows the expense.
+6. "Make a post about lip blush healing" → Approve → the post draft opens. It is NOT posted.
+7. "Message Yuki Tanaka that her touch-up is due" → Approve → the conversation opens with a draft in her language (Japanese clients: Japanese only, English meaning shown for you). Nothing is sent until you approve it there.
+8. Assistant settings → "Your voice": change tone/emoji → new captions, LINE drafts and message drafts follow it.
+9. Live voice (laptop Chrome): AngelOS screen → "Talk to AngelOS" → Start talking → allow the microphone → talk → Stop. Until the OpenAI key is set on the server it says "Live voice is off". Voice is never recorded or saved and there is no transcript. iPhone app: says "works in the web app for now".
+
 ## Database updates waiting for Angel's yes (written, NOT applied)
 - 0015_v1_messaging_inbox.sql — saved replies; unread and archive for conversations.
 - 0016_v1_ai_reply_style.sql — your reply style settings and suggested saved replies.
@@ -87,5 +98,6 @@ Reminders (suggest only, never auto-sent)
 - 0020_v1_clients_bookings_money.sql — client LINE/Instagram/birthday/archive, health forms, treatment details, deposits, service descriptions, expenses.
 
 ## Needs Angel's accounts
+- Live voice: on the API host set AI_PROVIDER_MODE=openai and OPENAI_API_KEY (optional OPENAI_REALTIME_MODEL, default gpt-realtime). The key stays on the server; the browser only gets a 2-minute key.
 - LINE: set LINE_MESSAGING_ENABLED=true, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN on the API host; webhook `<API>/webhooks/line`; then Settings → Connections → Connect LINE.
 - Instagram/Facebook posting and DMs: Meta app + approval. Until then: "Copy caption & open Instagram" and "Mark as posted".
