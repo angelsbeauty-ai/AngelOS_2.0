@@ -1,7 +1,8 @@
 import { apiFetch } from './api';
 
 export type ContentObjective = 'reach' | 'engagement' | 'saves' | 'profile_visits' | 'inquiries' | 'bookings' | 'education' | 'trust' | 'availability';
-export type ContentPlatform = 'instagram' | 'facebook' | 'tiktok' | 'manual';
+export type ContentPlatform = 'instagram' | 'facebook' | 'tiktok' | 'line' | 'manual';
+export type ContentFormat = 'reel' | 'story' | 'carousel' | 'photo';
 
 export interface ContentVariant {
   id: string;
@@ -25,6 +26,8 @@ export interface ContentPost {
   strategy_reason: string | null;
   source_goal: string | null;
   editing_instructions: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
   media?: Array<{ id: string; position: number; role: string; asset: { id: string; original_filename: string; media_type: string; content_status: string; marketing_permission: string } }>;
   variants?: ContentVariant[];
 }
@@ -66,4 +69,31 @@ export function scheduleContentVariant(workspaceId: string, variantId: string, s
 
 export function publishContentVariant(workspaceId: string, variantId: string) {
   return apiFetch<{ variant: ContentVariant; published: boolean; duplicatePrevented: boolean }>(`/workspaces/${workspaceId}/content/variants/${variantId}/publish`, { method: 'POST' });
+}
+
+export interface ComposerDraftInput {
+  title?: string;
+  objective: ContentObjective;
+  goal?: string;
+  language: 'en' | 'ja' | 'both';
+  caption: string;
+  hashtags: string[];
+  format: ContentFormat;
+  platforms: ContentPlatform[];
+  plannedFor?: string;
+  mediaAssetIds?: string[];
+}
+
+/** Saves a post written in the composer (POST /content/drafts). */
+export function createComposerDraft(workspaceId: string, input: ComposerDraftInput) {
+  return apiFetch<ContentPost>(`/workspaces/${workspaceId}/content/drafts`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+/** Calendar day for a post: its earliest planned/scheduled time, else when it was created. */
+export function contentPostDate(post: ContentPost): Date | null {
+  const planned = (post.variants ?? []).map((variant) => variant.scheduled_for).filter((value): value is string => Boolean(value)).sort()[0];
+  const value = planned ?? post.created_at;
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
