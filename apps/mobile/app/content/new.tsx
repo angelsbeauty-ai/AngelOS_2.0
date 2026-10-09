@@ -6,7 +6,7 @@ import { Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText 
 import { useToast } from '../../src/components/Toast';
 import { tokens } from '../../src/design/theme';
 import { ApiError } from '../../src/lib/api';
-import { createComposerDraft, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import { createComposerDraft, listHashtagSets, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -60,7 +60,7 @@ function isMarketingReady(asset: MediaAsset) {
 export default function NewPostScreen() {
   const router = useRouter();
   const toast = useToast();
-  const params = useLocalSearchParams<{ date?: string }>();
+  const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [goalIndex, setGoalIndex] = useState<number | null>(null);
@@ -79,6 +79,15 @@ export default function NewPostScreen() {
 
   useEffect(() => { void loadMedia(); }, []);
   useEffect(() => { if (params.date) setDay(parseDayParam(params.date)); }, [params.date]);
+  // Prefill from ideas / before-after maker.
+  useEffect(() => {
+    if (params.title) setTitle(String(params.title));
+    if (params.caption) setCaption(String(params.caption));
+    if (params.goal) { const i = GOALS.findIndex((g) => g.objective === params.goal || g.goal === params.goal); setGoalIndex(i >= 0 ? i : 0); }
+    if (params.mediaId) setSelectedMedia([String(params.mediaId)]);
+  }, [params.title, params.caption, params.goal, params.mediaId]);
+  const [hashtagSets, setHashtagSets] = useState<HashtagSet[]>([]);
+  useEffect(() => { if (workspaceId) listHashtagSets(workspaceId).then((r) => setHashtagSets(r.sets)).catch(() => undefined); }, [workspaceId]);
 
   async function loadMedia() {
     setMediaState('loading');
@@ -204,6 +213,9 @@ export default function NewPostScreen() {
         <SupportText tone={hashtags.length > HASHTAG_LIMIT ? 'critical' : 'secondary'}>
           {hashtags.length} hashtag{hashtags.length === 1 ? '' : 's'} · max {HASHTAG_LIMIT}
         </SupportText>
+        {hashtagSets.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{hashtagSets.map((set) => (
+          <Pressable key={set.id} accessibilityRole="button" accessibilityLabel={`Add hashtag set ${set.name}`} onPress={() => setHashtagText((t) => Array.from(new Set([...parseHashtags(t), ...set.tags])).join(' '))} style={styles.chip}><Text style={{ fontFamily: tokens.font.uiSemibold, fontSize: 14, color: colors.charcoal }}>+ {set.name}</Text></Pressable>
+        ))}</View> : null}
       </Card>
 
       <Card>

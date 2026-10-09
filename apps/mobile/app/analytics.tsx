@@ -6,17 +6,19 @@ import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, StatCard, SupportText, ui } from '../src/components/ui';
 import { getAnalyticsOverview, runMarketingCoach, type AnalyticsOverview } from '../src/lib/analytics';
 import { getActiveWorkspace } from '../src/lib/workspace';
+import { SocialInsightsCard } from '../src/components/SocialInsightsCard';
 
 export default function AnalyticsScreen() {
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null); const [coach, setCoach] = useState<string | null>(null); const [busy, setBusy] = useState(true); const [coachBusy, setCoachBusy] = useState(false);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null); const [wsId, setWsId] = useState<string | null>(null); const [coach, setCoach] = useState<string | null>(null); const [busy, setBusy] = useState(true); const [coachBusy, setCoachBusy] = useState(false);
   useEffect(() => { void load(); }, []);
-  async function load() { setBusy(true); try { const workspace = await getActiveWorkspace(); setOverview(await getAnalyticsOverview(workspace.id, 30)); } catch (error) { void dialog.notify('Could not load analytics', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function load() { setBusy(true); try { const workspace = await getActiveWorkspace(); setWsId(workspace.id); setOverview(await getAnalyticsOverview(workspace.id, 30)); } catch (error) { void dialog.notify('Could not load analytics', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
   async function askCoach() { setCoachBusy(true); try { const workspace = await getActiveWorkspace(); const result = await runMarketingCoach(workspace.id, 30); setCoach(result.recommendation); setOverview(result.evidence); } catch (error) { void dialog.notify('Marketing Coach unavailable', error instanceof Error ? error.message : 'Unknown error'); } finally { setCoachBusy(false); } }
   const totals = overview?.totals;
 
   return <Screen>
     <View style={styles.header}><View style={styles.headerCopy}><Pill tone="gold">Last 30 Days</Pill><ScreenTitle>Analytics</ScreenTitle><SupportText>Business outcomes first—then one clear next move.</SupportText></View><Pressable onPress={() => void load()} style={styles.refresh}><SecondaryActionLabel>Refresh</SecondaryActionLabel></Pressable></View>
     {busy ? <Card><BodyText>Loading analytics...</BodyText></Card> : null}
+    {wsId ? <SocialInsightsCard workspaceId={wsId} /> : null}
     {overview ? <>
       <View style={styles.grid}><StatCard label="Views" value={metric(totals?.views)} detail="Measured reach"/><StatCard label="Saves" value={metric(totals?.saves)} detail="Intent signal"/></View>
       <View style={styles.grid}><StatCard label="Inquiries" value={metric(totals?.inquiries)} detail="Qualified interest"/><StatCard label="Bookings" value={metric(totals?.bookings)} detail="Business result"/></View>

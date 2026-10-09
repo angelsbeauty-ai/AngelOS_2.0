@@ -24,5 +24,14 @@ export function mockTaskResponse(request: AiProviderRequest): string | null {
     if (language === 'ja') return `自然な仕上がりの眉で、毎朝のメイクがぐっと楽に✨ ご予約・ご相談はLINEからお気軽にどうぞ🌸`;
     return `Natural, soft results that make mornings easier. Focus: ${angle}. Message us to book your consultation.`;
   }
+  if (instructions.startsWith('CONTENT_PLAN_CAPTIONS')) {
+    const titles = /titles=(\[.*\])/.exec(instructions)?.[1];
+    let list: string[] = [];
+    try { list = JSON.parse(titles ?? '[]'); } catch { list = []; }
+    return JSON.stringify(list.map((title) => `${title}. Soft, natural results made for you. DM or LINE us to book.`));
+  }
+  if (instructions.startsWith('LINE_BROADCAST_DRAFT')) {
+    return 'こんにちは✨ 今月のご予約受付中です！気になる方はこのLINEから気軽にメッセージくださいね🌸';
+  }
   return null;
 }
