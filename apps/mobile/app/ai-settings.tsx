@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { getAssistantProfile, updateAssistantProfile, updateAssistantRoles, type AssistantProfile, type AssistantRole, type AssistantRoleKey } from '../src/lib/ai';
@@ -13,10 +14,10 @@ const ROLE_COPY: Array<{ key: AssistantRoleKey; label: string; description: stri
 export default function AiSettingsScreen() {
   const [workspaceId,setWorkspaceId]=useState<string|null>(null); const [profile,setProfile]=useState<AssistantProfile|null>(null); const [roles,setRoles]=useState<AssistantRole[]>([]); const [busy,setBusy]=useState(true);
   useEffect(()=>{void load();},[]);
-  async function load(){try{const workspace=await getActiveWorkspace();const data=await getAssistantProfile(workspace.id);setWorkspaceId(workspace.id);setProfile(data.profile);setRoles(data.roles);}catch(error){Alert.alert('Could not load AI settings',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  async function load(){try{const workspace=await getActiveWorkspace();const data=await getAssistantProfile(workspace.id);setWorkspaceId(workspace.id);setProfile(data.profile);setRoles(data.roles);}catch(error){void dialog.notify('Could not load AI settings',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
   const roleMap=useMemo(()=>new Map(roles.map((role)=>[role.role_key,role.enabled])),[roles]);
-  async function saveProfile(patch:Record<string,unknown>){if(!workspaceId||!profile)return;setBusy(true);try{setProfile(await updateAssistantProfile(workspaceId,patch));}catch(error){Alert.alert('Could not save AI setting',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
-  async function toggleRole(key:AssistantRoleKey,enabled:boolean){if(!workspaceId)return;setBusy(true);try{setRoles((await updateAssistantRoles(workspaceId,{[key]:enabled})).roles);}catch(error){Alert.alert('Could not update AI role',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  async function saveProfile(patch:Record<string,unknown>){if(!workspaceId||!profile)return;setBusy(true);try{setProfile(await updateAssistantProfile(workspaceId,patch));}catch(error){void dialog.notify('Could not save AI setting',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  async function toggleRole(key:AssistantRoleKey,enabled:boolean){if(!workspaceId)return;setBusy(true);try{setRoles((await updateAssistantRoles(workspaceId,{[key]:enabled})).roles);}catch(error){void dialog.notify('Could not update AI role',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
   if(!profile)return <Screen><Card><BodyText>{busy?'Loading AI settings...':'AI settings are unavailable.'}</BodyText></Card></Screen>;
   return <Screen>
     <Pill tone="gold">Your Business Partner</Pill><ScreenTitle>AI Assistant</ScreenTitle><SupportText>Choose how AngelOS communicates and which roles it actively uses.</SupportText>

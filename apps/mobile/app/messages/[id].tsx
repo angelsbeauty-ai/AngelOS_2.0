@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import {
@@ -34,7 +35,7 @@ export default function MessageThreadScreen() {
       const workspace = workspaceId ? { id: workspaceId } : await getActiveWorkspace();
       if (!workspaceId) setWorkspaceId(workspace.id);
       setDetail(await getMessageThread(workspace.id, id));
-    } catch (error) { Alert.alert('Could not load conversation', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Could not load conversation', error instanceof Error ? error.message : 'Unknown error'); }
     finally { setBusy(false); }
   }
 
@@ -44,7 +45,7 @@ export default function MessageThreadScreen() {
   async function draftWithAi() {
     if (!workspaceId || !id) return;
     try { const result = await createAiReplyDraft(workspaceId, id); setReply(result.message.body); await load(); }
-    catch (error) { Alert.alert('Could not draft reply', error instanceof Error ? error.message : 'Unknown error'); }
+    catch (error) { void dialog.notify('Could not draft reply', error instanceof Error ? error.message : 'Unknown error'); }
   }
 
   async function translateLatestInbound() {
@@ -53,25 +54,25 @@ export default function MessageThreadScreen() {
       const profile = await getAssistantProfile(workspaceId);
       await translateClientMessage(workspaceId, latestInbound.id, profile.profile.primary_language || 'en');
       await load();
-    } catch (error) { Alert.alert('Could not translate', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Could not translate', error instanceof Error ? error.message : 'Unknown error'); }
   }
 
   async function sendOwnerReply() {
     if (!workspaceId || !id || !reply.trim()) return;
     try { await createMessageReply(workspaceId, id, reply.trim(), true); setReply(''); await load(); }
-    catch (error) { Alert.alert('Could not send', error instanceof Error ? error.message : 'Unknown error'); }
+    catch (error) { void dialog.notify('Could not send', error instanceof Error ? error.message : 'Unknown error'); }
   }
 
   async function approveAiDraft() {
     if (!workspaceId || !latestPendingAi) return;
     try { await approveAndSendMessage(workspaceId, latestPendingAi.id); setReply(''); await load(); }
-    catch (error) { Alert.alert('Could not send AI draft', error instanceof Error ? error.message : 'Unknown error'); }
+    catch (error) { void dialog.notify('Could not send AI draft', error instanceof Error ? error.message : 'Unknown error'); }
   }
 
   async function saveNote() {
     if (!workspaceId || !id || !note.trim()) return;
     try { await addThreadInternalNote(workspaceId, id, note.trim()); setNote(''); await load(); }
-    catch (error) { Alert.alert('Could not save note', error instanceof Error ? error.message : 'Unknown error'); }
+    catch (error) { void dialog.notify('Could not save note', error instanceof Error ? error.message : 'Unknown error'); }
   }
 
   if (busy && !detail) return <Screen><Card><BodyText>Loading conversation...</BodyText></Card></Screen>;

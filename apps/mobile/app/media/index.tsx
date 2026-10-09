@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { Link } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, StatCard, SupportText, ui } from '../../src/components/ui';
@@ -9,7 +10,7 @@ import { getActiveWorkspace } from '../../src/lib/workspace';
 export default function MediaLibraryScreen() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null); const [assets, setAssets] = useState<MediaAsset[]>([]); const [previews, setPreviews] = useState<Record<string, string>>({}); const [busy, setBusy] = useState(true);
   useEffect(() => { void load(); }, []);
-  async function load() { setBusy(true); try { const workspace = workspaceId ? { id: workspaceId } : await getActiveWorkspace(); if (!workspaceId) setWorkspaceId(workspace.id); const rows = await listMedia(workspace.id); setAssets(rows); const imageRows = rows.filter((row) => row.media_type === 'image' && row.upload_status === 'uploaded').slice(0, 24); const urls = await Promise.all(imageRows.map(async (row) => [row.id, (await getMediaViewUrl(workspace.id, row.id)).url] as const)); setPreviews(Object.fromEntries(urls)); } catch (error) { Alert.alert('Could not load media', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function load() { setBusy(true); try { const workspace = workspaceId ? { id: workspaceId } : await getActiveWorkspace(); if (!workspaceId) setWorkspaceId(workspace.id); const rows = await listMedia(workspace.id); setAssets(rows); const imageRows = rows.filter((row) => row.media_type === 'image' && row.upload_status === 'uploaded').slice(0, 24); const urls = await Promise.all(imageRows.map(async (row) => [row.id, (await getMediaViewUrl(workspace.id, row.id)).url] as const)); setPreviews(Object.fromEntries(urls)); } catch (error) { void dialog.notify('Could not load media', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
   const approvedCount = assets.filter((asset) => asset.marketing_permission === 'marketing_approved').length;
 
   return <Screen>

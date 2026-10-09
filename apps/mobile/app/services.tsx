@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { createService, listServices, type ServiceItem } from '../src/lib/bookings';
@@ -22,7 +23,7 @@ export default function ServicesScreen() {
       const activeWorkspace = await getActiveWorkspace();
       setWorkspace(activeWorkspace);
       setServices(await listServices(activeWorkspace.id));
-    } catch (error) { Alert.alert('Could not load services', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Could not load services', error instanceof Error ? error.message : 'Unknown error'); }
     finally { setBusy(false); }
   }
 
@@ -32,16 +33,16 @@ export default function ServicesScreen() {
     const beforeMinutes = bufferBefore.trim() ? Number(bufferBefore) : 0;
     const afterMinutes = bufferAfter.trim() ? Number(bufferAfter) : 0;
     const standardPrice = Number(price);
-    if (!Number.isInteger(durationMinutes) || durationMinutes < 5) return Alert.alert('Check duration', 'Enter a duration of at least 5 minutes.');
-    if (!Number.isInteger(beforeMinutes) || beforeMinutes < 0 || beforeMinutes > 240 || !Number.isInteger(afterMinutes) || afterMinutes < 0 || afterMinutes > 240) return Alert.alert('Check buffers', 'Buffers must be whole minutes from 0 to 240.');
-    if (!Number.isFinite(standardPrice) || standardPrice < 0) return Alert.alert('Check price', 'Enter the real standard price, or 0 only when the service is free.');
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 5) return void dialog.notify('Check duration', 'Enter a duration of at least 5 minutes.');
+    if (!Number.isInteger(beforeMinutes) || beforeMinutes < 0 || beforeMinutes > 240 || !Number.isInteger(afterMinutes) || afterMinutes < 0 || afterMinutes > 240) return void dialog.notify('Check buffers', 'Buffers must be whole minutes from 0 to 240.');
+    if (!Number.isFinite(standardPrice) || standardPrice < 0) return void dialog.notify('Check price', 'Enter the real standard price, or 0 only when the service is free.');
     setBusy(true);
     try {
       await createService(workspace.id, { name: name.trim(), durationMinutes, bufferBeforeMinutes: beforeMinutes, bufferAfterMinutes: afterMinutes, standardPrice, currency: workspace.currency });
       setName(''); setDuration(''); setBufferBefore(''); setBufferAfter(''); setPrice('');
       setServices(await listServices(workspace.id));
-      Alert.alert('Service added', 'AngelOS will use these exact rules when checking availability.');
-    } catch (error) { Alert.alert('Could not create service', error instanceof Error ? error.message : 'Unknown error'); }
+      void dialog.notify('Service added', 'AngelOS will use these exact rules when checking availability.');
+    } catch (error) { void dialog.notify('Could not create service', error instanceof Error ? error.message : 'Unknown error'); }
     finally { setBusy(false); }
   }
 

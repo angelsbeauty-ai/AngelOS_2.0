@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, ScreenTitle, SecondaryActionLabel, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { getFinanceOverview, type FinanceOverview } from '../src/lib/finance';
@@ -7,7 +8,7 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 
 export default function FinanceScreen(){
   const[overview,setOverview]=useState<FinanceOverview|null>(null);const[busy,setBusy]=useState(true);
-  useEffect(()=>{void load();},[]);async function load(){setBusy(true);try{const workspace=await getActiveWorkspace();setOverview(await getFinanceOverview(workspace.id,30));}catch(error){Alert.alert('Could not load finance',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  useEffect(()=>{void load();},[]);async function load(){setBusy(true);try{const workspace=await getActiveWorkspace();setOverview(await getFinanceOverview(workspace.id,30));}catch(error){void dialog.notify('Could not load finance',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
   const currency=overview?.entries[0]?.currency??'JPY';const methods=overview?Object.entries(overview.byMethod):[];
   return <Screen>
     <View style={styles.header}><View style={styles.headerCopy}><Pill tone="gold">Last 30 Days</Pill><ScreenTitle>Finance</ScreenTitle><SupportText>Actual money received—never inflated by booked value.</SupportText></View><Pressable onPress={()=>void load()} style={styles.refresh}><SecondaryActionLabel>Refresh</SecondaryActionLabel></Pressable></View>

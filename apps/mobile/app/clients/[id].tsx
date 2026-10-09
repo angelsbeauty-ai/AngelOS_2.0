@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import {
@@ -37,7 +38,7 @@ export default function ClientDetailScreen() {
       if (!workspaceId) setWorkspaceId(workspace.id);
       setDetail(await getClient(workspace.id, id));
     } catch (error) {
-      Alert.alert('Could not load client', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not load client', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -66,7 +67,7 @@ export default function ClientDetailScreen() {
       setPaymentAmount('');
       await load();
     } catch (error) {
-      Alert.alert('Could not record payment', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not record payment', error instanceof Error ? error.message : 'Unknown error');
     }
   }
 

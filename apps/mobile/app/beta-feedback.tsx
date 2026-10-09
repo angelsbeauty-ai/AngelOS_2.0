@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { submitBetaFeedback } from '../src/lib/beta';
@@ -10,7 +11,7 @@ const categories = [['friction','Something slowed me down'],['bug','Something br
 export default function BetaFeedbackScreen() {
   const [category,setCategory]=useState<(typeof categories)[number][0]>('friction');
   const [message,setMessage]=useState('');const[rating,setRating]=useState(5);const[contact,setContact]=useState(false);const[quote,setQuote]=useState(false);const[busy,setBusy]=useState(false);
-  async function submit(){if(!message.trim())return;setBusy(true);try{const workspace=await getActiveWorkspace();await submitBetaFeedback(workspace.id,{category,message:message.trim(),rating,permissionToContact:contact,permissionToQuote:category==='testimonial_candidate'?quote:false});setMessage('');setQuote(false);Alert.alert('Feedback sent','Thank you. It stays private unless you explicitly allowed your review to be quoted.');}catch(error){Alert.alert('Could not send feedback',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  async function submit(){if(!message.trim())return;setBusy(true);try{const workspace=await getActiveWorkspace();await submitBetaFeedback(workspace.id,{category,message:message.trim(),rating,permissionToContact:contact,permissionToQuote:category==='testimonial_candidate'?quote:false});setMessage('');setQuote(false);void dialog.notify('Feedback sent','Thank you. It stays private unless you explicitly allowed your review to be quoted.');}catch(error){void dialog.notify('Could not send feedback',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
   return <Screen><View style={styles.stack}>
     <Pill tone="gold">Private Beta</Pill><ScreenTitle>Help shape AngelOS</ScreenTitle><SupportText>Tell us what helped, what broke, or what felt frustrating. Small details help improve the system before wider release.</SupportText>
     <Card><SectionTitle>What happened?</SectionTitle><View style={styles.choices}>{categories.map(([value,label])=><Pressable key={value} onPress={()=>{setCategory(value);if(value!=='testimonial_candidate')setQuote(false);}} style={[styles.choice,category===value&&styles.selected]}><Text style={[styles.choiceText,category===value&&styles.selectedText]}>{label}</Text></Pressable>)}</View></Card>

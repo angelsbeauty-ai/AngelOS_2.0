@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { Link, router } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import {
@@ -31,7 +32,7 @@ export default function MessagesScreen() {
       setWorkspaceId(workspace.id);
       setThreads(await listMessageThreads(workspace.id));
     } catch (error) {
-      Alert.alert('Could not load messages', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not load messages', error instanceof Error ? error.message : 'Unknown error');
     } finally { setBusy(false); }
   }
 
@@ -45,7 +46,7 @@ export default function MessagesScreen() {
       await load();
       router.push(`/messages/${result.threadId}` as any);
     } catch (error) {
-      Alert.alert('Could not create demo inquiry', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not create demo inquiry', error instanceof Error ? error.message : 'Unknown error');
     }
   }
 

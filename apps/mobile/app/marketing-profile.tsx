@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { getMarketingProfile, updateMarketingProfile } from '../src/lib/analytics';
@@ -7,8 +8,8 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 const goals=['bookings','inquiries','profile_visits','saves','reach'] as const; const levels=['beginner','intermediate','advanced'] as const;
 export default function MarketingProfileScreen(){
   const[workspaceId,setWorkspaceId]=useState<string|null>(null);const[goal,setGoal]=useState('bookings');const[level,setLevel]=useState('beginner');const[targetClient,setTargetClient]=useState('');const[serviceArea,setServiceArea]=useState('');const[city,setCity]=useState('');const[country,setCountry]=useState('');const[saving,setSaving]=useState(false);
-  useEffect(()=>{void load();},[]);async function load(){try{const workspace=await getActiveWorkspace();setWorkspaceId(workspace.id);const profile=await getMarketingProfile(workspace.id);setGoal(profile.primary_goal??'bookings');setLevel(profile.experience_level??'beginner');setTargetClient(profile.target_client??'');setServiceArea(profile.service_area??'');setCity(profile.city??'');setCountry(profile.country??'');}catch(error){Alert.alert('Could not load marketing profile',error instanceof Error?error.message:'Unknown error');}}
-  async function save(){if(!workspaceId)return;setSaving(true);try{await updateMarketingProfile(workspaceId,{primaryGoal:goal,experienceLevel:level,targetClient,serviceArea,city,country,localContextEnabled:true});Alert.alert('Saved','AngelOS will use this context to make marketing guidance more relevant.');}catch(error){Alert.alert('Could not save',error instanceof Error?error.message:'Unknown error');}finally{setSaving(false);}}
+  useEffect(()=>{void load();},[]);async function load(){try{const workspace=await getActiveWorkspace();setWorkspaceId(workspace.id);const profile=await getMarketingProfile(workspace.id);setGoal(profile.primary_goal??'bookings');setLevel(profile.experience_level??'beginner');setTargetClient(profile.target_client??'');setServiceArea(profile.service_area??'');setCity(profile.city??'');setCountry(profile.country??'');}catch(error){void dialog.notify('Could not load marketing profile',error instanceof Error?error.message:'Unknown error');}}
+  async function save(){if(!workspaceId)return;setSaving(true);try{await updateMarketingProfile(workspaceId,{primaryGoal:goal,experienceLevel:level,targetClient,serviceArea,city,country,localContextEnabled:true});void dialog.notify('Saved','AngelOS will use this context to make marketing guidance more relevant.');}catch(error){void dialog.notify('Could not save',error instanceof Error?error.message:'Unknown error');}finally{setSaving(false);}}
   return <Screen>
     <Pill tone="gold">Growth Context</Pill><ScreenTitle>Marketing Profile</ScreenTitle><SupportText>Tell AngelOS what growth means for this business. It can learn the details over time.</SupportText>
     <Card><SectionTitle>Primary goal</SectionTitle><View style={styles.wrap}>{goals.map((item)=><Pressable key={item} onPress={()=>setGoal(item)}><Pill tone={goal===item?'gold':'secondary'}>{item.replaceAll('_',' ')}</Pill></Pressable>)}</View></Card>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { listAutomationJobs, listAutomationRules, processDueAutomations, seedAutomationDefaults, updateAutomationRule, type AutomationJob, type AutomationRule } from '../src/lib/automations';
@@ -7,9 +8,9 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 
 export default function AutomationsScreen(){
   const[workspaceId,setWorkspaceId]=useState<string|null>(null);const[rules,setRules]=useState<AutomationRule[]>([]);const[jobs,setJobs]=useState<AutomationJob[]>([]);const[busy,setBusy]=useState(true);
-  useEffect(()=>{void load();},[]);async function load(){setBusy(true);try{const workspace=await getActiveWorkspace();setWorkspaceId(workspace.id);let nextRules=await listAutomationRules(workspace.id);if(!nextRules.length)nextRules=await seedAutomationDefaults(workspace.id);setRules(nextRules);setJobs(await listAutomationJobs(workspace.id));}catch(error){Alert.alert('Could not load automations',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
-  async function toggle(rule:AutomationRule){if(!workspaceId)return;setBusy(true);try{await updateAutomationRule(workspaceId,rule.id,{enabled:!rule.enabled});await load();}catch(error){Alert.alert('Could not update automation',error instanceof Error?error.message:'Unknown error');setBusy(false);}}
-  async function processDue(){if(!workspaceId)return;setBusy(true);try{await processDueAutomations(workspaceId);await load();}catch(error){Alert.alert('Automation run failed',error instanceof Error?error.message:'Unknown error');setBusy(false);}}
+  useEffect(()=>{void load();},[]);async function load(){setBusy(true);try{const workspace=await getActiveWorkspace();setWorkspaceId(workspace.id);let nextRules=await listAutomationRules(workspace.id);if(!nextRules.length)nextRules=await seedAutomationDefaults(workspace.id);setRules(nextRules);setJobs(await listAutomationJobs(workspace.id));}catch(error){void dialog.notify('Could not load automations',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  async function toggle(rule:AutomationRule){if(!workspaceId)return;setBusy(true);try{await updateAutomationRule(workspaceId,rule.id,{enabled:!rule.enabled});await load();}catch(error){void dialog.notify('Could not update automation',error instanceof Error?error.message:'Unknown error');setBusy(false);}}
+  async function processDue(){if(!workspaceId)return;setBusy(true);try{await processDueAutomations(workspaceId);await load();}catch(error){void dialog.notify('Automation run failed',error instanceof Error?error.message:'Unknown error');setBusy(false);}}
   const enabledCount=rules.filter((rule)=>rule.enabled).length;const failedCount=jobs.filter((job)=>job.status==='failed').length;
   return <Screen>
     <Pill tone="gold">Owner-Controlled Workflows</Pill><ScreenTitle>Automations</ScreenTitle><SupportText>Predictable work only. Delayed actions recheck the current business state before running.</SupportText>

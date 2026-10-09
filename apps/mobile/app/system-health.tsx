@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { acknowledgeAttention, getSystemHealth, runSystemHealthCheck, updateOperationalControls, type SystemHealthOverview } from '../src/lib/system-health';
@@ -8,9 +9,9 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 export default function SystemHealthScreen(){
   const[workspaceId,setWorkspaceId]=useState<string|null>(null);const[overview,setOverview]=useState<SystemHealthOverview|null>(null);const[busy,setBusy]=useState(false);
   useEffect(()=>{void load(false);},[]);
-  async function load(runCheck:boolean){try{setBusy(true);const workspace=await getActiveWorkspace();setWorkspaceId(workspace.id);setOverview(runCheck?await runSystemHealthCheck(workspace.id):await getSystemHealth(workspace.id));}catch(error){Alert.alert('Could not load system health',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
-  async function setControl(key:'pauseAiActions'|'pauseAutomations'|'emergencyReadOnly',value:boolean){if(!workspaceId||!overview)return;try{setBusy(true);await updateOperationalControls(workspaceId,{[key]:value,reason:value?'Owner enabled from System Health':''});await load(true);}catch(error){Alert.alert('Could not update control',error instanceof Error?error.message:'Unknown error');setBusy(false);}}
-  async function acknowledge(id:string){if(!workspaceId)return;try{await acknowledgeAttention(workspaceId,id);await load(false);}catch(error){Alert.alert('Could not acknowledge',error instanceof Error?error.message:'Unknown error');}}
+  async function load(runCheck:boolean){try{setBusy(true);const workspace=await getActiveWorkspace();setWorkspaceId(workspace.id);setOverview(runCheck?await runSystemHealthCheck(workspace.id):await getSystemHealth(workspace.id));}catch(error){void dialog.notify('Could not load system health',error instanceof Error?error.message:'Unknown error');}finally{setBusy(false);}}
+  async function setControl(key:'pauseAiActions'|'pauseAutomations'|'emergencyReadOnly',value:boolean){if(!workspaceId||!overview)return;try{setBusy(true);await updateOperationalControls(workspaceId,{[key]:value,reason:value?'Owner enabled from System Health':''});await load(true);}catch(error){void dialog.notify('Could not update control',error instanceof Error?error.message:'Unknown error');setBusy(false);}}
+  async function acknowledge(id:string){if(!workspaceId)return;try{await acknowledgeAttention(workspaceId,id);await load(false);}catch(error){void dialog.notify('Could not acknowledge',error instanceof Error?error.message:'Unknown error');}}
   const openAttention=overview?.attention.filter((item)=>item.status!=='resolved')??[];
   return <Screen>
     <Pill tone="gold">Safety Center</Pill><ScreenTitle>System Health</ScreenTitle><SupportText>See what works, what is affected, and what actually needs you.</SupportText>

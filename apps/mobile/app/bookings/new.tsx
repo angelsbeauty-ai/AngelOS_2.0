@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { router } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import {
@@ -36,7 +37,7 @@ export default function NewBookingScreen() {
       setWorkspaceId(workspace.id);
       const [clientRows, serviceRows] = await Promise.all([listClients(workspace.id), listServices(workspace.id)]);
       setClients(clientRows); setServices(serviceRows);
-    } catch (error) { Alert.alert('Booking setup needs attention', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Booking setup needs attention', error instanceof Error ? error.message : 'Unknown error'); }
   }
 
   const selectedClient = useMemo(() => clients.find((item) => item.id === clientId), [clients, clientId]);
@@ -48,14 +49,14 @@ export default function NewBookingScreen() {
     try {
       const startAt = localDateTimeToIso(date, time);
       const result = await createAppointment(workspaceId, { clientId, serviceId, startAt, source: 'owner', overrideSoftConflict });
-      Alert.alert('Booking created', `${selectedClient?.display_name ?? 'Client'} | ${selectedService?.name ?? 'Service'}`);
+      void dialog.notify('Booking created', `${selectedClient?.display_name ?? 'Client'} | ${selectedService?.name ?? 'Service'}`);
       router.replace('/calendar');
       return result;
     } catch (error) {
       if (error instanceof ApiError && error.status === 409 && typeof error.payload === 'object' && error.payload && (error.payload as any).code === 'SOFT_CONFLICT') {
         setSoftConflict(true); return;
       }
-      Alert.alert('Could not create booking', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not create booking', error instanceof Error ? error.message : 'Unknown error');
     } finally { setBusy(false); }
   }
 

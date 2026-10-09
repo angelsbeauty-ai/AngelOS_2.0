@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { apiFetch } from '../src/lib/api';
@@ -24,8 +25,8 @@ export default function OnboardingScreen() {
   async function redeem() {
     if (!invite.trim()) return;
     setSaving(true);
-    try { const result = await redeemBetaInvite(invite.trim()); setAccess(result); setInvite(''); Alert.alert('Beta access approved', 'You can now create your AngelOS business workspace.'); }
-    catch (error) { Alert.alert('Invite could not be redeemed', error instanceof Error ? error.message : 'Unknown error'); }
+    try { const result = await redeemBetaInvite(invite.trim()); setAccess(result); setInvite(''); void dialog.notify('Beta access approved', 'You can now create your AngelOS business workspace.'); }
+    catch (error) { void dialog.notify('Invite could not be redeemed', error instanceof Error ? error.message : 'Unknown error'); }
     finally { setSaving(false); }
   }
   async function createWorkspace() {
@@ -34,8 +35,8 @@ export default function OnboardingScreen() {
     setSaving(true);
     try {
       const workspace = await apiFetch<Workspace>('/workspaces', { method: 'POST', body: JSON.stringify({ name: name.trim(), businessType: 'beauty', timezone: device.timezone, currency: nextCurrency, locale: device.locale }) });
-      Alert.alert('Workspace created', `${workspace.name} is ready. Next, add the services you actually offer.`);
-    } catch (error) { Alert.alert('Could not create workspace', error instanceof Error ? error.message : 'Unknown error'); }
+      void dialog.notify('Workspace created', `${workspace.name} is ready. Next, add the services you actually offer.`);
+    } catch (error) { void dialog.notify('Could not create workspace', error instanceof Error ? error.message : 'Unknown error'); }
     finally { setSaving(false); }
   }
 

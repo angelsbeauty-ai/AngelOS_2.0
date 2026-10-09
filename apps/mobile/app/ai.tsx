@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Link, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import {
@@ -66,7 +67,7 @@ export default function AiScreen() {
         }
       ]);
     } catch (error) {
-      Alert.alert('AI setup needs attention', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('AI setup needs attention', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -91,7 +92,7 @@ export default function AiScreen() {
       setMessages((current) => [...current, result.message]);
       setAction(result.action);
     } catch (error) {
-      Alert.alert('Could not reach your assistant', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not reach your assistant', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
@@ -122,7 +123,7 @@ export default function AiScreen() {
       ]);
       setAction(null);
     } catch (error) {
-      Alert.alert('Action needs attention', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Action needs attention', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { Pill, ScreenTitle, SupportText, ui } from '../src/components/ui';
 import { createStudentDiscount, getFounderOverview, listFeatureFlags, listFounderWorkspaces, updateFeatureFlag } from '../src/lib/founder';
@@ -23,13 +24,13 @@ export default function FounderAdminScreen() {
     try {
       const [o,b,w,f,i,fb] = await Promise.all([getFounderOverview(), getFounderBetaOverview(), listFounderWorkspaces(), listFeatureFlags(), listBetaInvites(), listBetaFeedback()]);
       setOverview(o); setBeta(b); setWorkspaces(w); setFlags(f); setInvites(i); setFeedback(fb);
-    } catch (error) { Alert.alert('Founder Admin unavailable', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Founder Admin unavailable', error instanceof Error ? error.message : 'Unknown error'); }
   }
-  async function toggleFlag(flag:any, enabled:boolean) { try { await updateFeatureFlag(flag.key,{ enabled, stage: enabled && ['off','paused'].includes(flag.stage) ? 'beta' : flag.stage }); await load(); } catch (error) { Alert.alert('Could not update feature', error instanceof Error ? error.message : 'Unknown error'); } }
-  async function makeStudentDiscount() { try { const created=await createStudentDiscount({emailHint:email.trim()||undefined,discountPercent:20}); setLastToken(created.token); setEmail(''); } catch(error){Alert.alert('Could not create student discount',error instanceof Error?error.message:'Unknown error');} }
-  async function makeBetaInvite() { try { const created=await createBetaInvite({ emailHint: email.trim() || undefined, cohort:inviteCohort, label: inviteLabel.trim() || undefined, region: inviteRegion.trim() || undefined, expiresInDays: 60 }); setLastBetaToken(created.token); setInviteLabel(''); setInviteRegion(''); setEmail(''); await load(); } catch(error){Alert.alert('Could not create beta invite',error instanceof Error?error.message:'Unknown error');} }
-  async function revokeInvite(id:string){ try{ await revokeBetaInvite(id); await load(); }catch(error){Alert.alert('Could not revoke invite',error instanceof Error?error.message:'Unknown error');} }
-  async function revokeTester(userId:string){ Alert.alert('Revoke beta access?','The tester workspace will become read-only. Their data will not be deleted.',[{text:'Keep access',style:'cancel'},{text:'Revoke access',style:'destructive',onPress:()=>void (async()=>{try{await revokeBetaTester(userId);await load();}catch(error){Alert.alert('Could not revoke beta access',error instanceof Error?error.message:'Unknown error');}})()}]); }
+  async function toggleFlag(flag:any, enabled:boolean) { try { await updateFeatureFlag(flag.key,{ enabled, stage: enabled && ['off','paused'].includes(flag.stage) ? 'beta' : flag.stage }); await load(); } catch (error) { void dialog.notify('Could not update feature', error instanceof Error ? error.message : 'Unknown error'); } }
+  async function makeStudentDiscount() { try { const created=await createStudentDiscount({emailHint:email.trim()||undefined,discountPercent:20}); setLastToken(created.token); setEmail(''); } catch(error){void dialog.notify('Could not create student discount',error instanceof Error?error.message:'Unknown error');} }
+  async function makeBetaInvite() { try { const created=await createBetaInvite({ emailHint: email.trim() || undefined, cohort:inviteCohort, label: inviteLabel.trim() || undefined, region: inviteRegion.trim() || undefined, expiresInDays: 60 }); setLastBetaToken(created.token); setInviteLabel(''); setInviteRegion(''); setEmail(''); await load(); } catch(error){void dialog.notify('Could not create beta invite',error instanceof Error?error.message:'Unknown error');} }
+  async function revokeInvite(id:string){ try{ await revokeBetaInvite(id); await load(); }catch(error){void dialog.notify('Could not revoke invite',error instanceof Error?error.message:'Unknown error');} }
+  async function revokeTester(userId:string){ const ok=await dialog.confirm({title:'Revoke beta access?',message:'The tester workspace will become read-only. Their data will not be deleted.',cancelText:'Keep access',confirmText:'Revoke access',destructive:true}); if(!ok)return; try{await revokeBetaTester(userId);await load();}catch(error){void dialog.notify('Could not revoke beta access',error instanceof Error?error.message:'Unknown error');} }
 
   return <Screen><View style={styles.stack}>
     <Pill tone="gold">Founder Only</Pill>

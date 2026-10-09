@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, SupportText, ui } from '../../src/components/ui';
@@ -10,11 +11,11 @@ export default function ContentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>(); const [workspaceId, setWorkspaceId] = useState<string | null>(null); const [post, setPost] = useState<ContentPost | null>(null);
   const [scheduleByVariant, setScheduleByVariant] = useState<Record<string,string>>({}); const [busy, setBusy] = useState(false);
   useEffect(() => { if (id) void load(); }, [id]);
-  async function load() { try { const workspace = await getActiveWorkspace(); setWorkspaceId(workspace.id); setPost(await getContentPost(workspace.id, id)); } catch (error) { Alert.alert('Could not load content', error instanceof Error ? error.message : 'Unknown error'); } }
-  async function saveVariant(variant: ContentVariant, field: 'caption'|'hook'|'cta', value: string) { if (!workspaceId) return; try { await updateContentVariant(workspaceId, variant.id, { [field]: value }); await load(); } catch (error) { Alert.alert('Could not save', error instanceof Error ? error.message : 'Unknown error'); } }
-  async function approve() { if (!workspaceId) return; setBusy(true); try { await approveContentPost(workspaceId, id); await load(); } catch (error) { Alert.alert('Could not approve', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
-  async function schedule(variant: ContentVariant) { if (!workspaceId) return; const value = scheduleByVariant[variant.id]; if (!value) return Alert.alert('Add a date/time', 'Use an ISO date/time with timezone, for example 2026-08-22T19:00:00+09:00.'); try { await scheduleContentVariant(workspaceId, variant.id, value); await load(); } catch (error) { Alert.alert('Could not schedule', error instanceof Error ? error.message : 'Unknown error'); } }
-  async function publish(variant: ContentVariant) { if (!workspaceId) return; setBusy(true); try { const result = await publishContentVariant(workspaceId, variant.id); Alert.alert('Published', result.duplicatePrevented ? 'Duplicate publish prevented; this version was already verified.' : 'Demo publishing was verified.'); await load(); } catch (error) { Alert.alert('Publishing stopped', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function load() { try { const workspace = await getActiveWorkspace(); setWorkspaceId(workspace.id); setPost(await getContentPost(workspace.id, id)); } catch (error) { void dialog.notify('Could not load content', error instanceof Error ? error.message : 'Unknown error'); } }
+  async function saveVariant(variant: ContentVariant, field: 'caption'|'hook'|'cta', value: string) { if (!workspaceId) return; try { await updateContentVariant(workspaceId, variant.id, { [field]: value }); await load(); } catch (error) { void dialog.notify('Could not save', error instanceof Error ? error.message : 'Unknown error'); } }
+  async function approve() { if (!workspaceId) return; setBusy(true); try { await approveContentPost(workspaceId, id); await load(); } catch (error) { void dialog.notify('Could not approve', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function schedule(variant: ContentVariant) { if (!workspaceId) return; const value = scheduleByVariant[variant.id]; if (!value) return void dialog.notify('Add a date/time', 'Use an ISO date/time with timezone, for example 2026-08-22T19:00:00+09:00.'); try { await scheduleContentVariant(workspaceId, variant.id, value); await load(); } catch (error) { void dialog.notify('Could not schedule', error instanceof Error ? error.message : 'Unknown error'); } }
+  async function publish(variant: ContentVariant) { if (!workspaceId) return; setBusy(true); try { const result = await publishContentVariant(workspaceId, variant.id); void dialog.notify('Published', result.duplicatePrevented ? 'Duplicate publish prevented; this version was already verified.' : 'Demo publishing was verified.'); await load(); } catch (error) { void dialog.notify('Publishing stopped', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
   if (!post) return <Screen><Card><BodyText>Loading content...</BodyText></Card></Screen>;
 
   return <Screen>

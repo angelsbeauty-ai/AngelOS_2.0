@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'expo-router';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, StatCard, SupportText, ui } from '../src/components/ui';
 import { getAnalyticsOverview, runMarketingCoach, type AnalyticsOverview } from '../src/lib/analytics';
@@ -9,8 +10,8 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 export default function AnalyticsScreen() {
   const [overview, setOverview] = useState<AnalyticsOverview | null>(null); const [coach, setCoach] = useState<string | null>(null); const [busy, setBusy] = useState(true); const [coachBusy, setCoachBusy] = useState(false);
   useEffect(() => { void load(); }, []);
-  async function load() { setBusy(true); try { const workspace = await getActiveWorkspace(); setOverview(await getAnalyticsOverview(workspace.id, 30)); } catch (error) { Alert.alert('Could not load analytics', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
-  async function askCoach() { setCoachBusy(true); try { const workspace = await getActiveWorkspace(); const result = await runMarketingCoach(workspace.id, 30); setCoach(result.recommendation); setOverview(result.evidence); } catch (error) { Alert.alert('Marketing Coach unavailable', error instanceof Error ? error.message : 'Unknown error'); } finally { setCoachBusy(false); } }
+  async function load() { setBusy(true); try { const workspace = await getActiveWorkspace(); setOverview(await getAnalyticsOverview(workspace.id, 30)); } catch (error) { void dialog.notify('Could not load analytics', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function askCoach() { setCoachBusy(true); try { const workspace = await getActiveWorkspace(); const result = await runMarketingCoach(workspace.id, 30); setCoach(result.recommendation); setOverview(result.evidence); } catch (error) { void dialog.notify('Marketing Coach unavailable', error instanceof Error ? error.message : 'Unknown error'); } finally { setCoachBusy(false); } }
   const totals = overview?.totals;
 
   return <Screen>

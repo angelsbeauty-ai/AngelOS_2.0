@@ -6,7 +6,7 @@ import * as DialogHost from '../components/DialogHost';
  * Fallback: native Alert on iOS/Android if host isn't mounted, window.alert on web.
  */
 
-export async function notify(title: string, message: string): Promise<void> {
+export async function notify(title: string, message = ''): Promise<void> {
   try {
     return await DialogHost.notify(title, message);
   } catch {
@@ -45,3 +45,6 @@ export async function confirm(options: {
     });
   }
 }
+
+/** Preferred entry point: `dialog.notify(title, message)` / `dialog.confirm({ ... })`. */
+export const dialog = { notify, confirm };

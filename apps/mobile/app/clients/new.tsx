@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { dialog } from '../../src/lib/dialog';
 import { router } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { Card, Pill, PrimaryActionLabel, ScreenTitle, SupportText, ui } from '../../src/components/ui';
@@ -27,7 +28,7 @@ export default function NewClientScreen() {
       });
       router.replace({ pathname: '/clients/[id]', params: { id: client.id } });
     } catch (error) {
-      Alert.alert('Could not create client', error instanceof Error ? error.message : 'Unknown error');
+      void dialog.notify('Could not create client', error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setBusy(false);
     }
