@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, InternalServerError
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
+import type { CreateComposerDraftDto } from './dto/create-composer-draft.dto';
 import type { CreateContentDraftDto } from './dto/create-content-draft.dto';
 import type { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
@@ -138,6 +139,91 @@ export class ContentService {
       // Prototype compensation keeps partial draft creation from leaving orphan content records.
       await service.from('content_posts').delete().eq('workspace_id', workspaceId).eq('id', post.id);
       const message = caught instanceof Error ? caught.message : 'Could not finish content draft';
+      throw new InternalServerErrorException(message);
+    }
+  }
+
+  /**
+   * Saves a post Angel wrote herself in the composer. Unlike createDraft, no AI text is generated
+   * and media is optional. Rows are written with the caller's own Supabase client so workspace
+   * RLS (is_workspace_member) scopes every insert to her workspace.
+   */
+  async createComposerDraft(user: AuthUser, workspaceId: string, dto: CreateComposerDraftDto) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: workspace, error: workspaceError } = await supabase.from('workspaces').select('id').eq('id', workspaceId).maybeSingle();
+    if (workspaceError || !workspace) throw new NotFoundException('Workspace not found');
+
+    const caption = dto.caption.trim();
+    if (!caption) throw new BadRequestException('Write a caption before saving');
+    const platforms = Array.from(new Set(dto.platforms));
+    const mediaAssetIds = Array.from(new Set(dto.mediaAssetIds ?? []));
+    if (mediaAssetIds.length) {
+      const { data: assets, error } = await supabase.from('media_assets').select('id,upload_status,marketing_permission,marketing_scope').eq('workspace_id', workspaceId).in('id', mediaAssetIds);
+      if (error) throw new InternalServerErrorException(error.message);
+      if (!assets || assets.length !== mediaAssetIds.length) throw new BadRequestException('One or more media assets do not belong to this workspace');
+      if (assets.some((asset: any) => asset.upload_status !== 'uploaded')) throw new BadRequestException('All selected media must be fully uploaded first');
+      if (assets.some((asset: any) => !isMarketingEligible(asset))) throw new ConflictException('One or more selected photos do not have marketing permission');
+    }
+
+    const now = new Date().toISOString();
+    const title = (dto.title?.trim() || caption.split('\n')[0]).slice(0, 160);
+    const { data: post, error: postError } = await supabase.from('content_posts').insert({
+      workspace_id: workspaceId,
+      title,
+      objective: dto.objective,
+      primary_format: dto.format,
+      status: 'draft',
+      source_goal: dto.goal?.trim() || null,
+      strategy_reason: null,
+      editing_instructions: { source: 'composer', language: dto.language },
+      created_by: user.id,
+      updated_at: now
+    }).select('id').single();
+    if (postError || !post) throw new InternalServerErrorException(postError?.message ?? 'Could not save the draft');
+
+    try {
+      if (mediaAssetIds.length) {
+        const { error: mediaError } = await supabase.from('content_post_media').insert(mediaAssetIds.map((mediaAssetId, position) => ({
+          workspace_id: workspaceId,
+          content_post_id: post.id,
+          media_asset_id: mediaAssetId,
+          position,
+          role: position === 0 ? 'primary' : 'secondary'
+        })));
+        if (mediaError) throw mediaError;
+      }
+
+      const hashtags = (dto.hashtags ?? []).map((tag) => normalizeHashtag(tag)).filter(Boolean);
+      const { error: variantError } = await supabase.from('content_variants').insert(platforms.map((platform) => ({
+        workspace_id: workspaceId,
+        content_post_id: post.id,
+        platform,
+        format: dto.format,
+        caption,
+        hashtags,
+        scheduled_for: dto.plannedFor ?? null,
+        status: 'draft',
+        capabilities_snapshot: { connected: false, publish: false, source: 'composer' },
+        rule_version: 'v1-composer'
+      })));
+      if (variantError) {
+        if ((variantError as any).code === '23514' && platforms.includes('line')) {
+          throw new ConflictException('LINE drafts need database migration 0014_v1_social_composer.sql. Save without LINE for now.');
+        }
+        throw variantError;
+      }
+
+      if (mediaAssetIds.length) {
+        const service = createServiceSupabaseClient();
+        await service.from('media_assets').update({ content_status: 'selected', updated_at: now }).eq('workspace_id', workspaceId).in('id', mediaAssetIds);
+        await service.from('media_usage_events').insert(mediaAssetIds.map((mediaAssetId) => ({ workspace_id: workspaceId, media_asset_id: mediaAssetId, usage_type: 'content_selected', reference_id: post.id, created_by: user.id })));
+      }
+      return this.get(user, workspaceId, post.id);
+    } catch (caught) {
+      // Same compensation as createDraft: never leave a half-saved post behind.
+      await supabase.from('content_posts').delete().eq('workspace_id', workspaceId).eq('id', post.id);
+      if (caught instanceof ConflictException) throw caught;
+      const message = caught instanceof Error ? caught.message : (caught as any)?.message ?? 'Could not finish saving the draft';
       throw new InternalServerErrorException(message);
     }
   }

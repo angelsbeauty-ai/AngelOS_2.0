@@ -3,6 +3,7 @@ import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { ContentService } from './content.service';
+import { CreateComposerDraftDto } from './dto/create-composer-draft.dto';
 import { CreateContentDraftDto } from './dto/create-content-draft.dto';
 import { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import { ScheduleContentVariantDto } from './dto/schedule-content-variant.dto';
@@ -31,6 +32,11 @@ export class ContentController {
   @Post()
   createDraft(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: CreateContentDraftDto) {
     return this.content.createDraft(user, workspaceId, dto);
+  }
+
+  @Post('drafts')
+  createComposerDraft(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: CreateComposerDraftDto) {
+    return this.content.createComposerDraft(user, workspaceId, dto);
   }
 
   @Post(':contentPostId/approve')
