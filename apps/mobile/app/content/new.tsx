@@ -1,39 +1,299 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { ScrollView, StyleSheet, Text, TextInput, View, Pressable } from 'react-native';
+import { Link } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, SupportText, ui } from '../../src/components/ui';
-import { createContentDraft, reviewContentMedia, type ContentObjective, type ContentPlatform, type ContentReview } from '../../src/lib/content';
-import { getActiveWorkspace } from '../../src/lib/workspace';
+import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 
-const objectives: ContentObjective[] = ['bookings','reach','inquiries','saves','education','trust','availability'];
-const platforms: ContentPlatform[] = ['instagram','facebook','tiktok','manual'];
+type Language = 'en' | 'ja';
+type Platform = 'instagram_feed' | 'instagram_reel' | 'facebook' | 'line' | 'tiktok';
 
-export default function NewContentScreen() {
-  const [objective, setObjective] = useState<ContentObjective>('bookings'); const [title, setTitle] = useState('Next recommended post');
-  const [goal, setGoal] = useState(''); const [review, setReview] = useState<ContentReview | null>(null); const [selected, setSelected] = useState<string[]>([]);
-  const [selectedPlatforms, setSelectedPlatforms] = useState<ContentPlatform[]>(['instagram']); const [busy, setBusy] = useState(false);
-  async function reviewMedia() { setBusy(true); try { const workspace = await getActiveWorkspace(); const result = await reviewContentMedia(workspace.id, objective); setReview(result); setSelected(result.recommendation?.mediaAssetIds ?? []); } catch (error) { Alert.alert('Could not review media', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
-  function togglePlatform(platform: ContentPlatform) { setSelectedPlatforms((current) => current.includes(platform) ? current.filter((item) => item !== platform) : [...current, platform]); }
-  async function create() { if (!selected.length) return Alert.alert('Choose media', 'Review your eligible media first.'); if (!selectedPlatforms.length) return Alert.alert('Choose a platform', 'Choose at least one platform version.'); setBusy(true); try { const workspace = await getActiveWorkspace(); const post = await createContentDraft(workspace.id, { title, objective, goal, mediaAssetIds: selected, platforms: selectedPlatforms }); router.replace(`/content/${post.id}` as any); } catch (error) { Alert.alert('Could not create content', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+export default function NewPostScreen() {
+  const [goal, setGoal] = useState<string>('');
+  const [language, setLanguage] = useState<Language>('en');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Platform[]>(['instagram_feed']);
+  const [mediaIds, setMediaIds] = useState<string[]>([]);
+  const [caption, setCaption] = useState('');
+  const [hashtags, setHashtags] = useState('');
+  const [scheduledFor, setScheduledFor] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  return <Screen>
-    <Pill tone="gold">Guided Creation</Pill><ScreenTitle>Create Content</ScreenTitle><SupportText>Choose the business result. AngelOS will recommend one strongest eligible media direction.</SupportText>
-    <Card><SectionTitle>1. Choose the goal</SectionTitle><View style={styles.wrap}>{objectives.map((item) => <Pressable key={item} onPress={() => { setObjective(item); setReview(null); }}><Pill tone={item === objective ? 'gold' : 'secondary'}>{item.replaceAll('_', ' ')}</Pill></Pressable>)}</View>
-      <TextInput value={title} onChangeText={setTitle} placeholder="Post title" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
-      <TextInput value={goal} onChangeText={setGoal} placeholder="Optional details about what you want to achieve" placeholderTextColor={ui.colors.secondaryText} style={[styles.input, styles.goalInput]} multiline />
-    </Card>
-    <Card premium><SectionTitle>2. Let AngelOS review</SectionTitle><SupportText>Only media eligible for this business goal will be considered.</SupportText><Pressable onPress={() => void reviewMedia()} disabled={busy}><PrimaryActionLabel>{busy ? 'Reviewing...' : 'Review My Media'}</PrimaryActionLabel></Pressable></Card>
-    {review?.recommendation ? <Card><View style={styles.recommendationHeader}><Pill tone="gold">Recommended</Pill><SupportText>{review.recommendation.format}</SupportText></View><SectionTitle>Strongest direction</SectionTitle><BodyText>{review.recommendation.reason}</BodyText><SupportText>{review.recommendation.mediaAssetIds.length} selected asset(s) | {review.reviewMode === 'ai_vision' ? 'AI visual review' : 'safe metadata review'}</SupportText></Card> : null}
-    {review && !review.recommendation ? <Card><BodyText>{review.reason ?? 'No eligible recommendation yet.'}</BodyText></Card> : null}
-    {review?.candidates?.length ? <Card><SectionTitle>Eligible media</SectionTitle>{review.candidates.slice(0, 5).map((item) => <View key={item.id} style={styles.candidateRow}><View style={styles.candidateCopy}><Text style={styles.filename}>{item.filename}</Text><SupportText>{item.role}</SupportText></View><Pill>{`score ${item.score}`}</Pill></View>)}</Card> : null}
-    <Card><SectionTitle>3. Prepare platform versions</SectionTitle><View style={styles.wrap}>{platforms.map((item) => <Pressable key={item} onPress={() => togglePlatform(item)}><Pill tone={selectedPlatforms.includes(item) ? 'gold' : 'secondary'}>{item}</Pill></Pressable>)}</View><SupportText>Manual is the safe demo transport. Social versions remain drafts until real provider connections are ready.</SupportText></Card>
-    <Pressable onPress={() => void create()} disabled={busy}><PrimaryActionLabel>Create Strongest Draft</PrimaryActionLabel></Pressable>
-    <Pressable onPress={() => router.back()}><SecondaryActionLabel>Cancel</SecondaryActionLabel></Pressable>
-  </Screen>;
+  const platforms: { id: Platform; label: string }[] = [
+    { id: 'instagram_feed', label: 'IG Feed' },
+    { id: 'instagram_reel', label: 'IG Reel' },
+    { id: 'facebook', label: 'Facebook' },
+    { id: 'line', label: 'LINE Broadcast' },
+    { id: 'tiktok', label: 'TikTok' },
+  ];
+
+  const goals = ['Bookings', 'Academy students', 'Trust & credibility', 'Reach', 'Engagement'];
+
+  const togglePlatform = (p: Platform) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    );
+  };
+
+  async function save() {
+    if (!goal || !caption.trim()) return;
+    setBusy(true);
+    try {
+      // TODO: Call API to create draft(s)
+      // For now, just show success
+      alert('Post draft created');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Screen>
+      <ScreenTitle>Create Post</ScreenTitle>
+      <SupportText>Write your caption with AngelOS AI suggestions. Choose which platforms to post on.</SupportText>
+
+      <Card>
+        <SectionTitle>Goal</SectionTitle>
+        <View style={styles.goalGrid}>
+          {goals.map((g) => (
+            <Pressable
+              key={g}
+              style={[styles.goalPill, goal === g && styles.goalPillSelected]}
+              onPress={() => setGoal(g)}
+            >
+              <Text style={[styles.goalPillText, goal === g && styles.goalPillTextSelected]}>
+                {g}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle>Language</SectionTitle>
+        <View style={styles.languageToggle}>
+          <Pressable
+            style={[styles.langButton, language === 'en' && styles.langButtonActive]}
+            onPress={() => setLanguage('en')}
+          >
+            <Text style={[styles.langButtonText, language === 'en' && styles.langButtonTextActive]}>
+              English
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.langButton, language === 'ja' && styles.langButtonActive]}
+            onPress={() => setLanguage('ja')}
+          >
+            <Text style={[styles.langButtonText, language === 'ja' && styles.langButtonTextActive]}>
+              日本語
+            </Text>
+          </Pressable>
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle>Caption</SectionTitle>
+        <TextInput
+          value={caption}
+          onChangeText={setCaption}
+          placeholder="Write your caption here..."
+          placeholderTextColor={ui.colors.secondaryText}
+          multiline
+          style={styles.captionInput}
+        />
+        <SupportText>{caption.length} characters</SupportText>
+        <View style={styles.buttonRow}>
+          <Pressable style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Shorter</Text>
+          </Pressable>
+          <Pressable style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Warmer</Text>
+          </Pressable>
+          <Pressable style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Pro</Text>
+          </Pressable>
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle>Platforms</SectionTitle>
+        <View style={styles.platformGrid}>
+          {platforms.map((p) => (
+            <Pressable
+              key={p.id}
+              style={[styles.platformButton, selectedPlatforms.includes(p.id) && styles.platformButtonSelected]}
+              onPress={() => togglePlatform(p.id)}
+            >
+              <Text
+                style={[
+                  styles.platformButtonText,
+                  selectedPlatforms.includes(p.id) && styles.platformButtonTextSelected,
+                ]}
+              >
+                {p.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
+      <Card>
+        <SectionTitle>Hashtags</SectionTitle>
+        <TextInput
+          value={hashtags}
+          onChangeText={setHashtags}
+          placeholder="#hashtags #separated"
+          placeholderTextColor={ui.colors.secondaryText}
+          style={styles.input}
+        />
+      </Card>
+
+      <Card>
+        <SectionTitle>Schedule (Optional)</SectionTitle>
+        <TextInput
+          value={scheduledFor}
+          onChangeText={setScheduledFor}
+          placeholder="2026-10-15T19:00"
+          placeholderTextColor={ui.colors.secondaryText}
+          style={styles.input}
+        />
+        <SupportText>Leave blank to save as draft</SupportText>
+      </Card>
+
+      <View style={styles.actions}>
+        <Pressable disabled={busy} onPress={save} style={styles.saveButton}>
+          <PrimaryActionLabel>{busy ? 'Saving...' : 'Save Draft'}</PrimaryActionLabel>
+        </Pressable>
+      </View>
+    </Screen>
+  );
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: ui.spacing.xs }, input: { borderWidth: 1, borderColor: ui.colors.border, borderRadius: ui.radius.control, backgroundColor: ui.colors.elevated, color: ui.colors.primaryText, padding: ui.spacing.sm, fontSize: 16 }, goalInput: { minHeight: 96, textAlignVertical: 'top' },
-  recommendationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ui.spacing.sm }, candidateRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm, paddingVertical: ui.spacing.xs, borderBottomWidth: 1, borderBottomColor: ui.colors.border }, candidateCopy: { flex: 1, gap: 2 }, filename: { color: ui.colors.primaryText, fontSize: 15, fontWeight: '700' }
+  goalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.sm,
+  },
+  goalPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: ui.colors.elevated,
+    borderWidth: 1,
+    borderColor: ui.colors.hairline,
+  },
+  goalPillSelected: {
+    backgroundColor: ui.colors.gold,
+    borderColor: ui.colors.gold,
+  },
+  goalPillText: {
+    color: ui.colors.primaryText,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  goalPillTextSelected: {
+    color: ui.colors.onCharcoal,
+    fontWeight: '600',
+  },
+  languageToggle: {
+    flexDirection: 'row',
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.sm,
+  },
+  langButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: ui.spacing.sm,
+    borderRadius: ui.radius.control,
+    backgroundColor: ui.colors.elevated,
+    borderWidth: 1,
+    borderColor: ui.colors.hairline,
+    alignItems: 'center',
+  },
+  langButtonActive: {
+    backgroundColor: ui.colors.gold,
+    borderColor: ui.colors.gold,
+  },
+  langButtonText: {
+    color: ui.colors.primaryText,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  langButtonTextActive: {
+    color: ui.colors.onCharcoal,
+  },
+  captionInput: {
+    minHeight: 120,
+    borderWidth: 1,
+    borderColor: ui.colors.border,
+    borderRadius: ui.radius.control,
+    paddingHorizontal: ui.spacing.sm,
+    paddingVertical: ui.spacing.sm,
+    color: ui.colors.primaryText,
+    fontSize: 16,
+    textAlignVertical: 'top',
+    marginVertical: ui.spacing.sm,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: ui.spacing.xs,
+    borderRadius: ui.radius.control,
+    backgroundColor: ui.colors.elevated,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    color: ui.colors.primaryText,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  platformGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.sm,
+  },
+  platformButton: {
+    flex: 0.48,
+    paddingVertical: 10,
+    borderRadius: ui.radius.control,
+    backgroundColor: ui.colors.elevated,
+    borderWidth: 1,
+    borderColor: ui.colors.hairline,
+    alignItems: 'center',
+  },
+  platformButtonSelected: {
+    backgroundColor: ui.colors.gold,
+    borderColor: ui.colors.gold,
+  },
+  platformButtonText: {
+    color: ui.colors.primaryText,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  platformButtonTextSelected: {
+    color: ui.colors.onCharcoal,
+  },
+  input: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: ui.colors.border,
+    borderRadius: ui.radius.control,
+    paddingHorizontal: ui.spacing.sm,
+    color: ui.colors.primaryText,
+    fontSize: 16,
+    marginVertical: ui.spacing.sm,
+  },
+  actions: {
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.md,
+  },
+  saveButton: {
+    marginBottom: ui.spacing.xl,
+  },
 });

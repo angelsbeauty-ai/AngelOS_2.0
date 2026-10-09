@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { colors, radius, shadow, spacing, tokens, typography } from '../design/theme';
 
 const palette = colors.light;
@@ -27,6 +27,9 @@ export function Pill({ children, tone = 'secondary' }: PropsWithChildren<{ tone?
 export function Row({ children, accessory }: PropsWithChildren<{ accessory?: ReactNode }>) { return <View style={styles.row}><View style={styles.rowContent}>{children}</View>{accessory}</View>; }
 export function PrimaryActionLabel({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.primaryAction}>{children}</Text>; }
 export function SecondaryActionLabel({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.secondaryAction}>{children}</Text>; }
+export function EmptyState({ icon, title, message, action }: { icon?: string; title: string; message: string; action?: { label: string; onPress: () => void } }) {
+  return <View style={styles.emptyState}><Text {...textProps} style={styles.emptyTitle}>{title}</Text><SupportText>{message}</SupportText>{action && <Pressable onPress={action.onPress} style={styles.emptyButton}><SecondaryActionLabel>{action.label}</SecondaryActionLabel></Pressable>}</View>;
+}
 export const ui = { colors: palette, spacing, radius, typography };
 
 const styles = StyleSheet.create({

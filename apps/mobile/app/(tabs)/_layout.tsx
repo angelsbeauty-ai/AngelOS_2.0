@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { Calendar, GraduationCap, House, Users } from 'phosphor-react-native';
+import { Calendar, GraduationCap, House, Users, Sparkle } from 'phosphor-react-native';
 import { GlassSurface } from '../../src/components/Glass';
 import { colors } from '../../src/design/theme';
 
@@ -19,6 +19,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: 'Today', tabBarIcon: ({ color }) => <House size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="clients" options={{ title: 'Clients', tabBarIcon: ({ color }) => <Users size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="calendar" options={{ title: 'Calendar', tabBarIcon: ({ color }) => <Calendar size={24} color={color as string} weight="duotone" /> }} />
+      <Tabs.Screen name="social" options={{ title: 'Social', tabBarIcon: ({ color }) => <Sparkle size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="academy" options={{ title: 'Academy', tabBarIcon: ({ color }) => <GraduationCap size={24} color={color as string} weight="duotone" /> }} />
     </Tabs>
   );
