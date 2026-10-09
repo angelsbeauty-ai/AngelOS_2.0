@@ -6,6 +6,7 @@ import { ContentService } from './content.service';
 @Module({
   imports: [AiModule],
   controllers: [ContentController],
-  providers: [ContentService]
+  providers: [ContentService],
+  exports: [ContentService]
 })
 export class ContentModule {}

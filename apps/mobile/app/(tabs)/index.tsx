@@ -8,6 +8,7 @@ import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { getCalendar, type CalendarAppointment } from '../../src/lib/bookings';
 import { supabase } from '../../src/lib/supabase';
+import { SuggestionsCard } from '../../src/components/SuggestionsCard';
 
 export default function TodayScreen() {
   const [health, setHealth] = useState<SystemHealthOverview | null>(null);
@@ -90,6 +91,8 @@ export default function TodayScreen() {
           <Gear size={24} color={ui.colors.gold} weight="duotone" />
         </Pressable>
       </View>
+
+      <SuggestionsCard workspaceId={workspaceId} limit={4} />
 
       {health && (
         <Card>
