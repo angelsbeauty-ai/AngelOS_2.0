@@ -4,6 +4,7 @@ import { createServiceSupabaseClient, createUserSupabaseClient } from '../config
 import { planSafeAssistantAction } from './action-planner';
 import { buildOperatingInstructions } from './angelos-operating-contract';
 import { AiProviderService } from './ai-provider.service';
+import { StyleLearningService } from './style/style-learning.service';
 import type { AssistantProfile, AssistantRoleRow, AiMessageRow } from './ai.types';
 import type { CreateConversationDto } from './dto/create-conversation.dto';
 import type { CreateMemoryDto } from './dto/create-memory.dto';
@@ -13,7 +14,7 @@ import type { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
 
 @Injectable()
 export class AiService {
-  constructor(private readonly provider: AiProviderService) {}
+  constructor(private readonly provider: AiProviderService, private readonly style: StyleLearningService) {}
 
   async getProfile(user: AuthUser, workspaceId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
@@ -160,7 +161,7 @@ export class AiService {
       .map((row) => `${row.author_type === 'assistant' ? 'Assistant' : row.author_type === 'user' ? 'Owner' : 'System'}: ${row.content}`)
       .join('\n');
 
-    const contextFacts = await this.loadAuthorizedContextFacts(supabase, workspaceId, dto.context);
+    const contextFacts = await this.loadAuthorizedContextFacts(user, supabase, workspaceId, dto.context);
     const instructions = buildOperatingInstructions({
       workspaceName: workspaceResult.data.name,
       profile: profileResult.data as AssistantProfile,
@@ -354,6 +355,7 @@ export class AiService {
   }
 
   private async loadAuthorizedContextFacts(
+    user: AuthUser,
     supabase: ReturnType<typeof createUserSupabaseClient>,
     workspaceId: string,
     context?: { screen?: string; entityType?: string; entityId?: string }
@@ -411,6 +413,10 @@ export class AiService {
         `Client/lead: ${client?.display_name ?? thread.contact_display_name ?? 'unidentified'}; language=${client?.language ?? 'unknown'}; doNotAutoMessage=${client?.do_not_auto_message ?? 'unknown'}`
       ];
       for (const item of (messages ?? []).reverse()) facts.push(`${item.direction === 'inbound' ? 'Client' : 'Business'} message (${item.created_at}, ${item.status}${item.sensitive ? ', sensitive' : ''}): ${item.body}`);
+      const lastClient = (messages ?? []).filter((m: any) => m.direction === 'inbound').pop()?.body ?? '';
+      const replyLanguage = /[\u3040-\u30ff\u4e00-\u9fff]/.test(lastClient) ? 'ja' : String(client?.language ?? 'en').startsWith('ja') ? 'ja' : 'en';
+      const styleContext = await this.style.replyContext(user, workspaceId, String(thread.intent), replyLanguage).catch(() => undefined);
+      if (styleContext) facts.push(`If you draft a client reply, write it in ${replyLanguage === 'ja' ? 'Japanese only' : 'English only'}.\n${styleContext}`);
       return facts;
     }
 

@@ -8,7 +8,7 @@ import { getFounderMe } from '../src/lib/founder';
 import { supabase } from '../src/lib/supabase';
 
 const settings = [
-  { href: '/ai-settings', title: 'AI Assistant', detail: 'Personality, roles, proactivity and guidance' },
+  { href: '/ai-settings', title: 'AI Assistant', detail: 'Personality, reply style, repeated replies it learned' },
   { href: '/settings/connections', title: 'Connections', detail: 'LINE, Instagram, Facebook: what is really connected' },
   { href: '/marketing-profile', title: 'Marketing Profile', detail: 'Goals, ideal client, experience and service area' },
   { href: '/subscription', title: 'Subscription', detail: 'Plan, student discount and account access' },

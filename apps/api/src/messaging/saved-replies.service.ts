@@ -105,7 +105,8 @@ export class SavedRepliesService {
     const titles = new Set(existing.replies.map((row: any) => String(row.title).toLowerCase()));
     const rows = STARTER_SAVED_REPLIES.filter((row) => !titles.has(row.title.toLowerCase())).map((row) => ({ ...row, workspace_id: workspaceId, created_by: user.id }));
     if (rows.length) {
-      const { error } = await supabase.from('saved_replies').insert(rows);
+      let { error } = await supabase.from('saved_replies').insert(rows.map((row) => ({ ...row, source: 'starter' })));
+      if (error && isMissingRelation(error)) ({ error } = await supabase.from('saved_replies').insert(rows)); // before 0016
       if (error) throw new InternalServerErrorException(error.message);
     }
     return this.list(user, workspaceId);

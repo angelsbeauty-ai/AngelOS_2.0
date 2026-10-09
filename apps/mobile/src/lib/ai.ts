@@ -104,3 +104,40 @@ export async function approveAiAction(workspaceId: string, actionId: string) {
 export async function cancelAiAction(workspaceId: string, actionId: string) {
   return apiFetch(`/workspaces/${workspaceId}/ai/actions/${actionId}/cancel`, { method: 'POST' });
 }
+
+export interface LearnedStyle {
+  sampleCount: number;
+  languageMix: { en: number; ja: number };
+  avgLength: { en: number | null; ja: number | null };
+  lengthBand: 'short' | 'medium' | 'long';
+  emojiPerReply: number;
+  topEmojis: string[];
+  greetings: string[];
+  closings: string[];
+  formality: 'casual' | 'polite' | 'formal';
+  usesClientName: boolean;
+}
+
+export interface ReplyStyle {
+  learn_from_replies: boolean;
+  reply_tone: 'casual_friendly' | 'warm_polite' | 'professional' | 'playful';
+  emoji_level: 'none' | 'light' | 'lots';
+  reply_length: 'short' | 'medium' | 'detailed';
+  style_notes: string;
+  learned: Partial<LearnedStyle>;
+  sample_count: number;
+  learned_at: string | null;
+}
+
+export const getReplyStyle = (workspaceId: string) =>
+  apiFetch<{ style: ReplyStyle; needsMigration: string | null }>(`/workspaces/${workspaceId}/ai/style`);
+export const updateReplyStyle = (workspaceId: string, patch: Record<string, unknown>) =>
+  apiFetch<ReplyStyle>(`/workspaces/${workspaceId}/ai/style`, { method: 'PATCH', body: JSON.stringify(patch) });
+export const learnReplyStyleNow = (workspaceId: string) =>
+  apiFetch<{ learned: LearnedStyle; newSuggestions: number }>(`/workspaces/${workspaceId}/ai/style/learn`, { method: 'POST' });
+export const listSuggestedReplies = (workspaceId: string) =>
+  apiFetch<{ replies: import('./messaging').SavedReply[]; needsMigration: string | null }>(`/workspaces/${workspaceId}/ai/style/suggested-replies`);
+export const approveSuggestedReply = (workspaceId: string, id: string, edits?: { title?: string; bodyEn?: string; bodyJa?: string }) =>
+  apiFetch(`/workspaces/${workspaceId}/ai/style/suggested-replies/${id}/approve`, { method: 'POST', body: JSON.stringify(edits ?? {}) });
+export const rejectSuggestedReply = (workspaceId: string, id: string) =>
+  apiFetch(`/workspaces/${workspaceId}/ai/style/suggested-replies/${id}/reject`, { method: 'POST' });

@@ -1,4 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import { StyleLearningService } from './style/style-learning.service';
+import { ApproveSuggestedReplyDto, UpdateReplyStyleDto } from './dto/update-reply-style.dto';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
@@ -12,7 +14,15 @@ import { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
 @Controller('workspaces/:workspaceId/ai')
 @UseGuards(SupabaseAuthGuard)
 export class AiController {
-  constructor(private readonly ai: AiService) {}
+  constructor(private readonly ai: AiService, private readonly style: StyleLearningService) {}
+
+  // How the assistant writes to clients: manual settings + what it learned from the owner's replies.
+  @Get('style') getStyle(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.style.getStyle(user, workspaceId); }
+  @Patch('style') updateStyle(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: UpdateReplyStyleDto) { return this.style.updateStyle(user, workspaceId, dto); }
+  @Post('style/learn') learnStyle(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.style.learnNow(user, workspaceId); }
+  @Get('style/suggested-replies') suggestedReplies(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.style.listSuggested(user, workspaceId); }
+  @Post('style/suggested-replies/:replyId/approve') approveSuggested(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('replyId') replyId: string, @Body() dto: ApproveSuggestedReplyDto) { return this.style.decideSuggested(user, workspaceId, replyId, 'approved', dto); }
+  @Post('style/suggested-replies/:replyId/reject') rejectSuggested(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('replyId') replyId: string) { return this.style.decideSuggested(user, workspaceId, replyId, 'rejected'); }
 
   @Get('profile')
   getProfile(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {

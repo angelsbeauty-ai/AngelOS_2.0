@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, InternalServerError
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
+import { StyleLearningService } from '../ai/style/style-learning.service';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import type { CreateDemoChannelDto } from './dto/create-demo-channel.dto';
 import type { IngestMessageDto } from './dto/ingest-message.dto';
@@ -38,7 +39,7 @@ interface InboundRecordInput {
 export class MessagingService {
   private readonly logger = new Logger('MessagingService');
   private readonly manualAdapter = new ManualMessagingAdapter();
-  constructor(private readonly aiProvider: AiProviderService) {}
+  constructor(private readonly aiProvider: AiProviderService, private readonly style: StyleLearningService) {}
 
   private adapterFor(provider: string): MessagingProviderAdapter {
     if (provider === 'line') return new LineMessagingAdapter(readLineConfig());
@@ -366,9 +367,10 @@ export class MessagingService {
     return { message: data, requiresApproval: true, language, reason: mixed ? 'This draft mixes English and Japanese. Please edit it before approving.' : sensitive ? 'Please read this one carefully before approving.' : 'Nothing is sent until you tap Approve.' };
   }
 
-  /** Extended in Step 2 with the learned style profile + approved saved replies. */
-  protected async replyStyleContext(_user: AuthUser, _workspaceId: string, _intent: string, _language: ClientLanguage): Promise<string | undefined> {
-    return undefined;
+  /** The owner's reply style (manual + learned) and her approved saved replies, kept under ~2.4k tokens. */
+  private async replyStyleContext(user: AuthUser, workspaceId: string, intent: string, language: ClientLanguage): Promise<string | undefined> {
+    try { return await this.style.replyContext(user, workspaceId, intent, language); }
+    catch { return undefined; }
   }
 
   async createReply(user: AuthUser, workspaceId: string, threadId: string, dto: CreateReplyDto) {
@@ -532,8 +534,10 @@ export class MessagingService {
     return { message: sentMessage, sent: true, duplicatePrevented: false, delivery: 'sent' };
   }
 
-  /** Hook for Step 2 (learning from approved replies). */
-  protected async afterOwnerApproval(_workspaceId: string): Promise<void> {}
+  /** Every approval feeds the slow learning loop (runs in the background, never blocks the reply). */
+  private async afterOwnerApproval(workspaceId: string): Promise<void> {
+    void this.style.maybeLearn(workspaceId);
+  }
 }
 
 function withoutInboxColumns(fields: Record<string, unknown>) {
