@@ -7,6 +7,8 @@
     "start": "expo start",
     "ios": "expo start --ios",
     "android": "expo start --android",
+    "web": "expo start --web",
+    "export:web": "expo export --platform web",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -30,11 +32,13 @@
     "expo-symbols": "~57.0.3",
     "phosphor-react-native": "^3.0.6",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-url-polyfill": "^2.0.0"
+    "react-native-url-polyfill": "^2.0.0",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

@@ -1,28 +1,22 @@
-﻿import { Link, Redirect } from 'expo-router';
+import { Link, Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Gear } from 'phosphor-react-native';
 import { Screen } from '../../src/components/Screen';
-import {
-  AppTitle,
-  BodyText,
-  Card,
-  Pill,
-  PrimaryActionLabel,
-  Row,
-  SecondaryActionLabel,
-  SectionTitle,
-  StatCard,
-  SupportText,
-  ui
-} from '../../src/components/ui';
+import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system-health';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { getCalendar, type CalendarAppointment } from '../../src/lib/bookings';
 import { supabase } from '../../src/lib/supabase';
 
-export default function HomeScreen() {
+export default function TodayScreen() {
   const [health, setHealth] = useState<SystemHealthOverview | null>(null);
+  const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
+  const [nextAppointment, setNextAppointment] = useState<CalendarAppointment | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -31,7 +25,7 @@ export default function HomeScreen() {
       setIsSignedIn(signedIn);
       setSessionReady(true);
       if (signedIn) {
-        void loadHealth();
+        void load();
       }
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -40,7 +34,7 @@ export default function HomeScreen() {
       setIsSignedIn(signedIn);
       setSessionReady(true);
       if (signedIn) {
-        void loadHealth();
+        void load();
       }
     });
     return () => {
@@ -48,156 +42,280 @@ export default function HomeScreen() {
       listener.subscription.unsubscribe();
     };
   }, []);
-  async function loadHealth() {
-    try { const workspace = await getActiveWorkspace(); setHealth(await getSystemHealth(workspace.id)); }
-    catch { setHealth(null); }
+
+  async function load() {
+    try {
+      const workspace = await getActiveWorkspace();
+      setWorkspaceId(workspace.id);
+      const [healthData, calendarData] = await Promise.all([
+        getSystemHealth(workspace.id),
+        getCalendar(workspace.id, startOfToday().toISOString(), endOfToday().toISOString()),
+      ]);
+      setHealth(healthData);
+      setAppointments(calendarData.appointments);
+      const next = calendarData.appointments
+        .filter((a) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'no_show')
+        .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0];
+      setNextAppointment(next || null);
+    } catch {
+      setHealth(null);
+    }
   }
+
   if (!sessionReady) {
     return <Screen><SupportText>Loading AngelOS...</SupportText></Screen>;
   }
   if (!isSignedIn) {
     return <Redirect href="/login" />;
   }
-  const attentionCount = health ? health.counts.urgent + health.counts.today + health.counts.later : 0;
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const laterAppointments = appointments.filter(
+    (a) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'no_show' && a !== nextAppointment
+  );
+
   return (
     <Screen>
-      <View style={styles.hero}>
-        <Pill tone="gold">Owner Dashboard</Pill>
-        <AppTitle>AngelOS</AppTitle>
-        <SupportText>Clients, bookings, content and system health in one calm place.</SupportText>
-      </View>
-
-      <View style={styles.statsGrid}>
-        <StatCard label="Appointments" value="Today" detail="Review the day before it starts." />
-        <StatCard label="Attention" value={health ? `${attentionCount}` : '--'} detail={health ? 'Items to review' : 'Check workspace health'} />
-      </View>
-
-      <Card premium>
-        <View style={styles.cardHeader}>
-          <SectionTitle>AngelOS Assistant</SectionTitle>
-          <Pill>AI preview</Pill>
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <SupportText>{dateStr}</SupportText>
+          <ScreenTitle>Today</ScreenTitle>
         </View>
-        <BodyText>
-          Ask what needs attention, draft a client reply, prepare content, or review today's schedule.
-        </BodyText>
-        <Link href="/ai" asChild>
-          <Pressable style={styles.actionLink}>
-            <PrimaryActionLabel>Ask AngelOS</PrimaryActionLabel>
-          </Pressable>
-        </Link>
-      </Card>
+        <Pressable
+          onPress={() => router.push('/settings')}
+          style={styles.settingsButton}
+          accessibilityLabel="Settings"
+        >
+          <Gear size={24} color={ui.colors.gold} weight="duotone" />
+        </Pressable>
+      </View>
 
-      <Card>
-        <SectionTitle>Needs Attention</SectionTitle>
-        <BodyText>
-          {health
-            ? attentionCount
-              ? `${attentionCount} item${attentionCount === 1 ? '' : 's'} need review before AngelOS acts.`
-              : 'Nothing currently needs your attention.'
-            : 'Run a System Health check to verify your workspace.'}
-        </BodyText>
-        <Link href="/system-health" asChild>
-          <Pressable style={styles.actionLink}>
-            <SecondaryActionLabel>Open System Health</SecondaryActionLabel>
-          </Pressable>
-        </Link>
-      </Card>
-
-      <Card>
-        <SectionTitle>Run Today</SectionTitle>
-        <View>
-          <Link href="/calendar" asChild>
-            <Pressable style={styles.rowLink}>
-              <Row accessory={<Text style={styles.chevron}>{'>'}</Text>}>
-                <BodyText>Calendar</BodyText>
-                <SupportText>Bookings, models, classes and conflicts</SupportText>
-              </Row>
+      {health && (
+        <Card>
+          <SectionTitle>Needs Attention</SectionTitle>
+          <BodyText>
+            {health.counts.urgent + health.counts.today + health.counts.later > 0
+              ? `${health.counts.urgent + health.counts.today + health.counts.later} item${health.counts.urgent + health.counts.today + health.counts.later === 1 ? '' : 's'} need review.`
+              : 'Nothing currently needs your attention.'}
+          </BodyText>
+          <Link href="/system-health" asChild>
+            <Pressable style={styles.actionLink}>
+              <Text style={styles.actionText}>Review →</Text>
             </Pressable>
           </Link>
+        </Card>
+      )}
+
+      {nextAppointment && (
+        <Card premium>
+          <SectionTitle>Next Booking</SectionTitle>
+          <View style={styles.bookingCard}>
+            <Text style={styles.bookingTime}>{formatTime(nextAppointment.start_at)}</Text>
+            <Text style={styles.bookingClient}>{nextAppointment.client?.display_name ?? 'Client'}</Text>
+            <SupportText>{nextAppointment.service_name}</SupportText>
+            <Pill tone="gold">{nextAppointment.status.replaceAll('_', ' ')}</Pill>
+          </View>
+          <Link href="/calendar" asChild>
+            <Pressable style={styles.actionLink}>
+              <Text style={styles.actionText}>View Calendar →</Text>
+            </Pressable>
+          </Link>
+        </Card>
+      )}
+
+      <Card>
+        <SectionTitle>Today's Numbers</SectionTitle>
+        <View style={styles.numbersGrid}>
+          <View style={styles.numberItem}>
+            <Text style={styles.numberValue}>{appointments.length}</Text>
+            <SupportText>Appointment{appointments.length === 1 ? '' : 's'}</SupportText>
+          </View>
+          <View style={styles.numberItem}>
+            <Text style={styles.numberValue}>{new Set(appointments.map((a) => a.client?.id)).size}</Text>
+            <SupportText>Client{new Set(appointments.map((a) => a.client?.id)).size === 1 ? '' : 's'}</SupportText>
+          </View>
+        </View>
+      </Card>
+
+      {laterAppointments.length > 0 && (
+        <Card>
+          <SectionTitle>Later Today</SectionTitle>
+          <View style={styles.laterList}>
+            {laterAppointments.map((appointment) => (
+              <View key={appointment.id} style={styles.laterItem}>
+                <Text style={styles.laterTime}>{formatTime(appointment.start_at)}</Text>
+                <View style={styles.laterContent}>
+                  <Text style={styles.laterClient}>{appointment.client?.display_name ?? 'Client'}</Text>
+                  <SupportText>{appointment.service_name}</SupportText>
+                </View>
+              </View>
+            ))}
+          </View>
+        </Card>
+      )}
+
+      <Card>
+        <SectionTitle>Quick Links</SectionTitle>
+        <View style={styles.quickLinksGrid}>
           <Link href="/clients" asChild>
-            <Pressable style={styles.rowLink}>
-              <Row accessory={<Text style={styles.chevron}>{'>'}</Text>}>
-                <BodyText>Clients</BodyText>
-                <SupportText>Profiles, notes and treatment history</SupportText>
-              </Row>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Clients</Text>
             </Pressable>
           </Link>
           <Link href="/messages" asChild>
-            <Pressable style={styles.rowLink}>
-              <Row accessory={<Text style={styles.chevron}>{'>'}</Text>}>
-                <BodyText>Messages</BodyText>
-                <SupportText>Drafts, translation and booking handoff</SupportText>
-              </Row>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Messages</Text>
             </Pressable>
           </Link>
           <Link href="/content" asChild>
-            <Pressable style={styles.rowLink}>
-              <Row accessory={<Text style={styles.chevron}>{'>'}</Text>}>
-                <BodyText>Content</BodyText>
-                <SupportText>AI recommendation, approval and publishing</SupportText>
-              </Row>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Content</Text>
             </Pressable>
           </Link>
-        </View>
-      </Card>
-
-      <Card>
-        <SectionTitle>Tools & Controls</SectionTitle>
-        <View style={styles.moreGrid}>
-          <Link href="/media" style={styles.moreLink}>Media</Link>
-          <Link href="/analytics" style={styles.moreLink}>Analytics</Link>
-          <Link href="/finance" style={styles.moreLink}>Finance</Link>
-          <Link href="/automations" style={styles.moreLink}>Automations</Link>
-          <Link href="/subscription" style={styles.moreLink}>Subscription</Link>
-          <Link href="/beta-feedback" style={styles.moreLink}>Feedback</Link>
-          <Link href="/settings" style={styles.moreLink}>Settings</Link>
+          <Link href="/media" asChild>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Media</Text>
+            </Pressable>
+          </Link>
+          <Link href="/analytics" asChild>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Analytics</Text>
+            </Pressable>
+          </Link>
+          <Link href="/finance" asChild>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Finance</Text>
+            </Pressable>
+          </Link>
+          <Link href="/automations" asChild>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Automations</Text>
+            </Pressable>
+          </Link>
+          <Link href="/ai" asChild>
+            <Pressable style={styles.quickLink}>
+              <Text style={styles.quickLinkText}>Ask AI</Text>
+            </Pressable>
+          </Link>
         </View>
       </Card>
     </Screen>
   );
 }
 
+function startOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function endOfToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+}
+
+function formatTime(value: string) {
+  return new Date(value).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
 const styles = StyleSheet.create({
-  hero: {
-    gap: ui.spacing.xs
-  },
-  statsGrid: {
+  header: {
     flexDirection: 'row',
-    gap: ui.spacing.sm
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: ui.spacing.sm
+    marginBottom: ui.spacing.md,
+  },
+  headerContent: {
+    flex: 1,
+    gap: ui.spacing.xs,
+  },
+  settingsButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: ui.colors.elevated,
   },
   actionLink: {
-    marginTop: ui.spacing.xs,
+    marginTop: ui.spacing.sm,
   },
-  rowLink: {
-  },
-  chevron: {
+  actionText: {
     color: ui.colors.gold,
-    fontSize: 26,
-    lineHeight: 28
+    fontSize: 15,
+    fontWeight: '600',
   },
-  moreGrid: {
+  bookingCard: {
+    gap: ui.spacing.xs,
+    marginVertical: ui.spacing.sm,
+  },
+  bookingTime: {
+    color: ui.colors.primaryText,
+    fontSize: 24,
+    fontWeight: '600',
+  },
+  bookingClient: {
+    color: ui.colors.primaryText,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  numbersGrid: {
+    flexDirection: 'row',
+    gap: ui.spacing.md,
+    marginVertical: ui.spacing.sm,
+  },
+  numberItem: {
+    flex: 1,
+    gap: ui.spacing.xs,
+  },
+  numberValue: {
+    color: ui.colors.gold,
+    fontSize: 28,
+    fontWeight: '600',
+  },
+  laterList: {
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.sm,
+  },
+  laterItem: {
+    flexDirection: 'row',
+    gap: ui.spacing.sm,
+    alignItems: 'center',
+    paddingVertical: ui.spacing.xs,
+  },
+  laterTime: {
+    color: ui.colors.secondaryText,
+    fontSize: 13,
+    fontWeight: '500',
+    minWidth: 50,
+  },
+  laterContent: {
+    flex: 1,
+    gap: 2,
+  },
+  laterClient: {
+    color: ui.colors.primaryText,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  quickLinksGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: ui.spacing.xs
+    gap: ui.spacing.sm,
+    marginVertical: ui.spacing.sm,
   },
-  moreLink: {
-    minHeight: 40,
-    paddingVertical: 10,
+  quickLink: {
+    flex: 0.45,
+    paddingVertical: ui.spacing.sm,
     paddingHorizontal: ui.spacing.sm,
-    borderRadius: ui.radius.pill,
-    borderWidth: 1,
-    borderColor: ui.colors.border,
-    color: ui.colors.primaryText,
     backgroundColor: ui.colors.elevated,
-    fontSize: 14,
-    fontWeight: '700',
-  }
+    borderRadius: ui.radius.control,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickLinkText: {
+    color: ui.colors.primaryText,
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
-
-

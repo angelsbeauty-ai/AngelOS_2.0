@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, SupportText, ui } from '../src/components/ui';
+import { notify } from '../src/lib/dialog';
 import { supabase } from '../src/lib/supabase';
 import { apiFetch } from '../src/lib/api';
 
@@ -16,19 +17,27 @@ export default function LoginScreen() {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
-    if (error) return Alert.alert('Sign in failed', error.message);
+    if (error) {
+      await notify('Sign in failed', error.message);
+      return;
+    }
     try {
       const workspaces = await apiFetch<Array<{ id: string }>>('/workspaces');
       router.replace(workspaces.length ? '/' : '/onboarding');
-    } catch { router.replace('/onboarding'); }
+    } catch {
+      router.replace('/onboarding');
+    }
   }
 
   async function signUp() {
     setBusy(true);
     const { error } = await supabase.auth.signUp({ email: email.trim(), password });
     setBusy(false);
-    if (error) return Alert.alert('Account could not be created', error.message);
-    Alert.alert('Account created', 'Check your email if verification is enabled, then return here to sign in.');
+    if (error) {
+      await notify('Account could not be created', error.message);
+      return;
+    }
+    await notify('Account created', 'Check your email if verification is enabled, then return here to sign in.');
   }
 
   return <Screen><View style={styles.stack}>
