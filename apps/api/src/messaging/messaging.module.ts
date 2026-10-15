@@ -1,4 +1,5 @@
 import { MetaWebhookController } from '../meta/meta-webhook.controller';
+import { MetaConnectController, MetaOAuthCallbackController } from '../meta/meta-connect.controller';
 import { Module } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
@@ -9,7 +10,7 @@ import { SavedRepliesService } from './saved-replies.service';
 
 @Module({
   imports: [AiModule],
-  controllers: [MessagingController, LineWebhookController, MetaWebhookController],
+  controllers: [MessagingController, LineWebhookController, MetaWebhookController, MetaConnectController, MetaOAuthCallbackController],
   providers: [MessagingService, SavedRepliesService, SupabaseAuthGuard],
   exports: [MessagingService, SavedRepliesService]
 })
