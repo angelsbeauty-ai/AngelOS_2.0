@@ -12,7 +12,8 @@ import type { UpdateThreadDto } from './dto/update-thread.dto';
 import type { StartConversationDto } from './dto/start-conversation.dto';
 import { chooseReplyLanguage, detectLanguage, firstName, mixesLanguages, type ClientLanguage } from './language';
 import { LineMessagingAdapter, readLineConfig } from './line-messaging.adapter';
-import { ManualMessagingAdapter, MetaMessagingAdapter, type MessagingProviderAdapter, type NormalizedInboundMessage } from './provider-adapter';
+import { MetaGraphMessagingAdapter } from '../meta/meta-messaging.adapter';
+import { ManualMessagingAdapter, type MessagingProviderAdapter, type NormalizedInboundMessage } from './provider-adapter';
 import { buildClientReplyInstructions, buildTranslateInstructions } from './reply-prompt';
 import { hasUnfilledPlaceholder, isMissingRelation, migrationNeeded } from './saved-replies.service';
 
@@ -44,7 +45,7 @@ export class MessagingService {
 
   private adapterFor(provider: string): MessagingProviderAdapter {
     if (provider === 'line') return new LineMessagingAdapter(readLineConfig());
-    if (provider === 'instagram' || provider === 'facebook') return new MetaMessagingAdapter(provider);
+    if (provider === 'instagram' || provider === 'facebook') return new MetaGraphMessagingAdapter(provider);
     return this.manualAdapter;
   }
 
@@ -72,8 +73,8 @@ export class MessagingService {
       },
       ...(['instagram', 'facebook'] as const).map((provider) => ({
         provider, label: provider === 'instagram' ? 'Instagram DMs' : 'Facebook Messenger',
-        state: 'needs_meta_approval', connected: false, canConnect: false, accountName: null,
-        detail: new MetaMessagingAdapter(provider).status().detail,
+        ...(() => { const st = new MetaGraphMessagingAdapter(provider).status(); const ch = channels.find((row: any) => row.provider === provider && row.status === 'connected');
+          return { state: ch && st.ready ? 'connected' : st.state, connected: Boolean(ch && st.ready), canConnect: false, accountName: ch?.display_name ?? null, detail: st.detail }; })(),
         needs: ['Meta Business account', 'Meta developer app', 'Meta App Review for messaging (takes weeks)']
       })),
       {

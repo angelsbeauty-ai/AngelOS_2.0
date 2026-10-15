@@ -7,6 +7,7 @@ import type { CreateContentDraftDto } from './dto/create-content-draft.dto';
 import type { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
 import { ManualDemoPublishingAdapter } from './publishing-adapter';
+import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
 
 @Injectable()
 export class ContentService {
@@ -274,7 +275,8 @@ export class ContentService {
     const post = (variant as any).post;
     if (!['approved','scheduled','publishing'].includes(post?.status)) throw new ConflictException('Content must be approved before publishing');
     if (!['approved','scheduled','publishing'].includes(variant.status)) throw new ConflictException('This platform version is not approved for publishing');
-    if (variant.platform !== 'manual') throw new ConflictException('Live social publishing is not connected in Sprint 7. AngelOS stops here instead of pretending the post was published.');
+    const live = metaPublishingReady(variant.platform);
+    if (variant.platform !== 'manual' && !live) throw new ConflictException('Live social publishing is not connected. AngelOS stops here instead of pretending the post was published.');
 
     // Re-check marketing permission at publish time because consent can change after approval.
     const detail = await this.get(user, workspaceId, post.id);
@@ -297,7 +299,11 @@ export class ContentService {
     }
     await service.from('content_posts').update({ status: 'publishing', updated_at: now }).eq('id', post.id);
     await service.from('content_variants').update({ status: 'publishing', updated_at: now }).eq('id', variant.id);
-    const result = await this.demoPublisher.publish({ platform: variant.platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey });
+    let imageUrl: string | undefined;
+    const photo = assets.find((a: any) => a.media_type === 'image' && a.storage_path);
+    if (live && photo) { const signed = await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, 3600); imageUrl = signed.data?.signedUrl; }
+    const publisher = live ? new MetaPublishingAdapter() : this.demoPublisher;
+    const result = await publisher.publish({ platform: variant.platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey, imageUrl });
     if (result.status !== 'published') {
       await service.from('content_publish_attempts').update({ status: result.status === 'failed' ? 'failed' : 'unknown', provider_response: result.raw ?? null, error_message: result.error ?? null }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
       await service.from('content_variants').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', variant.id);
@@ -306,7 +312,7 @@ export class ContentService {
     }
 
     const publishedAt = new Date().toISOString();
-    const verification = { verified: true, transport: 'manual-demo', providerPostId: result.providerPostId, verifiedAt: publishedAt };
+    const verification = { verified: true, transport: live ? `meta-${variant.platform}` : 'manual-demo', providerPostId: result.providerPostId, verifiedAt: publishedAt };
     await service.from('content_publish_attempts').update({ status: 'published', provider_response: result.raw ?? null, verification, error_message: null }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
     const { data: publishedVariant, error: updateError } = await service.from('content_variants').update({ status: 'published', provider_post_id: result.providerPostId, live_url: result.liveUrl, published_at: publishedAt, updated_at: publishedAt }).eq('id', variant.id).select('*').single();
     if (updateError || !publishedVariant) throw new InternalServerErrorException(updateError?.message ?? 'Could not finalize published content');

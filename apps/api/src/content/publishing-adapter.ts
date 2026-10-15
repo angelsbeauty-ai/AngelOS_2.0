@@ -7,6 +7,8 @@ export interface PublishContentInput {
   hashtags: string[];
   scheduledFor?: string | null;
   idempotencyKey: string;
+  /** Public, short-lived URL of the first photo (Instagram requires one). */
+  imageUrl?: string;
 }
 
 export interface PublishContentResult {
