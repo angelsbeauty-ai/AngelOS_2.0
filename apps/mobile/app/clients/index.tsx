@@ -54,7 +54,7 @@ export default function ClientsScreen() {
     {busy && !clients.length ? <Skeleton rows={4} /> : null}
     {noStudio ? <NoStudio /> : null}
     {!busy && loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
-    {!busy && !loadError && clients.length === 0 ? <EmptyState title={search || filter !== 'all' ? t('clients.noMatch') : t('clients.none')} message={search || filter !== 'all' ? undefined : t('clients.noneHint')} action={search || filter !== 'all' ? undefined : { label: t('clients.newClient'), onPress: () => router.push('/clients/new') }} /> : null}
+    {!busy && !loadError && !noStudio && clients.length === 0 ? <EmptyState title={search || filter !== 'all' ? t('clients.noMatch') : t('clients.none')} message={search || filter !== 'all' ? undefined : t('clients.noneHint')} action={search || filter !== 'all' ? undefined : { label: t('clients.newClient'), onPress: () => router.push('/clients/new') }} /> : null}
     {clients.map((client) => <RowMenu key={client.id} accessibilityHint={t('clients.holdHint')} onPress={() => router.push(`/clients/${client.id}` as any)}
       actions={[{ id: 'book', title: t('clients.book') }, { id: 'edit', title: t('clients.edit') }, { id: 'archive', title: client.archived_at ? t('clients.unarchive') : t('clients.archive') }]}
       onAction={(action) => { if (action === 'book') router.push({ pathname: '/bookings/new', params: { clientId: client.id } }); if (action === 'edit') router.push(`/clients/${client.id}/edit` as any); if (action === 'archive') void archive(client); }}>

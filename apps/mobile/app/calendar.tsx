@@ -57,10 +57,10 @@ export default function CalendarScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} style={styles.navBtn}><CaretRight size={18} color="#2A2725" /></Pressable>
     </View>
     {busy && !appointments.length ? <Skeleton rows={2} height={56} /> : null}
-    {!busy && !loadError && !appointments.length && !blocks.length ? <Card><EmptyState title={mode === 'day' ? t('calendar.emptyDay') : t('calendar.emptyWeek')} action={{ label: t('calendar.newBooking'), onPress: () => router.push('/bookings/new') }} /></Card> : null}
+    {!busy && !loadError && !noStudio && !appointments.length && !blocks.length ? <Card><EmptyState title={mode === 'day' ? t('calendar.emptyDay') : t('calendar.emptyWeek')} action={{ label: t('calendar.newBooking'), onPress: () => router.push('/bookings/new') }} /></Card> : null}
     {noStudio ? <NoStudio /> : null}
     {loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
-    <Card>
+    {noStudio ? null : <Card>
       <ScrollView horizontal={mode === 'week'} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.grid}>
           <View style={styles.gutter}>{Array.from({ length: LAST - FIRST }, (_, i) => <Text key={i} style={[styles.hourLabel, { top: i * HOUR }]}>{FIRST + i}:00</Text>)}</View>
@@ -83,7 +83,7 @@ export default function CalendarScreen() {
         </View>
       </ScrollView>
       
-    </Card>
+    </Card>}
   </Screen>;
 }
 
