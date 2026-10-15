@@ -1617,7 +1617,16 @@
   "schedule": "予約する",
   "saveDraft": "下書き保存",
   "saving": "保存中…",
-  "noPostsYet": "まだ投稿がありません。"
+  "noPostsYet": "まだ投稿がありません。",
+  "choosePage": "ページを選択",
+  "choosePageSub": "このFacebookログインには複数のページがあります。このスタジオのページをタップしてください。",
+  "noIg": "Instagram未連携",
+  "choiceExpired": "ページ一覧の有効期限が切れました。もう一度接続してください。",
+  "metaConnected": "接続しました",
+  "disconnect": "接続を解除",
+  "disconnectTitle": "Facebook・Instagramの接続を解除しますか？",
+  "disconnectBody": "このページへの投稿を停止します。いつでも再接続できます。",
+  "disconnectFailed": "接続を解除できませんでした"
  },
  "inbox": {
   "messages": "メッセージ",

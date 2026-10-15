@@ -1617,7 +1617,16 @@
   "schedule": "Schedule",
   "saveDraft": "Save draft",
   "saving": "Saving…",
-  "noPostsYet": "No posts yet."
+  "noPostsYet": "No posts yet.",
+  "choosePage": "Choose your Page",
+  "choosePageSub": "Your Facebook login manages more than one Page. Tap the one for this studio.",
+  "noIg": "No Instagram linked",
+  "choiceExpired": "The Page list expired. Tap Connect again.",
+  "metaConnected": "Connected",
+  "disconnect": "Disconnect",
+  "disconnectTitle": "Disconnect Facebook & Instagram?",
+  "disconnectBody": "AngelOS will stop posting to this Page. You can connect again anytime.",
+  "disconnectFailed": "Couldn't disconnect"
  },
  "inbox": {
   "messages": "Messages",

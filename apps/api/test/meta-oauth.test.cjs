@@ -36,3 +36,14 @@ test('state round trip, tamper and expiry', () => {
   assert.equal(readState(s, 'other', 1000), null); assert.equal(readState(s, 'secret', 601000), null); assert.equal(readState(undefined, 'secret'), null);
 });
 test('token encrypt/decrypt', () => { const k = 'z'.repeat(32); const b = encryptToken('tok', k); assert.notEqual(b, 'tok'); assert.equal(decryptToken(b, k), 'tok'); assert.throws(() => decryptToken(b, 'y'.repeat(32))); });
+test('pending page choice: per studio+user, no tokens exposed, expires', () => {
+  const { putPending, getPending, clearPending, publicPages, PENDING_TTL_MS } = require('../dist/meta/meta-pending.js');
+  const pages = [{ pageId: '1', pageName: 'Other', pictureUrl: null, igUserId: null, igUsername: null, igPictureUrl: null, pageTokenEnc: 'E1' },
+    { pageId: '2', pageName: 'Angels Beauty', pictureUrl: 'p', igUserId: '9', igUsername: 'angelsbeauty', igPictureUrl: null, pageTokenEnc: 'E2' }];
+  putPending({ workspaceId: 'w', userId: 'u', userTokenEnc: 'U', pages }, 0);
+  assert.equal(getPending('w', 'other', 1), null); assert.equal(getPending('x', 'u', 1), null);
+  const p = getPending('w', 'u', 1); assert.equal(p.pages.length, 2);
+  const pub = publicPages(p); assert.equal(pub[1].pageName, 'Angels Beauty'); assert.ok(!JSON.stringify(pub).includes('E2'));
+  assert.equal(getPending('w', 'u', PENDING_TTL_MS + 1), null);
+  putPending({ workspaceId: 'w', userId: 'u', userTokenEnc: 'U', pages }); clearPending('w', 'u'); assert.equal(getPending('w', 'u'), null);
+});

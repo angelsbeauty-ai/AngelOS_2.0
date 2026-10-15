@@ -17,6 +17,11 @@ export const getSocialNumbers = (ws: string) => apiFetch<{ connected: SocialPlat
 /** Gordon's Meta login. Only called when the server says it is available (connectPath set). Returns the official login URL. */
 export const startMetaConnect = (path: string, platform: 'instagram' | 'facebook') =>
   apiFetch<{ authUrl: string; url?: string }>(path, { method: 'POST', body: JSON.stringify({ platform }) });
+export interface MetaPageChoice { pageId: string; pageName: string | null; pictureUrl: string | null; igUserId: string | null; igUsername: string | null; igPictureUrl: string | null }
+/** After a Meta login with several Pages (?meta=choose): the list to pick from, then save the one tapped. */
+export const getMetaPendingPages = (ws: string) => apiFetch<{ pages: MetaPageChoice[] }>(`/workspaces/${ws}/meta/pending-pages`).then((r) => r.pages);
+export const selectMetaPage = (ws: string, pageId: string) => apiFetch<{ ok: boolean }>(`/workspaces/${ws}/meta/select-page`, { method: 'POST', body: JSON.stringify({ pageId }) });
+export const disconnectMeta = (ws: string) => apiFetch<{ ok: boolean }>(`/workspaces/${ws}/meta/connection`, { method: 'DELETE' });
 export const PLATFORM_NAME: Record<SocialPlatform, string> = { instagram: 'Instagram', facebook: 'Facebook', line: 'LINE' };
 
 export type ContentAccountStatus = 'connected' | 'needs_reconnect' | 'not_connected';
