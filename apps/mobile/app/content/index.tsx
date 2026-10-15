@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { SuggestionsCard } from '../../src/components/SuggestionsCard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, View, Pressable } from 'react-native';
-import { Link, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
+import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { tokens } from '../../src/design/theme';
 import { Screen } from '../../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { contentPostDate, listContent, type ContentPost } from '../../src/lib/content';
@@ -36,7 +37,7 @@ const PLATFORM_LABEL: Record<string, string> = { instagram: 'Instagram', faceboo
 export default function SocialHubScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ view?: string }>();
-  const activeView = (['drafts', 'scheduled', 'posted', 'ideas'] as const).find((value) => value === params.view) ?? null;
+  const [activeView, setActiveView] = useState<HubView | null>((['drafts', 'scheduled', 'posted', 'ideas'] as const).find((value) => value === params.view) ?? null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [posts, setPosts] = useState<ContentPost[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -90,20 +91,25 @@ export default function SocialHubScreen() {
     <Screen onRefresh={() => load()}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Pill tone="gold">Content & Social</Pill>
-          <ScreenTitle>Social Hub</ScreenTitle>
-          <SupportText>Plan and manage your social media posts, campaigns and analytics.</SupportText>
+          <ScreenTitle>{t('social2.title')}</ScreenTitle>
         </View>
         <Link href="/content/new" asChild>
           <Pressable style={styles.newButton} accessibilityRole="button" accessibilityLabel="New post">
-            <PrimaryActionLabel>New Post</PrimaryActionLabel>
+            <PrimaryActionLabel>{t('social2.newPost')}</PrimaryActionLabel>
           </Pressable>
         </Link>
       </View>
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.viewGrid}>
+        {([null, 'drafts', 'scheduled', 'posted', 'ideas'] as const).map((v) => (
+          <Pressable key={v ?? 'cal'} accessibilityRole="button" accessibilityState={{ selected: activeView === v }} onPress={() => setActiveView(v)} style={[styles.viewButton, activeView === v && styles.viewOn]}>
+            <Text numberOfLines={1} style={[styles.viewLabel, activeView === v && styles.viewLabelOn]}>{v ? t(`social2.${v}`) : t('social2.all')}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+
       <Card premium>
-        <SectionTitle>Month Calendar</SectionTitle>
-        <View style={styles.monthHeader}>
+                <View style={styles.monthHeader}>
           <Pressable onPress={() => goToMonth(-1)} style={styles.monthNav} accessibilityRole="button" accessibilityLabel="Previous month">
             <Text style={styles.monthNavText}>‹</Text>
           </Pressable>
@@ -115,7 +121,7 @@ export default function SocialHubScreen() {
           </Pressable>
         </View>
 
-        {state === 'loading' ? <SupportText>Loading your posts…</SupportText> : null}
+        {state === 'loading' ? <SupportText>{t('social2.loading')}</SupportText> : null}
         {state === 'error' ? (
           <Pressable onPress={() => { setState('loading'); void load(); }} accessibilityRole="button">
             <SupportText tone="critical">{errorText} Tap to try again.</SupportText>
@@ -171,13 +177,13 @@ export default function SocialHubScreen() {
       <Card>
         <View style={styles.listHeader}>
           <SectionTitle>
-            {activeView ? `${activeView.charAt(0).toUpperCase()}${activeView.slice(1)}` : selectedLabel}
+            {activeView ? t(`social2.${activeView}`) : selectedLabel}
           </SectionTitle>
           {activeView ? (
-            <Link href="/content" asChild><Pressable accessibilityRole="button"><Text style={styles.link}>Show calendar day</Text></Pressable></Link>
+            <Pressable accessibilityRole="button" onPress={() => setActiveView(null)}><Text style={styles.link}>{t('social2.showDay')}</Text></Pressable>
           ) : (
             <Link href={{ pathname: '/content/new', params: { date: selectedDay } }} asChild>
-              <Pressable accessibilityRole="button" accessibilityLabel={`New post on ${selectedLabel}`}><Text style={styles.link}>+ Post on this day</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={`New post on ${selectedLabel}`}><Text style={styles.link}>{t('social2.postOnDay')}</Text></Pressable>
             </Link>
           )}
         </View>
@@ -208,41 +214,14 @@ export default function SocialHubScreen() {
         }) : null}
       </Card>
 
-      <Card>
-        <SectionTitle>{t('social2.views')}</SectionTitle>
-        <View style={styles.viewGrid}>
-          <Link href="/content?view=drafts" asChild>
-            <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>{t('social2.drafts')}</Text>
-            </Pressable>
-          </Link>
-          <Link href="/content?view=scheduled" asChild>
-            <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>{t('social2.scheduled')}</Text>
-            </Pressable>
-          </Link>
-          <Link href="/content?view=posted" asChild>
-            <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>{t('social2.posted')}</Text>
-            </Pressable>
-          </Link>
-          <Link href="/content?view=ideas" asChild>
-            <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>{t('social2.ideas')}</Text>
-            </Pressable>
-          </Link>
-        </View>
-      </Card>
 
       <Card>
         <SectionTitle>{t('social2.quick')}</SectionTitle>
         <View style={styles.actionList}>
-          <Link href="/content/before-after" asChild>
-            <Pressable style={styles.actionRow}>
+          <Pressable style={styles.actionRow} onPress={() => router.push('/content/before-after' as any)}>
               <BodyText>{t('social2.ba')}</BodyText>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
-          </Link>
           <Link href="/content/campaigns" asChild>
             <Pressable style={styles.actionRow}>
               <BodyText>{t('social2.campaign')}</BodyText>
@@ -392,26 +371,11 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  viewGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: ui.spacing.sm,
-  },
-  viewButton: {
-    width: '47%',
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingVertical: ui.spacing.sm,
-    paddingHorizontal: ui.spacing.sm,
-    backgroundColor: ui.colors.elevated,
-    borderRadius: ui.radius.control,
-    alignItems: 'center',
-  },
-  viewLabel: {
-    color: ui.colors.primaryText,
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  viewGrid: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
+  viewButton: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: tokens.color.raised, borderWidth: StyleSheet.hairlineWidth, borderColor: ui.colors.border },
+  viewOn: { backgroundColor: '#B07A6A', borderColor: '#B07A6A' },
+  viewLabel: { color: ui.colors.primaryText, fontSize: 15, fontFamily: 'Manrope_500Medium' },
+  viewLabelOn: { color: '#FFFFFF' },
   actionList: {
     gap: ui.spacing.sm,
   },

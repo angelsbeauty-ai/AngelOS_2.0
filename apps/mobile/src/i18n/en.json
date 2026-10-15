@@ -686,6 +686,11 @@
   "campaign": "Plan a campaign",
   "connect": "Connect social accounts",
   "title": "Social",
-  "all": "Calendar"
+  "all": "Calendar",
+  "newPost": "New post",
+  "month": "Month",
+  "loading": "Loading your posts…",
+  "showDay": "Show calendar day",
+  "postOnDay": "+ Post on this day"
  }
 }
