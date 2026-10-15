@@ -6,6 +6,7 @@ import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import { encryptToken, readState, signState } from './meta-crypto';
 import { clearPending, getPending, publicPages, putPending } from './meta-pending';
+import { triggerWorkspaceSync } from '../sync/social-sync.service';
 import { META_OAUTH_SCOPES, buildMetaLoginUrl, exchangeCodeAndListPages, readMetaOAuthConfig } from './meta-oauth';
 
 function enabled() { const o = readMetaOAuthConfig(); if (!o) throw new NotFoundException(); return o; }
@@ -27,7 +28,9 @@ export async function saveMetaConnection(ws: string, userId: string, page: { pag
     page_token_enc: page.pageTokenEnc, user_token_enc: userTokenEnc,
     token_expires_at: null, scopes: META_OAUTH_SCOPES, status: 'connected', connected_by: userId, connected_at: now, updated_at: now
   }, { onConflict: 'page_id' });
-  return error ? 'save_failed' : 'connected';
+  if (error) return 'save_failed';
+  triggerWorkspaceSync(ws); // import conversations + recent posts right away (read only)
+  return 'connected';
 }
 
 /** Per-studio Meta connect. 404 unless META_OAUTH_ENABLED + META_APP_ID/SECRET + META_OAUTH_REDIRECT_URI + META_TOKEN_KEY. */

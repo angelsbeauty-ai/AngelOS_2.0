@@ -3,6 +3,7 @@ import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { MessagingService } from './messaging.service';
+import { SocialSyncService } from '../sync/social-sync.service';
 import { SavedRepliesService } from './saved-replies.service';
 import { CreateDemoChannelDto } from './dto/create-demo-channel.dto';
 import { IngestMessageDto } from './dto/ingest-message.dto';
@@ -18,7 +19,11 @@ import { CreateSavedReplyDto, UpdateSavedReplyDto } from './dto/saved-reply.dto'
 @Controller('workspaces/:workspaceId/messaging')
 @UseGuards(SupabaseAuthGuard)
 export class MessagingController {
-  constructor(private readonly messaging: MessagingService, private readonly savedReplies: SavedRepliesService) {}
+  constructor(private readonly messaging: MessagingService, private readonly savedReplies: SavedRepliesService, private readonly sync: SocialSyncService) {}
+
+  /** Pull-to-refresh: import Instagram/Facebook conversations + recent posts now (read only). */
+  @Post('sync') syncNow(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.sync.syncForUser(user, workspaceId); }
+  @Get('sync') syncStatus(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.sync.statusForUser(user, workspaceId); }
 
   @Get('channels') listChannels(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.listChannels(user, workspaceId); }
   @Get('connections') connections(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.connections(user, workspaceId); }

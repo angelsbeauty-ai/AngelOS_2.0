@@ -7,11 +7,12 @@ import { LineWebhookController } from './line-webhook.controller';
 import { MessagingController } from './messaging.controller';
 import { MessagingService } from './messaging.service';
 import { SavedRepliesService } from './saved-replies.service';
+import { SocialSyncService } from '../sync/social-sync.service';
 
 @Module({
   imports: [AiModule],
   controllers: [MessagingController, LineWebhookController, MetaWebhookController, MetaConnectController, MetaOAuthCallbackController],
-  providers: [MessagingService, SavedRepliesService, SupabaseAuthGuard],
-  exports: [MessagingService, SavedRepliesService]
+  providers: [MessagingService, SavedRepliesService, SocialSyncService, SupabaseAuthGuard],
+  exports: [MessagingService, SavedRepliesService, SocialSyncService]
 })
 export class MessagingModule {}

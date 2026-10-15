@@ -112,6 +112,8 @@ export const deleteSavedReply = (workspaceId: string, id: string) =>
   apiFetch(`${base(workspaceId)}/saved-replies/${id}`, { method: 'DELETE' });
 
 export const listConnections = (workspaceId: string) => apiFetch<ConnectionStatus[]>(`${base(workspaceId)}/connections`);
+/** Pull-to-refresh: import Instagram/Facebook conversations + recent posts now (read only, never sends). */
+export const syncMessages = (workspaceId: string) => apiFetch<{ platforms: unknown[] }>(`${base(workspaceId)}/sync`, { method: 'POST' });
 export const connectLine = (workspaceId: string) => apiFetch(`${base(workspaceId)}/connections/line`, { method: 'POST' });
 
 export const PLATFORM_OPEN_URL: Record<string, string> = {

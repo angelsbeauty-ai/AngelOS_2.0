@@ -10,6 +10,7 @@ import { metaNumbers } from './meta-insights';
 import { decryptToken } from '../meta/meta-crypto';
 import { readMetaOAuthConfig } from '../meta/meta-oauth';
 import { openToken, sealToken, tokenKeyReady } from './token-crypto';
+import { triggerWorkspaceSync } from '../sync/social-sync.service';
 
 export type SocialPlatform = 'instagram' | 'facebook' | 'line';
 export type AccountState = 'connected' | 'needs_reconnect' | 'not_connected';
@@ -79,6 +80,7 @@ export class SocialAccountsService {
       status: 'connected', last_error: null, connected_by: user.id, connected_at: now, updated_at: now
     }, { onConflict: 'workspace_id' });
     if (error) throw new InternalServerErrorException(error.message);
+    triggerWorkspaceSync(workspaceId); // points the LINE webhook here so new messages arrive
     return { platform: 'line', state: 'connected', name: bot.displayName, handle: bot.basicId ?? null, pictureUrl: bot.pictureUrl ?? null, connectAvailable: true, connectPath: null } satisfies SocialAccountView;
   }
 

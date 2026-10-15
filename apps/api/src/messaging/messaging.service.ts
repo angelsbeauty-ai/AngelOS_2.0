@@ -61,19 +61,28 @@ export class MessagingService {
     const channels = await this.listChannels(user, workspaceId);
     const line = new LineMessagingAdapter(readLineConfig()).status();
     const lineChannel = channels.find((row: any) => row.provider === 'line' && row.status === 'connected');
+    // Per-studio connections (line_connections / meta_connections) are synced by SocialSyncService and work without the global flags.
+    const studioLine = lineChannel && (lineChannel as any).capabilities?.source === 'line_connection';
+    const lineSync = (lineChannel as any)?.capabilities?.sync;
+    const lineConnected = Boolean(lineChannel && (line.ready || studioLine));
     return [
       {
         provider: 'line', label: 'LINE Official Account',
-        state: lineChannel && line.ready ? 'connected' : line.state === 'ready' ? 'ready_to_connect' : 'not_connected',
-        connected: Boolean(lineChannel && line.ready),
+        state: lineConnected ? 'connected' : line.state === 'ready' ? 'ready_to_connect' : 'not_connected',
+        connected: lineConnected,
         canConnect: line.ready && !lineChannel,
         accountName: lineChannel?.display_name ?? null,
-        detail: lineChannel && line.ready ? 'Messages from your LINE Official Account arrive in the inbox. Replies are sent only after you tap Approve.' : line.detail,
+        detail: studioLine ? (lineSync?.messages?.note ?? 'New LINE messages appear here from now on') : lineConnected ? 'Messages from your LINE Official Account arrive in the inbox. Replies are sent only after you tap Approve.' : line.detail,
         needs: ['LINE Official Account with the Messaging API turned on', 'Server settings LINE_MESSAGING_ENABLED, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN (Angel sets them)', 'Webhook URL in the LINE console: <API address>/webhooks/line']
       },
       ...(['instagram', 'facebook'] as const).map((provider) => ({
         provider, label: provider === 'instagram' ? 'Instagram DMs' : 'Facebook Messenger',
-        ...(() => { const st = new MetaGraphMessagingAdapter(provider).status(); const ch = channels.find((row: any) => row.provider === provider && row.status === 'connected');
+        ...(() => { const st = new MetaGraphMessagingAdapter(provider).status(); const ch: any = channels.find((row: any) => row.provider === provider && row.status === 'connected');
+          if (ch?.capabilities?.source === 'meta_connection') {
+            const note = ch.capabilities?.sync?.messages?.note as string | null | undefined;
+            const name = provider === 'instagram' ? 'Instagram' : 'Facebook';
+            return { state: 'connected', connected: true, canConnect: false, accountName: ch.display_name ?? null, detail: note ?? `${name} messages are synced every 5 minutes. Sending replies from AngelOS is off; copy replies yourself.` };
+          }
           return { state: ch && st.ready ? 'connected' : st.state, connected: Boolean(ch && st.ready), canConnect: false, accountName: ch?.display_name ?? null, detail: st.detail }; })(),
         needs: ['Meta Business account', 'Meta developer app', 'Meta App Review for messaging (takes weeks)']
       })),

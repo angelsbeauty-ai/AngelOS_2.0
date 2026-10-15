@@ -10,7 +10,7 @@ import { NoStudio } from '../../src/components/NoStudio';
 import { Card, EmptyState, ScreenTitle, Skeleton, ui } from '../../src/components/ui';
 import { Avatar, PlatformBadge, UnreadDot } from '../../src/components/MessagingBits';
 import { toFriendly } from '../../src/lib/friendly-error';
-import { listConnections, listMessageThreads, timeLabel, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
+import { listConnections, listMessageThreads, syncMessages, timeLabel, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass } from '../../src/design/theme';
 
@@ -46,9 +46,10 @@ export default function MessagesScreen() {
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [errorText, setErrorText] = useState({ title: '', message: '' });
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (pull = false) => {
     try {
       const workspace = await getActiveWorkspace();
+      if (pull) await syncMessages(workspace.id).catch(() => undefined);
       const [rows, conn] = await Promise.all([
         listMessageThreads(workspace.id, 'active'),
         listConnections(workspace.id).catch(() => [] as ConnectionStatus[])
@@ -67,7 +68,7 @@ export default function MessagesScreen() {
   const anyConnected = connections.some((c) => c.connected);
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
-  return <View style={{ flex: 1 }}><Screen onRefresh={() => load()}>
+  return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
     <View style={styles.header}>
       <View style={{ flex: 1, gap: 2 }}><ScreenTitle>{t('messages.title')}</ScreenTitle></View>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} onPress={() => setMenuOpen(true)} style={[styles.round, filter && styles.roundOn]}>
@@ -80,6 +81,7 @@ export default function MessagesScreen() {
       {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}>
         <Text numberOfLines={1} style={[styles.chipText, plat === k && { color: '#FFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
     </ScrollView>
+    {(() => { const c = plat !== 'all' ? connections.find((x) => x.provider === plat && x.connected) : null; return c?.detail ? <Text style={styles.note}>{c.detail}</Text> : null; })()}
     {filter ? <Pressable onPress={() => setFilter(null)}><Text style={styles.link}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
 
     {state === 'loading' ? <Skeleton rows={4} height={72} /> : null}
@@ -147,6 +149,7 @@ const styles = StyleSheet.create({
   bannerTitle: { fontFamily: tokens.font.uiBold, fontSize: 15, color: ui.colors.primaryText },
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, color: tokens.color.tide, paddingVertical: 6 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  note: { fontSize: 13, color: '#6B6460', paddingHorizontal: 4 },
   list: { gap: 2, borderRadius: 28, backgroundColor: tokens.color.raised, paddingVertical: 4, paddingHorizontal: 4, ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ui.colors.border },
   rowBody: { flex: 1, gap: 4 },
