@@ -17,14 +17,14 @@ export async function metaNumbers(platform: 'instagram' | 'facebook', c: MetaCon
     const r = await fetchImpl(`${c.graphBase}/${path}${path.includes('?') ? '&' : '?'}access_token=${encodeURIComponent(c.pageToken ?? '')}`);
     const json = (await r.json().catch(() => ({}))) as any;
     if (r.ok && !json?.error) return json;
-    if (!out.error) out.error = String(json?.error?.message ?? `HTTP ${r.status}`).slice(0, 200);
+    if (!out.error) out.error = json?.error?.code === 1 || /reduce the amount/i.test(String(json?.error?.message ?? '')) ? 'Meta was busy.' : 'Meta did not answer.';
     return null;
   };
   try {
     if (platform === 'instagram' && c.igUserId) {
       const me = await get(`${c.igUserId}?fields=followers_count,media_count,username,profile_picture_url`);
       if (me) { out.followers = me.followers_count == null ? null : Number(me.followers_count); out.name = me.username ?? null; out.pictureUrl = me.profile_picture_url ?? null; out.posts = me.media_count == null ? null : Number(me.media_count); }
-      const media = await get(`${c.igUserId}/media?fields=like_count,comments_count&limit=10`);
+      const media = await get(`${c.igUserId}/media?fields=like_count,comments_count&limit=5`);
       if (media?.data) out.engagement = media.data.reduce((n: number, m: any) => n + Number(m.like_count ?? 0) + Number(m.comments_count ?? 0), 0);
     }
     if (platform === 'facebook' && c.pageId) {
@@ -36,6 +36,6 @@ export async function metaNumbers(platform: 'instagram' | 'facebook', c: MetaCon
       const count = await get(`${c.pageId}/published_posts?limit=1&summary=total_count`);
       if (count?.summary?.total_count != null) out.posts = Number(count.summary.total_count);
     }
-  } catch (e) { out.error = e instanceof Error ? e.message.slice(0, 200) : 'unknown error'; }
+  } catch { out.error = out.error ?? 'Meta did not answer.'; }
   return out;
 }

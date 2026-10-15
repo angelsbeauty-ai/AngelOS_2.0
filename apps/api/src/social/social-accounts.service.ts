@@ -6,6 +6,7 @@ import { LineMessagingAdapter, readLineConfig } from '../messaging/line-messagin
 import { isMissingRelation } from '../messaging/saved-replies.service';
 import { readMetaConfig, type MetaConfig } from '../meta/meta.config';
 import { metaNumbers, metaReadReady } from './meta-insights';
+import { plainNote } from '../sync/meta-sync';
 import { missingMessagingScopes } from '../meta/meta-oauth';
 import { decryptToken } from '../meta/meta-crypto';
 import { readMetaOAuthConfig } from '../meta/meta-oauth';
@@ -156,7 +157,7 @@ export class SocialAccountsService {
           const state: AccountState = rowOk ? (meta.status === 'needs_reconnect' || expired ? 'needs_reconnect' : 'connected') : cfg && metaReadReady(platform, cfg) ? 'connected' : 'not_connected';
           const myMissing = missing.filter((m) => (platform === 'facebook' ? m === 'pages_messaging' : m === 'instagram_manage_messages'));
           const reason = state !== 'needs_reconnect' ? null : expired ? 'The Meta login expired. Tap Reconnect to sign in to Facebook again.' : missingReason(myMissing.length ? myMissing : missing) ?? 'Meta asked for a fresh login. Tap Reconnect.';
-          const syncError = state === 'not_connected' ? null : syncs[platform] ?? (n?.error && n.followers == null ? `Could not read numbers from Meta: ${n.error}` : null);
+          const syncError = state === 'not_connected' ? null : syncs[platform] ?? (n?.error && n.followers == null ? 'Numbers could not be loaded from Meta right now. Pull down to try again.' : null);
           return { platform, state, name, handle: platform === 'instagram' && name ? `@${name}` : null, pictureUrl: state !== 'not_connected' ? n?.pictureUrl ?? null : null, connectAvailable, connectPath,
             followers: n?.followers ?? null, posts: n?.posts ?? null, reason, syncError, missingScopes: myMissing };
         } catch (e) { fail(platform, e); return { platform, state: 'needs_reconnect', name: null, handle: null, pictureUrl: null, connectAvailable, connectPath, ...BLANK }; }
@@ -181,7 +182,8 @@ export class SocialAccountsService {
         const sync = (row as any).capabilities?.sync;
         if (!sync) continue;
         const bad = [sync.messages, sync.posts].filter((x: any) => x && x.ok === false && x.note).map((x: any) => String(x.note));
-        out[(row as any).provider] = bad.length ? bad.join(' ') : null;
+        const plain = [...new Set(bad.map((b: string) => plainNote(b)).filter(Boolean))];
+        out[(row as any).provider] = plain.length ? plain.join(' ') : null;
       }
       return out;
     } catch { return {}; }

@@ -35,3 +35,20 @@ test('instagram posts stop at the 90-day cutoff and map formats', async () => {
   assert.equal(s.postTitle(out[0].caption, 'instagram', out[0].createdAt), 'Brows');
   assert.equal(s.postTitle('', 'facebook', '2026-09-01T00:00:00.000Z'), 'Facebook post 2026-09-01');
 });
+
+test('instagram posts: Meta code 1 retries with a halved limit and keeps going', async () => {
+  const now = Date.parse('2026-10-16T00:00:00Z');
+  const f = fake([
+    { ok: false, status: 500, json: { error: { code: 1, message: "Please reduce the amount of data you're asking for, then retry your request" } } },
+    { json: { data: [{ id: 'p1', caption: 'Hi', media_type: 'IMAGE', timestamp: '2026-10-15T00:00:00+0000', permalink: 'x' }] } }]);
+  const out = await s.fetchInstagramPosts({ graphBase: 'https://g', igUserId: 'IG', token: 't', days: 30 }, f.fetch, now);
+  assert.equal(out.length, 1);
+  assert.ok(f.calls[0].includes('limit=25')); assert.ok(f.calls[1].includes('limit=12'));
+  assert.ok(!f.calls[0].includes('children') && !f.calls[0].includes('insights') && !f.calls[0].includes('comments{'));
+});
+test('plain reasons never show raw Meta text', () => {
+  const e = new s.GraphCallError({ status: 500, code: 1, message: "Please reduce the amount of data you're asking for" });
+  assert.doesNotMatch(s.plainGraphReason(e, 'instagram_basic'), /reduce the amount/);
+  assert.equal(s.plainNote("Could not read from Meta: Please reduce the amount of data you're asking for, then retry your request"), 'Meta was busy. Some items will load on the next sync.');
+  assert.equal(s.plainNote('Needs permission: x'), 'Needs permission: x');
+});
