@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { ImageBackground, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { colors, spacing, tokens } from '../design/theme';
+import { TopBar } from './TopBar';
+import { showsAppTabBar } from './AppTabBar';
 
 // A1 silk backdrop: gives the glass cards something to blur (mockup .A .screen).
 const SILK = require('../../assets/brand/silk.jpg');
@@ -22,7 +24,7 @@ export function Screen({ children, hideAsk, onRefresh }: PropsWithChildren<{ hid
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
   const showAsk = !TAB_PATHS.has(pathname) && !hideAsk && role !== 'student' && !NO_ASK.test(pathname);
   return <ImageBackground source={SILK} resizeMode="cover" style={styles.bg}><SafeAreaView style={styles.safe}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{TAB_PATHS.has(pathname) && role !== 'student' ? <TopBar /> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} /> : null}
   </SafeAreaView></ImageBackground>;
 }
@@ -32,7 +34,7 @@ function AskButton({ pathname }: { pathname: string }) {
   const { t } = useTranslation();
   const parts = pathname.split('/').filter(Boolean);
   const entityType = parts[0] === 'clients' && parts[1] && parts[1] !== 'new' ? 'client' : undefined;
-  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, TAB_PATHS.has(pathname) && { bottom: 96 }]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, (TAB_PATHS.has(pathname) || showsAppTabBar(pathname)) && { bottom: 96 }]}>
     <Text style={styles.askText}>{t('ui.ask')}</Text>
   </Pressable>;
 }
