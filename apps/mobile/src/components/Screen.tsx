@@ -6,7 +6,7 @@ import { Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleShe
 import { router, usePathname } from 'expo-router';
 import { colors, spacing, tokens } from '../design/theme';
 
-const TAB_PATHS = new Set(['/', '/clients', '/calendar', '/social', '/account', '/academy']);
+const TAB_PATHS = new Set(['/', '/clients', '/calendar', '/social', '/account', '/academy', '/profile']);
 const NO_ASK = /^\/(ai|login|onboarding|forgot-password|reset-password)(\/|$)/;
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
@@ -18,9 +18,9 @@ export function Screen({ children, hideAsk, onRefresh }: PropsWithChildren<{ hid
   const role = useRole();
   // B9 route guard: students only reach the Academy and their own settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
-  const showAsk = !hideAsk && role !== 'student' && !NO_ASK.test(pathname);
+  const showAsk = !TAB_PATHS.has(pathname) && !hideAsk && role !== 'student' && !NO_ASK.test(pathname);
   return <SafeAreaView style={styles.safe}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{onRefresh && Platform.OS === 'web' ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} /> : null}
   </SafeAreaView>;
 }
@@ -37,7 +37,7 @@ function AskButton({ pathname }: { pathname: string }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: tokens.color.pearl },
-  content: { padding: tokens.space.screen, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
+  content: { padding: tokens.space.screen, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   stack: { gap: spacing.md },
   webStack: { maxWidth: 480, width: '100%', paddingBottom: 120 },
   refresh: { alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.light.border },

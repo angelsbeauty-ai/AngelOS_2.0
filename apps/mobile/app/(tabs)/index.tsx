@@ -134,7 +134,7 @@ export default function TodayScreen() {
           <ScreenTitle>{t('today.title')}</ScreenTitle>
           <SupportText>{greeting}. {subtitle}</SupportText>
         </View>
-        <Pressable onPress={() => router.push('/account' as any)} style={styles.settingsButton} accessibilityRole="button" accessibilityLabel={t('today.settings')}>
+        <Pressable onPress={() => router.push('/profile' as any)} style={styles.settingsButton} accessibilityRole="button" accessibilityLabel={t('today.settings')}>
           <Text style={styles.initials}>{initials}</Text>
         </Pressable>
       </View>
