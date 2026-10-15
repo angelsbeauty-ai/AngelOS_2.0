@@ -20,7 +20,7 @@ const settings = [
 
 const tools = [
   { href: '/messages', title: 'Messages', detail: 'Client conversations and AI reply drafts' },
-  { href: '/content', title: 'Content', detail: 'AI recommendation, approval and publishing' },
+  { href: '/social', title: 'Content', detail: 'AI recommendation, approval and publishing' },
   { href: '/media', title: 'Media', detail: 'Before/after, healed photos and library' },
   { href: '/analytics', title: 'Analytics', detail: 'Views, saves, inquiries and growth trends' },
   { href: '/finance', title: 'Finance', detail: 'Income tracking and business reports' },

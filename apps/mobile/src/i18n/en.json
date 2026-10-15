@@ -576,7 +576,8 @@
   "photosN_one": "{{count}} photo",
   "photosN_other": "{{count}} photos",
   "noPhotos": "No photos yet.",
-  "close": "Close"
+  "close": "Close",
+  "langFlag": "Speaks {{lang}}"
  },
  "st": {
   "lead": "Lead",
@@ -790,5 +791,61 @@
   "delNoStudio": "Please ask for deletion through Help so we can confirm it's you.",
   "delFail": "Couldn't send the request",
   "founderNoDelete": "Founder accounts can't be deleted from the app."
+ },
+ "s3": {
+  "week": "Week view",
+  "month": "Month view",
+  "errTitle": "Couldn't load your posts",
+  "errBody": "Check your connection and try again.",
+  "emptyTitle": "Nothing posted yet",
+  "emptyBody": "Show off your work. Make a before & after post or plan a week of content.",
+  "connect": "Connect your accounts",
+  "planCampaign": "Plan a campaign",
+  "planCampaignSub": "A few posts around one offer or event",
+  "idea": "Idea",
+  "edit": "Edit",
+  "reschedule": "Reschedule",
+  "postNow": "Post now",
+  "postNowQ": "Post this now?",
+  "postNowMsg": "It goes live on the connected accounts right away.",
+  "postNowSched": "This post is scheduled. Posting now replaces the scheduled time.",
+  "posted": "Posted",
+  "failed": "Couldn't post",
+  "open": "Open",
+  "st": {
+   "drafts": "Draft",
+   "scheduled": "Scheduled",
+   "posted": "Posted",
+   "failed": "Failed"
+  },
+  "none": {
+   "drafts": "No drafts",
+   "scheduled": "Nothing scheduled",
+   "posted": "Nothing posted yet",
+   "ideas": "No ideas yet"
+  },
+  "planTitle": "Plan campaign",
+  "cName": "Campaign name",
+  "cNamePh": "e.g. Spring brows week",
+  "cStart": "Starts",
+  "cEnd": "Ends",
+  "cOffer": "Offer (optional)",
+  "cOfferPh": "e.g. ¥5,000 off touch-ups",
+  "cGoal": "Goal",
+  "goal": {
+   "bookings": "Bookings",
+   "touch_ups": "Touch-ups",
+   "trust": "Trust",
+   "reach": "Reach",
+   "academy_students": "Academy students"
+  },
+  "cIdeas": "Ideas from AngelOS",
+  "cNoIdeas": "Ideas show up once you have photos and bookings.",
+  "cCreate": "Create drafts",
+  "cCreated": "{{count}} drafts added",
+  "cCreatedMsg": "They are in Drafts. Nothing posts until you say so.",
+  "cMigration": "Campaigns need a database update first. Ask support.",
+  "cFail": "Couldn't create the campaign",
+  "cancel": "Cancel"
  }
 }

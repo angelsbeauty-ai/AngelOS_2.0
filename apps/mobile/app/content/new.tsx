@@ -141,7 +141,7 @@ export default function NewPostScreen() {
       });
       toast.show({ title: 'Draft saved', message: `On your calendar for ${plannedAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}.`, tone: 'success' });
       if (router.canGoBack()) router.back();
-      else router.replace('/content');
+      else router.replace('/social');
     } catch (error) {
       if (error instanceof ApiError && (error.status === 400 || error.status === 409) && error.message) {
         void dialog.notify("That didn't save", error.message);

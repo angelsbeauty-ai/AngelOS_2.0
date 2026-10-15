@@ -1,398 +1,178 @@
+import { useCallback, useMemo, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { SuggestionsCard } from '../../src/components/SuggestionsCard';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, Pressable } from 'react-native';
-import { Link, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { tokens } from '../../src/design/theme';
+import { Plug } from 'phosphor-react-native/src/icons/Plug';
+import { Plus } from 'phosphor-react-native/src/icons/Plus';
+import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';
+import { InstagramLogo } from 'phosphor-react-native/src/icons/InstagramLogo';
+import { FacebookLogo } from 'phosphor-react-native/src/icons/FacebookLogo';
+import { TiktokLogo } from 'phosphor-react-native/src/icons/TiktokLogo';
+import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
+import { Lightbulb } from 'phosphor-react-native/src/icons/Lightbulb';
+import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
+import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
 import { Screen } from '../../src/components/Screen';
-import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
-import { contentPostDate, listContent, type ContentPost } from '../../src/lib/content';
-import { toFriendly } from '../../src/lib/friendly-error';
+import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui';
+import { Chip, ROSE } from '../../src/components/SettingsList';
+import { contentPostDate, listContent, listIdeas, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
+import { listConnections } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { confirm, dialog } from '../../src/lib/dialog';
+import { tokens } from '../../src/design/theme';
 
-type HubView = 'drafts' | 'scheduled' | 'posted' | 'ideas';
+type View_ = 'drafts' | 'scheduled' | 'posted' | 'ideas';
+const VIEWS: View_[] = ['drafts', 'scheduled', 'posted', 'ideas'];
+const GROUP: Record<string, View_> = { draft: 'drafts', prepared: 'drafts', approved: 'drafts', scheduled: 'scheduled', publishing: 'scheduled', published: 'posted', analyzed: 'posted', failed: 'drafts' };
+const TONE: Record<string, 'neutral' | 'rose' | 'success' | 'danger'> = { drafts: 'neutral', scheduled: 'rose', posted: 'success', failed: 'danger' };
+const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
-const STATUS_GROUP: Record<string, { label: string; color: string }> = {
-  draft: { label: 'Draft', color: ui.colors.secondaryText },
-  prepared: { label: 'Draft', color: ui.colors.secondaryText },
-  approved: { label: 'Approved', color: ui.colors.gold },
-  scheduled: { label: 'Scheduled', color: ui.colors.warning },
-  publishing: { label: 'Posting', color: ui.colors.warning },
-  published: { label: 'Posted', color: ui.colors.success },
-  analyzed: { label: 'Posted', color: ui.colors.success },
-  failed: { label: 'Failed', color: ui.colors.critical },
-};
-const VIEW_STATUSES: Record<Exclude<HubView, 'ideas'>, string[]> = {
-  drafts: ['draft', 'prepared', 'approved'],
-  scheduled: ['scheduled', 'publishing'],
-  posted: ['published', 'analyzed'],
-};
-
-function dayKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+function PlatformMark({ p }: { p: string }) {
+  const c = { size: 16, color: '#625B56' };
+  if (p === 'instagram') return <InstagramLogo {...c} />;
+  if (p === 'facebook') return <FacebookLogo {...c} />;
+  if (p === 'tiktok') return <TiktokLogo {...c} />;
+  if (p === 'line') return <ChatCircle {...c} />;
+  return null;
 }
-function statusInfo(status: string) { return STATUS_GROUP[status] ?? { label: status, color: ui.colors.secondaryText }; }
-const PLATFORM_LABEL: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', line: 'LINE', manual: 'Manual' };
 
-export default function SocialHubScreen() {
-  const { t } = useTranslation();
+export default function SocialHome() {
+  const { t, i18n } = useTranslation();
   const params = useLocalSearchParams<{ view?: string }>();
-  const [activeView, setActiveView] = useState<HubView | null>((['drafts', 'scheduled', 'posted', 'ideas'] as const).find((value) => value === params.view) ?? null);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [ws, setWs] = useState<string | null>(null);
   const [posts, setPosts] = useState<ContentPost[]>([]);
+  const [ideas, setIdeas] = useState<ContentIdea[]>([]);
+  const [connected, setConnected] = useState<number | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [errorText, setErrorText] = useState('');
-  const [selectedDay, setSelectedDay] = useState<string>(() => dayKey(new Date()));
+  const [view, setView] = useState<View_ | null>(VIEWS.find((v) => v === params.view) ?? null);
+  const [month, setMonth] = useState(false);
+  const [day, setDay] = useState<string | null>(null);
+  const [menu, setMenu] = useState<ContentPost | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const workspace = await getActiveWorkspace();
-      setPosts(await listContent(workspace.id));
-      setState('ready');
-    } catch (error) {
-      const friendly = toFriendly(error, { action: 'load', thing: 'posts' });
-      setErrorText(`${friendly.title}. ${friendly.message}`);
-      setState('error');
-    }
+      const w = await getActiveWorkspace(); setWs(w.id);
+      const list = await listContent(w.id); setPosts(list.filter((p) => p.status !== 'archived')); setState('ready');
+      void listIdeas(w.id).then((r) => setIdeas(r.ideas)).catch(() => undefined);
+      void listConnections(w.id).then((c) => setConnected(c.filter((x) => x.connected).length)).catch(() => undefined);
+    } catch { setState('error'); }
   }, []);
-
-  // Reload whenever the screen regains focus, e.g. after saving a draft in the composer.
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
-  const postsByDay = useMemo(() => {
-    const map = new Map<string, ContentPost[]>();
-    for (const post of posts) {
-      if (post.status === 'archived') continue;
-      const date = contentPostDate(post);
-      if (!date) continue;
-      const key = dayKey(date);
-      map.set(key, [...(map.get(key) ?? []), post]);
-    }
-    return map;
-  }, [posts]);
+  const counts = useMemo(() => { const c: Record<string, number> = {}; posts.forEach((p) => { const g = GROUP[p.status] ?? 'drafts'; c[g] = (c[g] ?? 0) + 1; }); return c; }, [posts]);
+  const active: View_ = view ?? (counts.scheduled ? 'scheduled' : 'drafts');
+  const byDay = useMemo(() => { const m = new Map<string, ContentPost[]>(); posts.forEach((p) => { const d = contentPostDate(p); if (d) m.set(dayKey(d), [...(m.get(dayKey(d)) ?? []), p]); }); return m; }, [posts]);
+  const listed = posts.filter((p) => (GROUP[p.status] ?? 'drafts') === active && (!day || (contentPostDate(p) && dayKey(contentPostDate(p)!) === day)))
+    .sort((a, b) => (contentPostDate(a)?.getTime() ?? 0) - (contentPostDate(b)?.getTime() ?? 0));
 
-  const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-  const daysInMonth = monthEnd.getDate();
-  const firstDayOffset = monthStart.getDay();
-  const todayKey = dayKey(new Date());
+  const now = new Date(); const lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
+  const start = month ? new Date(now.getFullYear(), now.getMonth(), 1) : new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const cellCount = month ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() : 7;
+  const lead = month ? (start.getDay() + 6) % 7 : 0;
+  const cells = Array.from({ length: cellCount }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
 
-  const goToMonth = (offset: number) => {
-    setCurrentDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
-  };
+  async function postNow(p: ContentPost) {
+    setMenu(null); const v = p.variants?.[0]; if (!ws || !v) return;
+    if (!(await confirm({ title: t('s3.postNowQ'), message: p.status === 'scheduled' ? t('s3.postNowSched') : t('s3.postNowMsg'), confirmText: t('s3.postNow') }))) return;
+    try { await publishContentVariant(ws, v.id); await dialog.notify(t('s3.posted')); void load(); } catch (e) { await dialog.notify(t('s3.failed'), e instanceof Error ? e.message : ''); }
+  }
 
-  const listedPosts = activeView && activeView !== 'ideas'
-    ? posts.filter((post) => VIEW_STATUSES[activeView].includes(post.status))
-    : postsByDay.get(selectedDay) ?? [];
-  const [selYear, selMonth, selDate] = selectedDay.split('-').map(Number);
-  const selectedLabel = new Date(selYear, selMonth - 1, selDate).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' });
-
-  return (
-    <Screen onRefresh={() => load()}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <ScreenTitle>{t('social2.title')}</ScreenTitle>
-        </View>
-        <Link href="/content/new" asChild>
-          <Pressable style={styles.newButton} accessibilityRole="button" accessibilityLabel="New post">
-            <PrimaryActionLabel>{t('social2.newPost')}</PrimaryActionLabel>
-          </Pressable>
-        </Link>
+  const empty = state === 'ready' && posts.length === 0;
+  return <View style={{ flex: 1 }}>
+    <Screen onRefresh={load}>
+      <View style={styles.head}>
+        <View style={{ flex: 1 }}><Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline><ScreenTitle>{t('social2.title')}</ScreenTitle></View>
+        <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/settings/connections')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.viewGrid}>
-        {([null, 'drafts', 'scheduled', 'posted', 'ideas'] as const).map((v) => (
-          <Pressable key={v ?? 'cal'} accessibilityRole="button" accessibilityState={{ selected: activeView === v }} onPress={() => setActiveView(v)} style={[styles.viewButton, activeView === v && styles.viewOn]}>
-            <Text numberOfLines={1} style={[styles.viewLabel, activeView === v && styles.viewLabelOn]}>{v ? t(`social2.${v}`) : t('social2.all')}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {state === 'loading' ? <><Skeleton rows={1} height={64} /><Skeleton rows={4} height={86} /></> : null}
 
-      <Card premium>
-                <View style={styles.monthHeader}>
-          <Pressable onPress={() => goToMonth(-1)} style={styles.monthNav} accessibilityRole="button" accessibilityLabel="Previous month">
-            <Text style={styles.monthNavText}>‹</Text>
-          </Pressable>
-          <Text style={styles.monthTitle}>
-            {currentDate.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
-          </Text>
-          <Pressable onPress={() => goToMonth(1)} style={styles.monthNav} accessibilityRole="button" accessibilityLabel="Next month">
-            <Text style={styles.monthNavText}>›</Text>
-          </Pressable>
+      {state === 'error' ? <View style={styles.calm}><Text style={styles.calmTitle}>{t('s3.errTitle')}</Text><Text style={styles.calmBody}>{t('s3.errBody')}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
+
+      {empty ? <View style={styles.calm}>
+        <View style={styles.emptyIcon}><ImageSquare size={30} color={ROSE} weight="duotone" /></View>
+        <Text style={styles.calmTitle}>{t('s3.emptyTitle')}</Text><Text style={styles.calmBody}>{t('s3.emptyBody')}</Text>
+        {connected === 0 ? <Button label={t('s3.connect')} onPress={() => router.push('/settings/connections')} /> : null}
+        <Button variant={connected === 0 ? 'secondary' : 'primary'} label={t('social2.newPost')} onPress={() => router.push('/content/new')} />
+      </View> : null}
+
+      {state === 'ready' && !empty ? <>
+        <View style={styles.strip}>
+          {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
+          {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
+            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#366A49' : ps.length ? ROSE : 'transparent';
+            return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, today && styles.cellToday, sel && !today && styles.cellSel]}>
+              {!month ? <Text style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
+              <Text style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
+              <View style={[styles.dot, { backgroundColor: ring }]}>{ps.length > 1 ? <Text style={styles.dotN}>{ps.length}</Text> : null}</View>
+            </Pressable>; })}
         </View>
 
-        {state === 'loading' ? <SupportText>{t('social2.loading')}</SupportText> : null}
-        {state === 'error' ? (
-          <Pressable onPress={() => { setState('loading'); void load(); }} accessibilityRole="button">
-            <SupportText tone="critical">{errorText} Tap to try again.</SupportText>
-          </Pressable>
-        ) : null}
+        <View style={styles.seg}>{VIEWS.map((v) => <Pressable key={v} accessibilityRole="tab" accessibilityState={{ selected: active === v }} onPress={() => { setView(v); router.setParams({ view: v }); }} style={[styles.segItem, active === v && styles.segOn]}>
+          <Text numberOfLines={1} style={[styles.segText, active === v && { color: '#FFF' }]}>{t(`social2.${v}`)}</Text></Pressable>)}</View>
 
-        <View style={styles.calendar}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-            <View key={day} style={styles.dayHeader}>
-              <Text style={styles.dayHeaderText}>{day}</Text>
-            </View>
-          ))}
-
-          {Array.from({ length: firstDayOffset }).map((_, i) => (
-            <View key={`empty-${i}`} style={styles.dayCell} />
-          ))}
-
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), i + 1);
-            const key = dayKey(date);
-            const isToday = key === todayKey;
-            const isSelected = key === selectedDay && !activeView;
-            const dayPosts = postsByDay.get(key) ?? [];
-
-            return (
-              <Pressable
-                key={key}
-                style={[styles.dayCell, isToday && styles.today, isSelected && styles.selectedDay]}
-                onPress={() => setSelectedDay(key)}
-                accessibilityRole="button"
-                accessibilityLabel={`${date.toDateString()}, ${dayPosts.length} post${dayPosts.length === 1 ? '' : 's'}`}
-              >
-                <Text style={[styles.dayNumber, isToday && styles.todayText]}>{i + 1}</Text>
-                <View style={styles.dayDots}>
-                  {dayPosts.slice(0, 4).map((post) => (
-                    <View key={post.id} style={[styles.dot, { backgroundColor: statusInfo(post.status).color }]} />
-                  ))}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
-        <View style={styles.legend}>
-          {(['draft', 'approved', 'scheduled', 'published', 'failed'] as const).map((status) => (
-            <View key={status} style={styles.legendItem}>
-              <View style={[styles.dot, { backgroundColor: statusInfo(status).color }]} />
-              <Text style={styles.legendText}>{statusInfo(status).label}</Text>
-            </View>
-          ))}
-        </View>
-      </Card>
-
-      <Card>
-        <View style={styles.listHeader}>
-          <SectionTitle>
-            {activeView ? t(`social2.${activeView}`) : selectedLabel}
-          </SectionTitle>
-          {activeView ? (
-            <Pressable accessibilityRole="button" onPress={() => setActiveView(null)}><Text style={styles.link}>{t('social2.showDay')}</Text></Pressable>
-          ) : (
-            <Link href={{ pathname: '/content/new', params: { date: selectedDay } }} asChild>
-              <Pressable accessibilityRole="button" accessibilityLabel={`New post on ${selectedLabel}`}><Text style={styles.link}>{t('social2.postOnDay')}</Text></Pressable>
-            </Link>
-          )}
-        </View>
-        {activeView === 'ideas' ? <IdeasBank /> : null}
-        {activeView !== 'ideas' && state === 'ready' && !listedPosts.length ? (
-          <SupportText>{activeView ? 'Nothing here yet.' : 'No posts planned for this day.'}</SupportText>
-        ) : null}
-        {activeView !== 'ideas' ? listedPosts.map((post) => {
-          const info = statusInfo(post.status);
-          const date = contentPostDate(post);
-          const platforms = Array.from(new Set((post.variants ?? []).map((variant) => PLATFORM_LABEL[variant.platform] ?? variant.platform)));
-          return (
-            <Link key={post.id} href={`/content/${post.id}`} asChild>
-              <Pressable style={styles.postRow} accessibilityRole="button" accessibilityLabel={`${post.title}, ${info.label}`}>
-                <View style={[styles.dot, styles.rowDot, { backgroundColor: info.color }]} />
-                <View style={styles.postCopy}>
-                  <BodyText>{post.title}</BodyText>
-                  <SupportText>
-                    {info.label}
-                    {date ? ` · ${date.toLocaleString(undefined, activeView ? { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' })}` : ''}
-                    {platforms.length ? ` · ${platforms.join(', ')}` : ''}
-                  </SupportText>
-                </View>
-                <Text style={styles.chevron}>›</Text>
-              </Pressable>
-            </Link>
-          );
-        }) : null}
-      </Card>
-
-
-      <Card>
-        <SectionTitle>{t('social2.quick')}</SectionTitle>
-        <View style={styles.actionList}>
-          <Pressable style={styles.actionRow} onPress={() => router.push('/content/before-after' as any)}>
-              <BodyText>{t('social2.ba')}</BodyText>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          <Link href="/content/campaigns" asChild>
-            <Pressable style={styles.actionRow}>
-              <BodyText>{t('social2.campaign')}</BodyText>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          </Link>
-          <Link href="/settings/connections" asChild>
-            <Pressable style={styles.actionRow}>
-              <BodyText>{t('social2.connect')}</BodyText>
-              <Text style={styles.chevron}>›</Text>
-            </Pressable>
-          </Link>
-        </View>
-      </Card>
+        {active === 'ideas' ? <View style={styles.list}>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/content/campaign')} style={styles.row}><View style={[styles.thumb, styles.thumbIcon]}><Lightbulb size={24} color={ROSE} weight="duotone" /></View><View style={{ flex: 1 }}><Text style={styles.cap}>{t('s3.planCampaign')}</Text><Text style={styles.meta}>{t('s3.planCampaignSub')}</Text></View><CaretRight size={16} color="#A69C94" /></Pressable>
+          {ideas.map((idea) => <Pressable key={idea.key} accessibilityRole="button" onPress={() => router.push({ pathname: '/content/new', params: { title: idea.title, goal: idea.objective } })} style={styles.row}>
+            <View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.cap}>{idea.title}</Text><View style={styles.metaRow}><Chip label={t('s3.idea')} /><Text numberOfLines={1} style={styles.meta}>{idea.angle}</Text></View></View></Pressable>)}
+        </View> : listed.length ? <View style={styles.list}>{listed.map((p) => { const d = contentPostDate(p); const g = p.status === 'failed' ? 'failed' : GROUP[p.status] ?? 'drafts';
+          return <Pressable key={p.id} accessibilityRole="button" onPress={() => router.push(`/content/${p.id}`)} onLongPress={() => setMenu(p)} delayLongPress={350} style={styles.row}>
+            <View style={styles.thumb}><View style={[styles.half, { backgroundColor: '#D9CFC6' }]} /><View style={{ width: 2 }} /><View style={[styles.half, { backgroundColor: '#C9A99B' }]} /></View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text numberOfLines={2} style={styles.cap}>{p.variants?.[0]?.caption?.trim() || p.title}</Text>
+              <View style={styles.metaRow}><Chip tone={TONE[g]} label={t(`s3.st.${g}`)} />{Array.from(new Set((p.variants ?? []).map((v) => v.platform))).map((pl) => <PlatformMark key={pl} p={pl} />)}
+                {d ? <Text style={styles.meta}>{d.toLocaleString(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text> : null}</View>
+            </View></Pressable>; })}</View>
+        : <View style={styles.calm}><Text style={styles.calmBody}>{t(`s3.none.${active}`)}</Text><Button small variant="secondary" label={t('social2.newPost')} onPress={() => router.push('/content/new')} /></View>}
+      </> : null}
+      <View style={{ height: 70 }} />
     </Screen>
-  );
+
+    {!empty ? <Pressable accessibilityRole="button" accessibilityLabel={t('social2.newPost')} onPress={() => router.push('/content/new')} style={styles.fab}><Plus size={18} color="#FFF" weight="bold" /><Text style={styles.fabText}>{t('social2.newPost')}</Text></Pressable> : null}
+
+    <Modal visible={!!menu} transparent animationType="fade" onRequestClose={() => setMenu(null)}>
+      <Pressable style={styles.backdrop} onPress={() => setMenu(null)}><View style={styles.menu}>
+        <Text numberOfLines={1} style={[styles.meta, { padding: 14 }]}>{menu?.title}</Text>
+        {menu && GROUP[menu.status] !== 'posted' ? <Pressable style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); router.push(`/content/${id}`); }}><Text style={styles.miText}>{t('s3.edit')}</Text></Pressable> : null}
+        {menu && GROUP[menu.status] !== 'posted' ? <Pressable style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); router.push(`/content/${id}`); }}><Text style={styles.miText}>{t('s3.reschedule')}</Text></Pressable> : null}
+        {menu && GROUP[menu.status] !== 'posted' && menu.variants?.length ? <Pressable style={styles.mi} onPress={() => void postNow(menu)}><Text style={styles.miText}>{menu.status === 'failed' ? t('pf.tryAgain') : t('s3.postNow')}</Text></Pressable> : null}
+        {menu && GROUP[menu.status] === 'posted' ? <Pressable style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); router.push(`/content/${id}`); }}><Text style={styles.miText}>{t('s3.open')}</Text></Pressable> : null}
+      </View></Pressable>
+    </Modal>
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: ui.spacing.sm,
-    marginBottom: ui.spacing.md,
-  },
-  headerContent: {
-    flex: 1,
-    gap: ui.spacing.xs,
-  },
-  newButton: {
-    width: 120,
-  },
-  monthHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: ui.spacing.md,
-    paddingHorizontal: ui.spacing.sm,
-  },
-  monthTitle: {
-    color: ui.colors.primaryText,
-    fontSize: 17,
-    fontWeight: '600',
-  },
-  monthNav: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  monthNavText: {
-    color: ui.colors.gold,
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  calendar: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    flexDirection: 'row',
-  },
-  dayHeader: {
-    width: '14.28%',
-    paddingVertical: ui.spacing.xs,
-    alignItems: 'center',
-  },
-  dayHeaderText: {
-    color: ui.colors.secondaryText,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  dayCell: {
-    width: '14.28%',
-    aspectRatio: 1,
-    padding: 4,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    borderRadius: 8,
-  },
-  today: {
-    backgroundColor: ui.colors.elevated,
-    borderWidth: 2,
-    borderColor: ui.colors.gold,
-  },
-  dayNumber: {
-    color: ui.colors.primaryText,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  todayText: {
-    color: ui.colors.gold,
-  },
-  dayDots: {
-    flexDirection: 'row',
-    gap: 2,
-    marginTop: 2,
-  },
-  selectedDay: {
-    backgroundColor: ui.colors.softGold,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  rowDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: ui.spacing.sm,
-    marginTop: ui.spacing.sm,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legendText: {
-    color: ui.colors.secondaryText,
-    fontSize: 12,
-  },
-  listHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: ui.spacing.sm,
-  },
-  link: {
-    color: ui.colors.gold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  postRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ui.spacing.sm,
-    minHeight: 56,
-    paddingVertical: ui.spacing.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: ui.colors.border,
-  },
-  postCopy: {
-    flex: 1,
-    gap: 2,
-  },
-  viewGrid: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
-  viewButton: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: tokens.color.raised, borderWidth: StyleSheet.hairlineWidth, borderColor: ui.colors.border },
-  viewOn: { backgroundColor: '#B07A6A', borderColor: '#B07A6A' },
-  viewLabel: { color: ui.colors.primaryText, fontSize: 15, fontFamily: 'Manrope_500Medium' },
-  viewLabelOn: { color: '#FFFFFF' },
-  actionList: {
-    gap: ui.spacing.sm,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: ui.spacing.xs,
-  },
-  chevron: {
-    color: ui.colors.gold,
-    fontSize: 20,
-  },
+  head: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
+  cellToday: { backgroundColor: '#2A2725' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
+  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8C847D' },
+  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725', fontVariant: ['lining-nums'] },
+  dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },
+  seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
+  segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  segOn: { backgroundColor: ROSE },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#2A2725' },
+  list: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(42,39,37,0.10)' },
+  thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' },
+  thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
+  half: { flex: 1 },
+  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#2A2725' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#625B56', flexShrink: 1 },
+  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#2A2725', textAlign: 'center' },
+  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#625B56', textAlign: 'center' },
+  emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
+  fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ROSE, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  fabText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#FFF' },
+  backdrop: { flex: 1, justifyContent: 'center', padding: 32, backgroundColor: 'rgba(0,0,0,0.25)' },
+  menu: { borderRadius: 20, backgroundColor: 'rgba(250,248,245,0.97)', overflow: 'hidden' },
+  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(42,39,37,0.10)' },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#2A2725' }
 });
-
-function IdeasBank() {
-  const [ws, setWs] = useState<string | null>(null);
-  useEffect(() => { void getActiveWorkspace().then((w) => setWs(w.id)).catch(() => undefined); }, []);
-  return <SuggestionsCard workspaceId={ws} showAllLink={false} />;
-}

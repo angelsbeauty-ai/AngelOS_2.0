@@ -576,7 +576,8 @@
   "photosN_one": "写真{{count}}枚",
   "photosN_other": "写真{{count}}枚",
   "noPhotos": "写真はまだありません。",
-  "close": "閉じる"
+  "close": "閉じる",
+  "langFlag": "{{lang}}で対応"
  },
  "st": {
   "lead": "見込み",
@@ -790,5 +791,61 @@
   "delNoStudio": "ご本人確認のため、ヘルプから削除をご依頼ください。",
   "delFail": "依頼を送れませんでした",
   "founderNoDelete": "ファウンダーアカウントはアプリから削除できません。"
+ },
+ "s3": {
+  "week": "週表示",
+  "month": "月表示",
+  "errTitle": "投稿を読み込めませんでした",
+  "errBody": "通信状況を確認して、もう一度試してね。",
+  "emptyTitle": "まだ投稿がありません",
+  "emptyBody": "ビフォーアフター投稿を作ったり、1週間分の投稿を計画してみよう。",
+  "connect": "アカウントを連携する",
+  "planCampaign": "キャンペーンを計画",
+  "planCampaignSub": "ひとつの特典やイベントに合わせた投稿",
+  "idea": "アイデア",
+  "edit": "編集",
+  "reschedule": "日時を変更",
+  "postNow": "今すぐ投稿",
+  "postNowQ": "今すぐ投稿する？",
+  "postNowMsg": "連携したアカウントにすぐ公開されます。",
+  "postNowSched": "予約済みの投稿です。今投稿すると予約時間は取り消されます。",
+  "posted": "投稿しました",
+  "failed": "投稿できませんでした",
+  "open": "開く",
+  "st": {
+   "drafts": "下書き",
+   "scheduled": "予約済み",
+   "posted": "投稿済み",
+   "failed": "失敗"
+  },
+  "none": {
+   "drafts": "下書きはありません",
+   "scheduled": "予約中の投稿はありません",
+   "posted": "まだ投稿はありません",
+   "ideas": "まだアイデアはありません"
+  },
+  "planTitle": "キャンペーンを計画",
+  "cName": "キャンペーン名",
+  "cNamePh": "例：春の眉ウィーク",
+  "cStart": "開始日",
+  "cEnd": "終了日",
+  "cOffer": "特典（任意）",
+  "cOfferPh": "例：リタッチ5,000円オフ",
+  "cGoal": "目的",
+  "goal": {
+   "bookings": "予約",
+   "touch_ups": "リタッチ",
+   "trust": "信頼",
+   "reach": "認知",
+   "academy_students": "アカデミー生徒"
+  },
+  "cIdeas": "AngelOSからのアイデア",
+  "cNoIdeas": "写真や予約が増えるとアイデアが表示されます。",
+  "cCreate": "下書きを作成",
+  "cCreated": "{{count}}件の下書きを追加しました",
+  "cCreatedMsg": "下書きに入っています。OKするまで投稿されません。",
+  "cMigration": "キャンペーンにはデータベースの更新が必要です。サポートに連絡してね。",
+  "cFail": "キャンペーンを作成できませんでした",
+  "cancel": "キャンセル"
  }
 }
