@@ -252,10 +252,14 @@ export class MessagingService {
    * Webhook path (LINE today; Meta later): already signature-verified, no user session.
    * The channel row decides the workspace, so a message can never land in another tenant.
    */
-  async ingestFromProvider(event: NormalizedInboundMessage, resolveName?: (userId: string) => Promise<string | undefined>) {
+  async ingestFromProvider(event: NormalizedInboundMessage, resolveName?: (userId: string) => Promise<string | undefined>, workspaceId?: string) {
     const service = createServiceSupabaseClient();
-    const { data: channel, error } = await service.from('messaging_channels').select('id,workspace_id,provider,display_name,status')
-      .eq('provider', event.provider).eq('external_account_id', event.externalAccountId).eq('status', 'connected').maybeSingle();
+    // Scope to the studio when known (LINE: picked by webhook destination), so a stale row elsewhere can't make this ambiguous.
+    let query = service.from('messaging_channels').select('id,workspace_id,provider,display_name,status')
+      .eq('provider', event.provider).eq('external_account_id', event.externalAccountId).eq('status', 'connected');
+    if (workspaceId) query = query.eq('workspace_id', workspaceId);
+    const { data: channels, error } = await query.order('created_at', { ascending: false }).limit(1);
+    const channel = channels?.[0];
     if (error) throw new InternalServerErrorException(error.message);
     if (!channel) { this.logger.warn(`Inbound ${event.provider} event for an unlinked account was ignored.`); return { ignored: true }; }
     const { data: known } = await service.from('client_channel_identities').select('client_id').eq('workspace_id', channel.workspace_id).eq('channel_id', channel.id).eq('external_user_id', event.externalUserId).maybeSingle();

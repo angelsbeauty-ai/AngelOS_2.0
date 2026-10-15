@@ -251,33 +251,37 @@ export class SocialSyncService implements OnModuleInit {
     const result: PlatformSync = { platform: 'line', connected: true, at, messages: { ok: true, imported: 0, note: LINE_FROM_NOW_NOTE }, posts: null };
     const base = publicApiBase();
     const endpoint = base ? `${base}/webhooks/line` : null;
-    const prev = channel.capabilities?.sync as any;
-    if (!endpoint) result.messages = { ok: false, imported: 0, note: 'Could not set the LINE webhook: the server does not know its public address.' };
-    else if (prev?.webhook === endpoint) (result as any).webhook = endpoint; // already set, no repeat call
+    const fail = (note: string) => { result.messages = { ok: false, imported: 0, note }; };
+    if (!endpoint) fail('Needs reconnect: could not set the LINE webhook because the server does not know its public address.');
     else {
-      try {
-        const token = openToken(row.access_token_enc);
-        const r = await fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }), signal: AbortSignal.timeout(10000) });
-        if (r.ok) (result as any).webhook = endpoint;
-        else { const body = (await r.json().catch(() => ({}))) as any; result.messages = { ok: false, imported: 0, note: `Could not set the LINE webhook (${r.status}${body?.message ? `: ${String(body.message).slice(0, 120)}` : ''}).` }; }
-      } catch (e) { result.messages = { ok: false, imported: 0, note: `Could not set the LINE webhook: ${e instanceof Error ? e.message.slice(0, 120) : 'unknown'}` }; }
-    }
-    if ((result as any).webhook) {
-      // Verify on LINE's side: endpoint saved + "Use webhook" switched on (the API cannot switch it on for us).
+      // Always compare with what LINE has saved (it can be changed in LINE Developers), and fix it when different.
       try {
         const token = openToken(row.access_token_enc);
         const h = { Authorization: `Bearer ${token}` };
-        const g = await fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', { headers: h, signal: AbortSignal.timeout(10000) });
-        const info = (await g.json().catch(() => ({}))) as any;
-        (result as any).webhookActive = info?.active === true;
-        if (g.ok && info?.endpoint !== endpoint) result.messages = { ok: false, imported: 0, note: 'Needs reconnect: the LINE webhook address is not saved. Tap Reconnect.' };
-        else if (g.ok && info?.active !== true) result.messages = { ok: false, imported: 0, note: 'Needs permission: turn on "Use webhook" in LINE Official Account Manager (Settings > Messaging API).' };
-        else if (g.ok) {
-          const tr = await fetch('https://api.line.me/v2/bot/channel/webhook/test', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }), signal: AbortSignal.timeout(15000) });
-          const tb = (await tr.json().catch(() => ({}))) as any;
-          (result as any).webhookTest = tb?.success === true;
+        const readInfo = async () => {
+          const g = await fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', { headers: h, signal: AbortSignal.timeout(10000) });
+          return { ok: g.ok, status: g.status, info: (await g.json().catch(() => ({}))) as any };
+        };
+        let cur = await readInfo();
+        if (!cur.ok || cur.info?.endpoint !== endpoint) {
+          const r = await fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', { method: 'PUT', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }), signal: AbortSignal.timeout(10000) });
+          if (!r.ok) { const body = (await r.json().catch(() => ({}))) as any; fail(`Needs reconnect: could not set the LINE webhook (${r.status}${body?.message ? `: ${String(body.message).slice(0, 120)}` : ''}).`); }
+          cur = await readInfo();
         }
-      } catch { /* verification is best effort */ }
+        if ((result.messages as any).ok) {
+          (result as any).webhook = cur.info?.endpoint === endpoint ? endpoint : null;
+          (result as any).webhookActive = cur.info?.active === true;
+          if (!cur.ok) fail(`Needs reconnect: LINE did not return the webhook settings (${cur.status}).`);
+          else if (cur.info?.endpoint !== endpoint) fail('Needs reconnect: the LINE webhook address is not saved. Tap Reconnect.');
+          else if (cur.info?.active !== true) fail('Needs permission: turn on "Use webhook" in LINE Official Account Manager (Settings > Messaging API).');
+          else {
+            const tr = await fetch('https://api.line.me/v2/bot/channel/webhook/test', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }), signal: AbortSignal.timeout(15000) });
+            const tb = (await tr.json().catch(() => ({}))) as any;
+            (result as any).webhookTest = tb?.success === true;
+            if (tb?.success !== true) fail(`Needs reconnect: LINE could not reach the webhook (${tb?.statusCode ?? tr.status}${tb?.reason ? ` ${String(tb.reason).slice(0, 60)}` : ''}).`);
+          }
+        }
+      } catch (e) { fail(`Needs reconnect: could not check the LINE webhook (${e instanceof Error ? e.message.slice(0, 120) : 'unknown'}).`); }
     }
     await this.saveStatus(db, channel, result);
     return result;

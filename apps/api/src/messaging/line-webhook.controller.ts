@@ -22,9 +22,11 @@ export class LineWebhookController {
     const destination = typeof (request.body as any)?.destination === 'string' ? String((request.body as any).destination) : '';
     const studio = await this.sync.lineSecretForBot(destination);
     let adapter: LineMessagingAdapter;
+    let workspaceId: string | undefined;
     if (studio) {
       adapter = new LineMessagingAdapter({ enabled: true, channelSecret: studio.channelSecret, channelAccessToken: studio.accessToken, apiBase: 'https://api.line.me' });
       if (!raw || !adapter.verify(raw, signature)) throw new ForbiddenException('Invalid LINE signature.');
+      workspaceId = studio.workspaceId;
       await this.sync.ensureLineChannel(studio.workspaceId, destination, studio.displayName);
     } else {
       adapter = new LineMessagingAdapter(readLineConfig());
@@ -35,7 +37,7 @@ export class LineWebhookController {
     let stored = 0;
     for (const event of events) {
       try {
-        const result: any = await this.messaging.ingestFromProvider(event, (userId) => adapter.getProfileName(userId));
+        const result: any = await this.messaging.ingestFromProvider(event, (userId) => adapter.getProfileName(userId), workspaceId);
         if (result?.threadId) stored += 1;
       } catch (error) {
         // Log without message text. LINE retries failed deliveries; duplicates are ignored by external_message_id.
