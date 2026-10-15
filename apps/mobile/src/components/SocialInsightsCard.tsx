@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -8,27 +9,28 @@ import { getSocialInsights, platformLabel, type SocialInsights } from '../lib/co
 
 /** Insights › Social: only real numbers from AngelOS; platform metrics stay "Not connected yet". */
 export function SocialInsightsCard({ workspaceId }: { workspaceId: string }) {
+  const { t } = useTranslation();
   const [data, setData] = useState<SocialInsights | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => { getSocialInsights(workspaceId, 30).then(setData).catch(() => setFailed(true)); }, [workspaceId]);
-  if (failed) return <Card><SectionTitle>Social</SectionTitle><SupportText>Couldn't load social numbers. Pull to refresh.</SupportText></Card>;
-  if (!data) return <Card><SectionTitle>Social</SectionTitle><SupportText>Loading…</SupportText></Card>;
+  if (failed) return <Card><SectionTitle>Social</SectionTitle><SupportText>{t('sic.s0')}</SupportText></Card>;
+  if (!data) return <Card><SectionTitle>Social</SectionTitle><SupportText>{t('sic.s1')}</SupportText></Card>;
   const platforms = Object.entries(data.byPlatform);
   return <Card>
     <SectionTitle>Social · last {data.days} days</SectionTitle>
     <View style={styles.tiles}>
-      <Tile label="Posted" value={platforms.reduce((a, [, v]) => a + v.posted, 0)} />
-      <Tile label="Scheduled" value={platforms.reduce((a, [, v]) => a + v.scheduled, 0)} />
-      <Tile label="New clients from social" value={data.fromSocial.newClients} />
-      <Tile label="Their bookings" value={data.fromSocial.bookings} />
+      <Tile label={t('sic.s4')} value={platforms.reduce((a, [, v]) => a + v.posted, 0)} />
+      <Tile label={t('sic.s5')} value={platforms.reduce((a, [, v]) => a + v.scheduled, 0)} />
+      <Tile label={t('sic.s6')} value={data.fromSocial.newClients} />
+      <Tile label={t('sic.s7')} value={data.fromSocial.bookings} />
     </View>
     {platforms.map(([p, v]) => <SupportText key={p}>{p === 'line' ? 'LINE' : platformLabel(p)}: {v.posted} posted · {v.scheduled} scheduled · {v.drafts} drafts</SupportText>)}
     {Object.keys(data.fromSocial.bySource).length ? <SupportText>New clients by source: {Object.entries(data.fromSocial.bySource).map(([s, n]) => `${s} ${n}`).join(' · ')}</SupportText> : <SupportText>Set "Source" on new clients (Instagram, LINE…) to see which app brings bookings.</SupportText>}
-    <Text style={styles.sub}>When you post</Text>
+    <Text style={styles.sub}>{t('sic.s2')}</Text>
     <SupportText>{data.postingTimes.length ? data.postingTimes.map((t) => `${t.slot} (${t.count})`).join(' · ') : `Best time for now: ${data.bestTimeDefault}`}</SupportText>
-    <Text style={styles.sub}>Reach, likes, followers</Text>
+    <Text style={styles.sub}>{t('sic.s3')}</Text>
     <SupportText>{data.platformMetricsNote}</SupportText>
-    <ActionButton label="Connect Instagram to see this" onPress={() => router.push('/settings/connections')} />
+    <ActionButton label={t('sic.s8')} onPress={() => router.push('/settings/connections')} />
   </Card>;
 }
 

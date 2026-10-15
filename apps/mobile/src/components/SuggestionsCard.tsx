@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -13,6 +14,7 @@ import { tokens } from '../design/theme';
  * Approve only creates a DRAFT (reply or post). Sending/publishing always needs another Approve.
  */
 export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { workspaceId: string | null; limit?: number; showAllLink?: boolean }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Suggestion[] | null>(null);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
@@ -55,10 +57,10 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
   }
 
   return <Card premium>
-    <View style={styles.head}><SectionTitle>AngelOS suggests</SectionTitle>{showAllLink && visible.length > shown.length ? <Pressable accessibilityRole="link" onPress={() => router.push('/suggestions' as any)}><Text style={styles.link}>All {visible.length}</Text></Pressable> : null}</View>
-    {items === null && !failed ? <SupportText>Looking at your day…</SupportText> : null}
-    {failed ? <SupportText>Suggestions are not available right now.</SupportText> : null}
-    {items !== null && visible.length === 0 ? <SupportText>Nothing to suggest right now. Your social calendar and inbox look good.</SupportText> : null}
+    <View style={styles.head}><SectionTitle>{t('sgc.s0')}</SectionTitle>{showAllLink && visible.length > shown.length ? <Pressable accessibilityRole="link" onPress={() => router.push('/suggestions' as any)}><Text style={styles.link}>All {visible.length}</Text></Pressable> : null}</View>
+    {items === null && !failed ? <SupportText>{t('sgc.s1')}</SupportText> : null}
+    {failed ? <SupportText>{t('sgc.s2')}</SupportText> : null}
+    {items !== null && visible.length === 0 ? <SupportText>{t('sgc.s3')}</SupportText> : null}
     {shown.map((item) => <View key={item.key} style={styles.item}>
       <Text style={styles.kind}>{item.kind === 'create_post_draft' ? 'SOCIAL' : 'MESSAGES'}</Text>
       <Text style={styles.title} maxFontSizeMultiplier={1.3}>{item.title}</Text>
@@ -66,8 +68,8 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
       <SupportText>{item.detail}</SupportText>
       <View style={styles.actions}>
         <ActionButton kind="primary" label={busy === item.key ? 'Working…' : item.kind === 'post_now' ? 'Open' : 'Approve'} disabled={Boolean(busy)} onPress={() => void approve(item)} />
-        <ActionButton label="Edit" onPress={() => edit(item)} />
-        <ActionButton kind="quiet" label="Dismiss" onPress={() => void dismiss(item)} />
+        <ActionButton label={t('sgc.s4')} onPress={() => edit(item)} />
+        <ActionButton kind="quiet" label={t('sgc.s5')} onPress={() => void dismiss(item)} />
       </View>
     </View>)}
   </Card>;

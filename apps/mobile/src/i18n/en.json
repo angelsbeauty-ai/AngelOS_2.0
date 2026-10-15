@@ -1476,5 +1476,88 @@
   "s6": "Approved for use",
   "s7": "No media yet",
   "s8": "Import from Photos or take a new business photo to begin."
+ },
+ "setx": {
+  "_ai_settings": {
+   "t": "AI Assistant",
+   "d": "Personality, reply style, repeated replies it learned"
+  },
+  "_settings_connections": {
+   "t": "Connections",
+   "d": "LINE, Instagram, Facebook: what is really connected"
+  },
+  "_marketing_profile": {
+   "t": "Marketing Profile",
+   "d": "Goals, ideal client, experience and service area"
+  },
+  "_subscription": {
+   "t": "Subscription",
+   "d": "Plan, student discount and account access"
+  },
+  "_system_health": {
+   "t": "System Health",
+   "d": "Connections, Needs Attention and emergency controls"
+  },
+  "_messages": {
+   "t": "Messages",
+   "d": "Client conversations and AI reply drafts"
+  },
+  "_social": {
+   "t": "Content",
+   "d": "AI recommendation, approval and publishing"
+  },
+  "_media": {
+   "t": "Media",
+   "d": "Before/after, healed photos and library"
+  },
+  "_analytics": {
+   "t": "Analytics",
+   "d": "Views, saves, inquiries and growth trends"
+  },
+  "_finance": {
+   "t": "Finance",
+   "d": "Income tracking and business reports"
+  },
+  "_automations": {
+   "t": "Automations",
+   "d": "Messages, reminders and follow-ups"
+  }
+ },
+ "sic": {
+  "s0": "Couldn't load social numbers. Pull to refresh.",
+  "s1": "Loading…",
+  "s2": "When you post",
+  "s3": "Reach, likes, followers",
+  "s4": "Posted",
+  "s5": "Scheduled",
+  "s6": "New clients from social",
+  "s7": "Their bookings",
+  "s8": "Connect Instagram to see this"
+ },
+ "bic": {
+  "s0": "Your business",
+  "s1": "Business numbers are not available right now.",
+  "s2": "Loading…",
+  "s3": "Money by service",
+  "s4": "7 days",
+  "s5": "30 days",
+  "s6": "90 days"
+ },
+ "sgc": {
+  "s0": "AngelOS suggests",
+  "s1": "Looking at your day…",
+  "s2": "Suggestions are not available right now.",
+  "s3": "Nothing to suggest right now. Your social calendar and inbox look good.",
+  "s4": "Edit",
+  "s5": "Dismiss"
+ },
+ "lv": {
+  "s0": "Talk to AngelOS",
+  "s1": "Listening… speak any time",
+  "s2": "Your voice is never recorded or saved, and no transcript is kept. To change bookings, money or posts, type it in the chat so you get an approval card."
+ },
+ "sgp": {
+  "s0": "Suggestions",
+  "s1": "Approve creates a draft for you to check. Nothing is sent to a client or posted until you approve it again."
  }
 }

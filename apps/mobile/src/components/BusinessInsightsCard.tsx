@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Tabs, fieldStyles } from './Field';
@@ -7,6 +8,7 @@ import { formatYen } from '../lib/finance';
 
 /** B6: bookings, no-shows, new vs returning, rebook rate and income — computed from real records only. */
 export function BusinessInsightsCard({ workspaceId }: { workspaceId: string }) {
+  const { t } = useTranslation();
   const [days, setDays] = useState<'7' | '30' | '90'>('30');
   const [data, setData] = useState<BusinessInsights | null>(null);
   const [failed, setFailed] = useState(false);
@@ -19,11 +21,11 @@ export function BusinessInsightsCard({ workspaceId }: { workspaceId: string }) {
     ['Money received', `${money(data.income)}${data.incomeChange == null ? '' : ` (${data.incomeChange >= 0 ? '+' : ''}${data.incomeChange}% vs before)`}`]
   ] : [];
   return <Card premium>
-    <SectionTitle>Your business</SectionTitle>
-    <Tabs value={days} onChange={setDays} options={[{ id: '7', label: '7 days' }, { id: '30', label: '30 days' }, { id: '90', label: '90 days' }]} />
-    {failed ? <SupportText>Business numbers are not available right now.</SupportText> : null}
-    {!data && !failed ? <SupportText>Loading…</SupportText> : null}
+    <SectionTitle>{t('bic.s0')}</SectionTitle>
+    <Tabs value={days} onChange={setDays} options={[{ id: '7', label: t('bic.s4') }, { id: '30', label: t('bic.s5') }, { id: '90', label: t('bic.s6') }]} />
+    {failed ? <SupportText>{t('bic.s1')}</SupportText> : null}
+    {!data && !failed ? <SupportText>{t('bic.s2')}</SupportText> : null}
     {rows.map(([k, v]) => <View key={k} style={fieldStyles.line}><SupportText>{k}</SupportText><Text style={fieldStyles.strong}>{v}</Text></View>)}
-    {data?.incomeByService.length ? <><SupportText>Money by service</SupportText>{data.incomeByService.slice(0, 6).map((s) => <View key={s.service} style={fieldStyles.line}><Text style={fieldStyles.strong}>{s.service}</Text><Text style={fieldStyles.strong}>{money(s.amount)}</Text></View>)}</> : null}
+    {data?.incomeByService.length ? <><SupportText>{t('bic.s3')}</SupportText>{data.incomeByService.slice(0, 6).map((s) => <View key={s.service} style={fieldStyles.line}><Text style={fieldStyles.strong}>{s.service}</Text><Text style={fieldStyles.strong}>{money(s.amount)}</Text></View>)}</> : null}
   </Card>;
 }

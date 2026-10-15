@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { ActionButton, Banner } from './MessagingBits';
@@ -11,6 +12,7 @@ type State = 'idle' | 'connecting' | 'live' | 'error';
  * Nothing is recorded: no MediaRecorder, no transcript events kept, nothing saved by AngelOS.
  */
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -57,14 +59,14 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
   }
 
   return <Card>
-    <SectionTitle>Talk to AngelOS</SectionTitle>
+    <SectionTitle>{t('lv.s0')}</SectionTitle>
     {Platform.OS !== 'web' ? <SupportText>Live voice works in the web app for now (the phone app needs a native audio module first).</SupportText> : null}
     {Platform.OS === 'web' && status && !status.available ? <Banner>{status.reason ?? 'Live voice is off.'}</Banner> : null}
     {Platform.OS === 'web' && status?.available ? <>
-      {state === 'live' ? <Pill tone="success">Listening… speak any time</Pill> : null}
+      {state === 'live' ? <Pill tone="success">{t('lv.s1')}</Pill> : null}
       <ActionButton kind={state === 'live' ? 'secondary' : 'primary'} label={state === 'live' ? 'Stop' : state === 'connecting' ? 'Connecting…' : 'Start talking'} disabled={state === 'connecting'} accessibilityHint="Uses your microphone. Nothing is recorded or saved." onPress={() => (state === 'live' ? stop() : void start())} />
     </> : null}
     {error ? <SupportText tone="warning">{error}</SupportText> : null}
-    <SupportText>Your voice is never recorded or saved, and no transcript is kept. To change bookings, money or posts, type it in the chat so you get an approval card.</SupportText>
+    <SupportText>{t('lv.s2')}</SupportText>
   </Card>;
 }
