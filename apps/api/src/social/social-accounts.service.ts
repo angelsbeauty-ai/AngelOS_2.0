@@ -102,6 +102,9 @@ export class SocialAccountsService {
   }
 
   private async metaRow(workspaceId: string): Promise<any | null> {
+    try { return await this.metaRowRaw(workspaceId); } catch (e) { this.logger.warn(`meta_connections read failed: ${e instanceof Error ? e.message : 'unknown'}`); return null; }
+  }
+  private async metaRowRaw(workspaceId: string): Promise<any | null> {
     const { data, error } = await createServiceSupabaseClient().from('meta_connections').select('page_id,page_name,ig_user_id,ig_username,page_token_enc,status,token_expires_at').eq('workspace_id', workspaceId).neq('status', 'disconnected').order('connected_at', { ascending: false }).limit(1);
     return error ? null : data?.[0] ?? null;
   }
@@ -120,23 +123,35 @@ export class SocialAccountsService {
 
   async accounts(user: AuthUser, workspaceId: string): Promise<{ accounts: SocialAccountView[] }> {
     await this.member(user, workspaceId);
-    const [line, meta] = await Promise.all([this.lineAdapterFor(workspaceId), this.metaRow(workspaceId)]);
-    const cfg = await this.metaConfigFor(workspaceId);
-    const pics = meta ? await this.metaPictures(cfg) : { facebook: null, instagram: null };
     const connectAvailable = metaConnectAvailable();
-    const metaView = (platform: 'instagram' | 'facebook'): SocialAccountView => {
-      const name = platform === 'instagram' ? meta?.ig_username ?? null : meta?.page_name ?? null;
-      const rowOk = meta && (platform === 'facebook' || meta.ig_username);
-      const expired = meta?.token_expires_at && Date.parse(meta.token_expires_at) <= Date.now();
-      const state: AccountState = rowOk ? (meta!.status === 'needs_reconnect' || expired ? 'needs_reconnect' : 'connected') : metaPublishingReady(platform, cfg) ? 'connected' : 'not_connected';
-      return { platform, state, name, handle: platform === 'instagram' && name ? `@${name}` : null, pictureUrl: rowOk ? pics[platform] : null, connectAvailable, connectPath: connectAvailable ? `/workspaces/${workspaceId}/meta/connect` : null };
-    };
-    return {
-      accounts: [
-        { platform: 'line', state: line.adapter ? 'connected' : 'not_connected', name: line.name, handle: line.handle, pictureUrl: line.pictureUrl, connectAvailable: true, connectPath: null },
-        metaView('instagram'), metaView('facebook')
-      ]
-    };
+    const connectPath = connectAvailable ? `/workspaces/${workspaceId}/meta/connect` : null;
+    const fail = (part: string, e: unknown) => { this.logger.warn(`social accounts: ${part} failed for a workspace: ${e instanceof Error ? e.message : String(e)}`); return null; };
+    // Each part is isolated: one failing provider shows as "needs reconnect", never fails the whole list.
+    const lineP: Promise<SocialAccountView> = this.lineAdapterFor(workspaceId)
+      .then((line): SocialAccountView => ({ platform: 'line', state: line.adapter ? 'connected' : 'not_connected', name: line.name, handle: line.handle, pictureUrl: line.pictureUrl, connectAvailable: true, connectPath: null }))
+      .catch((e): SocialAccountView => { fail('LINE', e); return { platform: 'line', state: 'needs_reconnect', name: null, handle: null, pictureUrl: null, connectAvailable: true, connectPath: null }; });
+    const metaP = (async (): Promise<SocialAccountView[]> => {
+      let meta: any = null; let cfg: MetaConfig | null = null;
+      try { meta = await this.metaRow(workspaceId); cfg = await this.metaConfigFor(workspaceId); }
+      catch (e) {
+        fail('Meta', e);
+        return (['instagram', 'facebook'] as const).map((platform) => ({ platform, state: 'needs_reconnect' as AccountState, name: null, handle: null, pictureUrl: null, connectAvailable, connectPath }));
+      }
+      let pics: { facebook: string | null; instagram: string | null } = { facebook: null, instagram: null };
+      if (meta && cfg) { try { pics = await this.metaPictures(cfg); } catch (e) { fail('Meta profile', e); } }
+      const view = (platform: 'instagram' | 'facebook'): SocialAccountView => {
+        try {
+          const name = platform === 'instagram' ? meta?.ig_username ?? null : meta?.page_name ?? null;
+          const rowOk = meta && (platform === 'facebook' || meta.ig_username);
+          const expired = meta?.token_expires_at && Date.parse(meta.token_expires_at) <= Date.now();
+          const state: AccountState = rowOk ? (meta.status === 'needs_reconnect' || expired ? 'needs_reconnect' : 'connected') : cfg && metaPublishingReady(platform, cfg) ? 'connected' : 'not_connected';
+          return { platform, state, name, handle: platform === 'instagram' && name ? `@${name}` : null, pictureUrl: rowOk ? pics[platform] : null, connectAvailable, connectPath };
+        } catch (e) { fail(platform, e); return { platform, state: 'needs_reconnect', name: null, handle: null, pictureUrl: null, connectAvailable, connectPath }; }
+      };
+      return [view('instagram'), view('facebook')];
+    })();
+    const [line, metaViews] = await Promise.all([lineP, metaP]);
+    return { accounts: [line, ...metaViews] };
   }
 
   // ---------- numbers ----------
