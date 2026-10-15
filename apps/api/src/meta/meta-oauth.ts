@@ -45,3 +45,21 @@ export async function exchangeCodeAndListPages(o: MetaOAuthConfig, code: string,
 
 /** Prefer a Page that has a linked Instagram business account. */
 export function pickPage(pages: MetaPage[]): MetaPage | null { return pages.find((p) => p.igUserId) ?? pages[0] ?? null; }
+
+/** Messaging needs both of these; without them the inbox stays empty. */
+export const META_MESSAGING_SCOPES = ['pages_messaging', 'instagram_manage_messages'];
+
+/** What the person really granted (GET /me/permissions), not what we asked for. null when Meta did not answer. */
+export async function fetchGrantedScopes(o: Pick<MetaOAuthConfig, 'graphBase'>, userToken: string, f: Fetch = fetch as any): Promise<string[] | null> {
+  try {
+    const body = await graph(f, `${o.graphBase}/me/permissions?${new URLSearchParams({ access_token: userToken })}`);
+    const rows: any[] = Array.isArray(body?.data) ? body.data : [];
+    return rows.filter((r) => r?.permission && r.status === 'granted').map((r) => String(r.permission));
+  } catch { return null; }
+}
+
+/** Messaging scopes missing from a granted list. Unknown list (null) = nothing proven missing. */
+export function missingMessagingScopes(granted: string[] | null | undefined): string[] {
+  if (!granted) return [];
+  return META_MESSAGING_SCOPES.filter((s) => !granted.includes(s));
+}

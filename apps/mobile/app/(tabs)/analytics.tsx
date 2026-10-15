@@ -12,6 +12,7 @@ import { ScrollView } from 'react-native';
 import { Plug } from 'phosphor-react-native/src/icons/Plug';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton } from '../../src/components/ui';
+import { AccountsStrip } from '../../src/components/AccountsStrip';
 import { MetaTiles, PLATS, type Plat } from '../../src/components/MetaTiles';
 import { webGlass } from '../../src/design/theme';
 import { SocialInsightsCard } from '../../src/components/SocialInsightsCard';
@@ -32,6 +33,7 @@ export default function AnalyticsScreen() {
     </ScrollView>
     {busy ? <Skeleton rows={2} height={86} /> : null}
     {noStudio ? <NoStudio /> : null}
+    {wsId && plat === 'all' ? <AccountsStrip workspaceId={wsId} /> : null}
     {wsId ? <MetaTiles workspaceId={wsId} platform={plat} /> : null}
     {wsId && plat === 'all' ? <BusinessInsightsCard workspaceId={wsId} /> : null}
     {wsId && plat === 'all' ? <SocialInsightsCard workspaceId={wsId} /> : null}

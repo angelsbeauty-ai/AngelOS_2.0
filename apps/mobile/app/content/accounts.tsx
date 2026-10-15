@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Linking, Pressable, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Image, Pressable, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import { ReconnectError, metaResultText, startReconnect } from '../../src/lib/meta-connect';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Button, ScreenTitle, Skeleton, SupportText } from '../../src/components/ui';
 import { dialog } from '../../src/lib/dialog';
-import { connectLineChannel, disconnectMeta, getMetaPendingPages, getSocialAccounts, PLATFORM_NAME, selectMetaPage, startMetaConnect, type MetaPageChoice, type SocialAccount } from '../../src/lib/social';
+import { connectLineChannel, disconnectMeta, getMetaPendingPages, getSocialAccounts, PLATFORM_NAME, selectMetaPage, type MetaPageChoice, type SocialAccount } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
 
@@ -20,19 +20,24 @@ export default function SocialAccounts() {
   const [setup, setSetup] = useState(false);
   const [form, setForm] = useState({ channelId: '', channelSecret: '', accessToken: '' });
   const [busy, setBusy] = useState(false);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [connErr, setConnErr] = useState<{ a: SocialAccount; message: string } | null>(null);
 
   const load = useCallback(async () => {
     try { const w = await getActiveWorkspace(); setWs(w.id); setItems(await getSocialAccounts(w.id)); setState('ready'); }
-    catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
+    catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); setLoadErr(e instanceof Error ? e.message : null); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
   const { meta } = useLocalSearchParams<{ meta?: string }>();
   const [choices, setChoices] = useState<MetaPageChoice[] | null>(null);
-  useEffect(() => { if (meta && meta !== 'connected' && meta !== 'choose') void dialog.notify(t('sml.metaFailed'), meta); }, [meta, t]);
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => { if (meta && meta !== 'choose') setNotice(metaResultText(meta)); }, [meta]);
+  // Several Pages waiting from the last Facebook login: open the picker automatically (also without ?meta=choose).
   useEffect(() => {
-    if (meta !== 'choose' || !ws) return;
-    getMetaPendingPages(ws).then((p) => { if (p.length) setChoices(p); else void dialog.notify(t('sml.choiceExpired')); }).catch(() => void dialog.notify(t('sml.choiceExpired')));
-  }, [meta, ws, t]);
+    if (!ws || state !== 'ready' || !items.some((a) => a.platform !== 'line' && a.connectPath)) return;
+    getMetaPendingPages(ws).then((p) => { if (p.length) setChoices(p); else if (meta === 'choose') setNotice(t('sml.choiceExpired')); })
+      .catch((e) => { if (meta === 'choose') setNotice(`${t('sml.choiceExpired')} ${e instanceof Error ? e.message : ''}`); });
+  }, [meta, ws, state, items, t]);
 
   async function choosePage(p: MetaPageChoice) {
     if (!ws || busy) return; setBusy(true);
@@ -55,16 +60,10 @@ export default function SocialAccounts() {
     finally { setBusy(false); }
   }
   async function connectMeta(a: SocialAccount) {
-    if (!a.connectPath) return;
-    try {
-      const { authUrl } = await startMetaConnect(a.connectPath, a.platform as 'instagram' | 'facebook');
-      // Web: same tab; the API callback sends the browser back to META_OAUTH_RETURN_URL (?meta=connected).
-      if (Platform.OS === 'web') { window.location.assign(authUrl); return; }
-      // Native: in-app browser; closes itself when the callback lands on the app scheme (angelos://...).
-      const r = await WebBrowser.openAuthSessionAsync(authUrl, 'angelos://').catch(async () => { await Linking.openURL(authUrl); return null; });
-      if (r) await load();
-    }
-    catch (e) { void dialog.notify(t('sml.metaFailed'), e instanceof Error ? e.message : ''); }
+    if (!ws) return;
+    setConnErr(null);
+    try { const r = await startReconnect(ws, a.platform); if (r === 'returned') await load(); }
+    catch (e) { setConnErr({ a, message: e instanceof ReconnectError && e.kind === 'login_off' ? t('messages.loginOff') : e instanceof Error ? e.message : String(e) }); }
   }
 
   const canSave = /^\d{6,20}$/.test(form.channelId.trim()) && form.channelSecret.trim().length >= 16 && form.accessToken.trim().length >= 40 && !busy;
@@ -73,8 +72,14 @@ export default function SocialAccounts() {
     <SupportText>{t('sml.accountsSub')}</SupportText>
     {state === 'loading' ? <Skeleton rows={3} height={76} /> : null}
     {state === 'nostudio' ? <NoStudio /> : null}
-    {state === 'error' ? <View style={styles.card}><Text style={styles.body}>{t('sml.loadError')}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
+    {state === 'error' ? <View style={styles.card}><Text style={styles.body}>{t('sml.loadError')}{loadErr ? ` (${loadErr})` : ''}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
 
+    {notice ? <View style={styles.card}><Text style={styles.body}>{notice}</Text><Button small variant="secondary" label={t('sml.notNow')} onPress={() => setNotice(null)} /></View> : null}
+    {connErr ? <View style={styles.card}>
+      <Text style={styles.title}>{t('messages.reconnectFailed')} ({PLATFORM_NAME[connErr.a.platform]})</Text>
+      <Text style={styles.body}>{connErr.message}</Text>
+      <Button label={t('messages.retry')} onPress={() => void connectMeta(connErr.a)} />
+    </View> : null}
     {state === 'ready' && choices ? <View style={styles.card}>
       <Text style={styles.title}>{t('sml.choosePage')}</Text>
       <SupportText>{t('sml.choosePageSub')}</SupportText>
@@ -98,7 +103,10 @@ export default function SocialAccounts() {
         </View>
         <View style={[styles.dot, { backgroundColor: a.state === 'connected' ? tokens.color.success : a.state === 'needs_reconnect' ? tokens.color.warning : '#B9B1AA' }]} />
       </View>
+      {a.state !== 'not_connected' ? <Text style={styles.body}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {a.followers == null ? t('acs.na') : a.followers.toLocaleString()}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${a.posts == null ? t('acs.na') : a.posts.toLocaleString()}` : ''}</Text> : null}
       {a.state === 'connected' ? <Text style={styles.ok}>{t('sml.connected')}</Text> : null}
+      {a.state === 'needs_reconnect' && a.reason ? <Text style={styles.warn}>{a.reason}</Text> : null}
+      {a.syncError ? <Text style={styles.warn}>{a.syncError}</Text> : null}
       {a.platform !== 'line' && a.state !== 'not_connected' && a.connectPath ? <Button variant="danger" label={t('sml.disconnect')} onPress={() => void disconnect()} /> : null}
       {a.platform === 'line' && a.state !== 'connected' && !setup ? <Button label={t('sml.lineSetup')} onPress={() => setSetup(true)} /> : null}
       {a.platform === 'line' && setup ? <View style={{ gap: 10 }}>
@@ -115,12 +123,13 @@ export default function SocialAccounts() {
       </View> : null}
       {a.platform !== 'line' && a.state !== 'connected' ? (a.connectAvailable && a.connectPath
         ? <Button label={a.state === 'needs_reconnect' ? t('sml.reconnect') : t('sml.connectX', { name: PLATFORM_NAME[a.platform] })} onPress={() => void connectMeta(a)} />
-        : <Text style={styles.soon}>{t('sml.comingSoon')}</Text>) : null}
+        : <Text style={styles.soon}>{t('messages.loginOff')}</Text>) : null}
     </View>) : null}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
+  warn: { fontFamily: tokens.font.uiMedium, fontSize: 14, lineHeight: 20, color: tokens.color.warning },
   card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 24 },

@@ -367,7 +367,13 @@
   "tryFilter": "別の絞り込みを試してね。",
   "unknown": "送信者不明",
   "needsYou": "対応が必要",
-  "you": "あなた: "
+  "you": "あなた: ",
+  "reconnectFailed": "再接続を開始できませんでした",
+  "loginOff": "サーバーでFacebookログインがオフになっています。AngelOSチームにオンにしてもらってから「再試行」をタップしてください。",
+  "retry": "再試行",
+  "openLine": "LINE設定を開く",
+  "lineIssue": "LINEの問題",
+  "missingTitle": "メッセージにはもう1つ許可が必要です"
  },
  "booking": {
   "newTitle": "新しい予約",
@@ -1669,5 +1675,13 @@
   "draftFollowFor": "{{name}}さんへのフォロー文を下書き",
   "aiEmpty": "今は提案はありません。リタッチ時期のお客さまがいるとここに表示されます。",
   "draftNote": "下書きを開くだけです。承認するまで送信されません。"
+ },
+ "acs": {
+  "na": "取得できません",
+  "loadFail": "アカウントを読み込めませんでした",
+  "none": "まだアカウントが接続されていません",
+  "friends": "友だち",
+  "followers": "フォロワー",
+  "posts": "投稿"
  }
 }

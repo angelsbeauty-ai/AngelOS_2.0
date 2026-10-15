@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { AccountsStrip } from '../../src/components/AccountsStrip';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -98,6 +99,8 @@ export default function ProfileScreen() {
       </View>
       <Pressable accessibilityRole="button" onPress={() => router.push('/profile/edit' as any)} hitSlop={10}><Text style={styles.edit}>{t('pf.edit')}</Text></Pressable>
     </View> : null}
+
+    {ws && owner ? <AccountsStrip workspaceId={ws.id} /> : null}
 
     {me?.founder ? <SettingsGroup highlight title={t('pf.founder')} badge={t('pf.onlyYou')} icon={<Crown size={14} color={ROSE} weight="duotone" />}>
       <SettingsRow icon={<Heartbeat {...I} />} title={t('pf.health')} sub={health === 'error' ? t('pf.cantCheck') : checkedMin == null ? undefined : checkedLabel(t, checkedMin)}

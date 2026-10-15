@@ -22,6 +22,7 @@ import { Chip, ROSE } from '../../src/components/SettingsList';
 import { contentPostDate, listContent, listIdeas, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
 import { getSocialAccounts } from '../../src/lib/social';
 import { SocialNumbersCard } from '../../src/components/SocialNumbersCard';
+import { AccountsStrip } from '../../src/components/AccountsStrip';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 import { tokens, webGlass } from '../../src/design/theme';
@@ -110,6 +111,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
 
       {state === 'ready' && !empty ? <>
         {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
+        {ws && asCalendar ? <AccountsStrip workspaceId={ws} /> : null}
         <View style={styles.strip}>
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;

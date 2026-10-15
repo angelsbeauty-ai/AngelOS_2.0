@@ -47,3 +47,16 @@ test('pending page choice: per studio+user, no tokens exposed, expires', () => {
   assert.equal(getPending('w', 'u', PENDING_TTL_MS + 1), null);
   putPending({ workspaceId: 'w', userId: 'u', userTokenEnc: 'U', pages }); clearPending('w', 'u'); assert.equal(getPending('w', 'u'), null);
 });
+
+test('granted scopes come from /me/permissions; missing messaging scopes are named', async () => {
+  const { fetchGrantedScopes, missingMessagingScopes } = require('../dist/meta/meta-oauth.js');
+  const f = async (url) => { assert.match(url, /\/me\/permissions\?/); return { ok: true, status: 200, json: async () => ({ data: [{ permission: 'pages_show_list', status: 'granted' }, { permission: 'pages_messaging', status: 'declined' }, { permission: 'instagram_manage_messages', status: 'granted' }] }) }; };
+  const g = await fetchGrantedScopes({ graphBase: 'https://g' }, 'tok', f);
+  assert.deepEqual(g, ['pages_show_list', 'instagram_manage_messages']);
+  assert.deepEqual(missingMessagingScopes(g), ['pages_messaging']);
+  assert.deepEqual(missingMessagingScopes(null), []);
+  assert.equal(await fetchGrantedScopes({ graphBase: 'https://g' }, 't', async () => ({ ok: false, status: 500, json: async () => ({ error: { message: 'x' } }) })), null);
+  const { missingReason } = require('../dist/social/social-accounts.service.js');
+  assert.match(missingReason(['pages_messaging']), /Facebook Messenger messages/);
+  assert.equal(missingReason([]), null);
+});

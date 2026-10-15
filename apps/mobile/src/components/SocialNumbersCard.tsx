@@ -10,10 +10,10 @@ import { getSocialNumbers, PLATFORM_NAME, type SocialNumber } from '../lib/socia
 export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<SocialNumber[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch(() => setFailed(true)); }, [workspaceId]);
+  const [failed, setFailed] = useState<string | null>(null);
+  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch((e) => setFailed(e instanceof Error ? e.message : 'unknown error')); }, [workspaceId]);
   const fmt = (n: number) => n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US');
-  if (failed) return null;
+  if (failed) return <View style={styles.card}><Text style={styles.title}>{t('sml.numbersTitle')}</Text><Text style={styles.body}>{t('acs.loadFail')}: {failed}</Text></View>;
   if (!items) return null;
   if (!items.length) return <View style={styles.card}>
     <Text style={styles.title}>{t('sml.numbersTitle')}</Text>
@@ -25,7 +25,8 @@ export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
     {items.map((n) => <View key={n.platform} style={styles.row}>
       <Text numberOfLines={1} style={styles.name}>{PLATFORM_NAME[n.platform]}</Text>
       <View style={styles.vals}>
-        <Text numberOfLines={1} style={styles.val}>{n.followers == null ? t('sml.notYet') : t(n.platform === 'line' ? 'sml.friends' : 'sml.followers', { n: fmt(n.followers) })}</Text>
+        <Text numberOfLines={1} style={styles.val}>{n.followers == null ? t('acs.na') : t(n.platform === 'line' ? 'sml.friends' : 'sml.followers', { n: fmt(n.followers) })}</Text>
+        {n.platform !== 'line' ? <Text numberOfLines={1} style={styles.sub}>{t('acs.posts')}: {n.posts == null ? t('acs.na') : fmt(n.posts)}</Text> : null}
         {n.engagement != null ? <Text numberOfLines={1} style={styles.sub}>{t('sml.engagement', { n: fmt(n.engagement) })}</Text> : null}
         {n.followersChange7d != null ? <Text numberOfLines={1} style={styles.sub}>{t('sml.change7d', { n: (n.followersChange7d >= 0 ? '+' : '') + fmt(n.followersChange7d) })}</Text> : null}
       </View>

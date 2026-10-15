@@ -4,7 +4,7 @@
  * and are tied to one studio + the user who signed in.
  */
 export interface PendingPage { pageId: string; pageName: string | null; pictureUrl: string | null; igUserId: string | null; igUsername: string | null; igPictureUrl: string | null; pageTokenEnc: string }
-export interface PendingChoice { workspaceId: string; userId: string; userTokenEnc: string; pages: PendingPage[]; expiresAt: number }
+export interface PendingChoice { workspaceId: string; userId: string; userTokenEnc: string; pages: PendingPage[]; grantedScopes?: string[] | null; expiresAt: number }
 
 export const PENDING_TTL_MS = 15 * 60 * 1000;
 const store = new Map<string, PendingChoice>();

@@ -3,10 +3,9 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizontal';
-import { Platform } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { Button } from '../../src/components/ui';
-import { getSocialAccounts, startMetaConnect } from '../../src/lib/social';
+import { getSocialAccounts, PLATFORM_NAME, type SocialAccount, type SocialPlatform } from '../../src/lib/social';
+import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
 import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
@@ -50,16 +49,20 @@ export default function MessagesScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [errorText, setErrorText] = useState({ title: '', message: '' });
+  const [accounts, setAccounts] = useState<SocialAccount[]>([]);
+  const [reErr, setReErr] = useState<{ provider: SocialPlatform; message: string; kind: string } | null>(null);
+  const [reBusy, setReBusy] = useState(false);
 
   const load = useCallback(async (pull = false) => {
     try {
       const workspace = await getActiveWorkspace();
       if (pull) await syncMessages(workspace.id).catch(() => undefined);
-      const [rows, conn] = await Promise.all([
+      const [rows, conn, accs] = await Promise.all([
         listMessageThreads(workspace.id, 'active'),
-        listConnections(workspace.id).catch(() => [] as ConnectionStatus[])
+        listConnections(workspace.id).catch(() => [] as ConnectionStatus[]),
+        getSocialAccounts(workspace.id).catch(() => [] as SocialAccount[])
       ]);
-      setThreads(rows); setConnections(conn); setState('ready');
+      setThreads(rows); setConnections(conn); setAccounts(accs); setState('ready');
     } catch (error) {
       if (isNoWorkspace(error)) { setState('nostudio'); return; }
       const friendly = toFriendly(error, { action: 'load', thing: 'messages' });
@@ -72,18 +75,22 @@ export default function MessagesScreen() {
   const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter)), [threads, plat, filter]);
   /** A platform-level sync problem (missing permission, expired login). Raw Meta text is never shown. */
   const platError = plat !== 'all' ? connections.find((x) => x.provider === plat && PROBLEM.test(x.detail ?? '')) ?? null : null;
-  async function reconnect(provider: string) {
+  /** Meta accounts that need a fresh login (e.g. messaging permission not granted). Plain English from the server. */
+  const needs = accounts.filter((a) => a.platform !== 'line' && a.state === 'needs_reconnect' && (plat === 'all' || a.platform === plat));
+  async function reconnect(provider: SocialPlatform) {
+    setReErr(null);
+    if (provider === 'line') { setReErr({ provider, kind: 'line', message: platError?.detail || t('messages.lineWebhookOff') }); return; }
+    setReBusy(true);
     try {
       const ws = await getActiveWorkspace();
-      if (provider === 'line') { router.push('/content/accounts' as any); return; }
-      const acc = (await getSocialAccounts(ws.id)).find((a) => a.platform === provider);
-      if (!acc?.connectPath) { router.push('/content/accounts' as any); return; }
-      const { authUrl } = await startMetaConnect(acc.connectPath, provider as 'instagram' | 'facebook');
-      if (Platform.OS === 'web') { window.location.assign(authUrl); return; }
-      await WebBrowser.openAuthSessionAsync(authUrl, 'angelos://'); await load(true);
-    } catch { router.push('/content/accounts' as any); }
+      const r = await startReconnect(ws.id, provider);
+      if (r === 'returned') await load(true);
+    } catch (e) {
+      const kind = e instanceof ReconnectError ? e.kind : 'failed';
+      setReErr({ provider, kind, message: kind === 'login_off' ? t('messages.loginOff') : e instanceof Error ? e.message : String(e) });
+    } finally { setReBusy(false); }
   }
-  const anyConnected = connections.some((c) => c.connected);
+  const anyConnected = connections.some((c) => c.connected) || accounts.some((a) => a.state !== 'not_connected');
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
   return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
@@ -99,9 +106,22 @@ export default function MessagesScreen() {
       {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}>
         <Text numberOfLines={1} style={[styles.chipText, plat === k && { color: '#FFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
     </ScrollView>
-    {platError ? <Card><View style={{ gap: 12 }}>
-      <Text style={styles.errText}>{platError.provider === 'line' && /use webhook/i.test(platError.detail) ? t('messages.lineWebhookOff') : t('messages.needsPerm', { name: PLATS.find(([k]) => k === platError.provider)?.[1] ?? '' })}</Text>
-      <Button label={t('messages.reconnect')} onPress={() => void reconnect(platError.provider)} />
+    {reErr ? <Card><View style={{ gap: 12 }}>
+      <Text style={styles.errText}>{reErr.kind === 'line' ? t('messages.lineIssue') : t('messages.reconnectFailed')} ({PLATFORM_NAME[reErr.provider]})</Text>
+      <Text style={styles.errBody}>{reErr.message}</Text>
+      {reErr.kind === 'line' ? <Button label={t('messages.openLine')} onPress={() => router.push('/content/accounts' as any)} />
+        : <Button label={reBusy ? '…' : t('messages.retry')} disabled={reBusy} onPress={() => void reconnect(reErr.provider)} />}
+    </View></Card> : null}
+    {!reErr && needs.map((a) => <Card key={a.platform}><View style={{ gap: 12 }}>
+      <Text style={styles.errText}>{t('messages.missingTitle')} ({PLATFORM_NAME[a.platform]})</Text>
+      <Text style={styles.errBody}>{a.reason ?? t('messages.needsPerm', { name: PLATFORM_NAME[a.platform] })}</Text>
+      <Button label={reBusy ? '…' : t('messages.reconnect')} disabled={reBusy} onPress={() => void reconnect(a.platform)} />
+    </View></Card>)}
+    {!reErr && platError && !needs.some((a) => a.platform === platError.provider) ? <Card><View style={{ gap: 12 }}>
+      <Text style={styles.errText}>{platError.provider === 'line' ? t('messages.lineIssue') : t('messages.needsPerm', { name: PLATS.find(([k]) => k === platError.provider)?.[1] ?? '' })}</Text>
+      {platError.provider === 'line' ? <Text style={styles.errBody}>{/use webhook/i.test(platError.detail) ? t('messages.lineWebhookOff') : platError.detail}</Text> : null}
+      {platError.provider === 'line' ? <Button label={t('messages.openLine')} onPress={() => router.push('/content/accounts' as any)} />
+        : <Button label={reBusy ? '…' : t('messages.reconnect')} disabled={reBusy} onPress={() => void reconnect(platError.provider as SocialPlatform)} />}
     </View></Card> : null}
     {filter ? <Pressable onPress={() => setFilter(null)}><Text style={styles.link}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
 
@@ -113,7 +133,7 @@ export default function MessagesScreen() {
       action={anyConnected ? undefined : { label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
 
     {seg === 'messages' && noAccounts ? <Card><EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
-    {seg === 'messages' && state === 'ready' && !noAccounts && !platError && visible.length === 0 ? <Card><EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
+    {seg === 'messages' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <Card><EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
 
     {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread) => {
@@ -162,6 +182,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: '#2A2725', borderColor: '#2A2725' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#2A2725' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
+  errBody: { fontFamily: tokens.font.ui, fontSize: 15, color: '#4A443F', lineHeight: 21 },
   errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#2A2725', lineHeight: 22 },
   menu: { width: 240, borderRadius: 22, backgroundColor: 'rgba(250,248,245,0.97)', overflow: 'hidden', ...(webGlass as object) },
   menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#625B56', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },

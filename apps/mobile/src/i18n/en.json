@@ -367,7 +367,13 @@
   "tryFilter": "Try another filter.",
   "unknown": "Unknown sender",
   "needsYou": "Needs you",
-  "you": "You: "
+  "you": "You: ",
+  "reconnectFailed": "Reconnect did not start",
+  "loginOff": "Facebook login is turned off on the server. Ask the AngelOS team to switch it on, then tap Retry.",
+  "retry": "Retry",
+  "openLine": "Open LINE setup",
+  "lineIssue": "LINE problem",
+  "missingTitle": "Messages need one more permission"
  },
  "booking": {
   "newTitle": "New booking",
@@ -1669,5 +1675,13 @@
   "draftFollowFor": "Draft a follow-up for {{name}}",
   "aiEmpty": "Nothing to suggest right now. Suggestions appear here when a client is due for a touch-up.",
   "draftNote": "Opens a draft. Nothing is sent until you approve it."
+ },
+ "acs": {
+  "na": "not available",
+  "loadFail": "Could not load your accounts",
+  "none": "No accounts connected yet",
+  "friends": "Friends",
+  "followers": "Followers",
+  "posts": "Posts"
  }
 }

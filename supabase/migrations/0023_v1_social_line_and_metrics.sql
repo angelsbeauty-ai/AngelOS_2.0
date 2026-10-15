@@ -1,5 +1,5 @@
 -- 0023 Social minimum loop: per-studio LINE Official Account connection + daily account numbers.
--- NOT APPLIED. Needs founder approval before running on staging/production.
+-- APPLIED on staging (hhzegavoyuicclsmrkwf). Header updated 2026-10-16; comment only, SQL unchanged.
 -- Until this runs, the API answers "LINE setup needs database update 0023" and numbers fall back to a live read.
 
 -- One LINE Official Account (Messaging API channel) per studio, entered once on the guided setup screen.

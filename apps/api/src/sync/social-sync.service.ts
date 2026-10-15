@@ -8,6 +8,7 @@ import { decryptToken } from '../meta/meta-crypto';
 import { openToken, tokenKeyReady } from '../social/token-crypto';
 import { classifyIntent } from '../messaging/messaging.service';
 import { detectLanguage } from '../messaging/language';
+import { metaNumbers } from '../social/meta-insights';
 import { fetchConversations, fetchFacebookPosts, fetchInstagramPosts, plainGraphReason, postTitle, type SyncedConversation, type SyncedPost } from './meta-sync';
 
 type Db = SupabaseClient<any, any, any>;
@@ -68,7 +69,7 @@ export class SocialSyncService implements OnModuleInit {
   async syncAll() {
     const db = createServiceSupabaseClient();
     const [meta, line] = await Promise.all([
-      db.from('meta_connections').select('workspace_id').eq('status', 'connected'),
+      db.from('meta_connections').select('workspace_id').in('status', ['connected', 'needs_reconnect']),
       db.from('line_connections').select('workspace_id').eq('status', 'connected')
     ]);
     const ids = new Set<string>([...(meta.data ?? []), ...(line.data ?? [])].map((r: any) => r.workspace_id));
@@ -102,7 +103,7 @@ export class SocialSyncService implements OnModuleInit {
 
   // ---------- Meta ----------
   private async metaFor(db: Db, workspaceId: string) {
-    const { data, error } = await db.from('meta_connections').select('page_id,page_name,ig_user_id,ig_username,page_token_enc,status').eq('workspace_id', workspaceId).eq('status', 'connected').order('connected_at', { ascending: false }).limit(1);
+    const { data, error } = await db.from('meta_connections').select('page_id,page_name,ig_user_id,ig_username,page_token_enc,status').eq('workspace_id', workspaceId).in('status', ['connected', 'needs_reconnect']).order('connected_at', { ascending: false }).limit(1);
     const row: any = error ? null : data?.[0];
     if (!row?.page_token_enc) return null;
     try {
@@ -130,8 +131,20 @@ export class SocialSyncService implements OnModuleInit {
     } catch (e) {
       result.posts = { ok: false, imported: 0, note: plainGraphReason(e, platform === 'facebook' ? 'pages_read_engagement' : 'instagram_basic') };
     }
+    await this.storeNumbers(db, workspaceId, meta, platform, result);
     await this.saveStatus(db, channel, result);
     return result;
+  }
+
+  /** Followers / posts count right after connect and on every sync (read only, no META_PUBLISHING_ENABLED needed). */
+  private async storeNumbers(db: Db, workspaceId: string, meta: NonNullable<Awaited<ReturnType<SocialSyncService['metaFor']>>>, platform: 'facebook' | 'instagram', result: PlatformSync) {
+    try {
+      const n = await metaNumbers(platform, { ...readMetaConfig(), pageId: meta.pageId, igUserId: meta.igUserId ?? undefined, pageToken: meta.token });
+      (result as any).numbers = { followers: n.followers, posts: n.posts, engagement: n.engagement, error: n.error ?? null };
+      if (n.followers == null) return;
+      const date = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+      await db.from('social_account_metrics').upsert({ workspace_id: workspaceId, platform, metric_date: date, followers: n.followers, engagement: n.engagement, reach: null, raw: { posts: n.posts }, fetched_at: new Date().toISOString() }, { onConflict: 'workspace_id,platform,metric_date' });
+    } catch (e) { this.logger.warn(`numbers for a workspace failed: ${e instanceof Error ? e.message : 'unknown'}`); }
   }
 
   private async ensureChannel(db: Db, workspaceId: string, provider: Provider, accountId: string, displayName: string) {

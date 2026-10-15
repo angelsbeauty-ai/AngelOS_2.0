@@ -6,8 +6,9 @@ export interface SocialAccount {
   platform: SocialPlatform; state: 'connected' | 'needs_reconnect' | 'not_connected';
   name: string | null; handle: string | null; pictureUrl: string | null;
   connectAvailable: boolean; connectPath: string | null;
+  followers?: number | null; posts?: number | null; reason?: string | null; syncError?: string | null; missingScopes?: string[];
 }
-export interface SocialNumber { platform: SocialPlatform; followers: number | null; engagement: number | null; reach: number | null; asOf: string | null; followersChange7d: number | null }
+export interface SocialNumber { platform: SocialPlatform; followers: number | null; posts?: number | null; engagement: number | null; reach: number | null; asOf: string | null; followersChange7d: number | null }
 
 const base = (ws: string) => `/workspaces/${ws}/social`;
 export const getSocialAccounts = (ws: string) => apiFetch<{ accounts: SocialAccount[] }>(`${base(ws)}/accounts`).then((r) => r.accounts);

@@ -1,5 +1,5 @@
 -- 0022 Meta (Instagram / Facebook) per-studio connections via OAuth.
--- NOT APPLIED. Needs founder approval before running on staging/production.
+-- APPLIED on staging (hhzegavoyuicclsmrkwf). Header updated 2026-10-16; comment only, SQL unchanged.
 -- Tokens are stored AES-256-GCM encrypted by the API (key: META_TOKEN_KEY env); the DB never sees plaintext.
 -- No RLS policies on purpose: only the API (service role) reads/writes this table. Clients see status via the API.
 

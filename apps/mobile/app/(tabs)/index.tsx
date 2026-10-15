@@ -26,6 +26,7 @@ import { label } from '../../src/lib/labels';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { supabase } from '../../src/lib/supabase';
 import { SuggestionsCard } from '../../src/components/SuggestionsCard';
+import { AccountsStrip } from '../../src/components/AccountsStrip';
 
 export default function TodayScreen() {
   const [health, setHealth] = useState<SystemHealthOverview | null>(null);
@@ -208,6 +209,7 @@ export default function TodayScreen() {
         {touchUps.length ? <SupportText>{t('home.draftNote')}</SupportText> : null}
       </Card> : null}
 
+      {workspaceId && !noStudio ? <AccountsStrip workspaceId={workspaceId} /> : null}
       <SuggestionsCard workspaceId={workspaceId} limit={4} />
 
       <SectionTitle>{t('today.quick')}</SectionTitle>

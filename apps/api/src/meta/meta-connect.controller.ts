@@ -7,7 +7,7 @@ import { createServiceSupabaseClient, createUserSupabaseClient } from '../config
 import { encryptToken, readState, signState } from './meta-crypto';
 import { clearPending, getPending, publicPages, putPending } from './meta-pending';
 import { triggerWorkspaceSync } from '../sync/social-sync.service';
-import { META_OAUTH_SCOPES, buildMetaLoginUrl, exchangeCodeAndListPages, readMetaOAuthConfig } from './meta-oauth';
+import { META_OAUTH_SCOPES, buildMetaLoginUrl, exchangeCodeAndListPages, fetchGrantedScopes, missingMessagingScopes, readMetaOAuthConfig } from './meta-oauth';
 
 function enabled() { const o = readMetaOAuthConfig(); if (!o) throw new NotFoundException(); return o; }
 async function assertMember(user: AuthUser, workspaceId: string) {
@@ -16,7 +16,7 @@ async function assertMember(user: AuthUser, workspaceId: string) {
 }
 
 /** Save one Page for a studio. Reconnect replaces: other Pages of this studio are removed; the same Page is updated in place. */
-export async function saveMetaConnection(ws: string, userId: string, page: { pageId: string; pageName: string | null; igUserId: string | null; igUsername: string | null; pageTokenEnc: string }, userTokenEnc: string) {
+export async function saveMetaConnection(ws: string, userId: string, page: { pageId: string; pageName: string | null; igUserId: string | null; igUsername: string | null; pageTokenEnc: string }, userTokenEnc: string, grantedScopes: string[] | null = null) {
   const db = createServiceSupabaseClient();
   const { data: other } = await db.from('meta_connections').select('workspace_id').eq('page_id', page.pageId).maybeSingle();
   if (other && other.workspace_id !== ws) return 'page_taken';
@@ -26,7 +26,7 @@ export async function saveMetaConnection(ws: string, userId: string, page: { pag
   const { error } = await db.from('meta_connections').upsert({
     workspace_id: ws, page_id: page.pageId, page_name: page.pageName, ig_user_id: page.igUserId, ig_username: page.igUsername,
     page_token_enc: page.pageTokenEnc, user_token_enc: userTokenEnc,
-    token_expires_at: null, scopes: META_OAUTH_SCOPES, status: 'connected', connected_by: userId, connected_at: now, updated_at: now
+    token_expires_at: null, scopes: grantedScopes ?? [], status: missingMessagingScopes(grantedScopes).length ? 'needs_reconnect' : 'connected', connected_by: userId, connected_at: now, updated_at: now
   }, { onConflict: 'page_id' });
   if (error) return 'save_failed';
   triggerWorkspaceSync(ws); // import conversations + recent posts right away (read only)
@@ -82,7 +82,7 @@ export class MetaConnectController {
     if (!p) throw new BadRequestException('The Page list expired. Please connect again.');
     const page = p.pages.find((x) => x.pageId === String(body?.pageId ?? ''));
     if (!page) throw new BadRequestException('Unknown Page.');
-    const r = await saveMetaConnection(ws, user.id, page, p.userTokenEnc);
+    const r = await saveMetaConnection(ws, user.id, page, p.userTokenEnc, p.grantedScopes ?? null);
     if (r === 'page_taken') throw new BadRequestException('This Page is already connected to another studio.');
     if (r !== 'connected') throw new BadRequestException('Could not save the Page.');
     clearPending(ws, user.id);
@@ -113,12 +113,13 @@ export class MetaOAuthCallbackController {
     try {
       const r = await exchangeCodeAndListPages(o, code);
       if (!r.pages.length) return done('no_pages');
+      const granted = await fetchGrantedScopes(o, r.userToken);
       const userTokenEnc = encryptToken(r.userToken, o.tokenKey);
       const pages = r.pages.map(({ pageToken, ...p }) => ({ ...p, pageTokenEnc: encryptToken(pageToken, o.tokenKey) }));
-      if (pages.length > 1) { putPending({ workspaceId: s.w, userId: s.u, userTokenEnc, pages }); return done('choose'); }
-      const saved = await saveMetaConnection(s.w, s.u, pages[0], userTokenEnc);
+      if (pages.length > 1) { putPending({ workspaceId: s.w, userId: s.u, userTokenEnc, pages, grantedScopes: granted }); return done('choose'); }
+      const saved = await saveMetaConnection(s.w, s.u, pages[0], userTokenEnc, granted);
       if (saved !== 'connected') { this.logger.error(`save failed: ${saved}`); return done(saved); }
-      return done('connected');
+      return done(missingMessagingScopes(granted).length ? 'missing_messaging' : 'connected');
     } catch (err) { this.logger.error(err instanceof Error ? err.message : 'unknown'); return done('exchange_failed'); }
   }
 }

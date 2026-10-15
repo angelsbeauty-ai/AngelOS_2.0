@@ -13,9 +13,10 @@ export const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagr
 export function MetaTiles({ workspaceId, platform }: { workspaceId: string; platform: Plat }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<SocialNumber[] | null>(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch(() => setFailed(true)); }, [workspaceId]);
-  if (failed || !items) return null;
+  const [failed, setFailed] = useState<string | null>(null);
+  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch((e) => setFailed(e instanceof Error ? e.message : 'unknown error')); }, [workspaceId]);
+  if (failed) return <View style={styles.card}><Text style={styles.body}>{t('acs.loadFail')}: {failed}</Text></View>;
+  if (!items) return null;
   const rows = items.filter((n) => platform === 'all' || n.platform === platform);
   if (!rows.length) return <View style={styles.card}>
     <Text style={styles.title}>{t('mt.emptyTitle')}</Text>
@@ -23,7 +24,7 @@ export function MetaTiles({ workspaceId, platform }: { workspaceId: string; plat
     <Button small variant="secondary" label={t('inbox.connectBtn')} onPress={() => router.push('/content/accounts')} />
   </View>;
   const sum = (pick: (n: SocialNumber) => number | null) => { const v = rows.map(pick).filter((x): x is number => x != null); return v.length ? v.reduce((a, b) => a + b, 0) : null; };
-  const fmt = (n: number | null) => (n == null ? t('mt.notYet') : n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US'));
+  const fmt = (n: number | null) => (n == null ? t('acs.na') : n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US'));
   const tiles: Array<[string, number | null]> = [['views', sum((n) => n.reach)], ['interactions', sum((n) => n.engagement)], ['followers', sum((n) => n.followers)]];
   return <View style={styles.grid}>{tiles.map(([k, v]) => <View key={k} style={styles.tile}>
     <Text numberOfLines={1} style={styles.label}>{t(`mt.${k}`)}</Text>
