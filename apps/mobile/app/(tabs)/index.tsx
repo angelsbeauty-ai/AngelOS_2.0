@@ -19,7 +19,7 @@ import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirmAppointment, getCalendar, type CalendarAppointment } from '../../src/lib/bookings';
 import { listMessageThreads } from '../../src/lib/messaging';
 import { getFinanceOverview } from '../../src/lib/finance';
-import { listClients } from '../../src/lib/clients';
+import { isDemoSeed, listClients, type ClientSummary } from '../../src/lib/clients';
 import { getMe } from '../../src/lib/me';
 import { dialog } from '../../src/lib/dialog';
 import { label } from '../../src/lib/labels';
@@ -39,6 +39,7 @@ export default function TodayScreen() {
   const [unread, setUnread] = useState<number | null>(null);
   const [weekIncome, setWeekIncome] = useState<{ amount: number; currency: string } | null>(null);
   const [touchUpCount, setTouchUpCount] = useState<number | null>(null);
+  const [touchUps, setTouchUps] = useState<ClientSummary[]>([]);
   const [firstName, setFirstName] = useState<string | null>(null);
   const [me2Name, setMe2Name] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -85,7 +86,9 @@ export default function TodayScreen() {
       setAppointments(calendarData.appointments);
       setUnread(threads ? threads.filter((th) => th.needs_owner || th.needs_reply).length : null);
       setWeekIncome(week ? { amount: week.actualIncome, currency: week.entries[0]?.currency ?? 'JPY' } : null);
-      setTouchUpCount(touchUps ? touchUps.length : null);
+      const realTouchUps = (touchUps ?? []).filter((c) => !isDemoSeed(c));
+      setTouchUps(realTouchUps);
+      setTouchUpCount(touchUps ? realTouchUps.length : null);
       setMe2Name(me?.displayName ?? null);
       setFirstName((me?.displayName ?? '').trim().split(/\s+/)[0] || null);
       const next = calendarData.appointments
@@ -149,7 +152,7 @@ export default function TodayScreen() {
             <Badge status={nextAppointment.status} label={label(t, 'st', nextAppointment.status)} />
           </View>
           <View style={styles.heroTimeRow}>
-            <Text style={styles.heroTime}>{formatTime(nextAppointment.start_at, locale)}</Text>
+            <Text numberOfLines={1} style={styles.heroTime}>{formatTime(nextAppointment.start_at, locale)}</Text>
             <SupportText>{t('today.until', { time: formatTime(nextAppointment.end_at, locale) })}</SupportText>
           </View>
           <Text style={styles.bookingClient}>{nextAppointment.client?.display_name ?? t('today.client')}</Text>
@@ -172,11 +175,11 @@ export default function TodayScreen() {
       {noStudio ? null : <>
       <Card>
         <View style={styles.strip}>
-          <Pressable style={styles.stripCell} onPress={() => router.push('/calendar')}><Text style={[styles.stripValue, !active.length && styles.stripZero]}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
+          <Pressable style={styles.stripCell} onPress={() => router.push('/bookings/week' as any)}><Text style={[styles.stripValue, !active.length && styles.stripZero]}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
           <View style={styles.stripDivider} />
           <Pressable style={styles.stripCell} onPress={() => router.push('/messages')}><Text style={[styles.stripValue, !unread && styles.stripZero]}>{unread ?? 0}</Text><SupportText>{t('today.toReply')}</SupportText></Pressable>
           <View style={styles.stripDivider} />
-          <Pressable style={styles.stripCell} onPress={() => router.push('/finance')}><Text style={[styles.stripValue, !weekIncome?.amount && styles.stripZero]} numberOfLines={1} adjustsFontSizeToFit>{money}</Text><SupportText>{t('today.thisWeek')}</SupportText></Pressable>
+          <Pressable style={styles.stripCell} onPress={() => router.push('/finance')}><Text style={[styles.stripValue, money.length > 6 && { fontSize: 26 }, !weekIncome?.amount && styles.stripZero]} numberOfLines={1} adjustsFontSizeToFit>{money}</Text><SupportText>{t('today.thisWeek')}</SupportText></Pressable>
         </View>
         {touchUpCount ? <Pressable onPress={() => router.push('/clients')}><SupportText tone="warning">{t('today.touchUps')}: {touchUpCount}</SupportText></Pressable> : null}
       </Card>
@@ -195,6 +198,15 @@ export default function TodayScreen() {
           <ListRow key={it.id} leading={<WarningCircle size={28} color={it.severity === 'urgent' ? ui.colors.critical : ui.colors.warning} weight="duotone" />} title={it.title} subtitle={it.summary} trailing={<Badge status={it.severity === 'urgent' ? 'cancelled' : 'request'} label={t(`today.sev.${it.severity}`)} />} onPress={() => router.push((it.action_path && it.action_path.startsWith('/') ? it.action_path : '/system-health') as any)} />
         ))}
       </View> : null}
+
+      {!noStudio && workspaceId ? <Card premium>
+        <View style={styles.heroTop}><SectionTitle>{t('home.aiTitle')}</SectionTitle><Sparkle size={20} color={ui.colors.gold} weight="duotone" /></View>
+        {touchUps.length ? touchUps.slice(0, 3).map((c) => <View key={c.id} style={styles.aiRow}>
+          <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={styles.aiName}>{c.display_name}</Text><SupportText>{t('home.touchUpDue')}</SupportText></View>
+          <Button small variant="secondary" label={t('home.draftFollow')} accessibilityLabel={t('home.draftFollowFor', { name: c.display_name })} onPress={() => router.push({ pathname: '/messages/new', params: { clientId: c.id } } as any)} />
+        </View>) : <SupportText>{t('home.aiEmpty')}</SupportText>}
+        {touchUps.length ? <SupportText>{t('home.draftNote')}</SupportText> : null}
+      </Card> : null}
 
       <SuggestionsCard workspaceId={workspaceId} limit={4} />
 
@@ -235,8 +247,8 @@ const styles = StyleSheet.create({
   settingsButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: ui.colors.softGold },
   initials: { color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 15 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroTimeRow: { flexDirection: 'row', alignItems: 'flex-end', gap: ui.spacing.xs },
-  heroTime: { color: ui.colors.primaryText, fontFamily: 'CormorantGaramond_500Medium', fontSize: 60, lineHeight: 64, fontVariant: ['lining-nums', 'tabular-nums'] },
+  heroTimeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: ui.spacing.xs },
+  heroTime: { color: ui.colors.primaryText, fontFamily: 'CormorantGaramond_500Medium', fontSize: 46, lineHeight: 52, fontVariant: ['lining-nums', 'tabular-nums'] },
   bookingClient: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 20 },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: ui.spacing.xs, marginTop: ui.spacing.xs },
   strip: { flexDirection: 'row', alignItems: 'center' },
@@ -245,6 +257,8 @@ const styles = StyleSheet.create({
   stripZero: { color: '#A69C94' },
   stripDivider: { width: 1, alignSelf: 'stretch', backgroundColor: ui.colors.border },
   laterTime: { width: 56, color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 15 },
+  aiRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm, paddingVertical: 6, borderTopWidth: 1, borderTopColor: ui.colors.border },
+  aiName: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 16 },
   okRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm },
   quickLinksGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: ui.spacing.sm, marginHorizontal: -4 },
   quickLink: { width: '25%', alignItems: 'center', gap: 6, paddingHorizontal: 4 },

@@ -1,19 +1,19 @@
-import { NoStudio } from '../src/components/NoStudio';
+import { NoStudio } from '../../src/components/NoStudio';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Screen } from '../src/components/Screen';
-import { ErrorState } from '../src/components/ErrorState';
-import { ActionButton } from '../src/components/MessagingBits';
-import { Tabs, fieldStyles } from '../src/components/Field';
-import { addDayString, dayString, prettyDay } from '../src/components/DateField';
-import { BodyText, Card, EmptyState, ScreenTitle, SectionTitle, Skeleton, SupportText, ui } from '../src/components/ui';
-import { getBusinessHours, getCalendar, type BusinessHour, type CalendarAppointment, type CalendarBlock } from '../src/lib/bookings';
-import { getActiveWorkspace, isNoWorkspace } from '../src/lib/workspace';
-import { toFriendly, type FriendlyResult } from '../src/lib/friendly-error';
+import { Screen } from '../../src/components/Screen';
+import { ErrorState } from '../../src/components/ErrorState';
+import { ActionButton } from '../../src/components/MessagingBits';
+import { Tabs, fieldStyles } from '../../src/components/Field';
+import { addDayString, dayString, prettyDay } from '../../src/components/DateField';
+import { BodyText, Card, EmptyState, ScreenTitle, SectionTitle, Skeleton, SupportText, ui } from '../../src/components/ui';
+import { getBusinessHours, getCalendar, type BusinessHour, type CalendarAppointment, type CalendarBlock } from '../../src/lib/bookings';
+import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
+import { toFriendly, type FriendlyResult } from '../../src/lib/friendly-error';
 
 const FIRST = 8, LAST = 21, HOUR = 52;
 type Mode = 'day' | 'week';
@@ -47,7 +47,7 @@ export default function CalendarScreen() {
 
   const step = mode === 'day' ? 1 : 7;
   return <Screen onRefresh={() => load()}>
-    <View style={styles.header}><View style={fieldStyles.grow}><ScreenTitle>{t('calendar.title')}</ScreenTitle><SupportText>{mode === 'day' ? prettyDay(anchor) : t('calendar.weekOf', { day: prettyDay(days[0]) })}</SupportText></View>
+    <View style={styles.header}><View style={fieldStyles.grow}><ScreenTitle>{t('nav2.bookingsCal')}</ScreenTitle><SupportText>{mode === 'day' ? prettyDay(anchor) : t('calendar.weekOf', { day: prettyDay(days[0]) })}</SupportText></View>
       <ActionButton kind="primary" label={t('calendar.newBooking')} onPress={() => router.push('/bookings/new')} /></View>
     {focusLabel ? <Card premium><SectionTitle>{t('calendar.checking')}</SectionTitle><BodyText>{focusLabel}</BodyText></Card> : null}
     <View style={styles.navRow}>

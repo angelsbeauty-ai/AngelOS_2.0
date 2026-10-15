@@ -17,6 +17,8 @@ import { Heartbeat } from 'phosphor-react-native/src/icons/Heartbeat';
 import { Key } from 'phosphor-react-native/src/icons/Key';
 import { CreditCard } from 'phosphor-react-native/src/icons/CreditCard';
 import { ChartLine } from 'phosphor-react-native/src/icons/ChartLine';
+import { Users } from 'phosphor-react-native/src/icons/Users';
+import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
 import { Clock } from 'phosphor-react-native/src/icons/Clock';
 import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
 import { Screen } from '../../src/components/Screen';
@@ -32,7 +34,7 @@ import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system
 import { listBetaFeedback } from '../../src/lib/beta';
 import { confirm } from '../../src/lib/dialog';
 import { supabase } from '../../src/lib/supabase';
-import { tokens } from '../../src/design/theme';
+import { tokens, webGlass } from '../../src/design/theme';
 
 const I = { size: 18, color: ROSE, weight: 'duotone' as const };
 
@@ -98,7 +100,7 @@ export default function ProfileScreen() {
     </View> : null}
 
     {me?.founder ? <SettingsGroup highlight title={t('pf.founder')} badge={t('pf.onlyYou')} icon={<Crown size={14} color={ROSE} weight="duotone" />}>
-      <SettingsRow icon={<Heartbeat {...I} />} title={t('pf.health')} sub={health === 'error' ? t('pf.cantCheck') : checkedMin == null ? undefined : checkedMin < 1 ? t('pf.checkedNow') : t('pf.checked', { min: checkedMin })}
+      <SettingsRow icon={<Heartbeat {...I} />} title={t('pf.health')} sub={health === 'error' ? t('pf.cantCheck') : checkedMin == null ? undefined : checkedLabel(t, checkedMin)}
         trailing={health === 'error' ? <Pressable onPress={() => { setHealth(null); if (ws) void getSystemHealth(ws.id).then(setHealth).catch(() => setHealth('error')); }}><Text style={styles.edit}>{t('pf.tryAgain')}</Text></Pressable> : health ? <Chip tone={health.overallStatus === 'healthy' ? 'success' : 'danger'} label={t(`pf.status.${health.overallStatus}`)} /> : null}
         onPress={() => router.push('/system-health')} />
       <SettingsRow icon={<Key {...I} />} title={t('pf.admin')} onPress={() => router.push('/founder-admin')} />
@@ -113,12 +115,17 @@ export default function ProfileScreen() {
       <SettingsRow last icon={<Translate {...I} />} title={t('pf.language')} value={i18n.language === 'ja' ? '日本語' : 'English'} onPress={() => setLangOpen(true)} />
     </SettingsGroup>
 
+    {owner ? <SettingsGroup title={t('pf.business')}>
+      <SettingsRow icon={<Users {...I} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
+      <SettingsRow icon={<CurrencyJpy {...I} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
+      <SettingsRow last icon={<Robot {...I} />} title={t('pf.aiAssistant')} onPress={() => router.push('/ai-settings')} />
+    </SettingsGroup> : null}
+
     {owner ? <SettingsGroup title={t('pf.app')}>
       <SettingsRow icon={<Link {...I} />} title={t('pf.connected')} value={connected} onPress={() => router.push('/settings/connections')} />
       <SettingsRow icon={<Scissors {...I} />} title={t('pf.services')} value={services} onPress={() => router.push('/services')} />
       <SettingsRow icon={<Clock {...I} />} title={t('pf.hours')} onPress={() => router.push('/business-hours' as any)} />
-      <SettingsRow icon={<Clock {...I} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
-      <SettingsRow last icon={<Robot {...I} />} title={t('pf.ai')} onPress={() => router.push('/ai-settings')} />
+      <SettingsRow last icon={<Clock {...I} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
     </SettingsGroup> : null}
     {student ? <SettingsGroup title={t('pf.app')}><SettingsRow last icon={<GraduationCap {...I} />} title={t('pf.academy')} onPress={() => router.push('/academy' as any)} /></SettingsGroup> : null}
 
@@ -145,8 +152,16 @@ export default function ProfileScreen() {
   </Screen>;
 }
 
+/** Real relative time of the last health check: just now / N min / N h / N days. */
+function checkedLabel(t: (k: string, o?: Record<string, unknown>) => string, min: number) {
+  if (min < 1) return t('pf.checkedNow');
+  if (min < 60) return t('pf.checked', { min });
+  if (min < 48 * 60) return t('pf.checkedH', { h: Math.round(min / 60) });
+  return t('pf.checkedD', { d: Math.round(min / 1440) });
+}
+
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#B87766' },
   avatarText: { color: '#FFFFFF', fontFamily: tokens.font.display, fontSize: 26 },
   name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#2A2725' },

@@ -15,6 +15,7 @@ import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
 import { Lightbulb } from 'phosphor-react-native/src/icons/Lightbulb';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
+import { Scissors } from 'phosphor-react-native/src/icons/Scissors';
 import { Screen } from '../../src/components/Screen';
 import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui';
 import { Chip, ROSE } from '../../src/components/SettingsList';
@@ -23,7 +24,7 @@ import { getSocialAccounts } from '../../src/lib/social';
 import { SocialNumbersCard } from '../../src/components/SocialNumbersCard';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
-import { tokens } from '../../src/design/theme';
+import { tokens, webGlass } from '../../src/design/theme';
 
 type View_ = 'drafts' | 'scheduled' | 'posted' | 'ideas';
 const VIEWS: View_[] = ['drafts', 'scheduled', 'posted', 'ideas'];
@@ -31,8 +32,8 @@ const GROUP: Record<string, View_> = { draft: 'drafts', prepared: 'drafts', appr
 const TONE: Record<string, 'neutral' | 'rose' | 'success' | 'danger'> = { drafts: 'neutral', scheduled: 'rose', posted: 'success', failed: 'danger' };
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
-function PlatformMark({ p }: { p: string }) {
-  const c = { size: 16, color: '#625B56' };
+function PlatformMark({ p, size = 16, color = '#625B56' }: { p: string; size?: number; color?: string }) {
+  const c = { size, color };
   if (p === 'instagram') return <InstagramLogo {...c} />;
   if (p === 'facebook') return <FacebookLogo {...c} />;
   if (p === 'tiktok') return <TiktokLogo {...c} />;
@@ -40,7 +41,10 @@ function PlatformMark({ p }: { p: string }) {
   return null;
 }
 
-export default function SocialHome() {
+export default function SocialHome() { return <SocialHomeView />; }
+
+/** asCalendar: the NAV V1 Calendar tab (month view, posts per day with platform icons, link to bookings). */
+export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean }) {
   const { t, i18n } = useTranslation();
   const params = useLocalSearchParams<{ view?: string }>();
   const [ws, setWs] = useState<string | null>(null);
@@ -49,7 +53,7 @@ export default function SocialHome() {
   const [connected, setConnected] = useState<number | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [view, setView] = useState<View_ | null>(VIEWS.find((v) => v === params.view) ?? null);
-  const [month, setMonth] = useState(false);
+  const [month, setMonth] = useState(asCalendar);
   const [day, setDay] = useState<string | null>(null);
   const [menu, setMenu] = useState<ContentPost | null>(null);
 
@@ -85,9 +89,10 @@ export default function SocialHome() {
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load}>
       <View style={styles.head}>
-        <View style={{ flex: 1 }}><Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline><ScreenTitle>{t('social2.title')}</ScreenTitle></View>
-        <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable>
+        <View style={{ flex: 1 }}><Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline><ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
+        {asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav2.bookingsCal')} onPress={() => router.push('/bookings/week' as any)} style={styles.round}><Scissors size={20} color="#2A2725" /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable> : null}
         <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable>
       </View>
 
@@ -104,7 +109,7 @@ export default function SocialHome() {
       </View> : null}
 
       {state === 'ready' && !empty ? <>
-        {ws ? <SocialNumbersCard workspaceId={ws} /> : null}
+        {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
         <View style={styles.strip}>
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
@@ -112,7 +117,7 @@ export default function SocialHome() {
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, today && styles.cellToday, sel && !today && styles.cellSel]}>
               {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
               <Text numberOfLines={1} style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
-              <View style={[styles.dot, { backgroundColor: ring }]}>{ps.length > 1 ? <Text style={styles.dotN}>{ps.length}</Text> : null}</View>
+              {ps.length ? <View style={styles.marks}>{Array.from(new Set(ps.flatMap((p) => (p.variants ?? []).map((v) => v.platform.split('_')[0])))).slice(0, 3).map((pl) => <PlatformMark key={pl} p={pl} size={11} color={today ? '#FFF' : ring} />)}</View> : <View style={[styles.dot, { backgroundColor: ring }]} />}
             </Pressable>; })}
         </View>
 
@@ -153,19 +158,20 @@ export default function SocialHome() {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
-  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
   cellToday: { backgroundColor: '#2A2725' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
   dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8C847D' },
   dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725', fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
+  marks: { flexDirection: 'row', gap: 1, minHeight: 11 },
   dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },
   seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: ROSE },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#2A2725' },
-  list: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden' },
+  list: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(42,39,37,0.10)' },
   thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' },
   thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
@@ -174,7 +180,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   fail: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16, color: '#A3392F' },
   meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#625B56', flexShrink: 1 },
-  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#2A2725', textAlign: 'center' },
   calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#625B56', textAlign: 'center' },
   emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },

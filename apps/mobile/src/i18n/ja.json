@@ -6,7 +6,10 @@
   "social": "SNS投稿",
   "settings": "設定",
   "academy": "アカデミー",
-  "profile": "プロフィール"
+  "profile": "プロフィール",
+  "home": "ホーム",
+  "messages": "メッセージ",
+  "analytics": "分析"
  },
  "common": {
   "save": "保存",
@@ -652,7 +655,8 @@
   "academy": "アカデミー",
   "settingsBack": "設定",
   "back": "戻る",
-  "posts": "投稿"
+  "posts": "投稿",
+  "bookingsCal": "予約"
  },
  "nav3": {
   "notFound": "ページが見つかりません",
@@ -793,7 +797,12 @@
   "founderNoDelete": "ファウンダーアカウントはアプリから削除できません。",
   "delSentData": "確認後、アカウントとビジネスデータ（お客様、予約、メモ、写真）を削除します。元に戻すことはできません。",
   "delSentSub": "アカウントを削除しても、Appleのサブスクリプションは解約されません。iPhoneの「設定」→ 自分の名前 →「サブスクリプション」から解約してね。",
-  "delDone": "閉じる"
+  "delDone": "閉じる",
+  "business": "ビジネス",
+  "money": "売上・収入",
+  "aiAssistant": "AIアシスタント",
+  "checkedH": "{{h}}時間前に確認",
+  "checkedD": "{{d}}日前に確認"
  },
  "s3": {
   "week": "週表示",
@@ -1609,5 +1618,42 @@
   "saveDraft": "下書き保存",
   "saving": "保存中…",
   "noPostsYet": "まだ投稿がありません。"
+ },
+ "inbox": {
+  "messages": "メッセージ",
+  "comments": "コメント",
+  "mentions": "メンション",
+  "filter": "絞り込み",
+  "clear": "解除",
+  "commentsEmpty": "コメントはまだありません",
+  "mentionsEmpty": "メンションはまだありません",
+  "notYet": "連携したアカウントのコメントやタグは、読み込めるようになるとここに表示されます。",
+  "connectTitle": "アカウントを連携してメッセージを表示",
+  "connectMsg": "Instagram・Facebook・LINEを連携すると、ここにメッセージが表示されます。",
+  "connectBtn": "アカウントを連携",
+  "f": {
+   "unread": "未読",
+   "unanswered": "未返信",
+   "booked": "予約済み",
+   "follow_up": "フォローアップ",
+   "touch_up": "リタッチ",
+   "done": "完了"
+  }
+ },
+ "mt": {
+  "views": "表示回数",
+  "interactions": "反応",
+  "followers": "フォロワー",
+  "notYet": "まだありません",
+  "emptyTitle": "このアカウントのインサイトはまだありません",
+  "emptyBody": "連携すると、表示回数・反応・フォロワーがプラットフォームから表示されます。"
+ },
+ "home": {
+  "aiTitle": "AIからの提案",
+  "touchUpDue": "リタッチ時期が近づいています",
+  "draftFollow": "フォロー文を下書き",
+  "draftFollowFor": "{{name}}さんへのフォロー文を下書き",
+  "aiEmpty": "今は提案はありません。リタッチ時期のお客さまがいるとここに表示されます。",
+  "draftNote": "下書きを開くだけです。承認するまで送信されません。"
  }
 }

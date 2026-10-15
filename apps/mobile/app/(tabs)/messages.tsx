@@ -1,87 +1,101 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
+import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
-import { Card, EmptyState, ScreenTitle, SupportText, ui } from '../../src/components/ui';
-import { ActionButton, Avatar, Banner, Chip, PlatformBadge, UnreadDot } from '../../src/components/MessagingBits';
+import { NoStudio } from '../../src/components/NoStudio';
+import { Card, EmptyState, ScreenTitle, Skeleton, ui } from '../../src/components/ui';
+import { Avatar, PlatformBadge, UnreadDot } from '../../src/components/MessagingBits';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { listConnections, listMessageThreads, timeLabel, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
-import { getActiveWorkspace } from '../../src/lib/workspace';
-import { tokens } from '../../src/design/theme';
+import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
+import { tokens, webGlass } from '../../src/design/theme';
 
-type Filter = 'all' | 'unread' | 'needs_reply' | 'done' | 'archived';
-const FILTER_KEYS: Array<[Filter, string]> = [['all', 'all'], ['unread', 'unreadF'], ['needs_reply', 'needsReply'], ['done', 'done'], ['archived', 'archived']];
+type Seg = 'messages' | 'comments' | 'mentions';
+type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
+type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'touch_up' | 'done';
+const SEGS: Seg[] = ['messages', 'comments', 'mentions'];
+const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'IG'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
+const FILTERS: Filter[] = ['unread', 'unanswered', 'booked', 'follow_up', 'touch_up', 'done'];
 
+/** Filter rules use only real thread fields (no invented states). */
+function matches(thread: MessageThreadSummary, f: Filter | null) {
+  const tag = `${thread.status} ${thread.intent}`.toLowerCase();
+  switch (f) {
+    case 'unread': return thread.unread;
+    case 'unanswered': return thread.needs_reply;
+    case 'booked': return /book/.test(tag);
+    case 'follow_up': return /follow/.test(tag);
+    case 'touch_up': return /touch/.test(tag);
+    case 'done': return thread.status === 'done';
+    default: return true;
+  }
+}
+
+/** NAV V1 Messages tab: Meta Business Suite style inbox shell over the existing messaging API. */
 export default function MessagesScreen() {
   const { t } = useTranslation();
-  const FILTERS = FILTER_KEYS.map(([key, k]) => ({ key, label: t(`messages.${k}`) }));
   const [threads, setThreads] = useState<MessageThreadSummary[]>([]);
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
-  const [filter, setFilter] = useState<Filter>('all');
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [seg, setSeg] = useState<Seg>('messages');
+  const [plat, setPlat] = useState<Plat>('all');
+  const [filter, setFilter] = useState<Filter | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [errorText, setErrorText] = useState({ title: '', message: '' });
 
-  const load = useCallback(async (nextFilter: Filter = filter) => {
+  const load = useCallback(async () => {
     try {
       const workspace = await getActiveWorkspace();
       const [rows, conn] = await Promise.all([
-        listMessageThreads(workspace.id, nextFilter === 'archived' ? 'archived' : 'active'),
+        listMessageThreads(workspace.id, 'active'),
         listConnections(workspace.id).catch(() => [] as ConnectionStatus[])
       ]);
       setThreads(rows); setConnections(conn); setState('ready');
     } catch (error) {
+      if (isNoWorkspace(error)) { setState('nostudio'); return; }
       const friendly = toFriendly(error, { action: 'load', thing: 'messages' });
       setErrorText({ title: friendly.title, message: friendly.message }); setState('error');
     }
-  }, [filter]);
+  }, []);
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
-  const visible = useMemo(() => threads.filter((thread) => {
-    if (filter === 'unread') return thread.unread;
-    if (filter === 'needs_reply') return thread.needs_reply;
-    if (filter === 'done') return thread.status === 'done';
-    return true;
-  }), [threads, filter]);
+  const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter)), [threads, plat, filter]);
+  const anyConnected = connections.some((c) => c.connected);
+  const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
-  const line = connections.find((item) => item.provider === 'line');
-  const unreadCount = threads.filter((thread) => thread.unread).length;
-
-  return <Screen onRefresh={() => load()}>
+  return <View style={{ flex: 1 }}><Screen onRefresh={() => load()}>
     <View style={styles.header}>
-      <View style={{ flex: 1, gap: 4 }}>
-        <ScreenTitle>{t('messages.title')}</ScreenTitle>
-        <SupportText>{unreadCount ? t('messages.unread', { count: unreadCount }) : t('messages.caught')}</SupportText>
-      </View>
-      <ActionButton kind="primary" label={t('messages.newConv')} onPress={() => router.push('/messages/new' as any)} />
+      <View style={{ flex: 1, gap: 2 }}><ScreenTitle>{t('messages.title')}</ScreenTitle></View>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} onPress={() => setMenuOpen(true)} style={[styles.round, filter && styles.roundOn]}>
+        {filter ? <Funnel size={20} color="#FFF" weight="fill" /> : <DotsThree size={22} color="#2A2725" weight="bold" />}
+      </Pressable>
     </View>
 
-    {line && !line.connected ? (
-      <Banner>
-        <Text style={styles.bannerTitle}>{t('messages.lineTitle')}</Text>
-        <SupportText>{t('messages.lineMsg')}</SupportText>
-        <Pressable accessibilityRole="link" onPress={() => router.push('/settings/connections' as any)}><Text style={styles.link}>{t('messages.connect')}</Text></Pressable>
-      </Banner>
-    ) : null}
+    <View style={styles.seg}>{SEGS.map((k) => <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: seg === k }} onPress={() => setSeg(k)} style={[styles.segItem, seg === k && styles.segOn]}>
+      <Text numberOfLines={1} style={[styles.segText, seg === k && { color: '#FFF' }]}>{t(`inbox.${k}`)}</Text></Pressable>)}</View>
 
-    <View style={styles.filters}>
-      {FILTERS.map((item) => <Chip key={item.key} label={item.label} selected={filter === item.key} onPress={() => setFilter(item.key)} />)}
-      <Chip label={t('messages.saved')} onPress={() => router.push('/messages/saved-replies' as any)} />
-    </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}>
+        <Text numberOfLines={1} style={[styles.chipText, plat === k && { color: '#FFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
+    </ScrollView>
+    {filter ? <Pressable onPress={() => setFilter(null)}><Text style={styles.link}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
 
-    {state === 'loading' ? <Card><SupportText>{t('messages.loading')}</SupportText></Card> : null}
+    {state === 'loading' ? <Skeleton rows={4} height={72} /> : null}
+    {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'error' ? <ErrorState title={errorText.title} message={errorText.message} onRetry={() => { setState('loading'); void load(); }} /> : null}
-    {state === 'ready' && visible.length === 0 ? (
-      <Card><EmptyState
-        title={filter === 'all' ? t('messages.none') : t('messages.nothing')}
-        message={filter === 'all' ? t('messages.noneMsg') : t('messages.tryFilter')}
-        action={filter === 'all' ? { label: t('messages.newConv'), onPress: () => router.push('/messages/new' as any) } : undefined}
-      /></Card>
-    ) : null}
 
-    {state === 'ready' ? <View style={styles.list}>
+    {state === 'ready' && seg !== 'messages' ? <Card><EmptyState title={t(`inbox.${seg}Empty`)} message={anyConnected ? t('inbox.notYet') : t('inbox.connectMsg')}
+      action={anyConnected ? undefined : { label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
+
+    {seg === 'messages' && noAccounts ? <Card><EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
+    {seg === 'messages' && state === 'ready' && !noAccounts && visible.length === 0 ? <Card><EmptyState title={threads.length ? t('messages.nothing') : t('messages.none')} message={threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
+
+    {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { transform: [{ scale: 0.98 }] }]}>
@@ -93,7 +107,6 @@ export default function MessagesScreen() {
             </View>
             <View style={styles.rowMid}>
               <PlatformBadge platform={thread.platform} label={thread.platform_label} />
-              {thread.needs_owner ? <Text style={styles.flag}>{t('messages.needsYou')}</Text> : null}
               {thread.status === 'done' ? <Text style={styles.done}>{t('messages.done')}</Text> : thread.needs_reply ? <Text style={styles.flag}>{t('messages.needsReply')}</Text> : null}
             </View>
             <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.preview}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
@@ -102,15 +115,42 @@ export default function MessagesScreen() {
         </Pressable>;
       })}
     </View> : null}
-  </Screen>;
+  </Screen>
+
+  <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+    <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}><View style={styles.menu}>
+      <Text style={styles.menuHead}>{t('inbox.filter')}</Text>
+      {FILTERS.map((f) => <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: filter === f }} onPress={() => { setFilter(filter === f ? null : f); setMenuOpen(false); }} style={styles.mi}>
+        <Text style={[styles.miText, filter === f && { color: ROSE }]}>{t(`inbox.f.${f}`)}</Text></Pressable>)}
+      <Pressable style={[styles.mi, styles.miSep]} onPress={() => { setMenuOpen(false); router.push('/messages/new' as any); }}><Text style={styles.miText}>{t('messages.newConv')}</Text></Pressable>
+      <Pressable style={styles.mi} onPress={() => { setMenuOpen(false); router.push('/messages/saved-replies' as any); }}><Text style={styles.miText}>{t('messages.saved')}</Text></Pressable>
+    </View></Pressable>
+  </Modal></View>;
 }
 
+const ROSE = '#8C5547';
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  roundOn: { backgroundColor: ROSE },
+  seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
+  segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  segOn: { backgroundColor: ROSE },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#2A2725' },
+  chips: { flexDirection: 'row', gap: 8 },
+  chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
+  chipOn: { backgroundColor: '#2A2725', borderColor: '#2A2725' },
+  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#2A2725' },
+  backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
+  menu: { width: 240, borderRadius: 22, backgroundColor: 'rgba(250,248,245,0.97)', overflow: 'hidden', ...(webGlass as object) },
+  menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#625B56', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
+  mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(42,39,37,0.10)' },
+  miSep: { borderTopWidth: 6, borderTopColor: 'rgba(42,39,37,0.06)' },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#2A2725' },
   bannerTitle: { fontFamily: tokens.font.uiBold, fontSize: 15, color: ui.colors.primaryText },
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, color: tokens.color.tide, paddingVertical: 6 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  list: { gap: 2, borderRadius: 28, backgroundColor: tokens.color.raised, paddingVertical: 4, paddingHorizontal: 4 },
+  list: { gap: 2, borderRadius: 28, backgroundColor: tokens.color.raised, paddingVertical: 4, paddingHorizontal: 4, ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ui.colors.border },
   rowBody: { flex: 1, gap: 4 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },

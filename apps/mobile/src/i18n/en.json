@@ -6,7 +6,10 @@
   "social": "Social",
   "settings": "Settings",
   "academy": "Academy",
-  "profile": "Profile"
+  "profile": "Profile",
+  "home": "Home",
+  "messages": "Messages",
+  "analytics": "Analytics"
  },
  "common": {
   "save": "Save",
@@ -652,7 +655,8 @@
   "academy": "Academy",
   "settingsBack": "Settings",
   "back": "Back",
-  "posts": "Posts"
+  "posts": "Posts",
+  "bookingsCal": "Bookings"
  },
  "nav3": {
   "notFound": "Page not found",
@@ -793,7 +797,12 @@
   "founderNoDelete": "Founder accounts can't be deleted from the app.",
   "delSentData": "After we confirm, we delete your account and business data (clients, bookings, notes, photos). This cannot be undone.",
   "delSentSub": "Deleting your account does not cancel an Apple subscription. Cancel it in iPhone Settings → your name → Subscriptions.",
-  "delDone": "Done"
+  "delDone": "Done",
+  "business": "Business",
+  "money": "Money & income",
+  "aiAssistant": "AI assistant",
+  "checkedH": "Checked {{h}} h ago",
+  "checkedD": "Checked {{d}} days ago"
  },
  "s3": {
   "week": "Week view",
@@ -1609,5 +1618,42 @@
   "saveDraft": "Save draft",
   "saving": "Saving…",
   "noPostsYet": "No posts yet."
+ },
+ "inbox": {
+  "messages": "Messages",
+  "comments": "Comments",
+  "mentions": "Mentions",
+  "filter": "Filter",
+  "clear": "clear",
+  "commentsEmpty": "No comments yet",
+  "mentionsEmpty": "No mentions yet",
+  "notYet": "Comments and tags from your connected accounts will show here once AngelOS can read them.",
+  "connectTitle": "Connect an account to see messages",
+  "connectMsg": "Connect Instagram, Facebook or LINE to see your messages here.",
+  "connectBtn": "Connect accounts",
+  "f": {
+   "unread": "Unread",
+   "unanswered": "Unanswered",
+   "booked": "Booked",
+   "follow_up": "Follow-up",
+   "touch_up": "Touch-up",
+   "done": "Done"
+  }
+ },
+ "mt": {
+  "views": "Views",
+  "interactions": "Interactions",
+  "followers": "Followers",
+  "notYet": "Not yet",
+  "emptyTitle": "No insights for this account yet",
+  "emptyBody": "Connect it to see views, interactions and followers from the platform itself."
+ },
+ "home": {
+  "aiTitle": "AI suggestions",
+  "touchUpDue": "Touch-up due soon",
+  "draftFollow": "Draft follow-up",
+  "draftFollowFor": "Draft a follow-up for {{name}}",
+  "aiEmpty": "Nothing to suggest right now. Suggestions appear here when a client is due for a touch-up.",
+  "draftNote": "Opens a draft. Nothing is sent until you approve it."
  }
 }
