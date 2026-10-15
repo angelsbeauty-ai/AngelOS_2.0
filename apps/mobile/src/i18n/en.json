@@ -5,7 +5,8 @@
   "calendar": "Calendar",
   "social": "Social",
   "settings": "Settings",
-  "academy": "Academy"
+  "academy": "Academy",
+  "profile": "Profile"
  },
  "common": {
   "save": "Save",
@@ -32,7 +33,9 @@
   "version": "Version {{v}}",
   "signOut": "Sign out",
   "signOutTitle": "Sign out?",
-  "signOutMsg": "You will need to sign in again to use AngelOS."
+  "signOutMsg": "You will need to sign in again to use AngelOS.",
+  "academy": "Academy",
+  "academyDetail": "Your courses and lessons"
  },
  "account": {
   "title": "Your account",

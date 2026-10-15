@@ -5,7 +5,8 @@
   "calendar": "カレンダー",
   "social": "SNS投稿",
   "settings": "設定",
-  "academy": "アカデミー"
+  "academy": "アカデミー",
+  "profile": "プロフィール"
  },
  "common": {
   "save": "保存",
@@ -32,7 +33,9 @@
   "version": "バージョン {{v}}",
   "signOut": "ログアウト",
   "signOutTitle": "ログアウトしますか？",
-  "signOutMsg": "もう一度ログインが必要になります。"
+  "signOutMsg": "もう一度ログインが必要になります。",
+  "academy": "アカデミー",
+  "academyDetail": "コースとレッスン"
  },
  "account": {
   "title": "アカウント",

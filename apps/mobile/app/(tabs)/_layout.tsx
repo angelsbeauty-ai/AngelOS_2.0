@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { Calendar } from 'phosphor-react-native/src/icons/Calendar';
-import { GearSix } from 'phosphor-react-native/src/icons/GearSix';
+import { UserCircle } from 'phosphor-react-native/src/icons/UserCircle';
 import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
 import { House } from 'phosphor-react-native/src/icons/House';
 import { Users } from 'phosphor-react-native/src/icons/Users';
@@ -31,8 +31,8 @@ export default function TabsLayout() {
       <Tabs.Screen name="clients" options={{ ...studio, title: t('tabs.clients'), tabBarIcon: ({ color }) => <Users size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="calendar" options={{ ...studio, title: t('tabs.calendar'), tabBarIcon: ({ color }) => <Calendar size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="social" options={{ ...studio, title: t('tabs.social'), tabBarIcon: ({ color }) => <Sparkle size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="account" options={{ href: student ? undefined : null, title: t('tabs.settings'), tabBarIcon: ({ color }) => <GearSix size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="academy" options={{ title: t('tabs.academy'), tabBarIcon: ({ color }) => <GraduationCap size={24} color={color as string} weight="duotone" /> }} />
+      <Tabs.Screen name="academy" options={{ href: student ? undefined : null, title: t('tabs.academy'), tabBarIcon: ({ color }) => <GraduationCap size={24} color={color as string} weight="duotone" /> }} />
+      <Tabs.Screen name="account" options={{ title: t('tabs.profile'), tabBarIcon: ({ color }) => <UserCircle size={24} color={color as string} weight="duotone" /> }} />
     </Tabs>
   );
 }
