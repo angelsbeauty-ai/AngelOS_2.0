@@ -129,6 +129,23 @@ export class AnalyticsService {
     return { currency: ws.data?.currency ?? 'JPY', ...businessMetrics({ now, days: safe, appointments: (appts.data ?? []) as any, history: (history.data ?? []) as any, payments: (payments.data ?? []) as any }) };
   }
 
+  /** S11 post insights: every metric snapshot for the variants of one post (real rows only, oldest first). */
+  async postInsights(user: AuthUser, workspaceId: string, contentPostId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: variants, error } = await supabase.from('content_variants').select('id,platform,format,status,published_at,scheduled_for').eq('workspace_id', workspaceId).eq('content_post_id', contentPostId);
+    if (error) throw new InternalServerErrorException(error.message);
+    const ids = (variants ?? []).map((v: any) => v.id);
+    const snaps = ids.length ? await supabase.from('content_metric_snapshots').select('*').eq('workspace_id', workspaceId).in('content_variant_id', ids).order('captured_at', { ascending: true }).limit(2000) : { data: [] as any[], error: null };
+    if (snaps.error) throw new InternalServerErrorException(snaps.error.message);
+    return {
+      contentPostId,
+      variants: (variants ?? []).map((v: any) => ({
+        variantId: v.id, platform: v.platform, format: v.format, status: v.status, publishedAt: v.published_at,
+        snapshots: (snaps.data ?? []).filter((m: any) => m.content_variant_id === v.id).map((m: any) => ({ capturedAt: m.captured_at, ...pickPublicMetrics(m) }))
+      }))
+    };
+  }
+
   async overview(user: AuthUser, workspaceId: string, days = 30) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const safeDays = Math.max(7, Math.min(365, Math.trunc(days || 30)));
@@ -184,7 +201,8 @@ export class AnalyticsService {
       postingWindow,
       patterns,
       evidence,
-      recentPosts: scored.slice(0, 12).map(summarizePost)
+      recentPosts: scored.slice(0, 12).map(summarizePost),
+      posts: measuredRows.slice(0, 300).map(summarizePost)
     };
   }
 

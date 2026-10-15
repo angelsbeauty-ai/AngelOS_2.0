@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { useCallback, useState } from 'react';
-import { Image, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, Linking, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Button, ScreenTitle, Skeleton, SupportText } from '../../src/components/ui';
@@ -25,6 +26,8 @@ export default function SocialAccounts() {
     catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+  const { meta } = useLocalSearchParams<{ meta?: string }>();
+  useEffect(() => { if (meta && meta !== 'connected') void dialog.notify(t('sml.metaFailed'), meta); }, [meta, t]);
 
   async function saveLine() {
     if (!ws) return; setBusy(true);
@@ -34,7 +37,14 @@ export default function SocialAccounts() {
   }
   async function connectMeta(a: SocialAccount) {
     if (!a.connectPath) return;
-    try { const { authUrl } = await startMetaConnect(a.connectPath, a.platform as 'instagram' | 'facebook'); await Linking.openURL(authUrl); }
+    try {
+      const { authUrl } = await startMetaConnect(a.connectPath, a.platform as 'instagram' | 'facebook');
+      // Web: same tab; the API callback sends the browser back to META_OAUTH_RETURN_URL (?meta=connected).
+      if (Platform.OS === 'web') { window.location.assign(authUrl); return; }
+      // Native: in-app browser; closes itself when the callback lands on the app scheme (angelos://...).
+      const r = await WebBrowser.openAuthSessionAsync(authUrl, 'angelos://').catch(async () => { await Linking.openURL(authUrl); return null; });
+      if (r) await load();
+    }
     catch (e) { void dialog.notify(t('sml.metaFailed'), e instanceof Error ? e.message : ''); }
   }
 

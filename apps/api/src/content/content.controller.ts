@@ -17,6 +17,7 @@ export class ContentController {
   constructor(private readonly content: ContentService, private readonly social: SocialService) {}
 
   // B0 social extras. Static paths are declared before ':contentPostId' so they win.
+  @Get('accounts') accounts(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.social.accounts(user, ws); }
   @Get('ideas') ideas(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.social.ideas(user, ws); }
   @Get('insights') insights(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Query('days') days?: string) { return this.social.insights(user, ws, Math.min(365, Math.max(7, Number(days) || 30))); }
   @Post('plan') plan(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Body() dto: PlanDaysDto) { return this.social.planDays(user, ws, dto); }

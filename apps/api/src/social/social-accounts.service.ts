@@ -7,6 +7,8 @@ import { isMissingRelation } from '../messaging/saved-replies.service';
 import { readMetaConfig, type MetaConfig } from '../meta/meta.config';
 import { metaPublishingReady } from '../meta/meta-publishing.adapter';
 import { metaNumbers } from './meta-insights';
+import { decryptToken } from '../meta/meta-crypto';
+import { readMetaOAuthConfig } from '../meta/meta-oauth';
 import { openToken, sealToken, tokenKeyReady } from './token-crypto';
 
 export type SocialPlatform = 'instagram' | 'facebook' | 'line';
@@ -21,7 +23,8 @@ export interface SocialAccountView {
 
 const MIGRATION = '0023_v1_social_line_and_metrics';
 const on = (v?: string) => String(v ?? '').trim().toLowerCase() === 'true';
-export const metaConnectAvailable = (env: NodeJS.ProcessEnv = process.env) => on(env.META_OAUTH_ENABLED);
+/** META_OAUTH_ENABLED=true AND the Meta app keys + META_TOKEN_KEY exist (see readMetaOAuthConfig). */
+export const metaConnectAvailable = (env: NodeJS.ProcessEnv = process.env) => on(env.META_OAUTH_ENABLED) && readMetaOAuthConfig(env) !== null;
 
 /**
  * Connected-account status (LINE / Instagram / Facebook) + numbers, as one clean API for the app.
@@ -80,24 +83,53 @@ export class SocialAccountsService {
   }
 
   // ---------- Meta (read only) ----------
-  /** Per-studio Meta config. Today: the server-wide env keys (beta, one studio). Gordon swaps in meta_connections tokens. */
-  metaConfigFor(_workspaceId: string): MetaConfig { return readMetaConfig(); }
+  /**
+   * Per-studio Meta config: the studio's own Page/IG tokens from meta_connections (decrypted with META_TOKEN_KEY).
+   * Falls back to the server-wide env keys only when the studio has no connection row (beta single-studio setup).
+   * Publishing still needs META_PUBLISHING_ENABLED=true (metaPublishingReady).
+   */
+  async metaConfigFor(workspaceId: string): Promise<MetaConfig> {
+    const base = readMetaConfig();
+    const row = await this.metaRow(workspaceId);
+    if (!row) return base;
+    if (row.status !== 'connected' || !row.page_token_enc) return { ...base, pageToken: undefined, pageId: undefined, igUserId: undefined };
+    try {
+      return { ...base, pageId: row.page_id, igUserId: row.ig_user_id ?? undefined, pageToken: decryptToken(row.page_token_enc), tokenExpiresAt: row.token_expires_at ?? undefined };
+    } catch (e) {
+      this.logger.warn(`Meta token could not be opened for a workspace: ${e instanceof Error ? e.message : 'unknown'}`);
+      return { ...base, pageToken: undefined, pageId: undefined, igUserId: undefined };
+    }
+  }
 
-  private async metaRow(workspaceId: string) {
-    const { data, error } = await createServiceSupabaseClient().from('meta_connections').select('page_name,ig_username,status,token_expires_at').eq('workspace_id', workspaceId).neq('status', 'disconnected').limit(1);
+  private async metaRow(workspaceId: string): Promise<any | null> {
+    const { data, error } = await createServiceSupabaseClient().from('meta_connections').select('page_id,page_name,ig_user_id,ig_username,page_token_enc,status,token_expires_at').eq('workspace_id', workspaceId).neq('status', 'disconnected').order('connected_at', { ascending: false }).limit(1);
     return error ? null : data?.[0] ?? null;
+  }
+
+  /** Page photo + IG profile photo (live, short timeout). Null on any failure. */
+  private async metaPictures(cfg: MetaConfig): Promise<{ facebook: string | null; instagram: string | null }> {
+    if (!cfg.pageToken || !cfg.pageId) return { facebook: null, instagram: null };
+    const get = (url: string) => fetch(url, { signal: AbortSignal.timeout(4000) }).then((r) => r.json()).catch(() => null);
+    const t = encodeURIComponent(cfg.pageToken);
+    const [fb, ig] = await Promise.all([
+      get(`${cfg.graphBase}/${cfg.pageId}/picture?redirect=false&type=large&access_token=${t}`),
+      cfg.igUserId ? get(`${cfg.graphBase}/${cfg.igUserId}?fields=profile_picture_url,username&access_token=${t}`) : Promise.resolve(null)
+    ]);
+    return { facebook: (fb as any)?.data?.url ?? null, instagram: (ig as any)?.profile_picture_url ?? null };
   }
 
   async accounts(user: AuthUser, workspaceId: string): Promise<{ accounts: SocialAccountView[] }> {
     await this.member(user, workspaceId);
     const [line, meta] = await Promise.all([this.lineAdapterFor(workspaceId), this.metaRow(workspaceId)]);
-    const cfg = this.metaConfigFor(workspaceId);
+    const cfg = await this.metaConfigFor(workspaceId);
+    const pics = meta ? await this.metaPictures(cfg) : { facebook: null, instagram: null };
     const connectAvailable = metaConnectAvailable();
     const metaView = (platform: 'instagram' | 'facebook'): SocialAccountView => {
       const name = platform === 'instagram' ? meta?.ig_username ?? null : meta?.page_name ?? null;
       const rowOk = meta && (platform === 'facebook' || meta.ig_username);
-      const state: AccountState = rowOk ? (meta!.status === 'needs_reconnect' ? 'needs_reconnect' : 'connected') : metaPublishingReady(platform, cfg) ? 'connected' : 'not_connected';
-      return { platform, state, name, handle: platform === 'instagram' && name ? `@${name}` : null, pictureUrl: null, connectAvailable, connectPath: connectAvailable ? `/workspaces/${workspaceId}/meta/connect` : null };
+      const expired = meta?.token_expires_at && Date.parse(meta.token_expires_at) <= Date.now();
+      const state: AccountState = rowOk ? (meta!.status === 'needs_reconnect' || expired ? 'needs_reconnect' : 'connected') : metaPublishingReady(platform, cfg) ? 'connected' : 'not_connected';
+      return { platform, state, name, handle: platform === 'instagram' && name ? `@${name}` : null, pictureUrl: rowOk ? pics[platform] : null, connectAvailable, connectPath: connectAvailable ? `/workspaces/${workspaceId}/meta/connect` : null };
     };
     return {
       accounts: [
@@ -115,7 +147,7 @@ export class SocialAccountsService {
       const f = await adapter.followers();
       return { followers: f.followers, engagement: null, reach: f.targetedReaches, raw: { blocks: f.blocks, date: f.date } };
     }
-    const cfg = this.metaConfigFor(workspaceId);
+    const cfg = await this.metaConfigFor(workspaceId);
     if (!metaPublishingReady(platform, cfg)) return null;
     const n = await metaNumbers(platform, cfg);
     return { followers: n.followers, engagement: n.engagement, reach: null, raw: { posts: n.posts } };

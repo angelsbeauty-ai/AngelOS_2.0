@@ -7,6 +7,7 @@ import { createServiceSupabaseClient, createUserSupabaseClient } from '../config
 import { LineMessagingAdapter, readLineConfig } from '../messaging/line-messaging.adapter';
 import { buildTranslateInstructions } from '../messaging/reply-prompt';
 import { isMissingRelation } from '../messaging/saved-replies.service';
+import { metaAccountStatus, type SocialAccount } from '../meta/meta-accounts';
 import { ContentService } from './content.service';
 import type { CreateCampaignDto, HashtagSetDto, LineDraftDto, MarkPostedDto, PlanDaysDto } from './dto/social.dto';
 import { addDaysLocal, dataIdeas, daysBetween, lineEstimateText, parseCaptionList, planCampaign, planPosts, seasonalIdeas, starterCaption, type PlannedPost } from './social-plan';
@@ -305,5 +306,17 @@ export class SocialService {
       bestTimeDefault: postingTimes.length ? null : '19:00–21:00 (until AngelOS has your own numbers)',
       fromSocial: { newClients: socialClients.length, bySource, bookings }
     };
+  }
+
+  /** Social home account row: Meta from the existing flags, LINE from the channel, TikTok not available yet. */
+  async accounts(user: AuthUser, workspaceId: string): Promise<SocialAccount[]> {
+    await this.workspace(user, workspaceId);
+    const line = await this.lineConnected(workspaceId);
+    return [
+      metaAccountStatus('instagram'),
+      metaAccountStatus('facebook'),
+      { platform: 'line', handle: null, status: line.connected ? 'connected' : 'not_connected', tokenExpiresAt: null, insights: false, detail: line.connected ? 'Connected.' : 'Not connected yet.' },
+      { platform: 'tiktok', handle: null, status: 'not_connected', tokenExpiresAt: null, insights: false, detail: 'Not available yet.' }
+    ];
   }
 }

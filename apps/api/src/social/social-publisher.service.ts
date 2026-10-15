@@ -76,7 +76,7 @@ export class SocialPublisherService {
       return this.finish(variant, r.status === 'sent' ? { status: 'published', providerPostId: r.externalMessageId, raw: r.raw } : { status: 'failed', reason: r.error ?? 'LINE broadcast failed. Nothing was sent.', raw: r.raw });
     }
     if (platform === 'instagram' || platform === 'facebook') {
-      const cfg = this.accounts.metaConfigFor(ws);
+      const cfg = await this.accounts.metaConfigFor(ws);
       if (!metaPublishingReady(platform, cfg)) return this.finish(variant, { status: 'failed', reason: notConnectedReason(platform) });
       const { data: media } = await service.from('content_post_media').select('position,asset:media_assets(*)').eq('content_post_id', variant.content_post_id).order('position');
       const assets = (media ?? []).map((m: any) => m.asset).filter(Boolean);
