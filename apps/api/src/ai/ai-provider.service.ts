@@ -1,6 +1,7 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { AiProviderRequest, AiProviderResponse } from './ai.types';
 import { mockTaskResponse } from './mock-provider';
+import { chooseModel } from './model-policy';
 
 @Injectable()
 export class AiProviderService {
@@ -14,7 +15,7 @@ export class AiProviderService {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
-    const model = process.env.OPENAI_MODEL ?? 'gpt-5.6-terra';
+    const model = chooseModel(request.userId).model;
     if (!apiKey) {
       throw new BadGatewayException('OPENAI_API_KEY is not configured');
     }

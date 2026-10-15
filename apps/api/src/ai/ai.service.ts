@@ -183,7 +183,7 @@ export class AiService {
     const planned = planTool(message, new Date(), timeZone);
     const providerResponse = planned?.kind === 'read'
       ? { text: await this.tools.read(user, workspaceId, planned, timeZone), provider: 'angelos-tools', model: 'records' }
-      : await this.provider.generate({ instructions, input: transcript || `Owner: ${message}` });
+      : await this.provider.generate({ instructions, input: transcript || `Owner: ${message}`, userId: user.id });
 
     const plannedAction = planned && planned.kind !== 'read' ? { actionKey: planned.key, riskLevel: planned.risk, input: planned.input, summary: planned.summary, kind: planned.kind } : null;
     let actionRun: any = null;

@@ -37,6 +37,8 @@ export interface AiProviderRequest {
   instructions: string;
   input: string;
   imageUrls?: string[];
+  /** Used only for per-user caps on the next model (see model-policy.ts). */
+  userId?: string;
 }
 
 export interface AiProviderResponse {
