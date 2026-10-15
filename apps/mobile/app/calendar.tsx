@@ -51,7 +51,7 @@ export default function CalendarScreen() {
     <View style={styles.navRow}>
       <View style={{ flex: 1 }}><Tabs value={mode} onChange={setMode} options={[{ id: 'day', label: t('calendar.day') }, { id: 'week', label: t('calendar.week') }]} /></View>
       <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.back')} onPress={() => setAnchor(addDayString(anchor, -step))} style={styles.navBtn}><CaretLeft size={18} color="#2A2725" /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} style={[styles.navBtn, { width: undefined, paddingHorizontal: 12 }]}><Text numberOfLines={1} style={styles.navToday}>{t('calendar.today')}</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} style={styles.navPill}><Text numberOfLines={1} style={styles.navToday}>{t('calendar.today')}</Text></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} style={styles.navBtn}><CaretRight size={18} color="#2A2725" /></Pressable>
     </View>
     {busy && !appointments.length ? <Skeleton rows={2} height={56} /> : null}
@@ -96,7 +96,8 @@ function pos(start: string, end: string, day: string) {
 
 const styles = StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'nowrap' },
-  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
+  navBtn: { flexShrink: 0, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
+  navPill: { flexShrink: 0, height: 40, minWidth: 64, paddingHorizontal: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
   navToday: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: '#2A2725' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: ui.spacing.sm },
   grid: { flexDirection: 'row', flex: 1, paddingTop: 4 },
