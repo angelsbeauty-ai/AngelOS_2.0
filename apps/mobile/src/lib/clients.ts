@@ -36,6 +36,8 @@ export interface ClientDetail {
 export type ClientFilter = 'all' | 'new' | 'active' | 'touch_up' | 'archived';
 export interface HealthQuestion { key: string; en: string; ja: string; redFlag: boolean }
 
+/** Legacy demo-inbox contacts (source 'manual', name 'Demo Client') are hidden, never deleted. */
+export const isDemoSeed = (c: ClientSummary) => c.display_name === 'Demo Client' && (c.source === 'manual' || c.source === 'manual-demo');
 export function listClients(workspaceId: string, search = '', filter: ClientFilter = 'all') {
   const params = new URLSearchParams();
   if (search.trim()) params.set('search', search.trim());

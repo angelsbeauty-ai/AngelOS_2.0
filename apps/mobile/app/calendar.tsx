@@ -7,7 +7,7 @@ import { ErrorState } from '../src/components/ErrorState';
 import { ActionButton } from '../src/components/MessagingBits';
 import { Tabs, fieldStyles } from '../src/components/Field';
 import { addDayString, dayString, prettyDay } from '../src/components/DateField';
-import { BodyText, Card, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
+import { BodyText, Card, EmptyState, ScreenTitle, SectionTitle, Skeleton, SupportText, ui } from '../src/components/ui';
 import { getBusinessHours, getCalendar, type BusinessHour, type CalendarAppointment, type CalendarBlock } from '../src/lib/bookings';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { toFriendly, type FriendlyResult } from '../src/lib/friendly-error';
@@ -52,6 +52,8 @@ export default function CalendarScreen() {
       <ActionButton kind="quiet" label={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} />
       <ActionButton kind="quiet" label={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} />
     </View>
+    {busy && !appointments.length ? <Skeleton rows={2} height={56} /> : null}
+    {!busy && !loadError && !appointments.length && !blocks.length ? <Card><EmptyState title={mode === 'day' ? t('calendar.emptyDay') : t('calendar.emptyWeek')} action={{ label: t('calendar.newBooking'), onPress: () => router.push('/bookings/new') }} /></Card> : null}
     {loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
     <Card>
       <ScrollView horizontal={mode === 'week'} contentContainerStyle={{ flexGrow: 1 }}>
@@ -75,14 +77,8 @@ export default function CalendarScreen() {
           })}
         </View>
       </ScrollView>
-      {!busy && !appointments.length && !blocks.length ? <SupportText>{mode === 'day' ? t('calendar.nothingDay') : t('calendar.nothingWeek')}</SupportText> : null}
-      <SupportText>{t('calendar.legend')}</SupportText>
+      
     </Card>
-    <View style={fieldStyles.row}>
-      <ActionButton label={t('calendar.hours')} onPress={() => router.push('/business-hours' as any)} />
-      <ActionButton label={t('calendar.daysOff')} onPress={() => router.push('/time-off' as any)} />
-      <ActionButton label={t('calendar.services')} onPress={() => router.push('/services')} />
-    </View>
   </Screen>;
 }
 

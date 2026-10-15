@@ -113,7 +113,10 @@
    "active": "Active",
    "touch_up": "Touch-up due",
    "archived": "Archived"
-  }
+  },
+  "chipLead": "New enquiry",
+  "chipClient": "Client",
+  "add": "New client"
  },
  "today": {
   "greeting": "Good morning, {{name}}",
@@ -173,7 +176,9 @@
    "urgent": "Urgent",
    "today": "Today",
    "later": "Soon"
-  }
+  },
+  "title": "Today",
+  "noAppts": "No appointments today"
  },
  "errors": {
   "offline": "You're offline",
@@ -325,7 +330,10 @@
   "prevDay": "‹ Day",
   "tomorrow": "Tomorrow",
   "plusWeek": "+1 week",
-  "nextDay": "Day ›"
+  "nextDay": "Day ›",
+  "emptyWeek": "No bookings this week",
+  "emptyDay": "No bookings this day",
+  "setup": "Booking setup"
  },
  "messages": {
   "title": "Messages",
@@ -634,7 +642,8 @@
   "reset": "New password",
   "academy": "Academy",
   "settingsBack": "Settings",
-  "back": "Back"
+  "back": "Back",
+  "posts": "Posts"
  },
  "nav3": {
   "notFound": "Page not found",
@@ -648,8 +657,8 @@
   "students": "Students",
   "reviews": "Practice photos",
   "courses": "Courses",
-  "emptyOwner": "Create your first course",
-  "emptyOwnerMsg": "Add lessons, invite students and follow their progress here.",
+  "emptyOwner": "Your courses will live here",
+  "emptyOwnerMsg": "Create a course to add lessons and invite students.",
   "emptyStudent": "No courses yet",
   "emptyStudentMsg": "Your teacher will add you to a course.",
   "lessons_one": "{{count}} lesson",
@@ -675,6 +684,8 @@
   "quick": "Quick actions",
   "ba": "Before & after maker",
   "campaign": "Plan a campaign",
-  "connect": "Connect social accounts"
+  "connect": "Connect social accounts",
+  "title": "Social",
+  "all": "Calendar"
  }
 }

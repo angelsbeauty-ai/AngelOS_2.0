@@ -10,7 +10,6 @@ import { ChartLine } from 'phosphor-react-native/src/icons/ChartLine';
 import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
 import { BellRinging } from 'phosphor-react-native/src/icons/BellRinging';
 import { Robot } from 'phosphor-react-native/src/icons/Robot';
-import { CheckCircle } from 'phosphor-react-native/src/icons/CheckCircle';
 import { WarningCircle } from 'phosphor-react-native/src/icons/WarningCircle';
 import { Screen } from '../../src/components/Screen';
 import { Badge, BodyText, Button, Card, ListRow, Overline, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
@@ -132,8 +131,8 @@ export default function TodayScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Overline>{dateStr}</Overline>
-          <ScreenTitle>{greeting}</ScreenTitle>
-          <SupportText>{subtitle}</SupportText>
+          <ScreenTitle>{t('today.title')}</ScreenTitle>
+          <SupportText>{greeting}. {subtitle}</SupportText>
         </View>
         <Pressable onPress={() => router.push('/settings')} style={styles.settingsButton} accessibilityRole="button" accessibilityLabel={t('today.settings')}>
           <Text style={styles.initials}>{initials}</Text>
@@ -167,6 +166,7 @@ export default function TodayScreen() {
         </Card>
       )}
 
+      {active.length || unread || weekIncome?.amount ? (
       <Card>
         <View style={styles.strip}>
           <Pressable style={styles.stripCell} onPress={() => router.push('/calendar')}><Text style={styles.stripValue}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
@@ -177,6 +177,9 @@ export default function TodayScreen() {
         </View>
         {touchUpCount ? <Pressable onPress={() => router.push('/clients')}><SupportText tone="warning">{t('today.touchUps')}: {touchUpCount}</SupportText></Pressable> : null}
       </Card>
+      ) : (
+        <Card><SupportText>{t('today.noAppts')}</SupportText></Card>
+      )}
 
       {laterAppointments.length > 0 ? (
         <View style={{ gap: ui.spacing.xs }}>
@@ -185,14 +188,12 @@ export default function TodayScreen() {
         </View>
       ) : null}
 
-      <View style={{ gap: ui.spacing.xs }}>
+      {openItems.length ? <View style={{ gap: ui.spacing.xs }}>
         <SectionTitle>{t('today.needs')}</SectionTitle>
-        {openItems.length ? openItems.map((it) => (
+        {openItems.map((it) => (
           <ListRow key={it.id} leading={<WarningCircle size={28} color={it.severity === 'urgent' ? ui.colors.critical : ui.colors.warning} weight="duotone" />} title={it.title} subtitle={it.summary} trailing={<Badge status={it.severity === 'urgent' ? 'cancelled' : 'request'} label={t(`today.sev.${it.severity}`)} />} onPress={() => router.push((it.action_path && it.action_path.startsWith('/') ? it.action_path : '/system-health') as any)} />
-        )) : (
-          <Card><View style={styles.okRow}><CheckCircle size={32} color={ui.colors.success} weight="duotone" /><View style={{ flex: 1 }}><BodyText>{t('today.needsEmpty')}</BodyText><SupportText>{t('today.needsEmptyMsg')}</SupportText></View></View></Card>
-        )}
-      </View>
+        ))}
+      </View> : null}
 
       <SuggestionsCard workspaceId={workspaceId} limit={4} />
 

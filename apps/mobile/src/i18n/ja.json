@@ -113,7 +113,10 @@
    "active": "通い中",
    "touch_up": "リタッチ時期",
    "archived": "アーカイブ"
-  }
+  },
+  "chipLead": "新しいお問い合わせ",
+  "chipClient": "お客様",
+  "add": "新規のお客様"
  },
  "today": {
   "greeting": "おはようございます、{{name}}さん",
@@ -173,7 +176,9 @@
    "urgent": "至急",
    "today": "今日",
    "later": "あとで"
-  }
+  },
+  "title": "今日",
+  "noAppts": "今日の予約はありません"
  },
  "errors": {
   "offline": "オフラインです",
@@ -325,7 +330,10 @@
   "prevDay": "‹ 前の日",
   "tomorrow": "明日",
   "plusWeek": "+1週間",
-  "nextDay": "次の日 ›"
+  "nextDay": "次の日 ›",
+  "emptyWeek": "今週の予約はありません",
+  "emptyDay": "この日の予約はありません",
+  "setup": "予約の設定"
  },
  "messages": {
   "title": "メッセージ",
@@ -634,7 +642,8 @@
   "reset": "新しいパスワード",
   "academy": "アカデミー",
   "settingsBack": "設定",
-  "back": "戻る"
+  "back": "戻る",
+  "posts": "投稿"
  },
  "nav3": {
   "notFound": "ページが見つかりません",
@@ -648,8 +657,8 @@
   "students": "生徒",
   "reviews": "練習写真",
   "courses": "コース",
-  "emptyOwner": "最初のコースを作ろう",
-  "emptyOwnerMsg": "レッスンを追加して、生徒を招待し、進み具合をここで確認できます。",
+  "emptyOwner": "ここにコースが並びます",
+  "emptyOwnerMsg": "コースを作って、レッスンを追加し、生徒を招待しましょう。",
   "emptyStudent": "まだコースはありません",
   "emptyStudentMsg": "先生がコースに追加してくれます。",
   "lessons_one": "レッスン{{count}}件",
@@ -675,6 +684,8 @@
   "quick": "クイック操作",
   "ba": "ビフォーアフター作成",
   "campaign": "キャンペーンを計画",
-  "connect": "SNSアカウントを連携"
+  "connect": "SNSアカウントを連携",
+  "title": "SNS",
+  "all": "カレンダー"
  }
 }
