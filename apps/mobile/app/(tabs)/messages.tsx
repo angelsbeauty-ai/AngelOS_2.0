@@ -2,7 +2,11 @@ import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { List } from 'phosphor-react-native/src/icons/List';
+import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizontal';
+import { Platform } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
+import { Button } from '../../src/components/ui';
+import { getSocialAccounts, startMetaConnect } from '../../src/lib/social';
 import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
@@ -18,6 +22,7 @@ type Seg = 'messages' | 'comments' | 'mentions';
 type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
 type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'touch_up' | 'done';
 const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
+const PROBLEM = /needs permission|needs reconnect|could not read|meta said|permission|error|expired/i;
 const FILTERS: Filter[] = ['unread', 'unanswered', 'booked', 'follow_up', 'touch_up', 'done'];
 
 /** Filter rules use only real thread fields (no invented states). */
@@ -65,6 +70,19 @@ export default function MessagesScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter)), [threads, plat, filter]);
+  /** A platform-level sync problem (missing permission, expired login). Raw Meta text is never shown. */
+  const platError = plat !== 'all' ? connections.find((x) => x.provider === plat && PROBLEM.test(x.detail ?? '')) ?? null : null;
+  async function reconnect(provider: string) {
+    try {
+      const ws = await getActiveWorkspace();
+      if (provider === 'line') { router.push('/content/accounts' as any); return; }
+      const acc = (await getSocialAccounts(ws.id)).find((a) => a.platform === provider);
+      if (!acc?.connectPath) { router.push('/content/accounts' as any); return; }
+      const { authUrl } = await startMetaConnect(acc.connectPath, provider as 'instagram' | 'facebook');
+      if (Platform.OS === 'web') { window.location.assign(authUrl); return; }
+      await WebBrowser.openAuthSessionAsync(authUrl, 'angelos://'); await load(true);
+    } catch { router.push('/content/accounts' as any); }
+  }
   const anyConnected = connections.some((c) => c.connected);
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
@@ -72,7 +90,7 @@ export default function MessagesScreen() {
     <View style={styles.header}>
       <View style={{ flex: 1, gap: 2 }}><ScreenTitle>{t('messages.title')}</ScreenTitle></View>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} onPress={() => setMenuOpen(true)} style={[styles.round, filter && styles.roundOn]}>
-        {filter ? <Funnel size={20} color="#FFF" weight="fill" /> : <List size={22} color="#2A2725" weight="bold" />}
+        {filter ? <Funnel size={20} color="#FFF" weight="fill" /> : <SlidersHorizontal size={22} color="#2A2725" weight="bold" />}
       </Pressable>
     </View>
 
@@ -81,7 +99,10 @@ export default function MessagesScreen() {
       {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}>
         <Text numberOfLines={1} style={[styles.chipText, plat === k && { color: '#FFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
     </ScrollView>
-    {(() => { const c = plat !== 'all' ? connections.find((x) => x.provider === plat && x.connected) : null; return c?.detail ? <Text style={styles.note}>{c.detail}</Text> : null; })()}
+    {platError ? <Card><View style={{ gap: 12 }}>
+      <Text style={styles.errText}>{platError.provider === 'line' && /use webhook/i.test(platError.detail) ? t('messages.lineWebhookOff') : t('messages.needsPerm', { name: PLATS.find(([k]) => k === platError.provider)?.[1] ?? '' })}</Text>
+      <Button label={t('messages.reconnect')} onPress={() => void reconnect(platError.provider)} />
+    </View></Card> : null}
     {filter ? <Pressable onPress={() => setFilter(null)}><Text style={styles.link}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
 
     {state === 'loading' ? <Skeleton rows={4} height={72} /> : null}
@@ -92,7 +113,7 @@ export default function MessagesScreen() {
       action={anyConnected ? undefined : { label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
 
     {seg === 'messages' && noAccounts ? <Card><EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
-    {seg === 'messages' && state === 'ready' && !noAccounts && visible.length === 0 ? <Card><EmptyState title={threads.length ? t('messages.nothing') : t('messages.none')} message={threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
+    {seg === 'messages' && state === 'ready' && !noAccounts && !platError && visible.length === 0 ? <Card><EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
 
     {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread) => {
@@ -141,6 +162,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: '#2A2725', borderColor: '#2A2725' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#2A2725' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
+  errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#2A2725', lineHeight: 22 },
   menu: { width: 240, borderRadius: 22, backgroundColor: 'rgba(250,248,245,0.97)', overflow: 'hidden', ...(webGlass as object) },
   menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#625B56', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
   mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(42,39,37,0.10)' },

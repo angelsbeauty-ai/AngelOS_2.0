@@ -14,7 +14,7 @@ test('off unless flag + keys', () => {
 test('login url has all scopes and state', () => {
   const u = new URL(buildMetaLoginUrl(readMetaOAuthConfig(env), 'st'));
   assert.equal(u.hostname, 'www.facebook.com'); assert.equal(u.searchParams.get('client_id'), '123'); assert.equal(u.searchParams.get('state'), 'st');
-  assert.deepEqual(u.searchParams.get('scope').split(','), META_OAUTH_SCOPES); assert.equal(META_OAUTH_SCOPES.length, 7);
+  assert.deepEqual(u.searchParams.get('scope').split(','), META_OAUTH_SCOPES); assert.equal(META_OAUTH_SCOPES.length, 10); for (const s of ['pages_messaging', 'pages_manage_metadata', 'instagram_manage_messages']) assert.ok(META_OAUTH_SCOPES.includes(s));
 });
 test('exchange: short -> long -> pages, picks IG-linked page', async () => {
   const calls = [];

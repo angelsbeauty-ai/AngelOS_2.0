@@ -342,6 +342,11 @@
   "setup": "予約の設定"
  },
  "messages": {
+  "lineEmpty": "LINEのメッセージはまだありません",
+  "lineTest": "LINEは過去のトークを読み込めません。確認のため、LINE公式アカウントにテストメッセージを送ってください。",
+  "lineWebhookOff": "LINE公式アカウントマネージャーで「Webhookの利用」をオンにしてから「再接続」をタップしてください。",
+  "needsPerm": "{{name}}の権限があと1つ必要です。「再接続」をタップしてください。",
+  "reconnect": "再接続",
   "title": "メッセージ",
   "unread": "未読{{count}}件",
   "caught": "すべて確認済み",

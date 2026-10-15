@@ -342,6 +342,11 @@
   "setup": "Booking setup"
  },
  "messages": {
+  "lineEmpty": "No LINE messages yet",
+  "lineTest": "LINE can't load old chats. Send a test message to your LINE account to check.",
+  "lineWebhookOff": "LINE needs one more step: turn on 'Use webhook' in LINE Official Account Manager, then tap Reconnect.",
+  "needsPerm": "{{name}} needs one more permission. Tap Reconnect.",
+  "reconnect": "Reconnect",
   "title": "Messages",
   "unread": "{{count}} unread",
   "caught": "All caught up",

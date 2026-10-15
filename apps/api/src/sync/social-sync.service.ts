@@ -249,6 +249,23 @@ export class SocialSyncService implements OnModuleInit {
         else { const body = (await r.json().catch(() => ({}))) as any; result.messages = { ok: false, imported: 0, note: `Could not set the LINE webhook (${r.status}${body?.message ? `: ${String(body.message).slice(0, 120)}` : ''}).` }; }
       } catch (e) { result.messages = { ok: false, imported: 0, note: `Could not set the LINE webhook: ${e instanceof Error ? e.message.slice(0, 120) : 'unknown'}` }; }
     }
+    if ((result as any).webhook) {
+      // Verify on LINE's side: endpoint saved + "Use webhook" switched on (the API cannot switch it on for us).
+      try {
+        const token = openToken(row.access_token_enc);
+        const h = { Authorization: `Bearer ${token}` };
+        const g = await fetch('https://api.line.me/v2/bot/channel/webhook/endpoint', { headers: h, signal: AbortSignal.timeout(10000) });
+        const info = (await g.json().catch(() => ({}))) as any;
+        (result as any).webhookActive = info?.active === true;
+        if (g.ok && info?.endpoint !== endpoint) result.messages = { ok: false, imported: 0, note: 'Needs reconnect: the LINE webhook address is not saved. Tap Reconnect.' };
+        else if (g.ok && info?.active !== true) result.messages = { ok: false, imported: 0, note: 'Needs permission: turn on "Use webhook" in LINE Official Account Manager (Settings > Messaging API).' };
+        else if (g.ok) {
+          const tr = await fetch('https://api.line.me/v2/bot/channel/webhook/test', { method: 'POST', headers: { ...h, 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint }), signal: AbortSignal.timeout(15000) });
+          const tb = (await tr.json().catch(() => ({}))) as any;
+          (result as any).webhookTest = tb?.success === true;
+        }
+      } catch { /* verification is best effort */ }
+    }
     await this.saveStatus(db, channel, result);
     return result;
   }

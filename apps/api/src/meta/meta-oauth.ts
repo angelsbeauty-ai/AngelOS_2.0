@@ -1,6 +1,6 @@
 import { readMetaConfig, type MetaConfig } from './meta.config';
 
-export const META_OAUTH_SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'instagram_basic', 'instagram_content_publish', 'instagram_manage_insights', 'business_management'];
+export const META_OAUTH_SCOPES = ['pages_show_list', 'pages_read_engagement', 'pages_manage_posts', 'instagram_basic', 'instagram_content_publish', 'instagram_manage_insights', 'business_management', 'pages_messaging', 'pages_manage_metadata', 'instagram_manage_messages'];
 
 export interface MetaOAuthConfig { appId: string; appSecret: string; redirectUri: string; tokenKey: string; stateSecret: string; returnUrl?: string; dialogBase: string; graphBase: string }
 

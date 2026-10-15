@@ -40,7 +40,7 @@ export function plainGraphReason(error: unknown, neededPermission: string): stri
     const { code, message } = error.info;
     const perm = /permission|not authorized|requires|scope|capability/i.test(message) || (code !== undefined && (PERMISSION_CODES.has(code) || (code >= 200 && code < 300)));
     if (code === 190) return 'Needs reconnect: the Meta login expired. Connect again in Accounts.';
-    if (perm) return `Needs permission: ${neededPermission} (Meta said: ${message.slice(0, 160)})`;
+    if (perm) return `Needs permission: ${neededPermission}`;
     return `Could not read from Meta: ${message.slice(0, 160)}`;
   }
   return `Could not read from Meta: ${error instanceof Error ? error.message.slice(0, 160) : 'unknown error'}`;
