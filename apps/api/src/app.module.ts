@@ -1,4 +1,5 @@
 import { ScheduleModule } from '@nestjs/schedule';
+import { SocialModule } from './social/social.module';
 import { AccountModule } from './account/account.module';
 import { AcademyModule } from './academy/academy.module';
 import { Module } from '@nestjs/common';
@@ -26,7 +27,7 @@ import { BetaAccessGuard } from './common/guards/beta-access.guard';
 import { SuggestionsModule } from './suggestions/suggestions.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), AccountModule, AcademyModule, HealthModule, WorkspacesModule, AiModule, ClientsModule, BookingsModule, MessagingModule, MediaModule, ContentModule, AnalyticsModule, FinanceModule, AutomationsModule, SystemHealthModule, SubscriptionsModule, FounderModule, ProductAnalyticsModule, BetaModule, SuggestionsModule],
+  imports: [ScheduleModule.forRoot(), AccountModule, AcademyModule, HealthModule, WorkspacesModule, AiModule, ClientsModule, BookingsModule, MessagingModule, MediaModule, ContentModule, AnalyticsModule, FinanceModule, AutomationsModule, SystemHealthModule, SubscriptionsModule, FounderModule, ProductAnalyticsModule, BetaModule, SuggestionsModule, SocialModule],
   providers: [
     { provide: APP_GUARD, useClass: EmergencyReadOnlyGuard },
     { provide: APP_GUARD, useClass: SubscriptionAccessGuard },

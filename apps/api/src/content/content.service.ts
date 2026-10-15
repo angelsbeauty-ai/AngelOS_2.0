@@ -18,7 +18,7 @@ export class ContentService {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase
       .from('content_posts')
-      .select('*,media:content_post_media(id,position,role,asset:media_assets(id,original_filename,media_type,content_status,marketing_permission)),variants:content_variants(*)')
+      .select('*,media:content_post_media(id,position,role,asset:media_assets(id,original_filename,media_type,content_status,marketing_permission)),variants:content_variants(*,attempts:content_publish_attempts(status,error_message))')
       .eq('workspace_id', workspaceId)
       .order('updated_at', { ascending: false })
       .limit(100);
@@ -258,7 +258,7 @@ export class ContentService {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data: variant, error } = await supabase.from('content_variants').select('*,post:content_posts(id,status)').eq('workspace_id', workspaceId).eq('id', variantId).single();
     if (error || !variant) throw new NotFoundException('Content variant not found');
-    if ((variant as any).post?.status !== 'approved' && (variant as any).post?.status !== 'scheduled') throw new ConflictException('Approve the content post before scheduling it');
+    if (!['approved', 'scheduled', 'failed'].includes((variant as any).post?.status)) throw new ConflictException('Approve the content post before scheduling it');
     if (new Date(scheduledFor).getTime() <= Date.now()) throw new BadRequestException('Scheduled time must be in the future');
     const service = createServiceSupabaseClient();
     const now = new Date().toISOString();
@@ -273,8 +273,8 @@ export class ContentService {
     const { data: variant, error } = await supabase.from('content_variants').select('*,post:content_posts(*)').eq('workspace_id', workspaceId).eq('id', variantId).single();
     if (error || !variant) throw new NotFoundException('Content variant not found');
     const post = (variant as any).post;
-    if (!['approved','scheduled','publishing'].includes(post?.status)) throw new ConflictException('Content must be approved before publishing');
-    if (!['approved','scheduled','publishing'].includes(variant.status)) throw new ConflictException('This platform version is not approved for publishing');
+    if (!['approved','scheduled','publishing','failed'].includes(post?.status)) throw new ConflictException('Content must be approved before publishing');
+    if (!['approved','scheduled','publishing','failed'].includes(variant.status)) throw new ConflictException('This platform version is not approved for publishing');
     const live = metaPublishingReady(variant.platform);
     if (variant.platform !== 'manual' && !live) throw new ConflictException('Live social publishing is not connected. AngelOS stops here instead of pretending the post was published.');
 
@@ -409,7 +409,7 @@ function buildRuleBasedMediaRecommendation(ranked: Array<{ asset: any; score: nu
   };
 }
 
-function isMarketingEligible(asset: any) {
+export function isMarketingEligible(asset: any) {
   if (asset.marketing_permission === 'marketing_approved') return true;
   if (asset.marketing_permission !== 'limited') return false;
   const scope = asset.marketing_scope ?? {};

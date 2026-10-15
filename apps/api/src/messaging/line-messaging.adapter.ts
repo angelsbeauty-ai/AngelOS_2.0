@@ -109,11 +109,11 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
   }
 
   /** Bot info: used once when Angel taps "Connect LINE", to link the bot to her workspace. */
-  async getBotInfo(): Promise<{ userId: string; displayName: string; basicId?: string }> {
+  async getBotInfo(): Promise<{ userId: string; displayName: string; basicId?: string; pictureUrl?: string }> {
     const response = await this.fetchImpl(`${this.config.apiBase}/v2/bot/info`, { headers: { Authorization: `Bearer ${this.config.channelAccessToken}` } });
     if (!response.ok) throw new Error(`LINE bot info failed (${response.status})`);
     const json = (await response.json()) as any;
-    return { userId: String(json.userId), displayName: String(json.displayName ?? 'LINE Official Account'), basicId: json.basicId };
+    return { userId: String(json.userId), displayName: String(json.displayName ?? 'LINE Official Account'), basicId: json.basicId, pictureUrl: typeof json.pictureUrl === 'string' ? json.pictureUrl : undefined };
   }
 
   /**
@@ -158,6 +158,21 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
       if (used.ok) { const u = (await used.json()) as any; out.used = Number(u.totalUsage ?? 0); }
     } catch { /* estimate stays unknown */ }
     return out;
+  }
+
+  /** Friend count for the daily numbers pull (LINE data is for the previous day, JST). Never throws. */
+  async followers(now = new Date()): Promise<{ followers: number | null; targetedReaches: number | null; blocks: number | null; date: string }> {
+    const jst = new Date(now.getTime() + 9 * 3600000 - 86400000);
+    const date = jst.toISOString().slice(0, 10).replace(/-/g, '');
+    const out = { followers: null as number | null, targetedReaches: null as number | null, blocks: null as number | null, date };
+    if (!this.status().ready) return out;
+    try {
+      const r = await this.fetchImpl(`${this.config.apiBase}/v2/bot/insight/followers?date=${date}`, { headers: { Authorization: `Bearer ${this.config.channelAccessToken}` } });
+      if (!r.ok) return out;
+      const json = (await r.json()) as any;
+      if (json.status !== 'ready') return out;
+      return { followers: Number(json.followers ?? 0), targetedReaches: json.targetedReaches == null ? null : Number(json.targetedReaches), blocks: json.blocks == null ? null : Number(json.blocks), date };
+    } catch { return out; }
   }
 
   async getProfileName(userId: string): Promise<string | undefined> {

@@ -19,14 +19,15 @@ import { Screen } from '../../src/components/Screen';
 import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui';
 import { Chip, ROSE } from '../../src/components/SettingsList';
 import { contentPostDate, listContent, listIdeas, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
-import { listConnections } from '../../src/lib/messaging';
+import { getSocialAccounts } from '../../src/lib/social';
+import { SocialNumbersCard } from '../../src/components/SocialNumbersCard';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 import { tokens } from '../../src/design/theme';
 
 type View_ = 'drafts' | 'scheduled' | 'posted' | 'ideas';
 const VIEWS: View_[] = ['drafts', 'scheduled', 'posted', 'ideas'];
-const GROUP: Record<string, View_> = { draft: 'drafts', prepared: 'drafts', approved: 'drafts', scheduled: 'scheduled', publishing: 'scheduled', published: 'posted', analyzed: 'posted', failed: 'drafts' };
+const GROUP: Record<string, View_> = { draft: 'drafts', prepared: 'drafts', approved: 'drafts', scheduled: 'scheduled', publishing: 'scheduled', published: 'posted', analyzed: 'posted', failed: 'scheduled' };
 const TONE: Record<string, 'neutral' | 'rose' | 'success' | 'danger'> = { drafts: 'neutral', scheduled: 'rose', posted: 'success', failed: 'danger' };
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
@@ -57,7 +58,7 @@ export default function SocialHome() {
       const w = await getActiveWorkspace(); setWs(w.id);
       const list = await listContent(w.id); setPosts(list.filter((p) => p.status !== 'archived')); setState('ready');
       void listIdeas(w.id).then((r) => setIdeas(r.ideas)).catch(() => undefined);
-      void listConnections(w.id).then((c) => setConnected(c.filter((x) => x.connected).length)).catch(() => undefined);
+      void getSocialAccounts(w.id).then((c) => setConnected(c.filter((x) => x.state === 'connected').length)).catch(() => undefined);
     } catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -87,7 +88,7 @@ export default function SocialHome() {
         <View style={{ flex: 1 }}><Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline><ScreenTitle>{t('social2.title')}</ScreenTitle></View>
         <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/settings/connections')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable>
       </View>
 
       {state === 'loading' ? <><Skeleton rows={1} height={64} /><Skeleton rows={4} height={86} /></> : null}
@@ -98,18 +99,19 @@ export default function SocialHome() {
       {empty ? <View style={styles.calm}>
         <View style={styles.emptyIcon}><ImageSquare size={30} color={ROSE} weight="duotone" /></View>
         <Text style={styles.calmTitle}>{t('s3.emptyTitle')}</Text><Text style={styles.calmBody}>{t('s3.emptyBody')}</Text>
-        {connected === 0 ? <Button label={t('s3.connect')} onPress={() => router.push('/settings/connections')} /> : null}
+        {connected === 0 ? <Button label={t('s3.connect')} onPress={() => router.push('/content/accounts')} /> : null}
         <Button variant={connected === 0 ? 'secondary' : 'primary'} label={t('social2.newPost')} onPress={() => router.push('/content/new')} />
       </View> : null}
 
       {state === 'ready' && !empty ? <>
+        {ws ? <SocialNumbersCard workspaceId={ws} /> : null}
         <View style={styles.strip}>
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
             const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#366A49' : ps.length ? ROSE : 'transparent';
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, today && styles.cellToday, sel && !today && styles.cellSel]}>
-              {!month ? <Text style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
-              <Text style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
+              {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
+              <Text numberOfLines={1} style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
               <View style={[styles.dot, { backgroundColor: ring }]}>{ps.length > 1 ? <Text style={styles.dotN}>{ps.length}</Text> : null}</View>
             </Pressable>; })}
         </View>
@@ -128,6 +130,7 @@ export default function SocialHome() {
               <Text numberOfLines={2} style={styles.cap}>{p.variants?.[0]?.caption?.trim() || p.title}</Text>
               <View style={styles.metaRow}><Chip tone={TONE[g]} label={t(`s3.st.${g}`)} />{Array.from(new Set((p.variants ?? []).map((v) => v.platform))).map((pl) => <PlatformMark key={pl} p={pl} />)}
                 {d ? <Text style={styles.meta}>{d.toLocaleString(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</Text> : null}</View>
+              {g === 'failed' ? <Text numberOfLines={3} style={styles.fail}>{(p.variants ?? []).map((v: any) => v.attempts?.[0]?.error_message).find(Boolean) ?? t('sml.failedNoReason')}</Text> : null}
             </View></Pressable>; })}</View>
         : <View style={styles.calm}><Text style={styles.calmBody}>{t(`s3.none.${active}`)}</Text><Button small variant="secondary" label={t('social2.newPost')} onPress={() => router.push('/content/new')} /></View>}
       </> : null}
@@ -169,6 +172,7 @@ const styles = StyleSheet.create({
   half: { flex: 1 },
   cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#2A2725' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  fail: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16, color: '#A3392F' },
   meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#625B56', flexShrink: 1 },
   calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
   calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#2A2725', textAlign: 'center' },

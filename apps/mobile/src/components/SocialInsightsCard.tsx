@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
 import { Card, SectionTitle, SupportText, ui } from './ui';
-import { ActionButton } from './MessagingBits';
+import { SocialNumbersCard } from './SocialNumbersCard';
 import { tokens } from '../design/theme';
 import { getSocialInsights, platformLabel, type SocialInsights } from '../lib/content';
 
@@ -18,19 +17,17 @@ export function SocialInsightsCard({ workspaceId }: { workspaceId: string }) {
   const platforms = Object.entries(data.byPlatform);
   return <Card>
     <SectionTitle>Social · last {data.days} days</SectionTitle>
-    <View style={styles.tiles}>
+    {platforms.every(([, v]) => !v.posted && !v.scheduled) && !data.fromSocial.newClients ? <SupportText>{t('sml.noPostsYet')}</SupportText> : <View style={styles.tiles}>
       <Tile label={t('sic.s4')} value={platforms.reduce((a, [, v]) => a + v.posted, 0)} />
       <Tile label={t('sic.s5')} value={platforms.reduce((a, [, v]) => a + v.scheduled, 0)} />
       <Tile label={t('sic.s6')} value={data.fromSocial.newClients} />
       <Tile label={t('sic.s7')} value={data.fromSocial.bookings} />
-    </View>
+    </View>}
     {platforms.map(([p, v]) => <SupportText key={p}>{p === 'line' ? 'LINE' : platformLabel(p)}: {v.posted} posted · {v.scheduled} scheduled · {v.drafts} drafts</SupportText>)}
     {Object.keys(data.fromSocial.bySource).length ? <SupportText>New clients by source: {Object.entries(data.fromSocial.bySource).map(([s, n]) => `${s} ${n}`).join(' · ')}</SupportText> : <SupportText>Set "Source" on new clients (Instagram, LINE…) to see which app brings bookings.</SupportText>}
     <Text style={styles.sub}>{t('sic.s2')}</Text>
     <SupportText>{data.postingTimes.length ? data.postingTimes.map((t) => `${t.slot} (${t.count})`).join(' · ') : `Best time for now: ${data.bestTimeDefault}`}</SupportText>
-    <Text style={styles.sub}>{t('sic.s3')}</Text>
-    <SupportText>{data.platformMetricsNote}</SupportText>
-    <ActionButton label={t('sic.s8')} onPress={() => router.push('/settings/connections')} />
+    <SocialNumbersCard workspaceId={workspaceId} />
   </Card>;
 }
 

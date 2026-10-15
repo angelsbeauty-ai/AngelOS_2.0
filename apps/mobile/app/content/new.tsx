@@ -1,13 +1,15 @@
 import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
+import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
+import { Card, Pill, PrimaryActionLabel, SecondaryActionLabel, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
 import { useToast } from '../../src/components/Toast';
 import { tokens } from '../../src/design/theme';
 import { ApiError } from '../../src/lib/api';
-import { createComposerDraft, listHashtagSets, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import { approveContentPost, scheduleContentVariant, createComposerDraft, listHashtagSets, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -124,12 +126,32 @@ export default function NewPostScreen() {
     setSelectedMedia((current) => current.includes(id) ? current.filter((item) => item !== id) : current.length >= 10 ? current : [...current, id]);
   }
 
-  async function save() {
+  async function addFromPhone() {
+    if (!workspaceId) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { void dialog.notify(t('imp.photosPerm'), t('imp.photosPermMsg')); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false, quality: 1 });
+    if (result.canceled || !result.assets[0]) return;
+    const a = result.assets[0];
+    setBusy(true);
+    try {
+      // Angel picks this photo herself for a public post, so it is saved as approved for marketing.
+      const asset = await importMedia(workspaceId, { uri: a.uri, filename: a.fileName || `post_${Date.now()}.jpg`, mimeType: a.mimeType || 'image/jpeg', sizeBytes: a.fileSize, width: a.width, height: a.height, source: 'phone_photos' }, { role: 'other', marketingPermission: 'marketing_approved' });
+      setMedia((m) => [asset, ...m.filter((x) => x.id !== asset.id)]);
+      setPreviews((p) => ({ ...p, [asset.id]: a.uri }));
+      setSelectedMedia((cur) => [asset.id, ...cur].slice(0, 10));
+      setMediaState('ready');
+    } catch (e) { void dialog.notify(t('imp.fail'), e instanceof Error ? e.message : t('imp.unknown')); }
+    finally { setBusy(false); }
+  }
+
+  async function save(schedule = false) {
     if (!workspaceId || goalIndex === null || !caption.trim() || !platforms.length) return;
     const goal = GOALS[goalIndex];
     setBusy(true);
     try {
-      await createComposerDraft(workspaceId, {
+      if (schedule && plannedAt.getTime() <= Date.now() + 60000) { void dialog.notify(t('sml.pastTitle'), t('sml.pastBody')); return; }
+      const draft = await createComposerDraft(workspaceId, {
         title: title.trim() || undefined,
         objective: goal.objective,
         goal: goal.goal,
@@ -141,7 +163,11 @@ export default function NewPostScreen() {
         plannedFor: plannedAt.toISOString(),
         mediaAssetIds: selectedMedia.length ? selectedMedia : undefined,
       });
-      toast.show({ title: t('cnew.s34'), message: `On your calendar for ${plannedAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}.`, tone: 'success' });
+      if (schedule) {
+        await approveContentPost(workspaceId, draft.id);
+        for (const v of draft.variants ?? []) await scheduleContentVariant(workspaceId, v.id, plannedAt.toISOString());
+      }
+      toast.show({ title: schedule ? t('sml.scheduled') : t('cnew.s34'), message: t('sml.onCalendar', { when: `${plannedAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}` }), tone: 'success' });
       if (router.canGoBack()) router.back();
       else router.replace('/social');
     } catch (error) {
@@ -160,7 +186,7 @@ export default function NewPostScreen() {
     <Screen>
       <Pill tone="gold">Social</Pill>
       <ScreenTitle>{t('cnew.s0')}</ScreenTitle>
-      <SupportText>Write it once, pick where it goes and when. It saves as a draft on your Social calendar; nothing is posted.</SupportText>
+      <SupportText>{t('sml.composerSub')}</SupportText>
 
       <Card>
         <SectionTitle>{t('cnew.s1')}</SectionTitle>
@@ -261,7 +287,8 @@ export default function NewPostScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Photos (optional)</SectionTitle>
+        <SectionTitle>{t('sml.photos')}</SectionTitle>
+        <Pressable accessibilityRole="button" disabled={busy || !workspaceId} onPress={() => void addFromPhone()}><Text style={styles.link}>{t('sml.addFromPhone')}</Text></Pressable>
         {mediaState === 'loading' ? <SupportText>{t('cnew.s8')}</SupportText> : null}
         {mediaState === 'error' ? (
           <Pressable accessibilityRole="button" onPress={() => void loadMedia()}>
@@ -298,8 +325,11 @@ export default function NewPostScreen() {
 
       <View style={styles.actions}>
         {!canSave && !busy ? <SupportText>{t('cnew.s12')}</SupportText> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s24')} disabled={!canSave} onPress={() => void save()} style={!canSave ? styles.disabled : null}>
-          <PrimaryActionLabel>{busy ? 'Saving…' : 'Save Draft'}</PrimaryActionLabel>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('sml.schedule')} disabled={!canSave} onPress={() => void save(true)} style={!canSave ? styles.disabled : null}>
+          <PrimaryActionLabel>{busy ? t('sml.saving') : t('sml.schedule')}</PrimaryActionLabel>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s24')} disabled={!canSave} onPress={() => void save(false)} style={[styles.secondaryBtn, !canSave ? styles.disabled : null]}>
+          <SecondaryActionLabel>{t('sml.saveDraft')}</SecondaryActionLabel>
         </Pressable>
       </View>
     </Screen>
@@ -337,4 +367,5 @@ const styles = StyleSheet.create({
   link: { color: colors.tide, fontFamily: tokens.font.uiBold, fontSize: 15 },
   actions: { gap: 8, marginTop: 8, marginBottom: 48 },
   disabled: { opacity: 0.45 },
+  secondaryBtn: { alignItems: 'center', paddingVertical: 12 },
 });
