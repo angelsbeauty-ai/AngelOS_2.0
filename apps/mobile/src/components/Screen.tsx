@@ -6,6 +6,7 @@ import { Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleShe
 import { router, usePathname } from 'expo-router';
 import { colors, spacing, tokens } from '../design/theme';
 
+const TAB_PATHS = new Set(['/', '/clients', '/calendar', '/social', '/account', '/academy']);
 const NO_ASK = /^\/(ai|login|onboarding|forgot-password|reset-password)(\/|$)/;
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
@@ -29,7 +30,7 @@ function AskButton({ pathname }: { pathname: string }) {
   const { t } = useTranslation();
   const parts = pathname.split('/').filter(Boolean);
   const entityType = parts[0] === 'clients' && parts[1] && parts[1] !== 'new' ? 'client' : undefined;
-  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={styles.ask}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, TAB_PATHS.has(pathname) && { bottom: 96 }]}>
     <Text style={styles.askText}>{t('ui.ask')}</Text>
   </Pressable>;
 }

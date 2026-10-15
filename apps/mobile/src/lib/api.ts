@@ -22,7 +22,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const raw = await response.text();
   let payload: unknown = raw;
   if (raw) { try { payload = JSON.parse(raw); } catch { /* keep text */ } }
-  if (response.status === 401) await handleSessionExpired();
+  // Only a real session that stopped working counts as "expired"; logged-out visitors on public pages (signup, forgot/reset password) stay put.
+  if (response.status === 401 && token) await handleSessionExpired();
   if (!response.ok) {
     const message = typeof payload === 'object' && payload && 'message' in payload ? String((payload as any).message) : raw || `Request failed with status ${response.status}`;
     throw new ApiError(response.status, payload, message);
