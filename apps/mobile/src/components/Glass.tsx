@@ -18,5 +18,5 @@ const styles = StyleSheet.create({
   base: { overflow: 'hidden' },
   glass: { backgroundColor: tokens.color.glassTint },
   solid: { backgroundColor: tokens.color.ivorySolid },
-  web: { backgroundColor: 'rgba(250,248,245,0.72)', backdropFilter: 'blur(20px) saturate(1.4)', WebkitBackdropFilter: 'blur(20px) saturate(1.4)' } as any
+  web: { backgroundImage: 'linear-gradient(180deg, rgba(243,237,231,0.72), rgba(243,237,231,0.5))', backdropFilter: 'blur(32px) saturate(1.7)', WebkitBackdropFilter: 'blur(32px) saturate(1.7)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.85), inset 0 0 0 0.5px rgba(255,255,255,0.45), 0 14px 30px -16px rgba(42,39,37,0.34)' } as any
 });

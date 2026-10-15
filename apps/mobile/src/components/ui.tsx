@@ -2,7 +2,7 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, Animated, ActivityIndicator, Platform, StyleSheet, Text, TextInput, View, Pressable, type TextInputProps, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radius, shadow, spacing, tokens, typography } from '../design/theme';
+import { colors, radius, shadow, spacing, tokens, typography, webGlass } from '../design/theme';
 
 const palette = colors.light;
 type TextTone = 'primary' | 'secondary' | 'gold' | 'success' | 'warning' | 'critical';
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: palette.primaryText, fontFamily: tokens.font.uiSemibold, fontSize: typography.section, lineHeight: 22 },
   body: { fontFamily: tokens.font.ui, fontSize: typography.body, lineHeight: 22 },
   support: { fontFamily: tokens.font.ui, fontSize: typography.support, lineHeight: 20 },
-  card: { gap: spacing.xs, padding: spacing.sm, borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: tokens.color.raised, ...shadow.soft },
+  card: { gap: spacing.xs, padding: spacing.sm, borderRadius: radius.card, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: tokens.color.raised, ...shadow.soft, ...(webGlass as object) },
   premiumCard: { backgroundColor: palette.warmSurface, borderColor: palette.softGold },
   statCard: { flex: 1 },
   statValue: { color: palette.primaryText, fontFamily: tokens.font.uiBold, fontSize: 26 },

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
-import { tokens } from '../design/theme';
+import { tokens, webGlass } from '../design/theme';
 
 export const ROSE = '#8C5547';
 
@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
   groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#625B56' },
   onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#FFFFFF', backgroundColor: '#C98B78', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
-  group: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden' },
+  group: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
   sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(42,39,37,0.10)' },
   icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
