@@ -7,7 +7,7 @@ import { tokens, webGlass } from '../design/theme';
 import { getSocialNumbers, type SocialNumber } from '../lib/social';
 
 export type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
-export const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'IG'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
+export const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
 
 /** Meta Business insights style tiles (views, interactions, followers). Only real connected-account numbers; never zeros for "not connected". */
 export function MetaTiles({ workspaceId, platform }: { workspaceId: string; platform: Plat }) {

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
+import { List } from 'phosphor-react-native/src/icons/List';
 import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
@@ -17,8 +17,7 @@ import { tokens, webGlass } from '../../src/design/theme';
 type Seg = 'messages' | 'comments' | 'mentions';
 type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
 type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'touch_up' | 'done';
-const SEGS: Seg[] = ['messages', 'comments', 'mentions'];
-const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'IG'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
+const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
 const FILTERS: Filter[] = ['unread', 'unanswered', 'booked', 'follow_up', 'touch_up', 'done'];
 
 /** Filter rules use only real thread fields (no invented states). */
@@ -40,7 +39,7 @@ export default function MessagesScreen() {
   const { t } = useTranslation();
   const [threads, setThreads] = useState<MessageThreadSummary[]>([]);
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
-  const [seg, setSeg] = useState<Seg>('messages');
+  const seg = 'messages' as Seg; // Messages only (no Comments/Mentions segment).
   const [plat, setPlat] = useState<Plat>('all');
   const [filter, setFilter] = useState<Filter | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -72,12 +71,10 @@ export default function MessagesScreen() {
     <View style={styles.header}>
       <View style={{ flex: 1, gap: 2 }}><ScreenTitle>{t('messages.title')}</ScreenTitle></View>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} onPress={() => setMenuOpen(true)} style={[styles.round, filter && styles.roundOn]}>
-        {filter ? <Funnel size={20} color="#FFF" weight="fill" /> : <DotsThree size={22} color="#2A2725" weight="bold" />}
+        {filter ? <Funnel size={20} color="#FFF" weight="fill" /> : <List size={22} color="#2A2725" weight="bold" />}
       </Pressable>
     </View>
 
-    <View style={styles.seg}>{SEGS.map((k) => <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: seg === k }} onPress={() => setSeg(k)} style={[styles.segItem, seg === k && styles.segOn]}>
-      <Text numberOfLines={1} style={[styles.segText, seg === k && { color: '#FFF' }]}>{t(`inbox.${k}`)}</Text></Pressable>)}</View>
 
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
       {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}>
