@@ -1559,5 +1559,10 @@
  "sgp": {
   "s0": "Suggestions",
   "s1": "Approve creates a draft for you to check. Nothing is sent to a client or posted until you approve it again."
+ },
+ "grid": {
+  "title": "Instagram grid",
+  "intro": "How your profile will look: scheduled posts on top, then what is already posted.",
+  "empty": "No scheduled or posted Instagram posts yet."
  }
 }

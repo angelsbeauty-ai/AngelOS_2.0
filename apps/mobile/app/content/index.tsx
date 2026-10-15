@@ -1,8 +1,10 @@
+import { PostThumb } from '../../src/components/PostThumb';
 import { NoStudio } from '../../src/components/NoStudio';
 import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { SquaresFour } from 'phosphor-react-native/src/icons/SquaresFour';
 import { Plug } from 'phosphor-react-native/src/icons/Plug';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';
@@ -84,6 +86,7 @@ export default function SocialHome() {
       <View style={styles.head}>
         <View style={{ flex: 1 }}><Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline><ScreenTitle>{t('social2.title')}</ScreenTitle></View>
         <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/settings/connections')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable>
       </View>
 
@@ -120,7 +123,7 @@ export default function SocialHome() {
             <View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.cap}>{idea.title}</Text><View style={styles.metaRow}><Chip label={t('s3.idea')} /><Text numberOfLines={1} style={styles.meta}>{idea.angle}</Text></View></View></Pressable>)}
         </View> : listed.length ? <View style={styles.list}>{listed.map((p) => { const d = contentPostDate(p); const g = p.status === 'failed' ? 'failed' : GROUP[p.status] ?? 'drafts';
           return <Pressable key={p.id} accessibilityRole="button" onPress={() => router.push(`/content/${p.id}`)} onLongPress={() => setMenu(p)} delayLongPress={350} style={styles.row}>
-            <View style={styles.thumb}><View style={[styles.half, { backgroundColor: '#D9CFC6' }]} /><View style={{ width: 2 }} /><View style={[styles.half, { backgroundColor: '#C9A99B' }]} /></View>
+            <PostThumb workspaceId={ws} post={p} />
             <View style={{ flex: 1, gap: 4 }}>
               <Text numberOfLines={2} style={styles.cap}>{p.variants?.[0]?.caption?.trim() || p.title}</Text>
               <View style={styles.metaRow}><Chip tone={TONE[g]} label={t(`s3.st.${g}`)} />{Array.from(new Set((p.variants ?? []).map((v) => v.platform))).map((pl) => <PlatformMark key={pl} p={pl} />)}
