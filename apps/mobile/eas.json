@@ -8,7 +8,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "staging"
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_PUBLIC_API_URL": "https://angelosapi-staging.up.railway.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hhzegavoyuicclsmrkwf.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_LWxk8oyDkXo0PhFVdaJXOA_igP5Hf5u"
       },
       "environment": "development"
     },
@@ -16,7 +19,10 @@
       "distribution": "internal",
       "channel": "staging",
       "env": {
-        "EXPO_PUBLIC_APP_ENV": "staging"
+        "EXPO_PUBLIC_APP_ENV": "staging",
+        "EXPO_PUBLIC_API_URL": "https://angelosapi-staging.up.railway.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://hhzegavoyuicclsmrkwf.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_LWxk8oyDkXo0PhFVdaJXOA_igP5Hf5u"
       },
       "environment": "preview",
       "autoIncrement": true
