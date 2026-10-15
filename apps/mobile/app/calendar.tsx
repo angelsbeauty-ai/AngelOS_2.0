@@ -1,3 +1,5 @@
+import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
+import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -46,11 +48,11 @@ export default function CalendarScreen() {
     <View style={styles.header}><View style={fieldStyles.grow}><ScreenTitle>{t('calendar.title')}</ScreenTitle><SupportText>{mode === 'day' ? prettyDay(anchor) : t('calendar.weekOf', { day: prettyDay(days[0]) })}</SupportText></View>
       <ActionButton kind="primary" label={t('calendar.newBooking')} onPress={() => router.push('/bookings/new')} /></View>
     {focusLabel ? <Card premium><SectionTitle>{t('calendar.checking')}</SectionTitle><BodyText>{focusLabel}</BodyText></Card> : null}
-    <View style={fieldStyles.row}>
-      <Tabs value={mode} onChange={setMode} options={[{ id: 'day', label: t('calendar.day') }, { id: 'week', label: t('calendar.week') }]} />
-      <ActionButton kind="quiet" label={t('calendar.back')} onPress={() => setAnchor(addDayString(anchor, -step))} />
-      <ActionButton kind="quiet" label={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} />
-      <ActionButton kind="quiet" label={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} />
+    <View style={styles.navRow}>
+      <View style={{ flex: 1 }}><Tabs value={mode} onChange={setMode} options={[{ id: 'day', label: t('calendar.day') }, { id: 'week', label: t('calendar.week') }]} /></View>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.back')} onPress={() => setAnchor(addDayString(anchor, -step))} style={styles.navBtn}><CaretLeft size={18} color="#2A2725" /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} style={[styles.navBtn, { width: undefined, paddingHorizontal: 12 }]}><Text numberOfLines={1} style={styles.navToday}>{t('calendar.today')}</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} style={styles.navBtn}><CaretRight size={18} color="#2A2725" /></Pressable>
     </View>
     {busy && !appointments.length ? <Skeleton rows={2} height={56} /> : null}
     {!busy && !loadError && !appointments.length && !blocks.length ? <Card><EmptyState title={mode === 'day' ? t('calendar.emptyDay') : t('calendar.emptyWeek')} action={{ label: t('calendar.newBooking'), onPress: () => router.push('/bookings/new') }} /></Card> : null}
@@ -93,6 +95,9 @@ function pos(start: string, end: string, day: string) {
 }
 
 const styles = StyleSheet.create({
+  navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'nowrap' },
+  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
+  navToday: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: '#2A2725' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: ui.spacing.sm },
   grid: { flexDirection: 'row', flex: 1, paddingTop: 4 },
   gutter: { width: 44, position: 'relative' },

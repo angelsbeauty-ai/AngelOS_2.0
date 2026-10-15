@@ -119,8 +119,8 @@ export default function TodayScreen() {
   const active = appointments.filter((a) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'no_show');
   const laterAppointments = active.filter((a) => a.id !== nextAppointment?.id);
   const attention = health ? health.counts.urgent + health.counts.today + health.counts.later : 0;
-  const money = weekIncome ? formatYen(weekIncome.amount, weekIncome.currency, locale) : '—';
-  const links: Array<[string, string, any]> = [['clients', '/clients', Users], ['messages', '/messages', ChatCircle], ['content', '/content', Sparkle], ['media', '/media', ImageIcon], ['analytics', '/analytics', ChartLine], ['finance', '/finance', CurrencyJpy], ['automations', '/automations', BellRinging], ['ai', '/ai', Robot]];
+  const money = weekIncome ? formatYen(weekIncome.amount, weekIncome.currency, locale) : formatYen(0, 'JPY', locale);
+  const links: Array<[string, string, any]> = [['clients', '/clients', Users], ['messages', '/messages', ChatCircle], ['content', '/social', Sparkle], ['media', '/media', ImageIcon], ['analytics', '/analytics', ChartLine], ['finance', '/finance', CurrencyJpy], ['automations', '/automations', BellRinging], ['ai', '/ai', Robot]];
   const minsAway = nextAppointment ? Math.round((new Date(nextAppointment.start_at).getTime() - Date.now()) / 60000) : 0;
   const initials = (me2Name ?? '').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'A';
   const openItems = (health?.attention ?? []).filter((x) => x.status === 'open').slice(0, 4);
@@ -166,20 +166,16 @@ export default function TodayScreen() {
         </Card>
       )}
 
-      {active.length || unread || weekIncome?.amount ? (
       <Card>
         <View style={styles.strip}>
-          <Pressable style={styles.stripCell} onPress={() => router.push('/calendar')}><Text style={styles.stripValue}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
+          <Pressable style={styles.stripCell} onPress={() => router.push('/calendar')}><Text style={[styles.stripValue, !active.length && styles.stripZero]}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
           <View style={styles.stripDivider} />
-          <Pressable style={styles.stripCell} onPress={() => router.push('/messages')}><Text style={styles.stripValue}>{unread ?? '—'}</Text><SupportText>{t('today.toReply')}</SupportText></Pressable>
+          <Pressable style={styles.stripCell} onPress={() => router.push('/messages')}><Text style={[styles.stripValue, !unread && styles.stripZero]}>{unread ?? 0}</Text><SupportText>{t('today.toReply')}</SupportText></Pressable>
           <View style={styles.stripDivider} />
-          <Pressable style={styles.stripCell} onPress={() => router.push('/finance')}><Text style={styles.stripValue} numberOfLines={1} adjustsFontSizeToFit>{money}</Text><SupportText>{t('today.thisWeek')}</SupportText></Pressable>
+          <Pressable style={styles.stripCell} onPress={() => router.push('/finance')}><Text style={[styles.stripValue, !weekIncome?.amount && styles.stripZero]} numberOfLines={1} adjustsFontSizeToFit>{money}</Text><SupportText>{t('today.thisWeek')}</SupportText></Pressable>
         </View>
         {touchUpCount ? <Pressable onPress={() => router.push('/clients')}><SupportText tone="warning">{t('today.touchUps')}: {touchUpCount}</SupportText></Pressable> : null}
       </Card>
-      ) : (
-        <Card><SupportText>{t('today.noAppts')}</SupportText></Card>
-      )}
 
       {laterAppointments.length > 0 ? (
         <View style={{ gap: ui.spacing.xs }}>
@@ -241,6 +237,7 @@ const styles = StyleSheet.create({
   strip: { flexDirection: 'row', alignItems: 'center' },
   stripCell: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 4 },
   stripValue: { color: ui.colors.primaryText, fontFamily: 'CormorantGaramond_500Medium', fontSize: 34, lineHeight: 38, fontVariant: ['lining-nums', 'tabular-nums'] },
+  stripZero: { color: '#A69C94' },
   stripDivider: { width: 1, alignSelf: 'stretch', backgroundColor: ui.colors.border },
   laterTime: { width: 56, color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 15 },
   okRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm },

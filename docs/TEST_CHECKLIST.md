@@ -140,3 +140,20 @@ Student (second account)
 - Live voice: on the API host set AI_PROVIDER_MODE=openai and OPENAI_API_KEY (optional OPENAI_REALTIME_MODEL, default gpt-realtime). The key stays on the server; the browser only gets a 2-minute key.
 - LINE: set LINE_MESSAGING_ENABLED=true, LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN on the API host; webhook `<API>/webhooks/line`; then Settings → Connections → Connect LINE.
 - Instagram/Facebook posting and DMs: Meta app + approval. Until then: "Copy caption & open Instagram" and "Mark as posted".
+
+## Oct 16 b — Social S1–S7, Profile P1–P4, review fixes
+- [ ] Tabs: Today · Clients · Calendar · Social · Profile; labels not clipped; no Ask button on tab screens
+- [ ] Social: large "Social" title only (no "Posts" header); month caption; Week/Month toggle; plug → Accounts
+- [ ] Social strip: today = dark cell; days with posts show a dot (rose scheduled / green posted, count if 2+); tap filters list
+- [ ] Views segmented: Drafts/Scheduled/Posted/Ideas on one line; switches in place (URL ?view=)
+- [ ] Post rows: thumbnail, 2-line caption, status chip, platform marks, date/time; tap → Post; long-press → menu (Edit, Reschedule, Post now / Try again; Posted: Open)
+- [ ] "+ New post" floating rose button above the tab bar
+- [ ] No posts → calm empty state (Connect your accounts when none connected + New post)
+- [ ] Load failure → calm "Couldn't load your posts" + Try again (no red text)
+- [ ] Ideas view: "Plan a campaign" row → Plan campaign screen; creating returns to Drafts
+- [ ] Profile: card + Edit; founder group only for server-side founders; Language sheet; Log out confirm
+- [ ] Edit profile: Save disabled until a change; email change sends a confirmation email
+- [ ] Delete account: Type DELETE; sends a support request only (nothing deleted)
+- [ ] Today: one empty state; stats strip always shown (zeros muted grey)
+- [ ] Calendar: Day/Week + ‹ Today › on one row at 390 wide
+- [ ] Client detail: JP/EN language tag next to status
