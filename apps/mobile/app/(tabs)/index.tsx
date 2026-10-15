@@ -1,3 +1,4 @@
+import { NoStudio } from '../../src/components/NoStudio';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
@@ -14,7 +15,7 @@ import { WarningCircle } from 'phosphor-react-native/src/icons/WarningCircle';
 import { Screen } from '../../src/components/Screen';
 import { Badge, BodyText, Button, Card, ListRow, Overline, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system-health';
-import { getActiveWorkspace } from '../../src/lib/workspace';
+import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirmAppointment, getCalendar, type CalendarAppointment } from '../../src/lib/bookings';
 import { listMessageThreads } from '../../src/lib/messaging';
 import { getFinanceOverview } from '../../src/lib/finance';
@@ -28,6 +29,7 @@ import { SuggestionsCard } from '../../src/components/SuggestionsCard';
 
 export default function TodayScreen() {
   const [health, setHealth] = useState<SystemHealthOverview | null>(null);
+  const [noStudio, setNoStudio] = useState(false);
   const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
   const [nextAppointment, setNextAppointment] = useState<CalendarAppointment | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
@@ -90,8 +92,9 @@ export default function TodayScreen() {
         .filter((a) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'no_show')
         .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0];
       setNextAppointment(next || null);
-    } catch {
+    } catch (e) {
       setHealth(null);
+      if (isNoWorkspace(e)) setNoStudio(true);
     }
   }
 
@@ -139,7 +142,7 @@ export default function TodayScreen() {
         </Pressable>
       </View>
 
-      {nextAppointment ? (
+      {noStudio ? <NoStudio /> : nextAppointment ? (
         <Card premium>
           <View style={styles.heroTop}>
             <Overline>{minsAway > 0 && minsAway < 600 ? t('today.nextIn', { min: minsAway }) : t('today.nextNow')}</Overline>
@@ -166,6 +169,7 @@ export default function TodayScreen() {
         </Card>
       )}
 
+      {noStudio ? null : <>
       <Card>
         <View style={styles.strip}>
           <Pressable style={styles.stripCell} onPress={() => router.push('/calendar')}><Text style={[styles.stripValue, !active.length && styles.stripZero]}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
@@ -176,6 +180,7 @@ export default function TodayScreen() {
         </View>
         {touchUpCount ? <Pressable onPress={() => router.push('/clients')}><SupportText tone="warning">{t('today.touchUps')}: {touchUpCount}</SupportText></Pressable> : null}
       </Card>
+      </>}
 
       {laterAppointments.length > 0 ? (
         <View style={{ gap: ui.spacing.xs }}>

@@ -1,3 +1,4 @@
+import { NoStudio } from '../../src/components/NoStudio';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
@@ -8,7 +9,7 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { Tabs } from '../../src/components/Field';
 import { Avatar, Badge, Button, EmptyState, Header, Skeleton, SupportText, ui } from '../../src/components/ui';
 import { isDemoSeed, listClients, setClientArchived, type ClientFilter, type ClientSummary } from '../../src/lib/clients';
-import { getActiveWorkspace } from '../../src/lib/workspace';
+import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { toFriendly, type FriendlyResult } from '../../src/lib/friendly-error';
 import { label } from '../../src/lib/labels';
 import { confirm } from '../../src/lib/dialog';
@@ -24,6 +25,7 @@ export default function ClientsScreen() {
   const [filter, setFilter] = useState<ClientFilter>('all');
   const [busy, setBusy] = useState(true);
   const [loadError, setLoadError] = useState<FriendlyResult | null>(null);
+  const [noStudio, setNoStudio] = useState(false);
 
   useEffect(() => { const t = setTimeout(() => void load(), search ? 300 : 0); return () => clearTimeout(t); }, [search, filter]);
 
@@ -33,7 +35,7 @@ export default function ClientsScreen() {
       const id = workspaceId ?? (await getActiveWorkspace()).id;
       setWorkspaceId(id);
       setClients((await listClients(id, search, filter)).filter((c) => !isDemoSeed(c)));
-    } catch (error) { setLoadError(toFriendly(error, { action: 'load', thing: 'clients' })); }
+    } catch (error) { if (isNoWorkspace(error)) setNoStudio(true); else setLoadError(toFriendly(error, { action: 'load', thing: 'clients' })); }
     finally { setBusy(false); }
   }
 
@@ -50,6 +52,7 @@ export default function ClientsScreen() {
     <TextInput value={search} onChangeText={setSearch} placeholder={t('clients.search')} accessibilityLabel={t('clients.search')} placeholderTextColor={ui.colors.secondaryText} style={styles.search} />
     <Tabs value={filter} options={FILTERS} onChange={setFilter} />
     {busy && !clients.length ? <Skeleton rows={4} /> : null}
+    {noStudio ? <NoStudio /> : null}
     {!busy && loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
     {!busy && !loadError && clients.length === 0 ? <EmptyState title={search || filter !== 'all' ? t('clients.noMatch') : t('clients.none')} message={search || filter !== 'all' ? undefined : t('clients.noneHint')} action={search || filter !== 'all' ? undefined : { label: t('clients.newClient'), onPress: () => router.push('/clients/new') }} /> : null}
     {clients.map((client) => <RowMenu key={client.id} accessibilityHint={t('clients.holdHint')} onPress={() => router.push(`/clients/${client.id}` as any)}

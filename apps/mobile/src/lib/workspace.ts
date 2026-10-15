@@ -14,10 +14,14 @@ export async function getActiveWorkspace(): Promise<WorkspaceSummary> {
   const workspaces = await apiFetch<WorkspaceSummary[]>('/workspaces');
   const workspace = workspaces[0];
   if (!workspace) {
-    throw new Error('No business workspace found. Create your workspace first.');
+    throw new NoWorkspaceError();
   }
   return workspace;
 }
 
 export const updateWorkspace = (id: string, input: { name?: string; currency?: string; timezone?: string; locale?: string }) =>
   apiFetch<WorkspaceSummary>(`/workspaces/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+
+/** Thrown when the signed-in user has no studio yet. Screens show <NoStudio /> instead of an error. */
+export class NoWorkspaceError extends Error { constructor() { super('No business workspace found. Create your workspace first.'); this.name = 'NoWorkspaceError'; } }
+export const isNoWorkspace = (e: unknown) => e instanceof NoWorkspaceError || (e instanceof Error && e.name === 'NoWorkspaceError');

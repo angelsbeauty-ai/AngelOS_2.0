@@ -850,5 +850,10 @@
   "cMigration": "Campaigns need a database update first. Ask support.",
   "cFail": "Couldn't create the campaign",
   "cancel": "Cancel"
+ },
+ "nostudio": {
+  "title": "Set up your studio",
+  "body": "Add your studio name and a few basics, and your clients, bookings and posts will live here.",
+  "cta": "Set up my studio"
  }
 }

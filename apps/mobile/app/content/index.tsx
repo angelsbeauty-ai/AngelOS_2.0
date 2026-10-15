@@ -1,3 +1,4 @@
+import { NoStudio } from '../../src/components/NoStudio';
 import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -17,7 +18,7 @@ import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui
 import { Chip, ROSE } from '../../src/components/SettingsList';
 import { contentPostDate, listContent, listIdeas, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
 import { listConnections } from '../../src/lib/messaging';
-import { getActiveWorkspace } from '../../src/lib/workspace';
+import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 import { tokens } from '../../src/design/theme';
 
@@ -43,7 +44,7 @@ export default function SocialHome() {
   const [posts, setPosts] = useState<ContentPost[]>([]);
   const [ideas, setIdeas] = useState<ContentIdea[]>([]);
   const [connected, setConnected] = useState<number | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [view, setView] = useState<View_ | null>(VIEWS.find((v) => v === params.view) ?? null);
   const [month, setMonth] = useState(false);
   const [day, setDay] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export default function SocialHome() {
       const list = await listContent(w.id); setPosts(list.filter((p) => p.status !== 'archived')); setState('ready');
       void listIdeas(w.id).then((r) => setIdeas(r.ideas)).catch(() => undefined);
       void listConnections(w.id).then((c) => setConnected(c.filter((x) => x.connected).length)).catch(() => undefined);
-    } catch { setState('error'); }
+    } catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
@@ -88,6 +89,7 @@ export default function SocialHome() {
 
       {state === 'loading' ? <><Skeleton rows={1} height={64} /><Skeleton rows={4} height={86} /></> : null}
 
+      {state === 'nostudio' ? <NoStudio /> : null}
       {state === 'error' ? <View style={styles.calm}><Text style={styles.calmTitle}>{t('s3.errTitle')}</Text><Text style={styles.calmBody}>{t('s3.errBody')}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
 
       {empty ? <View style={styles.calm}>
@@ -129,7 +131,7 @@ export default function SocialHome() {
       <View style={{ height: 70 }} />
     </Screen>
 
-    {!empty ? <Pressable accessibilityRole="button" accessibilityLabel={t('social2.newPost')} onPress={() => router.push('/content/new')} style={styles.fab}><Plus size={18} color="#FFF" weight="bold" /><Text style={styles.fabText}>{t('social2.newPost')}</Text></Pressable> : null}
+    {!empty && state !== 'nostudio' ? <Pressable accessibilityRole="button" accessibilityLabel={t('social2.newPost')} onPress={() => router.push('/content/new')} style={styles.fab}><Plus size={18} color="#FFF" weight="bold" /><Text style={styles.fabText}>{t('social2.newPost')}</Text></Pressable> : null}
 
     <Modal visible={!!menu} transparent animationType="fade" onRequestClose={() => setMenu(null)}>
       <Pressable style={styles.backdrop} onPress={() => setMenu(null)}><View style={styles.menu}>

@@ -1,3 +1,4 @@
+import { NoStudio } from '../src/components/NoStudio';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { useEffect, useState } from 'react';
@@ -11,7 +12,7 @@ import { Tabs, fieldStyles } from '../src/components/Field';
 import { addDayString, dayString, prettyDay } from '../src/components/DateField';
 import { BodyText, Card, EmptyState, ScreenTitle, SectionTitle, Skeleton, SupportText, ui } from '../src/components/ui';
 import { getBusinessHours, getCalendar, type BusinessHour, type CalendarAppointment, type CalendarBlock } from '../src/lib/bookings';
-import { getActiveWorkspace } from '../src/lib/workspace';
+import { getActiveWorkspace, isNoWorkspace } from '../src/lib/workspace';
 import { toFriendly, type FriendlyResult } from '../src/lib/friendly-error';
 
 const FIRST = 8, LAST = 21, HOUR = 52;
@@ -27,6 +28,7 @@ export default function CalendarScreen() {
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [hours, setHours] = useState<BusinessHour[]>([]);
   const [loadError, setLoadError] = useState<FriendlyResult | null>(null);
+  const [noStudio, setNoStudio] = useState(false);
   const [busy, setBusy] = useState(true);
 
   const days = mode === 'day' ? [anchor] : Array.from({ length: 7 }, (_, i) => addDayString(weekStart(anchor), i));
@@ -39,7 +41,7 @@ export default function CalendarScreen() {
       const end = new Date(`${addDayString(days[days.length - 1], 1)}T00:00:00`);
       const [data, h] = await Promise.all([getCalendar(ws.id, start.toISOString(), end.toISOString()), hours.length ? Promise.resolve(hours) : getBusinessHours(ws.id).catch(() => [])]);
       setAppointments(data.appointments.filter((a) => a.status !== 'cancelled')); setBlocks(data.blocks); setHours(h);
-    } catch (e) { setLoadError(toFriendly(e, { action: 'load', thing: 'calendar' })); }
+    } catch (e) { if (isNoWorkspace(e)) setNoStudio(true); else setLoadError(toFriendly(e, { action: 'load', thing: 'calendar' })); }
     finally { setBusy(false); }
   }
 
@@ -56,6 +58,7 @@ export default function CalendarScreen() {
     </View>
     {busy && !appointments.length ? <Skeleton rows={2} height={56} /> : null}
     {!busy && !loadError && !appointments.length && !blocks.length ? <Card><EmptyState title={mode === 'day' ? t('calendar.emptyDay') : t('calendar.emptyWeek')} action={{ label: t('calendar.newBooking'), onPress: () => router.push('/bookings/new') }} /></Card> : null}
+    {noStudio ? <NoStudio /> : null}
     {loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
     <Card>
       <ScrollView horizontal={mode === 'week'} contentContainerStyle={{ flexGrow: 1 }}>
