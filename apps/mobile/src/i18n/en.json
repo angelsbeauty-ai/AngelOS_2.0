@@ -692,5 +692,23 @@
   "loading": "Loading your posts…",
   "showDay": "Show calendar day",
   "postOnDay": "+ Post on this day"
+ },
+ "imp": {
+  "photosPerm": "Photos permission needed",
+  "photosPermMsg": "AngelOS only needs Photos access when you choose to import business photos. Everything else works without it.",
+  "camPerm": "Camera permission needed",
+  "camPermMsg": "AngelOS only asks for the camera when you choose to take a photo.",
+  "saved": "Saved to AngelOS",
+  "savedN_one": "{{count}} item imported.",
+  "savedN_other": "{{count}} items imported.",
+  "savedOne": "The photo is now in your library.",
+  "fail": "Import failed",
+  "unknown": "Something went wrong",
+  "lead": "Choose photos or videos you already have. The originals on your phone stay unchanged.",
+  "linked": "New photos will be saved to this client.",
+  "choose": "Choose from Photos",
+  "take": "Take a photo",
+  "cancel": "Cancel",
+  "working": "Importing…"
  }
 }

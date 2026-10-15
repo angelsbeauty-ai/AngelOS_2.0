@@ -1,24 +1,33 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { Pressable } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { dialog } from '../../src/lib/dialog';
 import * as ImagePicker from 'expo-image-picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, SupportText } from '../../src/components/ui';
+import { BodyText, Button, Card, SupportText, ui } from '../../src/components/ui';
 import { importMedia } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 
 export default function ImportMediaScreen() {
+  const { t } = useTranslation();
   const router = useRouter(); const params = useLocalSearchParams<{ clientId?: string; role?: string }>(); const [busy, setBusy] = useState(false);
-  async function pickFromPhotos() { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) { void dialog.notify('Photos permission needed', 'AngelOS only needs Photos access when you choose to import business media. You can keep using the rest of the app without it.'); return; } const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, selectionLimit: 20, quality: 1 }); if (result.canceled) return; setBusy(true); try { const workspace = await getActiveWorkspace(); for (const selected of result.assets) { const filename = selected.fileName || `angelos_${Date.now()}.${selected.type === 'video' ? 'mp4' : 'jpg'}`; const mimeType = selected.mimeType || (selected.type === 'video' ? 'video/mp4' : 'image/jpeg'); await importMedia(workspace.id, { uri: selected.uri, filename, mimeType, sizeBytes: selected.fileSize, width: selected.width, height: selected.height, durationMs: selected.duration ?? undefined, source: 'phone_photos' }, { clientId: params.clientId, role: params.role ?? 'other', marketingPermission: 'unknown' }); } void dialog.notify('Saved to AngelOS', `${result.assets.length} item${result.assets.length === 1 ? '' : 's'} securely imported.`); router.back(); } catch (error) { void dialog.notify('Import failed', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
-  async function takePhoto() { const permission = await ImagePicker.requestCameraPermissionsAsync(); if (!permission.granted) { void dialog.notify('Camera permission needed', 'AngelOS only asks for Camera access when you choose to capture business media.'); return; } const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 }); if (result.canceled) return; setBusy(true); try { const workspace = await getActiveWorkspace(); const selected = result.assets[0]; await importMedia(workspace.id, { uri: selected.uri, filename: selected.fileName || `camera_${Date.now()}.jpg`, mimeType: selected.mimeType || 'image/jpeg', sizeBytes: selected.fileSize, width: selected.width, height: selected.height, source: 'camera' }, { clientId: params.clientId, role: params.role ?? 'other', marketingPermission: 'unknown' }); void dialog.notify('Saved to AngelOS', 'The photo is now part of the secure business library.'); router.back(); } catch (error) { void dialog.notify('Import failed', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function pickFromPhotos() { const permission = await ImagePicker.requestMediaLibraryPermissionsAsync(); if (!permission.granted) { void dialog.notify(t('imp.photosPerm'), t('imp.photosPermMsg')); return; } const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, selectionLimit: 20, quality: 1 }); if (result.canceled) return; setBusy(true); try { const workspace = await getActiveWorkspace(); for (const selected of result.assets) { const filename = selected.fileName || `angelos_${Date.now()}.${selected.type === 'video' ? 'mp4' : 'jpg'}`; const mimeType = selected.mimeType || (selected.type === 'video' ? 'video/mp4' : 'image/jpeg'); await importMedia(workspace.id, { uri: selected.uri, filename, mimeType, sizeBytes: selected.fileSize, width: selected.width, height: selected.height, durationMs: selected.duration ?? undefined, source: 'phone_photos' }, { clientId: params.clientId, role: params.role ?? 'other', marketingPermission: 'unknown' }); } void dialog.notify(t('imp.saved'), t('imp.savedN', { count: result.assets.length })); router.back(); } catch (error) { void dialog.notify(t('imp.fail'), error instanceof Error ? error.message : t('imp.unknown')); } finally { setBusy(false); } }
+  async function takePhoto() { const permission = await ImagePicker.requestCameraPermissionsAsync(); if (!permission.granted) { void dialog.notify(t('imp.camPerm'), t('imp.camPermMsg')); return; } const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 }); if (result.canceled) return; setBusy(true); try { const workspace = await getActiveWorkspace(); const selected = result.assets[0]; await importMedia(workspace.id, { uri: selected.uri, filename: selected.fileName || `camera_${Date.now()}.jpg`, mimeType: selected.mimeType || 'image/jpeg', sizeBytes: selected.fileSize, width: selected.width, height: selected.height, source: 'camera' }, { clientId: params.clientId, role: params.role ?? 'other', marketingPermission: 'unknown' }); void dialog.notify(t('imp.saved'), t('imp.savedOne')); router.back(); } catch (error) { void dialog.notify(t('imp.fail'), error instanceof Error ? error.message : t('imp.unknown')); } finally { setBusy(false); } }
 
-  return <Screen>
-    <Pill tone="gold">Secure Import</Pill><ScreenTitle>Add Media</ScreenTitle><SupportText>Choose what you already have. No extra account or folder setup is required.</SupportText>
-    {params.clientId ? <Card premium><SectionTitle>Linked to this client</SectionTitle><BodyText>New media will be attached to the client record you came from.</BodyText></Card> : null}
-    <Card><SectionTitle>Choose from Photos</SectionTitle><SupportText>Select up to 20 photos or videos already on your phone.</SupportText><Pressable disabled={busy} onPress={() => void pickFromPhotos()}><PrimaryActionLabel>{busy ? 'Saving...' : 'Choose From Photos'}</PrimaryActionLabel></Pressable></Card>
-    <Card><SectionTitle>Capture something new</SectionTitle><SupportText>Take a business photo and save it directly into AngelOS.</SupportText><Pressable disabled={busy} onPress={() => void takePhoto()}><SecondaryActionLabel>Take a Photo</SecondaryActionLabel></Pressable></Card>
-    <Card premium><SectionTitle>Your original stays yours</SectionTitle><SupportText>AngelOS preserves only what you intentionally import. The original on your phone is not changed.</SupportText></Card>
-    <Pressable onPress={() => router.back()} disabled={busy}><SecondaryActionLabel>Cancel</SecondaryActionLabel></Pressable>
+  return <Screen hideAsk>
+    <Stack.Screen options={{ headerRight: () => <Pressable accessibilityRole="button" disabled={busy} onPress={() => router.back()} hitSlop={8}><Text style={styles.cancel}>{t('imp.cancel')}</Text></Pressable> }} />
+    <SupportText>{t('imp.lead')}</SupportText>
+    {params.clientId ? <Card><BodyText>{t('imp.linked')}</BodyText></Card> : null}
+    <Pressable accessibilityRole="button" disabled={busy} onPress={() => void pickFromPhotos()} style={({ pressed }) => [styles.primary, (busy || pressed) && { opacity: 0.7 }]}>
+      {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{t('imp.choose')}</Text>}
+    </Pressable>
+    <Button variant="secondary" label={t('imp.take')} disabled={busy} onPress={() => void takePhoto()} />
   </Screen>;
 }
+
+const styles = StyleSheet.create({
+  primary: { minHeight: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: '#B07A6A' },
+  primaryText: { color: '#FFFFFF', fontFamily: 'Manrope_700Bold', fontSize: 16 },
+  cancel: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 16, paddingHorizontal: 8 }
+});
