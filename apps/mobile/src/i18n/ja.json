@@ -568,7 +568,12 @@
   "noConsent": "同意書はまだ保存されていません。",
   "signed": "（{{name}}さん署名）",
   "addConsent": "同意書を追加",
-  "addTreat": "施術を追加"
+  "addTreat": "施術を追加",
+  "photos": "写真",
+  "photosN_one": "写真{{count}}枚",
+  "photosN_other": "写真{{count}}枚",
+  "noPhotos": "写真はまだありません。",
+  "close": "閉じる"
  },
  "st": {
   "lead": "見込み",

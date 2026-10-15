@@ -568,7 +568,12 @@
   "noConsent": "No consent saved yet.",
   "signed": "(signed {{name}})",
   "addConsent": "Add consent",
-  "addTreat": "Add a treatment"
+  "addTreat": "Add a treatment",
+  "photos": "Photos",
+  "photosN_one": "{{count}} photo",
+  "photosN_other": "{{count}} photos",
+  "noPhotos": "No photos yet.",
+  "close": "Close"
  },
  "st": {
   "lead": "Lead",
