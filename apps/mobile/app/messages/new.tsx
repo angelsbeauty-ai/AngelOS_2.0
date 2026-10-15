@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -16,6 +17,7 @@ const PLATFORMS = [
 ] as const;
 
 export default function NewConversationScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -49,27 +51,27 @@ export default function NewConversationScreen() {
   }
 
   return <Screen>
-    <ScreenTitle>New conversation</ScreenTitle>
-    <SupportText>Pick the client, then paste the message they sent you. AngelOS keeps the conversation here and drafts your reply.</SupportText>
+    <ScreenTitle>{t('mnew.s0')}</ScreenTitle>
+    <SupportText>{t('mnew.s1')}</SupportText>
 
     <Card>
-      <SectionTitle>1 · Client</SectionTitle>
+      <SectionTitle>{t('mnew.s2')}</SectionTitle>
       {client ? (
         <View style={styles.selected}>
           <Avatar name={client.display_name} />
           <View style={{ flex: 1 }}><Text style={styles.name}>{client.display_name}</Text><SupportText>{client.language === 'ja' ? '日本語' : 'English'}</SupportText></View>
-          <ActionButton kind="quiet" label="Change" onPress={() => setClient(null)} />
+          <ActionButton kind="quiet" label={t('mnew.s5')} onPress={() => setClient(null)} />
         </View>
       ) : (
         <>
-          <TextInput accessibilityLabel="Search clients" value={search} onChangeText={setSearch} placeholder="Search by name" placeholderTextColor={ui.colors.secondaryText} style={styles.input} autoCorrect={false} />
+          <TextInput accessibilityLabel={t('mnew.s6')} value={search} onChangeText={setSearch} placeholder={t('mnew.s7')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} autoCorrect={false} />
           {clients.slice(0, 8).map((item) => (
             <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Choose ${item.display_name}`} onPress={() => setClient(item)} style={styles.clientRow}>
               <Avatar name={item.display_name} /><Text style={styles.name}>{item.display_name}</Text>
             </Pressable>
           ))}
-          {clients.length === 0 ? <SupportText>No clients found. Add the client first in Clients, then come back.</SupportText> : null}
-          <ActionButton label="+ New client" onPress={() => router.push('/clients/new' as any)} />
+          {clients.length === 0 ? <SupportText>{t('mnew.s3')}</SupportText> : null}
+          <ActionButton label={t('mnew.s8')} onPress={() => router.push('/clients/new' as any)} />
         </>
       )}
     </Card>
@@ -80,8 +82,8 @@ export default function NewConversationScreen() {
     </Card>
 
     <Card>
-      <SectionTitle>3 · Their message</SectionTitle>
-      <TextInput accessibilityLabel="Paste the client's message" value={body} onChangeText={setBody} placeholder="Paste what the client wrote" placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.multiline]} />
+      <SectionTitle>{t('mnew.s4')}</SectionTitle>
+      <TextInput accessibilityLabel={t('mnew.s9')} value={body} onChangeText={setBody} placeholder={t('mnew.s10')} placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.multiline]} />
     </Card>
 
     <ActionButton kind="primary" label={busy ? 'Saving…' : 'Add conversation'} disabled={busy || !client || !body.trim()} onPress={() => void save()} />

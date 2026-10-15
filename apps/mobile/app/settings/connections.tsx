@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
@@ -16,6 +17,7 @@ const STATE_LABEL: Record<ConnectionStatus['state'], string> = {
 };
 
 export default function ConnectionsScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [items, setItems] = useState<ConnectionStatus[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -36,10 +38,10 @@ export default function ConnectionsScreen() {
   }
 
   return <Screen>
-    <ScreenTitle>Connections</ScreenTitle>
-    <SupportText>Which apps AngelOS can really use. Anything not connected says so.</SupportText>
-    {state === 'error' ? <ErrorState title="We couldn't load connections" message="Check your connection and try again." onRetry={() => { setState('loading'); void load(); }} /> : null}
-    {state === 'loading' ? <Card><SupportText>Loading…</SupportText></Card> : null}
+    <ScreenTitle>{t('conn.s0')}</ScreenTitle>
+    <SupportText>{t('conn.s1')}</SupportText>
+    {state === 'error' ? <ErrorState title={t('conn.s7')} message={t('conn.s8')} onRetry={() => { setState('loading'); void load(); }} /> : null}
+    {state === 'loading' ? <Card><SupportText>{t('conn.s2')}</SupportText></Card> : null}
 
     {items.map((item) => <Card key={item.provider}>
       <View style={styles.head}>
@@ -48,18 +50,18 @@ export default function ConnectionsScreen() {
       </View>
       {item.accountName ? <SupportText>Account: {item.accountName}</SupportText> : null}
       <SupportText>{item.detail}</SupportText>
-      {item.needs.length && !item.connected ? <View style={{ gap: 2 }}><Text style={styles.needsLabel}>What it needs</Text>{item.needs.map((need) => <SupportText key={need}>• {need}</SupportText>)}</View> : null}
+      {item.needs.length && !item.connected ? <View style={{ gap: 2 }}><Text style={styles.needsLabel}>{t('conn.s3')}</Text>{item.needs.map((need) => <SupportText key={need}>• {need}</SupportText>)}</View> : null}
       {item.provider === 'line' && item.canConnect ? <ActionButton kind="primary" label={busy ? 'Connecting…' : 'Connect LINE'} disabled={busy} onPress={() => void connect()} /> : null}
     </Card>)}
 
     {state === 'ready' ? <>
       <Card>
-        <View style={styles.head}><Text style={styles.title}>Instagram & Facebook posting</Text><Text style={[styles.state, styles.off]}>Not connected yet</Text></View>
+        <View style={styles.head}><Text style={styles.title}>Instagram & Facebook posting</Text><Text style={[styles.state, styles.off]}>{t('conn.s4')}</Text></View>
         <SupportText>Posting needs an Instagram Business/Creator account linked to a Facebook Page and a Meta app. Until then use "Copy caption & open Instagram".</SupportText>
       </Card>
       <Card>
-        <View style={styles.head}><Text style={styles.title}>TikTok</Text><Text style={[styles.state, styles.off]}>Manual only</Text></View>
-        <SupportText>Download the video and copy the caption. Direct posting needs a TikTok app audit.</SupportText>
+        <View style={styles.head}><Text style={styles.title}>TikTok</Text><Text style={[styles.state, styles.off]}>{t('conn.s5')}</Text></View>
+        <SupportText>{t('conn.s6')}</SupportText>
       </Card>
     </> : null}
   </Screen>;

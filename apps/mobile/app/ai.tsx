@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
@@ -32,6 +33,7 @@ import {
 import { getActiveWorkspace } from '../src/lib/workspace';
 
 export default function AiScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ screen?: string; entityType?: string; entityId?: string; entityLabel?: string }>();
   const screenContext: AiScreenContext = {
     screen: params.screen ?? 'ai',
@@ -145,10 +147,10 @@ export default function AiScreen() {
           <View style={styles.avatar}><Text style={styles.avatarText}>{assistantName.slice(0, 1).toUpperCase()}</Text></View>
           <View style={styles.headerCopy}>
             <ScreenTitle>{assistantName}</ScreenTitle>
-            <SupportText>Your calm AI business partner.</SupportText>
+            <SupportText>{t('aip.s0')}</SupportText>
             {screenContext.entityLabel ? <SupportText>Working with: {screenContext.entityLabel}</SupportText> : null}
           </View>
-          <Link href="/ai-settings" style={styles.settingsLink}>Settings</Link>
+          <Link href="/ai-settings" style={styles.settingsLink}>{t('aip.s1')}</Link>
         </View>
       </Card>
 
@@ -186,10 +188,10 @@ export default function AiScreen() {
           <SupportText>{action.kind === 'draft' ? 'Approve makes a draft only. Nothing is sent or posted until you approve it again.' : 'Nothing changes until you tap Approve.'}</SupportText>
           <View style={styles.actionButtons}>
             <Pressable disabled={busy} onPress={() => void resolveAction(true)} style={styles.actionButton}>
-              <PrimaryActionLabel>Approve</PrimaryActionLabel>
+              <PrimaryActionLabel>{t('aip.s2')}</PrimaryActionLabel>
             </Pressable>
             <Pressable disabled={busy} onPress={() => void resolveAction(false)} style={styles.actionButton}>
-              <SecondaryActionLabel>Cancel</SecondaryActionLabel>
+              <SecondaryActionLabel>{t('aip.s3')}</SecondaryActionLabel>
             </Pressable>
           </View>
         </Card>
@@ -198,12 +200,12 @@ export default function AiScreen() {
       <Card>
         <Row>
           <View>
-            <SectionTitle>Tell AngelOS</SectionTitle>
-            <SupportText>One instruction is enough. It will organize the next step.</SupportText>
+            <SectionTitle>{t('aip.s4')}</SectionTitle>
+            <SupportText>{t('aip.s5')}</SupportText>
           </View>
         </Row>
         <TextInput
-          placeholder="Tell me what's going on with your business..."
+          placeholder={t('aip.s6')}
           placeholderTextColor={ui.colors.secondaryText}
           multiline
           value={composer}

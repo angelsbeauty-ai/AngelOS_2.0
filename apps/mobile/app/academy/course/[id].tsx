@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -10,6 +11,7 @@ import { getActiveWorkspace } from '../../../src/lib/workspace';
 import { confirm, dialog } from '../../../src/lib/dialog';
 
 export default function CourseScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [ws, setWs] = useState<string | null>(null);
   const [role, setRole] = useState<'owner' | 'student'>('student');
@@ -36,7 +38,7 @@ export default function CourseScreen() {
     void run('Could not reorder', () => reorderLessons(ws, id!, next.map((l) => l.id)));
   }
 
-  if (!lessons || !ws) return <Screen><Card><BodyText>Loading…</BodyText></Card></Screen>;
+  if (!lessons || !ws) return <Screen><Card><BodyText>{t('crs.s0')}</BodyText></Card></Screen>;
   if (role === 'student') return <Screen>
     <ScreenTitle>{title}</ScreenTitle>
     {description ? <BodyText>{description}</BodyText> : null}
@@ -45,24 +47,24 @@ export default function CourseScreen() {
   </Screen>;
 
   return <Screen>
-    <ScreenTitle>Edit course</ScreenTitle>
+    <ScreenTitle>{t('crs.s1')}</ScreenTitle>
     <Card>
-      <Field label="Title" value={title} onChangeText={setTitle} />
-      <Field label="Description" value={description} onChangeText={setDescription} multiline />
-      <View style={fieldStyles.line}><View style={fieldStyles.grow}><BodyText>Published</BodyText><SupportText>Enrolled students can only see published courses.</SupportText></View><Switch accessibilityLabel="Published" value={published} onValueChange={(v) => { setPublished(v); void run('Could not update', () => updateCourse(ws, id!, { published: v })); }} /></View>
-      <ActionButton kind="primary" label="Save" onPress={() => void run('Could not save', () => updateCourse(ws, id!, { title: title.trim(), description }))} />
+      <Field label={t('crs.s6')} value={title} onChangeText={setTitle} />
+      <Field label={t('crs.s7')} value={description} onChangeText={setDescription} multiline />
+      <View style={fieldStyles.line}><View style={fieldStyles.grow}><BodyText>{t('crs.s2')}</BodyText><SupportText>{t('crs.s3')}</SupportText></View><Switch accessibilityLabel={t('crs.s2')} value={published} onValueChange={(v) => { setPublished(v); void run('Could not update', () => updateCourse(ws, id!, { published: v })); }} /></View>
+      <ActionButton kind="primary" label={t('crs.s8')} onPress={() => void run('Could not save', () => updateCourse(ws, id!, { title: title.trim(), description }))} />
     </Card>
     <Card>
-      <SectionTitle>Lessons</SectionTitle>
-      {!lessons.length ? <SupportText>No lessons yet.</SupportText> : null}
+      <SectionTitle>{t('crs.s4')}</SectionTitle>
+      {!lessons.length ? <SupportText>{t('crs.s5')}</SupportText> : null}
       {lessons.map((l, i) => <View key={l.id} style={fieldStyles.line}>
         <Text style={[fieldStyles.strong, { flex: 1 }]} onPress={() => router.push(`/academy/lesson/${l.id}` as any)}>{i + 1}. {l.title}</Text>
         <ActionButton kind="quiet" label="↑" accessibilityHint="Move up" disabled={i === 0} onPress={() => move(i, -1)} />
         <ActionButton kind="quiet" label="↓" accessibilityHint="Move down" disabled={i === lessons.length - 1} onPress={() => move(i, 1)} />
       </View>)}
-      <Field label="New lesson title" value={newLesson} onChangeText={setNewLesson} />
-      <ActionButton label="Add lesson" disabled={!newLesson.trim()} onPress={() => void run('Could not add lesson', async () => { const l = await addLesson(ws, id!, { title: newLesson.trim() }); setNewLesson(''); router.push(`/academy/lesson/${l.id}` as any); })} />
+      <Field label={t('crs.s9')} value={newLesson} onChangeText={setNewLesson} />
+      <ActionButton label={t('crs.s10')} disabled={!newLesson.trim()} onPress={() => void run('Could not add lesson', async () => { const l = await addLesson(ws, id!, { title: newLesson.trim() }); setNewLesson(''); router.push(`/academy/lesson/${l.id}` as any); })} />
     </Card>
-    <ActionButton kind="quiet" label="Delete course" onPress={async () => { if (await confirm({ title: `Delete "${title}"?`, message: 'All its lessons, student progress and practice photos are deleted too.', confirmText: 'Delete', destructive: true })) { try { await deleteCourse(ws, id!); router.back(); } catch (e) { void dialog.notify('Could not delete', e instanceof Error ? e.message : ''); } } }} />
+    <ActionButton kind="quiet" label={t('crs.s11')} onPress={async () => { if (await confirm({ title: `Delete "${title}"?`, message: t('crs.s12'), confirmText: t('crs.s13'), destructive: true })) { try { await deleteCourse(ws, id!); router.back(); } catch (e) { void dialog.notify('Could not delete', e instanceof Error ? e.message : ''); } } }} />
   </Screen>;
 }

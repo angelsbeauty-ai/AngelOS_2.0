@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { Image, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
@@ -12,6 +13,7 @@ import { dialog } from '../../src/lib/dialog';
 type Status = 'pending' | 'approved' | 'try_again';
 
 export default function SubmissionsScreen() {
+  const { t } = useTranslation();
   const [ws, setWs] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('pending');
   const [items, setItems] = useState<Submission[] | null>(null);
@@ -28,18 +30,18 @@ export default function SubmissionsScreen() {
     catch (e) { void dialog.notify('Could not save', e instanceof Error ? e.message : ''); }
   }
   return <Screen onRefresh={() => load(status)}>
-    <ScreenTitle>Practice photos</ScreenTitle>
-    <Tabs value={status} onChange={setStatus} options={[{ id: 'pending', label: 'To review' }, { id: 'approved', label: 'Approved' }, { id: 'try_again', label: 'Try again' }]} />
-    {items === null ? <Card><BodyText>Loading…</BodyText></Card> : null}
-    {items?.length === 0 ? <Card><BodyText>Nothing here.</BodyText></Card> : null}
+    <ScreenTitle>{t('subm.s0')}</ScreenTitle>
+    <Tabs value={status} onChange={setStatus} options={[{ id: 'pending', label: t('subm.s8') }, { id: 'approved', label: t('subm.s9') }, { id: 'try_again', label: t('subm.s7') }]} />
+    {items === null ? <Card><BodyText>{t('subm.s1')}</BodyText></Card> : null}
+    {items?.length === 0 ? <Card><BodyText>{t('subm.s2')}</BodyText></Card> : null}
     {items?.map((s) => <Card key={s.id}>
       <SectionTitle>{s.lesson?.title ?? 'Lesson'}</SectionTitle>
       <SupportText>{new Date(s.created_at).toLocaleString()}</SupportText>
-      {s.photoUrl ? <Image source={{ uri: s.photoUrl }} style={{ width: '100%', aspectRatio: 1, borderRadius: 12 }} resizeMode="cover" accessibilityLabel="Practice photo" /> : null}
+      {s.photoUrl ? <Image source={{ uri: s.photoUrl }} style={{ width: '100%', aspectRatio: 1, borderRadius: 12 }} resizeMode="cover" accessibilityLabel={t('subm.s3')} /> : null}
       {s.note ? <BodyText>{s.note}</BodyText> : null}
       {s.status === 'pending' ? <>
-        <Field label="Comment for the student" value={comments[s.id] ?? ''} onChangeText={(v) => setComments({ ...comments, [s.id]: v })} multiline hint="Needed for Try again." />
-        <View style={fieldStyles.row}><ActionButton kind="primary" label="Approve" onPress={() => void review(s.id, 'approved')} /><ActionButton label="Try again" onPress={() => void review(s.id, 'try_again')} /></View>
+        <Field label={t('subm.s4')} value={comments[s.id] ?? ''} onChangeText={(v) => setComments({ ...comments, [s.id]: v })} multiline hint={t('subm.s5')} />
+        <View style={fieldStyles.row}><ActionButton kind="primary" label={t('subm.s6')} onPress={() => void review(s.id, 'approved')} /><ActionButton label={t('subm.s7')} onPress={() => void review(s.id, 'try_again')} /></View>
       </> : s.feedback ? <SupportText>Your comment: {s.feedback}</SupportText> : null}
     </Card>)}
   </Screen>;

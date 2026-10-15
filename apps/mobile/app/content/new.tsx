@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
@@ -58,6 +59,7 @@ function isMarketingReady(asset: MediaAsset) {
 }
 
 export default function NewPostScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string }>();
@@ -139,7 +141,7 @@ export default function NewPostScreen() {
         plannedFor: plannedAt.toISOString(),
         mediaAssetIds: selectedMedia.length ? selectedMedia : undefined,
       });
-      toast.show({ title: 'Draft saved', message: `On your calendar for ${plannedAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}.`, tone: 'success' });
+      toast.show({ title: t('cnew.s34'), message: `On your calendar for ${plannedAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}.`, tone: 'success' });
       if (router.canGoBack()) router.back();
       else router.replace('/social');
     } catch (error) {
@@ -157,11 +159,11 @@ export default function NewPostScreen() {
   return (
     <Screen>
       <Pill tone="gold">Social</Pill>
-      <ScreenTitle>New Post</ScreenTitle>
+      <ScreenTitle>{t('cnew.s0')}</ScreenTitle>
       <SupportText>Write it once, pick where it goes and when. It saves as a draft on your Social calendar; nothing is posted.</SupportText>
 
       <Card>
-        <SectionTitle>Goal</SectionTitle>
+        <SectionTitle>{t('cnew.s1')}</SectionTitle>
         <View style={styles.chips}>
           {GOALS.map((item, index) => (
             <Chip key={item.goal} label={item.label} selected={goalIndex === index} onPress={() => setGoalIndex(index)} />
@@ -170,19 +172,19 @@ export default function NewPostScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Caption</SectionTitle>
+        <SectionTitle>{t('cnew.s2')}</SectionTitle>
         <View style={styles.chips}>
           <Chip label="日本語" selected={language === 'ja'} onPress={() => setLanguage('ja')} />
-          <Chip label="English" selected={language === 'en'} onPress={() => setLanguage('en')} />
-          <Chip label="Both" selected={language === 'both'} onPress={() => setLanguage('both')} />
+          <Chip label={t('cnew.s13')} selected={language === 'en'} onPress={() => setLanguage('en')} />
+          <Chip label={t('cnew.s14')} selected={language === 'both'} onPress={() => setLanguage('both')} />
         </View>
         <TextInput
           value={title}
           onChangeText={setTitle}
-          placeholder="Title for your calendar (optional)"
+          placeholder={t('cnew.s15')}
           placeholderTextColor={colors.charcoal3}
           maxLength={160}
-          accessibilityLabel="Post title"
+          accessibilityLabel={t('cnew.s16')}
           maxFontSizeMultiplier={1.3}
           style={styles.input}
         />
@@ -193,7 +195,7 @@ export default function NewPostScreen() {
           placeholderTextColor={colors.charcoal3}
           multiline
           maxLength={5000}
-          accessibilityLabel="Caption"
+          accessibilityLabel={t('cnew.s2')}
           maxFontSizeMultiplier={1.3}
           style={styles.captionInput}
         />
@@ -203,10 +205,10 @@ export default function NewPostScreen() {
         <TextInput
           value={hashtagText}
           onChangeText={setHashtagText}
-          placeholder="#hashtags separated by spaces"
+          placeholder={t('cnew.s17')}
           placeholderTextColor={colors.charcoal3}
           autoCapitalize="none"
-          accessibilityLabel="Hashtags"
+          accessibilityLabel={t('cnew.s18')}
           maxFontSizeMultiplier={1.3}
           style={styles.input}
         />
@@ -219,7 +221,7 @@ export default function NewPostScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Where</SectionTitle>
+        <SectionTitle>{t('cnew.s3')}</SectionTitle>
         <View style={styles.chips}>
           {PLATFORMS.map((item) => (
             <Chip key={item.id} label={item.label} selected={platforms.includes(item.id)} onPress={() => togglePlatform(item.id)} />
@@ -230,46 +232,46 @@ export default function NewPostScreen() {
             <Chip key={item.id} label={item.label} selected={format === item.id} onPress={() => setFormat(item.id)} />
           ))}
         </View>
-        <SupportText>Accounts are not connected yet, so this stays a draft you post yourself.</SupportText>
-        {platforms.includes('line') ? <SupportText tone="warning">LINE drafts need a database update that is waiting for approval. Until then, save without LINE.</SupportText> : null}
+        <SupportText>{t('cnew.s4')}</SupportText>
+        {platforms.includes('line') ? <SupportText tone="warning">{t('cnew.s5')}</SupportText> : null}
       </Card>
 
       <Card>
-        <SectionTitle>When</SectionTitle>
+        <SectionTitle>{t('cnew.s6')}</SectionTitle>
         <View style={styles.dayRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous day" onPress={() => setDay((current) => addDays(current, -1))} style={styles.dayNav}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s19')} onPress={() => setDay((current) => addDays(current, -1))} style={styles.dayNav}>
             <Text style={styles.dayNavText}>‹</Text>
           </Pressable>
           <Text maxFontSizeMultiplier={1.3} style={styles.dayLabel}>
             {day.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
           </Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next day" onPress={() => setDay((current) => addDays(current, 1))} style={styles.dayNav}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s20')} onPress={() => setDay((current) => addDays(current, 1))} style={styles.dayNav}>
             <Text style={styles.dayNavText}>›</Text>
           </Pressable>
         </View>
         <View style={styles.chips}>
-          <Chip label="Today" selected={sameDay(day, today)} onPress={() => setDay(today)} />
-          <Chip label="Tomorrow" selected={sameDay(day, addDays(today, 1))} onPress={() => setDay(addDays(today, 1))} />
-          <Chip label="In a week" selected={sameDay(day, addDays(today, 7))} onPress={() => setDay(addDays(today, 7))} />
+          <Chip label={t('cnew.s21')} selected={sameDay(day, today)} onPress={() => setDay(today)} />
+          <Chip label={t('cnew.s22')} selected={sameDay(day, addDays(today, 1))} onPress={() => setDay(addDays(today, 1))} />
+          <Chip label={t('cnew.s23')} selected={sameDay(day, addDays(today, 7))} onPress={() => setDay(addDays(today, 7))} />
         </View>
         <View style={styles.chips}>
           {TIMES.map((value) => <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />)}
         </View>
-        <SupportText>19:00–21:00 is a good default until AngelOS has your own numbers.</SupportText>
+        <SupportText>{t('cnew.s7')}</SupportText>
       </Card>
 
       <Card>
         <SectionTitle>Photos (optional)</SectionTitle>
-        {mediaState === 'loading' ? <SupportText>Loading your marketing-approved photos…</SupportText> : null}
+        {mediaState === 'loading' ? <SupportText>{t('cnew.s8')}</SupportText> : null}
         {mediaState === 'error' ? (
           <Pressable accessibilityRole="button" onPress={() => void loadMedia()}>
-            <SupportText tone="critical">Couldn't load your photos. Tap to try again.</SupportText>
+            <SupportText tone="critical">{t('cnew.s9')}</SupportText>
           </Pressable>
         ) : null}
         {mediaState === 'ready' && !media.length ? (
           <View style={styles.emptyMedia}>
-            <SupportText>No photos are approved for marketing yet. You can still save the draft and add photos later.</SupportText>
-            <Link href="/media" asChild><Pressable accessibilityRole="link"><Text style={styles.link}>Open Media</Text></Pressable></Link>
+            <SupportText>{t('cnew.s10')}</SupportText>
+            <Link href="/media" asChild><Pressable accessibilityRole="link"><Text style={styles.link}>{t('cnew.s11')}</Text></Pressable></Link>
           </View>
         ) : null}
         {media.length ? (
@@ -295,8 +297,8 @@ export default function NewPostScreen() {
       </Card>
 
       <View style={styles.actions}>
-        {!canSave && !busy ? <SupportText>Choose a goal, write a caption and pick at least one place to post.</SupportText> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Save draft" disabled={!canSave} onPress={() => void save()} style={!canSave ? styles.disabled : null}>
+        {!canSave && !busy ? <SupportText>{t('cnew.s12')}</SupportText> : null}
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s24')} disabled={!canSave} onPress={() => void save()} style={!canSave ? styles.disabled : null}>
           <PrimaryActionLabel>{busy ? 'Saving…' : 'Save Draft'}</PrimaryActionLabel>
         </Pressable>
       </View>

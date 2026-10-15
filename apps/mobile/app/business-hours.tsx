@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -14,6 +15,7 @@ const NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
 type Day = { dayOfWeek: number; startTime: string; endTime: string; isClosed: boolean };
 
 export default function BusinessHoursScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [days, setDays] = useState<Day[]>([]);
   const [saving, setSaving] = useState(false);
@@ -32,11 +34,11 @@ export default function BusinessHoursScreen() {
     finally { setSaving(false); }
   }
   return <Screen>
-    <ScreenTitle>Business hours</ScreenTitle>
+    <ScreenTitle>{t('bh.s0')}</ScreenTitle>
     <SupportText>Bookings outside these hours ask "Book anyway?" first.</SupportText>
     {days.map((d, i) => <Card key={d.dayOfWeek}>
       <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{NAMES[d.dayOfWeek]}</Text><View style={fieldStyles.row}><SupportText>{d.isClosed ? 'Closed' : 'Open'}</SupportText><Switch accessibilityLabel={`${NAMES[d.dayOfWeek]} open`} value={!d.isClosed} onValueChange={(open) => update(i, { isClosed: !open })} /></View></View>
-      {!d.isClosed ? <View style={fieldStyles.row}><TimeField label="Opens" value={d.startTime} onChange={(startTime) => update(i, { startTime })} /><TimeField label="Closes" value={d.endTime} onChange={(endTime) => update(i, { endTime })} /></View> : null}
+      {!d.isClosed ? <View style={fieldStyles.row}><TimeField label={t('bh.s1')} value={d.startTime} onChange={(startTime) => update(i, { startTime })} /><TimeField label={t('bh.s2')} value={d.endTime} onChange={(endTime) => update(i, { endTime })} /></View> : null}
     </Card>)}
     <ActionButton kind="primary" label={saving ? 'Saving…' : 'Save hours'} disabled={saving || !days.length} onPress={() => void save()} />
   </Screen>;

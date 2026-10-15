@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState, createElement } from 'react';
 import { Image, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -62,6 +63,7 @@ async function render(canvas: any, opts: { urls: string[]; layout: Layout; ratio
 }
 
 export default function BeforeAfterScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [studio, setStudio] = useState('');
   const [search, setSearch] = useState('');
@@ -119,19 +121,19 @@ export default function BeforeAfterScreen() {
 
   return <Screen>
     <ScreenTitle>Before & after</ScreenTitle>
-    <SupportText>Only photos marked "OK for marketing" from clients with photo consent can be used.</SupportText>
+    <SupportText>{t('ba.s0')}</SupportText>
     {Platform.OS !== 'web' ? <Banner tone="warning"><SupportText>The before/after maker works in the web version for now (the phone version needs a new app build, which Angel decides on).</SupportText></Banner> : null}
 
     <Card>
-      <SectionTitle>1. Client</SectionTitle>
-      <TextInput accessibilityLabel="Search clients" value={search} onChangeText={setSearch} placeholder="Search a client" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+      <SectionTitle>{t('ba.s1')}</SectionTitle>
+      <TextInput accessibilityLabel={t('ba.s4')} value={search} onChangeText={setSearch} placeholder={t('ba.s5')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
       <View style={styles.chips}>{clients.map((c) => <Chip key={c.id} label={c.display_name} selected={client?.id === c.id} onPress={() => void pickClient(c.id, c.display_name)} />)}</View>
     </Card>
 
     {client ? <Card>
       <SectionTitle>2. Photos ({picked.length}/{need})</SectionTitle>
-      {!client.consentOk ? <Banner tone="warning"><SupportText>Needs photo consent. Open {client.name}'s page and add the photo/marketing consent first.</SupportText><ActionButton label="Open client" onPress={() => router.push(`/clients/${client.id}`)} /></Banner> : null}
-      {client.consentOk && !photos.length ? <SupportText>No photos with marketing permission for this client yet. Tag photos before/after and turn on "OK for marketing".</SupportText> : null}
+      {!client.consentOk ? <Banner tone="warning"><SupportText>Needs photo consent. Open {client.name}'s page and add the photo/marketing consent first.</SupportText><ActionButton label={t('ba.s6')} onPress={() => router.push(`/clients/${client.id}`)} /></Banner> : null}
+      {client.consentOk && !photos.length ? <SupportText>{t('ba.s2')}</SupportText> : null}
       {client.consentOk ? <View style={styles.grid}>{photos.map((p) => {
         const index = picked.indexOf(p.id);
         return <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${p.role} photo`} onPress={() => setPicked((cur) => index >= 0 ? cur.filter((x) => x !== p.id) : cur.length >= need ? cur : [...cur, p.id])} style={[styles.thumb, index >= 0 && styles.thumbOn]}>
@@ -142,15 +144,15 @@ export default function BeforeAfterScreen() {
     </Card> : null}
 
     {client?.consentOk ? <Card>
-      <SectionTitle>3. Look</SectionTitle>
-      <View style={styles.chips}><Chip label="Side by side" selected={layout === 'side'} onPress={() => setLayout('side')} /><Chip label="Top / bottom" selected={layout === 'stack'} onPress={() => setLayout('stack')} /><Chip label="3 steps (before · after · healed)" selected={layout === 'three'} onPress={() => setLayout('three')} /></View>
+      <SectionTitle>{t('ba.s3')}</SectionTitle>
+      <View style={styles.chips}><Chip label={t('ba.s7')} selected={layout === 'side'} onPress={() => setLayout('side')} /><Chip label={t('ba.s8')} selected={layout === 'stack'} onPress={() => setLayout('stack')} /><Chip label={t('ba.s9')} selected={layout === 'three'} onPress={() => setLayout('three')} /></View>
       <View style={styles.chips}>{(['1:1', '4:5', '9:16'] as Ratio[]).map((r) => <Chip key={r} label={r} selected={ratio === r} onPress={() => setRatio(r)} />)}</View>
-      <View style={styles.chips}><Chip label="Labels 日本語" selected={labels === 'ja'} onPress={() => setLabels('ja')} /><Chip label="Labels English" selected={labels === 'en'} onPress={() => setLabels('en')} /><Chip label="No labels" selected={labels === 'none'} onPress={() => setLabels('none')} /><Chip label={watermark ? 'Logo on' : 'Logo off'} selected={watermark} onPress={() => setWatermark(!watermark)} /></View>
+      <View style={styles.chips}><Chip label={t('ba.s10')} selected={labels === 'ja'} onPress={() => setLabels('ja')} /><Chip label={t('ba.s11')} selected={labels === 'en'} onPress={() => setLabels('en')} /><Chip label={t('ba.s12')} selected={labels === 'none'} onPress={() => setLabels('none')} /><Chip label={watermark ? 'Logo on' : 'Logo off'} selected={watermark} onPress={() => setWatermark(!watermark)} /></View>
       {Platform.OS === 'web' ? createElement('canvas', { ref: canvasRef, style: { display: 'none' } }) : null}
       <ActionButton kind="primary" label={busy ? 'Making…' : 'Make image'} disabled={busy || picked.length !== need || Platform.OS !== 'web'} onPress={() => void make()} />
       {result ? <>
-        <Image source={{ uri: result.url }} style={[styles.result, { aspectRatio: RATIO[ratio] }]} accessibilityLabel="Before and after preview" />
-        <ActionButton kind="primary" label="Use in a new post" disabled={busy} onPress={() => void useInPost()} />
+        <Image source={{ uri: result.url }} style={[styles.result, { aspectRatio: RATIO[ratio] }]} accessibilityLabel={t('ba.s13')} />
+        <ActionButton kind="primary" label={t('ba.s14')} disabled={busy} onPress={() => void useInPost()} />
       </> : null}
     </Card> : null}
   </Screen>;
