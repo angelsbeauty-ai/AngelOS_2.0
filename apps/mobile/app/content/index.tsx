@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { SuggestionsCard } from '../../src/components/SuggestionsCard';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Pressable } from 'react-native';
@@ -33,6 +34,7 @@ function statusInfo(status: string) { return STATUS_GROUP[status] ?? { label: st
 const PLATFORM_LABEL: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', line: 'LINE', manual: 'Manual' };
 
 export default function SocialHubScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ view?: string }>();
   const activeView = (['drafts', 'scheduled', 'posted', 'ideas'] as const).find((value) => value === params.view) ?? null;
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -207,49 +209,49 @@ export default function SocialHubScreen() {
       </Card>
 
       <Card>
-        <SectionTitle>Views</SectionTitle>
+        <SectionTitle>{t('social2.views')}</SectionTitle>
         <View style={styles.viewGrid}>
           <Link href="/content?view=drafts" asChild>
             <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>Drafts</Text>
+              <Text style={styles.viewLabel}>{t('social2.drafts')}</Text>
             </Pressable>
           </Link>
           <Link href="/content?view=scheduled" asChild>
             <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>Scheduled</Text>
+              <Text style={styles.viewLabel}>{t('social2.scheduled')}</Text>
             </Pressable>
           </Link>
           <Link href="/content?view=posted" asChild>
             <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>Posted</Text>
+              <Text style={styles.viewLabel}>{t('social2.posted')}</Text>
             </Pressable>
           </Link>
           <Link href="/content?view=ideas" asChild>
             <Pressable style={styles.viewButton}>
-              <Text style={styles.viewLabel}>Ideas</Text>
+              <Text style={styles.viewLabel}>{t('social2.ideas')}</Text>
             </Pressable>
           </Link>
         </View>
       </Card>
 
       <Card>
-        <SectionTitle>Quick Actions</SectionTitle>
+        <SectionTitle>{t('social2.quick')}</SectionTitle>
         <View style={styles.actionList}>
           <Link href="/content/before-after" asChild>
             <Pressable style={styles.actionRow}>
-              <BodyText>Before & After Composer</BodyText>
+              <BodyText>{t('social2.ba')}</BodyText>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
           </Link>
           <Link href="/content/campaigns" asChild>
             <Pressable style={styles.actionRow}>
-              <BodyText>Plan Campaign</BodyText>
+              <BodyText>{t('social2.campaign')}</BodyText>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
           </Link>
           <Link href="/settings/connections" asChild>
             <Pressable style={styles.actionRow}>
-              <BodyText>Connect Social Accounts</BodyText>
+              <BodyText>{t('social2.connect')}</BodyText>
               <Text style={styles.chevron}>›</Text>
             </Pressable>
           </Link>
@@ -396,7 +398,9 @@ const styles = StyleSheet.create({
     gap: ui.spacing.sm,
   },
   viewButton: {
-    flex: 0.48,
+    width: '47%',
+    minHeight: 44,
+    justifyContent: 'center',
     paddingVertical: ui.spacing.sm,
     paddingHorizontal: ui.spacing.sm,
     backgroundColor: ui.colors.elevated,

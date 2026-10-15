@@ -10,6 +10,7 @@ import { Avatar, Badge, Button, EmptyState, Header, Skeleton, SupportText, ui } 
 import { listClients, setClientArchived, type ClientFilter, type ClientSummary } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { toFriendly, type FriendlyResult } from '../../src/lib/friendly-error';
+import { label } from '../../src/lib/labels';
 import { confirm } from '../../src/lib/dialog';
 
 const FILTER_IDS: ClientFilter[] = ['all', 'new', 'active', 'touch_up', 'archived'];
@@ -56,7 +57,7 @@ export default function ClientsScreen() {
       onAction={(action) => { if (action === 'book') router.push({ pathname: '/bookings/new', params: { clientId: client.id } }); if (action === 'edit') router.push(`/clients/${client.id}/edit` as any); if (action === 'archive') void archive(client); }}>
       <View style={styles.clientRow}>
         <Avatar name={client.display_name} />
-        <View style={styles.clientCopy}><Text style={styles.clientName}>{client.display_name}</Text><SupportText>{client.status.replaceAll('_', ' ')} · {client.language === 'ja' ? t('clients.japanese') : t('clients.english')}</SupportText>{client.phone || client.email ? <SupportText>{client.phone ?? client.email}</SupportText> : null}</View>
+        <View style={styles.clientCopy}><Text style={styles.clientName}>{client.display_name}</Text><SupportText>{label(t, 'st', client.status)} · {client.language === 'ja' ? t('clients.japanese') : t('clients.english')}</SupportText>{client.phone || client.email ? <SupportText>{client.phone ?? client.email}</SupportText> : null}</View>
         {client.health_flag ? <Badge status="request" label={t('clients.checkHealth')} /> : null}
         {client.archived_at ? <Badge status="cancelled" label={t('clients.archived')} /> : null}
       </View>

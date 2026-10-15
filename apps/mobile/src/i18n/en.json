@@ -597,7 +597,11 @@
   "keloid": "Keloid scarring",
   "diabetes": "Diabetes",
   "skin_condition": "Skin condition",
-  "herpes": "Cold sores"
+  "herpes": "Cold sores",
+  "warm": "Warm",
+  "booking_intent": "Wants to book",
+  "booked": "Booked",
+  "returning": "Returning"
  },
  "links2": {
   "clients": "Clients",
@@ -637,5 +641,40 @@
   "notFoundMsg": "The page you're looking for doesn't exist.",
   "home": "Go home",
   "signup": "Create account"
+ },
+ "acad": {
+  "eyebrow": "Courses & students",
+  "title": "Academy",
+  "students": "Students",
+  "reviews": "Practice photos",
+  "courses": "Courses",
+  "emptyOwner": "Create your first course",
+  "emptyOwnerMsg": "Add lessons, invite students and follow their progress here.",
+  "emptyStudent": "No courses yet",
+  "emptyStudentMsg": "Your teacher will add you to a course.",
+  "lessons_one": "{{count}} lesson",
+  "lessons_other": "{{count}} lessons",
+  "studentsN_one": "{{count}} student",
+  "studentsN_other": "{{count}} students",
+  "published": "Published",
+  "draft": "Draft",
+  "done": "{{p}}% done",
+  "newCourse": "New course",
+  "courseTitle": "Course title",
+  "coursePh": "e.g. Powder brows basics",
+  "create": "Create course",
+  "createFail": "Could not create course",
+  "unavailable": "Academy is not available right now."
+ },
+ "social2": {
+  "views": "Views",
+  "drafts": "Drafts",
+  "scheduled": "Scheduled",
+  "posted": "Posted",
+  "ideas": "Ideas",
+  "quick": "Quick actions",
+  "ba": "Before & after maker",
+  "campaign": "Plan a campaign",
+  "connect": "Connect social accounts"
  }
 }

@@ -597,7 +597,11 @@
   "keloid": "ケロイド体質",
   "diabetes": "糖尿病",
   "skin_condition": "皮膚の疾患",
-  "herpes": "ヘルペス"
+  "herpes": "ヘルペス",
+  "warm": "関心あり",
+  "booking_intent": "予約希望",
+  "booked": "予約済み",
+  "returning": "リピーター"
  },
  "links2": {
   "clients": "お客様",
@@ -637,5 +641,40 @@
   "notFoundMsg": "お探しのページは存在しません。",
   "home": "ホームへ",
   "signup": "アカウント作成"
+ },
+ "acad": {
+  "eyebrow": "コースと生徒",
+  "title": "アカデミー",
+  "students": "生徒",
+  "reviews": "練習写真",
+  "courses": "コース",
+  "emptyOwner": "最初のコースを作ろう",
+  "emptyOwnerMsg": "レッスンを追加して、生徒を招待し、進み具合をここで確認できます。",
+  "emptyStudent": "まだコースはありません",
+  "emptyStudentMsg": "先生がコースに追加してくれます。",
+  "lessons_one": "レッスン{{count}}件",
+  "lessons_other": "レッスン{{count}}件",
+  "studentsN_one": "生徒{{count}}人",
+  "studentsN_other": "生徒{{count}}人",
+  "published": "公開中",
+  "draft": "下書き",
+  "done": "{{p}}%完了",
+  "newCourse": "新しいコース",
+  "courseTitle": "コース名",
+  "coursePh": "例：パウダーブロウ基礎",
+  "create": "コースを作成",
+  "createFail": "コースを作成できませんでした",
+  "unavailable": "アカデミーは今ご利用いただけません。"
+ },
+ "social2": {
+  "views": "表示",
+  "drafts": "下書き",
+  "scheduled": "予約投稿",
+  "posted": "投稿済み",
+  "ideas": "アイデア",
+  "quick": "クイック操作",
+  "ba": "ビフォーアフター作成",
+  "campaign": "キャンペーンを計画",
+  "connect": "SNSアカウントを連携"
  }
 }
