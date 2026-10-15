@@ -10,6 +10,8 @@ import { isMissingRelation } from '../messaging/saved-replies.service';
 import { metaAccountStatus, type SocialAccount } from '../meta/meta-accounts';
 import { ContentService } from './content.service';
 import type { CreateCampaignDto, HashtagSetDto, LineDraftDto, MarkPostedDto, PlanDaysDto } from './dto/social.dto';
+import type { ComposeCaptionDto } from './dto/compose-caption.dto';
+import { composeCaption, parseComposerCaption, type CaptionTone } from './caption-draft';
 import { addDaysLocal, dataIdeas, daysBetween, lineEstimateText, parseCaptionList, planCampaign, planPosts, seasonalIdeas, starterCaption, type PlannedPost } from './social-plan';
 
 const MIGRATION = '0019_v1_social_campaigns';
@@ -55,6 +57,50 @@ export class SocialService {
       });
       return parseCaptionList(response.text, posts.length) ?? posts.map((p) => starterCaption(p, offer));
     } catch { return posts.map((p) => starterCaption(p, offer)); }
+  }
+
+  /**
+   * A starting caption for the composer. Nothing is saved or posted.
+   * Live model text is used only when it comes back as usable JSON; otherwise a fixed template.
+   */
+  async composeCaption(user: AuthUser, workspaceId: string, dto: ComposeCaptionDto) {
+    await this.workspace(user, workspaceId);
+    const template = composeCaption({
+      objective: dto.objective,
+      language: dto.language,
+      tone: dto.tone as CaptionTone | undefined,
+      title: dto.title,
+      note: dto.note,
+      caption: dto.caption,
+      captionEn: dto.captionEn,
+      seed: dto.seed
+    });
+    if ((process.env.AI_PROVIDER_MODE ?? 'mock') !== 'openai') return { ...template, source: 'template' as const };
+    try {
+      const ws = await this.workspace(user, workspaceId);
+      const voice = await this.style.voiceLine(user, workspaceId).catch(() => '');
+      const response = await this.provider.generate({
+        instructions: [
+          'COMPOSER_CAPTION',
+          `studio=${ws.name}`,
+          `language=${dto.language}`,
+          `tone=${dto.tone ?? 'write'}`,
+          'Return JSON only with keys captionJa, captionEn, hashtags (up to 5 strings).',
+          'Permanent makeup studio. Japanese: friendly salon tone (です/ます, a little emoji is fine). English: warm and short.',
+          'Do not invent prices, dates, client names, medical claims, or results. For tone=price use the literal placeholders [価格] and [price], never a number.',
+          'If a caption is provided, rewrite that text only. Do not add facts that are not already in the caption, title, or note.',
+          voice
+        ].filter(Boolean).join('\n'),
+        input: JSON.stringify({ objective: dto.objective, title: dto.title ?? '', note: dto.note ?? '', caption: dto.caption ?? '', captionEn: dto.captionEn ?? '' })
+      });
+      const parsed = parseComposerCaption(response.text);
+      if (!parsed) return { ...template, source: 'template' as const };
+      const caption = dto.language === 'en' ? parsed.captionEn : parsed.captionJa;
+      const hook = (caption.split(/(?<=[。．.!?！？])/)[0] ?? caption).trim().slice(0, 80);
+      return { caption, captionJa: parsed.captionJa, captionEn: parsed.captionEn, hashtags: parsed.hashtags.length ? parsed.hashtags : template.hashtags, hook, source: 'angelos' as const };
+    } catch {
+      return { ...template, source: 'template' as const };
+    }
   }
 
   private async createDrafts(user: AuthUser, workspaceId: string, posts: PlannedPost[], timeZone: string, studio: string, offer?: string | null, campaignId?: string) {

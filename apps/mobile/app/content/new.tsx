@@ -9,7 +9,7 @@ import { Card, Pill, PrimaryActionLabel, SecondaryActionLabel, ScreenTitle, Sect
 import { useToast } from '../../src/components/Toast';
 import { tokens } from '../../src/design/theme';
 import { ApiError } from '../../src/lib/api';
-import { approveContentPost, scheduleContentVariant, createComposerDraft, listHashtagSets, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import { approveContentPost, scheduleContentVariant, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -80,6 +80,10 @@ export default function NewPostScreen() {
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [selectedMedia, setSelectedMedia] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [captionEn, setCaptionEn] = useState('');
+  const [captionNote, setCaptionNote] = useState<string | null>(null);
+  const [captionBusy, setCaptionBusy] = useState(false);
+  const [seed, setSeed] = useState(0);
 
   useEffect(() => { void loadMedia(); }, []);
   useEffect(() => { if (params.date) setDay(parseDayParam(params.date)); }, [params.date]);
@@ -111,13 +115,19 @@ export default function NewPostScreen() {
   }
 
   const hashtags = useMemo(() => parseHashtags(hashtagText), [hashtagText]);
+  const postedCaption = useMemo(() => {
+    const primary = caption.trim();
+    const english = captionEn.trim();
+    if (language === 'both' && english && !primary.includes(english)) return `${primary}\n\n${english}`.trim();
+    return primary;
+  }, [caption, captionEn, language]);
   const plannedAt = useMemo(() => {
     const [hours, minutes] = time.split(':').map(Number);
     return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes);
   }, [day, time]);
   const today = startOfDay(new Date());
-  const captionTooLongForInstagram = platforms.includes('instagram') && caption.length > IG_CAPTION_LIMIT;
-  const canSave = Boolean(workspaceId && goalIndex !== null && caption.trim() && platforms.length && !busy);
+  const captionTooLongForInstagram = platforms.includes('instagram') && postedCaption.length > IG_CAPTION_LIMIT;
+  const canSave = Boolean(workspaceId && goalIndex !== null && postedCaption && platforms.length && !busy && !captionBusy);
 
   function togglePlatform(id: ContentPlatform) {
     setPlatforms((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
@@ -145,8 +155,41 @@ export default function NewPostScreen() {
     finally { setBusy(false); }
   }
 
+  async function writeCaption(tone: CaptionTone) {
+    if (goalIndex === null) { void dialog.notify(t('cnew.s38'), t('cnew.s1')); return; }
+    if (!workspaceId || captionBusy) return;
+    if ((tone === 'write' || tone === 'again') && (caption.trim() || captionEn.trim())) {
+      const ok = await dialog.confirm({ title: t('cnew.s35'), message: t('cnew.s47'), confirmText: t('cnew.s45') });
+      if (!ok) return;
+    }
+    const nextSeed = tone === 'write' || tone === 'again' ? seed + 1 : seed;
+    setSeed(nextSeed);
+    setCaptionBusy(true);
+    try {
+      const draft = await draftCaption(workspaceId, {
+        objective: GOALS[goalIndex].objective,
+        language,
+        tone,
+        title: title.trim() || undefined,
+        caption: caption.trim() || undefined,
+        captionEn: captionEn.trim() || undefined,
+        seed: nextSeed
+      });
+      if (language === 'en') setCaption(draft.captionEn || draft.caption);
+      else setCaption(draft.captionJa || draft.caption);
+      if (language === 'both') setCaptionEn(draft.captionEn);
+      if (tone === 'write' || tone === 'again') setHashtagText(draft.hashtags.join(' '));
+      setCaptionNote(t('cnew.s37'));
+    } catch (error) {
+      const friendly = toFriendly(error, { action: 'save', thing: 'draft' });
+      void dialog.notify(t('cnew.s46'), friendly.message);
+    } finally {
+      setCaptionBusy(false);
+    }
+  }
+
   async function save(schedule = false) {
-    if (!workspaceId || goalIndex === null || !caption.trim() || !platforms.length) return;
+    if (!workspaceId || goalIndex === null || !postedCaption || !platforms.length) return;
     const goal = GOALS[goalIndex];
     setBusy(true);
     try {
@@ -156,7 +199,7 @@ export default function NewPostScreen() {
         objective: goal.objective,
         goal: goal.goal,
         language,
-        caption: caption.trim(),
+        caption: postedCaption,
         hashtags: hashtags.slice(0, HASHTAG_LIMIT),
         format,
         platforms,
@@ -225,8 +268,37 @@ export default function NewPostScreen() {
           maxFontSizeMultiplier={1.3}
           style={styles.captionInput}
         />
+        {language === 'both' ? (
+          <TextInput
+            value={captionEn}
+            onChangeText={setCaptionEn}
+            placeholder={t('cnew.s39')}
+            placeholderTextColor={colors.charcoal3}
+            multiline
+            maxLength={5000}
+            accessibilityLabel={t('cnew.s39')}
+            maxFontSizeMultiplier={1.3}
+            style={styles.captionInput}
+          />
+        ) : null}
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s35')} disabled={captionBusy} onPress={() => void writeCaption('write')} style={captionBusy ? styles.disabled : null}>
+          <Text style={styles.link}>{captionBusy ? t('cnew.s36') : t('cnew.s35')}</Text>
+        </Pressable>
+        <View style={styles.chips}>
+          {([
+            ['shorter', 's40'],
+            ['warmer', 's41'],
+            ['professional', 's42'],
+            ['price', 's43'],
+            ['booking', 's44'],
+            ['again', 's45']
+          ] as const).map(([tone, key]) => (
+            <Chip key={tone} label={t(`cnew.${key}`)} selected={false} onPress={() => void writeCaption(tone)} />
+          ))}
+        </View>
+        {captionNote ? <SupportText>{captionNote}</SupportText> : null}
         <SupportText tone={captionTooLongForInstagram ? 'critical' : 'secondary'}>
-          {caption.length} characters{platforms.includes('instagram') ? ` · Instagram limit ${IG_CAPTION_LIMIT}` : ''}
+          {postedCaption.length} characters{platforms.includes('instagram') ? ` · Instagram limit ${IG_CAPTION_LIMIT}` : ''}
         </SupportText>
         <TextInput
           value={hashtagText}

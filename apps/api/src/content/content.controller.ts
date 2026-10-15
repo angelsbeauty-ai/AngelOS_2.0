@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { SocialService } from './social.service';
 import { CreateCampaignDto, HashtagSetDto, LineBroadcastDto, LineDraftDto, MarkPostedDto, PlanDaysDto } from './dto/social.dto';
+import { ComposeCaptionDto } from './dto/compose-caption.dto';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
@@ -26,6 +27,7 @@ export class ContentController {
   @Post('campaigns/:campaignId/plan') planCampaign(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('campaignId') id: string) { return this.social.planCampaign(user, ws, id); }
   @Get('hashtag-sets') hashtagSets(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.social.listHashtagSets(user, ws); }
   @Post('hashtag-sets') saveHashtagSet(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Body() dto: HashtagSetDto) { return this.social.saveHashtagSet(user, ws, dto); }
+  @Post('caption') composeCaption(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Body() dto: ComposeCaptionDto) { return this.social.composeCaption(user, ws, dto); }
   @Delete('hashtag-sets/:setId') deleteHashtagSet(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('setId') id: string) { return this.social.deleteHashtagSet(user, ws, id); }
   @Get('line/estimate') lineEstimate(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.social.lineEstimate(user, ws); }
   @Post('line/drafts') lineDraft(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Body() dto: LineDraftDto) { return this.social.lineDraft(user, ws, dto); }

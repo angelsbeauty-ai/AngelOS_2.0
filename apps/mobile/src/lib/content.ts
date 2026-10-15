@@ -90,6 +90,25 @@ export function createComposerDraft(workspaceId: string, input: ComposerDraftInp
   return apiFetch<ContentPost>(`/workspaces/${workspaceId}/content/drafts`, { method: 'POST', body: JSON.stringify(input) });
 }
 
+export type CaptionTone = 'write' | 'shorter' | 'warmer' | 'professional' | 'price' | 'booking' | 'again';
+
+/** Starting caption only. Nothing is saved or posted. */
+export function draftCaption(workspaceId: string, input: {
+  objective: ContentObjective;
+  language: 'en' | 'ja' | 'both';
+  tone?: CaptionTone;
+  title?: string;
+  note?: string;
+  caption?: string;
+  captionEn?: string;
+  seed?: number;
+}) {
+  return apiFetch<{ caption: string; captionJa: string; captionEn: string; hashtags: string[]; hook: string; source: 'template' | 'angelos' }>(
+    `/workspaces/${workspaceId}/content/caption`,
+    { method: 'POST', body: JSON.stringify(input) }
+  );
+}
+
 /** Calendar day for a post: its earliest planned/scheduled time, else when it was created. */
 export function contentPostDate(post: ContentPost): Date | null {
   const planned = (post.variants ?? []).map((variant) => variant.scheduled_for).filter((value): value is string => Boolean(value)).sort()[0];

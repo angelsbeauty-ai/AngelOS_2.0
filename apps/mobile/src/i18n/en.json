@@ -1312,7 +1312,20 @@
   "s22": "Tomorrow",
   "s23": "In a week",
   "s24": "Save draft",
-  "s34": "Draft saved"
+  "s34": "Draft saved",
+  "s35": "Write with AngelOS",
+  "s36": "Writing…",
+  "s37": "A starting caption. Change anything that does not sound like you. Nothing is posted yet.",
+  "s38": "Choose a goal first.",
+  "s39": "English caption",
+  "s40": "Shorter",
+  "s41": "Warmer",
+  "s42": "More professional",
+  "s43": "Add price",
+  "s44": "Add booking line",
+  "s45": "Try again",
+  "s46": "Could not write a caption",
+  "s47": "This replaces the caption you have now. You can still edit it before saving."
  },
  "ba": {
   "s0": "Only photos marked \"OK for marketing\" from clients with photo consent can be used.",
