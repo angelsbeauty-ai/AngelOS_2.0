@@ -15,6 +15,9 @@ export class AnalyticsController {
   @Get('business')
   business(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('days') days?: string) { return this.analytics.business(user, workspaceId, Number(days) || 30); }
 
+  @Get('posts/:contentPostId')
+  postInsights(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('contentPostId') id: string) { return this.analytics.postInsights(user, workspaceId, id); }
+
   @Get('overview')
   overview(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('days') days?: string) {
     return this.analytics.overview(user, workspaceId, Number(days ?? 30));
