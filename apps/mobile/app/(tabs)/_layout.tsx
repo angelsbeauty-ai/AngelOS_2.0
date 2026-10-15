@@ -34,7 +34,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="calendar" options={{ ...studio, title: t('tabs.calendar'), tabBarIcon: ({ color }) => <Calendar size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="social" options={{ ...studio, title: t('tabs.social'), tabBarIcon: ({ color }) => <ShareNetwork size={24} color={color as string} weight="duotone" /> }} />
       <Tabs.Screen name="academy" options={{ href: student ? undefined : null, title: t('tabs.academy'), tabBarIcon: ({ color }) => <GraduationCap size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="account" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color }) => <UserCircle size={24} color={color as string} weight="duotone" /> }} />
     </Tabs>
   );

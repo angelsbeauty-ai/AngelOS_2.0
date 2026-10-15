@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { CheckCircle } from 'phosphor-react-native/src/icons/CheckCircle';
 import { Warning } from 'phosphor-react-native/src/icons/Warning';
 import { Button } from './ui';
 import { dialog } from '../lib/dialog';
@@ -16,6 +17,7 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
   const { t } = useTranslation();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sent, setSent] = useState(false);
   const ok = text.trim() === 'DELETE';
 
   async function send() {
@@ -24,14 +26,21 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
     setBusy(true);
     try {
       await submitBetaFeedback(workspaceId, { category: 'support', message: `Account deletion request from ${email ?? 'this account'} (typed DELETE in the app). Please confirm by email before removing anything.`, permissionToContact: true });
-      onClose(); setText('');
-      await dialog.notify(t('pf.delSent'), t('pf.delSentMsg'));
+      setText(''); setSent(true);
     } catch (e) { await dialog.notify(t('pf.delFail'), e instanceof Error ? e.message : ''); }
     finally { setBusy(false); }
   }
 
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <View style={styles.backdrop}><View style={styles.sheet}>
+      {sent ? <>
+        <View style={[styles.warn, { backgroundColor: 'rgba(54,106,73,0.12)' }]}><CheckCircle size={30} color="#366A49" weight="duotone" /></View>
+        <Text style={styles.title}>{t('pf.delSent')}</Text>
+        <Text style={styles.body}>{t('pf.delSentMsg')}</Text>
+        <Text style={styles.body}>{t('pf.delSentData')}</Text>
+        <Text style={[styles.body, { fontFamily: tokens.font.uiSemibold }]}>{t('pf.delSentSub')}</Text>
+        <Button label={t('pf.delDone')} onPress={() => { setSent(false); onClose(); }} />
+      </> : <>
       <View style={styles.warn}><Warning size={30} color="#A8432C" weight="duotone" /></View>
       <Text style={styles.title}>{t('pf.delTitle')}</Text>
       <Text style={styles.body}>{t('pf.delBody')}</Text>
@@ -39,6 +48,7 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
       <TextInput value={text} onChangeText={setText} autoCapitalize="characters" autoCorrect={false} placeholder="DELETE" placeholderTextColor="#A69C94" style={styles.input} accessibilityLabel={t('pf.delType')} />
       <Button label={t('pf.delKeep')} onPress={() => { setText(''); onClose(); }} />
       <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ok || busy }} disabled={!ok || busy} onPress={() => void send()} style={[styles.danger, (!ok || busy) && { opacity: 0.4 }]}><Text style={styles.dangerText}>{t('pf.delGo')}</Text></Pressable>
+      </>}
     </View></View>
   </Modal>;
 }

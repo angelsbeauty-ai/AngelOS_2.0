@@ -787,10 +787,13 @@
   "delKeep": "Keep my account",
   "delGo": "Request deletion",
   "delSent": "Request sent",
-  "delSentMsg": "We've received your deletion request and will confirm by email before anything is removed.",
+  "delSentMsg": "We received your request to delete your account. We will email you to confirm before anything is removed.",
   "delNoStudio": "Please ask for deletion through Help so we can confirm it's you.",
   "delFail": "Couldn't send the request",
-  "founderNoDelete": "Founder accounts can't be deleted from the app."
+  "founderNoDelete": "Founder accounts can't be deleted from the app.",
+  "delSentData": "After we confirm, we delete your account and business data (clients, bookings, notes, photos). This cannot be undone.",
+  "delSentSub": "Deleting your account does not cancel an Apple subscription. Cancel it in iPhone Settings → your name → Subscriptions.",
+  "delDone": "Done"
  },
  "s3": {
   "week": "Week view",

@@ -6,7 +6,7 @@ import { Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleShe
 import { router, usePathname } from 'expo-router';
 import { colors, spacing, tokens } from '../design/theme';
 
-const TAB_PATHS = new Set(['/', '/clients', '/calendar', '/social', '/account', '/academy', '/profile']);
+const TAB_PATHS = new Set(['/', '/clients', '/calendar', '/social', '/academy', '/profile']);
 const NO_ASK = /^\/(ai|login|onboarding|forgot-password|reset-password)(\/|$)/;
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
