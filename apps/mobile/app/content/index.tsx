@@ -102,6 +102,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       {state === 'nostudio' ? <NoStudio /> : null}
       {state === 'error' ? <View style={styles.calm}><Text style={styles.calmTitle}>{t('s3.errTitle')}</Text><Text style={styles.calmBody}>{t('s3.errBody')}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
 
+      {ws && asCalendar && state === 'ready' ? <AccountsStrip workspaceId={ws} /> : null}
       {empty ? <View style={styles.calm}>
         <View style={styles.emptyIcon}><ImageSquare size={30} color={ROSE} weight="duotone" /></View>
         <Text style={styles.calmTitle}>{t('s3.emptyTitle')}</Text><Text style={styles.calmBody}>{t('s3.emptyBody')}</Text>
@@ -111,7 +112,6 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
 
       {state === 'ready' && !empty ? <>
         {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
-        {ws && asCalendar ? <AccountsStrip workspaceId={ws} /> : null}
         <View style={styles.strip}>
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
