@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
@@ -30,6 +31,7 @@ const LENGTH = [['short', 'Short'], ['medium', 'Medium'], ['detailed', 'Detailed
 const FORMALITY: Record<string, string> = { casual: 'casual', polite: 'polite', formal: 'formal' };
 
 export default function AiSettingsScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [profile, setProfile] = useState<AssistantProfile | null>(null);
   const [roles, setRoles] = useState<AssistantRole[]>([]);
@@ -71,80 +73,80 @@ export default function AiSettingsScreen() {
   const saveProfile = (patch: Record<string, unknown>) => workspaceId && act(() => updateAssistantProfile(workspaceId, patch), setProfile);
   const saveStyle = (patch: Record<string, unknown>) => workspaceId && act(() => updateReplyStyle(workspaceId, patch), setStyle);
 
-  if (state === 'error') return <Screen><ErrorState title="We couldn't load assistant settings" message="Check your connection and try again." onRetry={() => { setState('loading'); void load(); }} /></Screen>;
-  if (!profile || !workspaceId) return <Screen><Card><SupportText>Loading assistant settings…</SupportText></Card></Screen>;
+  if (state === 'error') return <Screen><ErrorState title={t('aiset.s23')} message={t('aiset.s24')} onRetry={() => { setState('loading'); void load(); }} /></Screen>;
+  if (!profile || !workspaceId) return <Screen><Card><SupportText>{t('aiset.s0')}</SupportText></Card></Screen>;
   const learned = style?.learned ?? {};
 
   return <Screen>
-    <ScreenTitle>Assistant settings</ScreenTitle>
-    <SupportText>How AngelOS talks to you, and how it writes to your clients.</SupportText>
+    <ScreenTitle>{t('aiset.s1')}</ScreenTitle>
+    <SupportText>{t('aiset.s2')}</SupportText>
 
     <Card premium>
-      <SectionTitle>Your assistant</SectionTitle>
-      <Text style={styles.label}>Name</Text>
-      <TextInput accessibilityLabel="Assistant name" value={name} onChangeText={setName} onBlur={() => { if (name.trim() && name.trim() !== profile.display_name) void saveProfile({ displayName: name.trim() }); }} style={styles.input} />
-      <Text style={styles.label}>How it talks to you</Text>
-      <View style={styles.chips}>{OWNER_TONES.map(([key, label]) => <Chip key={key} label={label} selected={profile.tone === key} onPress={() => void saveProfile({ tone: key })} />)}</View>
-      <Text style={styles.label}>Personality (optional)</Text>
-      <TextInput accessibilityLabel="Assistant personality" value={personality} onChangeText={setPersonality} multiline placeholder="Warm, calm, short answers." placeholderTextColor={ui.colors.secondaryText} style={[styles.input, styles.multi]} />
-      {personality !== (profile.personality_prompt ?? '') ? <ActionButton label="Save personality" disabled={busy} onPress={() => void saveProfile({ personalityPrompt: personality.trim() })} /> : null}
-      <Text style={styles.label}>How much should it lead?</Text>
+      <SectionTitle>{t('aiset.s3')}</SectionTitle>
+      <Text style={styles.label}>{t('aiset.w.name')}</Text>
+      <TextInput accessibilityLabel={t('aiset.s25')} value={name} onChangeText={setName} onBlur={() => { if (name.trim() && name.trim() !== profile.display_name) void saveProfile({ displayName: name.trim() }); }} style={styles.input} />
+      <Text style={styles.label}>{t('aiset.s4')}</Text>
+      <View style={styles.chips}>{OWNER_TONES.map(([key, label]) => <Chip key={key} label={t(`aiset.opt.${key}`, label)} selected={profile.tone === key} onPress={() => void saveProfile({ tone: key })} />)}</View>
+      <Text style={styles.label}>{t('aiset.s5')}</Text>
+      <TextInput accessibilityLabel={t('aiset.s26')} value={personality} onChangeText={setPersonality} multiline placeholder={t('aiset.s27')} placeholderTextColor={ui.colors.secondaryText} style={[styles.input, styles.multi]} />
+      {personality !== (profile.personality_prompt ?? '') ? <ActionButton label={t('aiset.s28')} disabled={busy} onPress={() => void saveProfile({ personalityPrompt: personality.trim() })} /> : null}
+      <Text style={styles.label}>{t('aiset.s6')}</Text>
       <View style={styles.chips}>{(['low', 'balanced', 'high'] as const).map((value) => <Chip key={value} label={value === 'low' ? 'Only when asked' : value === 'balanced' ? 'Balanced' : 'Very proactive'} selected={profile.proactivity === value} onPress={() => void saveProfile({ proactivity: value })} />)}</View>
     </Card>
 
     <Card>
-      <SectionTitle>Your voice</SectionTitle>
-      <SupportText>Used for client reply drafts, reminder and assistant message drafts, post captions and LINE broadcasts, so everything sounds like you. Japanese drafts stay in a friendly salon tone and never mix in English.</SupportText>
+      <SectionTitle>{t('aiset.s7')}</SectionTitle>
+      <SupportText>{t('aiset.s8')}</SupportText>
       {styleMigration ? <Banner tone="warning"><SupportText tone="warning">These settings need the database update {styleMigration}. It is waiting for your yes. Until then drafts use "Casual & friendly".</SupportText></Banner> : null}
-      <Text style={styles.label}>Tone</Text>
-      <View style={styles.chips}>{REPLY_TONES.map(([key, label]) => <Chip key={key} label={label} selected={style?.reply_tone === key} onPress={() => void saveStyle({ replyTone: key })} />)}</View>
-      <Text style={styles.label}>Emoji</Text>
-      <View style={styles.chips}>{EMOJI.map(([key, label]) => <Chip key={key} label={label} selected={style?.emoji_level === key} onPress={() => void saveStyle({ emojiLevel: key })} />)}</View>
-      <Text style={styles.label}>Length</Text>
-      <View style={styles.chips}>{LENGTH.map(([key, label]) => <Chip key={key} label={label} selected={style?.reply_length === key} onPress={() => void saveStyle({ replyLength: key })} />)}</View>
-      <Text style={styles.label}>Style notes</Text>
-      <TextInput accessibilityLabel="Style notes" value={notes} onChangeText={setNotes} multiline placeholder='e.g. "Always thank them for choosing Angels Beauty. Never use 様, use さん."' placeholderTextColor={ui.colors.secondaryText} style={[styles.input, styles.multi]} />
-      {notes !== (style?.style_notes ?? '') ? <ActionButton label="Save notes" disabled={busy} onPress={() => void saveStyle({ styleNotes: notes })} /> : null}
+      <Text style={styles.label}>{t('aiset.w.tone')}</Text>
+      <View style={styles.chips}>{REPLY_TONES.map(([key, label]) => <Chip key={key} label={t(`aiset.opt.${key}`, label)} selected={style?.reply_tone === key} onPress={() => void saveStyle({ replyTone: key })} />)}</View>
+      <Text style={styles.label}>{t('aiset.w.emoji')}</Text>
+      <View style={styles.chips}>{EMOJI.map(([key, label]) => <Chip key={key} label={t(`aiset.opt.${key}`, label)} selected={style?.emoji_level === key} onPress={() => void saveStyle({ emojiLevel: key })} />)}</View>
+      <Text style={styles.label}>{t('aiset.w.length')}</Text>
+      <View style={styles.chips}>{LENGTH.map(([key, label]) => <Chip key={key} label={t(`aiset.opt.${key}`, label)} selected={style?.reply_length === key} onPress={() => void saveStyle({ replyLength: key })} />)}</View>
+      <Text style={styles.label}>{t('aiset.s9')}</Text>
+      <TextInput accessibilityLabel={t('aiset.s9')} value={notes} onChangeText={setNotes} multiline placeholder='e.g. "Always thank them for choosing Angels Beauty. Never use 様, use さん."' placeholderTextColor={ui.colors.secondaryText} style={[styles.input, styles.multi]} />
+      {notes !== (style?.style_notes ?? '') ? <ActionButton label={t('aiset.s29')} disabled={busy} onPress={() => void saveStyle({ styleNotes: notes })} /> : null}
     </Card>
 
     <Card>
       <View style={styles.toggleRow}>
-        <View style={{ flex: 1, gap: 2 }}><SectionTitle>Learn from my replies</SectionTitle><SupportText>AngelOS looks at replies you write or edit, and slowly learns your style. It keeps a short summary, not your messages.</SupportText></View>
-        <Switch accessibilityLabel="Learn from my replies" value={style?.learn_from_replies ?? true} disabled={busy || Boolean(styleMigration)} onValueChange={(value) => void saveStyle({ learnFromReplies: value })} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(style?.learn_from_replies ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
+        <View style={{ flex: 1, gap: 2 }}><SectionTitle>{t('aiset.s10')}</SectionTitle><SupportText>{t('aiset.s11')}</SupportText></View>
+        <Switch accessibilityLabel={t('aiset.s10')} value={style?.learn_from_replies ?? true} disabled={busy || Boolean(styleMigration)} onValueChange={(value) => void saveStyle({ learnFromReplies: value })} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(style?.learn_from_replies ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
       </View>
       {learned.sampleCount ? <View style={styles.learned}>
         <Text style={styles.learnedTitle}>What it learned from {learned.sampleCount} replies</Text>
         <SupportText>• Languages: {learned.languageMix?.ja ?? 0} Japanese, {learned.languageMix?.en ?? 0} English</SupportText>
         <SupportText>• Usually {learned.lengthBand} replies, {FORMALITY[learned.formality ?? 'polite']} tone, about {learned.emojiPerReply ?? 0} emoji each {learned.topEmojis?.length ? `(${learned.topEmojis.join(' ')})` : ''}</SupportText>
-        {learned.usesClientName ? <SupportText>• You use the client's name</SupportText> : null}
+        {learned.usesClientName ? <SupportText>{t('aiset.s12')}</SupportText> : null}
         {learned.greetings?.length ? <SupportText>• Openings: {learned.greetings.join(' / ')}</SupportText> : null}
         {learned.closings?.length ? <SupportText>• Closings: {learned.closings.join(' / ')}</SupportText> : null}
         {style?.learned_at ? <SupportText>Last learned {new Date(style.learned_at).toLocaleString()}</SupportText> : null}
-      </View> : <SupportText>Nothing learned yet. It starts after you approve a few replies you wrote or edited yourself.</SupportText>}
+      </View> : <SupportText>{t('aiset.s13')}</SupportText>}
       <ActionButton label={busy ? 'Learning…' : 'Learn now'} disabled={busy || Boolean(styleMigration) || style?.learn_from_replies === false} onPress={() => void act(() => learnReplyStyleNow(workspaceId), (result) => { void load(); void dialog.notify('Done', result.newSuggestions ? `${result.newSuggestions} new repeated reply suggestion(s) below.` : 'Your style summary is up to date.'); })} />
     </Card>
 
     <Card>
-      <SectionTitle>Repeated replies AngelOS noticed</SectionTitle>
-      <SupportText>Replies you sent 3 or more times (for example aftercare). Approve one to make it a saved reply the AI can use.</SupportText>
-      {suggested.length === 0 ? <SupportText>None right now.</SupportText> : null}
+      <SectionTitle>{t('aiset.s14')}</SectionTitle>
+      <SupportText>{t('aiset.s15')}</SupportText>
+      {suggested.length === 0 ? <SupportText>{t('aiset.s16')}</SupportText> : null}
       {suggested.map((item) => editing?.id === item.id ? <View key={item.id} style={styles.suggestion}>
-        <TextInput accessibilityLabel="Title" value={editing.title} onChangeText={(title) => setEditing({ ...editing, title })} style={styles.input} />
-        {item.body_ja !== null ? <><Text style={styles.label}>日本語</Text><TextInput accessibilityLabel="Japanese text" value={editing.bodyJa} onChangeText={(bodyJa) => setEditing({ ...editing, bodyJa })} multiline style={[styles.input, styles.multi]} /></> : null}
+        <TextInput accessibilityLabel={t('aiset.s30')} value={editing.title} onChangeText={(title) => setEditing({ ...editing, title })} style={styles.input} />
+        {item.body_ja !== null ? <><Text style={styles.label}>日本語</Text><TextInput accessibilityLabel={t('aiset.s31')} value={editing.bodyJa} onChangeText={(bodyJa) => setEditing({ ...editing, bodyJa })} multiline style={[styles.input, styles.multi]} /></> : null}
         <Text style={styles.label}>English</Text>
-        <TextInput accessibilityLabel="English text" value={editing.bodyEn} onChangeText={(bodyEn) => setEditing({ ...editing, bodyEn })} multiline style={[styles.input, styles.multi]} />
-        {item.body_ja !== null && editing.bodyJa !== item.body_ja ? <ActionButton label="Update English meaning" disabled={busy || !editing.bodyJa.trim()} onPress={() => void act(() => translateText(workspaceId, editing.bodyJa.trim(), 'en'), (result) => setEditing({ ...editing, bodyEn: result.translation, checkedJa: editing.bodyJa }))} /> : null}
+        <TextInput accessibilityLabel={t('aiset.s32')} value={editing.bodyEn} onChangeText={(bodyEn) => setEditing({ ...editing, bodyEn })} multiline style={[styles.input, styles.multi]} />
+        {item.body_ja !== null && editing.bodyJa !== item.body_ja ? <ActionButton label={t('aiset.s33')} disabled={busy || !editing.bodyJa.trim()} onPress={() => void act(() => translateText(workspaceId, editing.bodyJa.trim(), 'en'), (result) => setEditing({ ...editing, bodyEn: result.translation, checkedJa: editing.bodyJa }))} /> : null}
         <View style={styles.chips}>
-          <ActionButton kind="primary" label="Approve" disabled={busy || (item.body_ja !== null && editing.bodyJa !== item.body_ja && editing.checkedJa !== editing.bodyJa)} onPress={() => void act(() => approveSuggestedReply(workspaceId, item.id, { title: editing.title, bodyEn: editing.bodyEn, ...(item.body_ja !== null ? { bodyJa: editing.bodyJa } : {}) }), () => { setEditing(null); void load(); })} />
-          <ActionButton kind="quiet" label="Cancel" onPress={() => setEditing(null)} />
+          <ActionButton kind="primary" label={t('aiset.s34')} disabled={busy || (item.body_ja !== null && editing.bodyJa !== item.body_ja && editing.checkedJa !== editing.bodyJa)} onPress={() => void act(() => approveSuggestedReply(workspaceId, item.id, { title: editing.title, bodyEn: editing.bodyEn, ...(item.body_ja !== null ? { bodyJa: editing.bodyJa } : {}) }), () => { setEditing(null); void load(); })} />
+          <ActionButton kind="quiet" label={t('aiset.s35')} onPress={() => setEditing(null)} />
         </View>
       </View> : <View key={item.id} style={styles.suggestion}>
         <View style={styles.toggleRow}><Text style={styles.learnedTitle}>{item.title}</Text><SupportText>sent {item.occurrences ?? 3}×</SupportText></View>
         {item.body_ja ? <BilingualBlock ja={item.body_ja} en={item.body_en} labelJa="日本語" labelEn="English meaning" /> : <Text style={styles.body}>{item.body_en}</Text>}
         <View style={styles.chips}>
-          <ActionButton kind="primary" label="Approve" disabled={busy} onPress={() => void act(() => approveSuggestedReply(workspaceId, item.id), () => void load())} />
-          <ActionButton label="Edit" onPress={() => setEditing({ id: item.id, title: item.title, bodyEn: item.body_en ?? '', bodyJa: item.body_ja ?? '' })} />
-          <ActionButton kind="quiet" label="Reject" disabled={busy} onPress={() => void act(() => rejectSuggestedReply(workspaceId, item.id), () => void load())} />
+          <ActionButton kind="primary" label={t('aiset.s34')} disabled={busy} onPress={() => void act(() => approveSuggestedReply(workspaceId, item.id), () => void load())} />
+          <ActionButton label={t('aiset.s36')} onPress={() => setEditing({ id: item.id, title: item.title, bodyEn: item.body_en ?? '', bodyJa: item.body_ja ?? '' })} />
+          <ActionButton kind="quiet" label={t('aiset.s37')} disabled={busy} onPress={() => void act(() => rejectSuggestedReply(workspaceId, item.id), () => void load())} />
         </View>
       </View>)}
     </Card>
@@ -152,16 +154,16 @@ export default function AiSettingsScreen() {
     <Card>
       <SectionTitle>Roles</SectionTitle>
       {ROLE_COPY.map((role) => <View key={role.key} style={styles.toggleRow}>
-        <View style={{ flex: 1, gap: 2 }}><Text style={styles.learnedTitle}>{role.label}</Text><SupportText>{role.description}</SupportText></View>
-        <Switch accessibilityLabel={role.label} value={roleMap.get(role.key) ?? true} disabled={busy} onValueChange={(value) => void act(() => updateAssistantRoles(workspaceId, { [role.key]: value }), (result) => setRoles(result.roles))} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(roleMap.get(role.key) ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
+        <View style={{ flex: 1, gap: 2 }}><Text style={styles.learnedTitle}>{t(`aiset.role.${role.key}.l`, role.label)}</Text><SupportText>{t(`aiset.role.${role.key}.d`, role.description)}</SupportText></View>
+        <Switch accessibilityLabel={t(`aiset.role.${role.key}.l`, role.label)} value={roleMap.get(role.key) ?? true} disabled={busy} onValueChange={(value) => void act(() => updateAssistantRoles(workspaceId, { [role.key]: value }), (result) => setRoles(result.roles))} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(roleMap.get(role.key) ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
       </View>)}
     </Card>
 
     <Card>
-      <SectionTitle>What AngelOS remembers</SectionTitle>
-      <SupportText>AngelOS keeps short usage summaries (not voice recordings or message text) to improve the assistant.</SupportText>
+      <SectionTitle>{t('aiset.s17')}</SectionTitle>
+      <SupportText>{t('aiset.s18')}</SupportText>
       {memory?.needsMigration ? <Banner><SupportText>Memory starts after a database update ({memory.needsMigration}).</SupportText></Banner> : null}
-      {memory && !memory.needsMigration && memory.summaries.length === 0 ? <SupportText>Nothing yet. It fills in as you use AngelOS.</SupportText> : null}
+      {memory && !memory.needsMigration && memory.summaries.length === 0 ? <SupportText>{t('aiset.s19')}</SupportText> : null}
       {(memory?.summaries ?? []).slice(0, 8).map((item) => <View key={`${item.kind}:${item.topic}`} style={styles.memoryRow}>
         <Text style={[styles.body, { flex: 1 }]}>{item.summary}</Text>
         <Text style={styles.count}>{item.request_count}×</Text>
@@ -169,9 +171,9 @@ export default function AiSettingsScreen() {
     </Card>
 
     <Card>
-      <SectionTitle>Everyday guidance</SectionTitle>
-      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>Ask useful follow-up questions</Text></View><Switch accessibilityLabel="Ask useful follow-up questions" value={profile.guidance_questions_enabled} onValueChange={(value) => void saveProfile({ guidanceQuestionsEnabled: value })} /></View>
-      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>Explain recommendations</Text></View><Switch accessibilityLabel="Explain recommendations" value={profile.explain_recommendations} onValueChange={(value) => void saveProfile({ explainRecommendations: value })} /></View>
+      <SectionTitle>{t('aiset.s20')}</SectionTitle>
+      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>{t('aiset.s21')}</Text></View><Switch accessibilityLabel={t('aiset.s21')} value={profile.guidance_questions_enabled} onValueChange={(value) => void saveProfile({ guidanceQuestionsEnabled: value })} /></View>
+      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>{t('aiset.s22')}</Text></View><Switch accessibilityLabel={t('aiset.s22')} value={profile.explain_recommendations} onValueChange={(value) => void saveProfile({ explainRecommendations: value })} /></View>
     </Card>
   </Screen>;
 }

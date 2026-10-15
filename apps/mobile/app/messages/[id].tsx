@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -18,6 +19,7 @@ import { tokens } from '../../src/design/theme';
 const APP_NAME: Record<string, string> = { line: 'LINE', instagram: 'Instagram', facebook: 'Messenger', other: 'the app' };
 
 export default function MessageThreadScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [detail, setDetail] = useState<MessageThreadDetail | null>(null);
@@ -57,8 +59,8 @@ export default function MessageThreadScreen() {
     } finally { setBusy(null); }
   }
 
-  if (state === 'error') return <Screen><ErrorState title="We couldn't load this conversation" message="Check your connection and try again. Nothing has been lost." onRetry={() => { setState('loading'); void load(); }} /></Screen>;
-  if (!detail || !workspaceId) return <Screen><Card><SupportText>Loading conversation…</SupportText></Card></Screen>;
+  if (state === 'error') return <Screen><ErrorState title={t('msgd.s12')} message={t('msgd.s13')} onRetry={() => { setState('loading'); void load(); }} /></Screen>;
+  if (!detail || !workspaceId) return <Screen><Card><SupportText>{t('msgd.s0')}</SupportText></Card></Screen>;
 
   const thread = detail.thread;
   const name = thread.client?.display_name ?? thread.contact_display_name ?? 'Conversation';
@@ -74,7 +76,7 @@ export default function MessageThreadScreen() {
 
   async function approveDraft() {
     if (!pendingDraft) return;
-    const ok = await dialog.confirm({ title: 'Approve this reply?', message: manual ? `It will be ready to copy into ${appName}. AngelOS does not send it for you.` : `AngelOS will send it to ${name} on ${appName}.`, confirmText: 'Approve' });
+    const ok = await dialog.confirm({ title: t('msgd.s31'), message: manual ? `It will be ready to copy into ${appName}. AngelOS does not send it for you.` : `AngelOS will send it to ${name} on ${appName}.`, confirmText: t('msgd.s32') });
     if (!ok) return;
     await run('approve', async () => {
       const result = await approveReply(workspaceId!, pendingDraft.id, draftEdited ? draftBody : undefined);
@@ -84,7 +86,7 @@ export default function MessageThreadScreen() {
   }
 
   async function approveOwnReply() {
-    const ok = await dialog.confirm({ title: 'Approve this reply?', message: manual ? `It will be ready to copy into ${appName}.` : `AngelOS will send it to ${name} on ${appName}.`, confirmText: 'Approve' });
+    const ok = await dialog.confirm({ title: t('msgd.s31'), message: manual ? `It will be ready to copy into ${appName}.` : `AngelOS will send it to ${name} on ${appName}.`, confirmText: t('msgd.s32') });
     if (!ok) return;
     await run('reply', async () => { await createMessageReply(workspaceId!, thread.id, reply.trim(), true); setReply(''); setReplyMeaning(null); });
   }
@@ -115,13 +117,13 @@ export default function MessageThreadScreen() {
     </View>
     <View style={styles.actions}>
       {thread.status === 'done'
-        ? <ActionButton label="Reopen" onPress={() => void run('status', () => updateThread(workspaceId, thread.id, { status: 'needs_reply' }))} />
-        : <ActionButton label="Mark done" onPress={() => void run('status', () => updateThread(workspaceId, thread.id, { status: 'done' }))} />}
+        ? <ActionButton label={t('msgd.s14')} onPress={() => void run('status', () => updateThread(workspaceId, thread.id, { status: 'needs_reply' }))} />
+        : <ActionButton label={t('msgd.s15')} onPress={() => void run('status', () => updateThread(workspaceId, thread.id, { status: 'done' }))} />}
       <ActionButton label={thread.archived ? 'Unarchive' : 'Archive'} onPress={() => void run('archive', async () => { await updateThread(workspaceId, thread.id, { archived: !thread.archived }); if (!thread.archived) router.back(); }, thread.archived)} />
-      {thread.client ? <ActionButton label="Book this person" onPress={() => router.push({ pathname: '/bookings/new', params: { clientId: thread.client!.id } } as any)} /> : null}
-      <ActionButton kind="quiet" label="Ask AI" onPress={() => router.push({ pathname: '/ai', params: { screen: 'messages', entityType: 'message_thread', entityId: thread.id, entityLabel: name } } as any)} />
+      {thread.client ? <ActionButton label={t('msgd.s16')} onPress={() => router.push({ pathname: '/bookings/new', params: { clientId: thread.client!.id } } as any)} /> : null}
+      <ActionButton kind="quiet" label={t('msgd.s17')} onPress={() => router.push({ pathname: '/ai', params: { screen: 'messages', entityType: 'message_thread', entityId: thread.id, entityLabel: name } } as any)} />
     </View>
-    {thread.needs_owner ? <Banner tone="warning"><SupportText tone="warning">This one needs you personally (complaint, health or unclear sender). Read carefully before replying.</SupportText></Banner> : null}
+    {thread.needs_owner ? <Banner tone="warning"><SupportText tone="warning">{t('msgd.s1')}</SupportText></Banner> : null}
 
     <View style={styles.bubbles}>
       {visibleMessages.map((message) => <Bubble key={message.id} message={message} appName={appName} manual={manual} busy={busy}
@@ -132,21 +134,21 @@ export default function MessageThreadScreen() {
 
     {manual ? <Card>
       <SectionTitle>Did {firstName} write again?</SectionTitle>
-      <TextInput accessibilityLabel="Paste the client's next message" value={pasted} onChangeText={setPasted} placeholder="Paste their next message" placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.small]} />
-      <ActionButton label="Add their message" disabled={!pasted.trim() || Boolean(busy)} onPress={() => void run('paste', async () => { await addInboundMessage(workspaceId, thread.id, pasted.trim()); setPasted(''); })} />
+      <TextInput accessibilityLabel={t('msgd.s18')} value={pasted} onChangeText={setPasted} placeholder={t('msgd.s19')} placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.small]} />
+      <ActionButton label={t('msgd.s20')} disabled={!pasted.trim() || Boolean(busy)} onPress={() => void run('paste', async () => { await addInboundMessage(workspaceId, thread.id, pasted.trim()); setPasted(''); })} />
     </Card> : null}
 
     <Card premium>
-      <SectionTitle>AI reply draft</SectionTitle>
+      <SectionTitle>{t('msgd.s2')}</SectionTitle>
       {pendingDraft ? <>
-        {pendingDraft.metadata?.mixed_language_warning ? <SupportText tone="warning">This draft mixes English and Japanese. Please fix it before approving.</SupportText> : null}
+        {pendingDraft.metadata?.mixed_language_warning ? <SupportText tone="warning">{t('msgd.s3')}</SupportText> : null}
         {draftIsJa ? <BilingualBlock ja={draftBody} en={draftEnglish} /> : null}
-        <TextInput accessibilityLabel="Edit the AI draft" value={draftBody} onChangeText={(text) => { setDraftText(text); setDraftMeaning(null); }} multiline style={[styles.input, styles.medium]} />
-        {draftIsJa && draftEdited && !draftMeaning ? <ActionButton label="Update English meaning" onPress={() => void run('meaning', async () => setDraftMeaning((await translateText(workspaceId, draftBody, 'en')).translation), false)} /> : null}
-        <SupportText>Nothing is sent until you tap Approve.</SupportText>
+        <TextInput accessibilityLabel={t('msgd.s21')} value={draftBody} onChangeText={(text) => { setDraftText(text); setDraftMeaning(null); }} multiline style={[styles.input, styles.medium]} />
+        {draftIsJa && draftEdited && !draftMeaning ? <ActionButton label={t('msgd.s22')} onPress={() => void run('meaning', async () => setDraftMeaning((await translateText(workspaceId, draftBody, 'en')).translation), false)} /> : null}
+        <SupportText>{t('msgd.s4')}</SupportText>
         <View style={styles.inline}>
           <ActionButton kind="primary" label={busy === 'approve' ? 'Approving…' : 'Approve'} disabled={Boolean(busy) || !draftBody.trim() || (draftIsJa && !draftEnglish)} onPress={() => void approveDraft()} />
-          <ActionButton label="New draft" disabled={Boolean(busy)} onPress={() => void run('draft', async () => { setDraftText(null); await createAiReplyDraft(workspaceId, thread.id); })} />
+          <ActionButton label={t('msgd.s23')} disabled={Boolean(busy)} onPress={() => void run('draft', async () => { setDraftText(null); await createAiReplyDraft(workspaceId, thread.id); })} />
         </View>
       </> : <>
         <SupportText>AngelOS writes a reply in {thread.reply_language === 'ja' ? 'friendly Japanese, with the English meaning next to it' : 'English'}. You check it, edit it, then approve.</SupportText>
@@ -155,47 +157,48 @@ export default function MessageThreadScreen() {
     </Card>
 
     <Card>
-      <SectionTitle>Write your own reply</SectionTitle>
+      <SectionTitle>{t('msgd.s5')}</SectionTitle>
       <ActionButton label={showSaved ? 'Hide saved replies' : 'Saved replies'} onPress={() => void openSaved()} />
       {showSaved ? <View style={{ gap: 6 }}>
-        {savedReplies === null ? <SupportText>Loading…</SupportText> : null}
-        {savedReplies?.length === 0 ? <SupportText>No saved replies yet. Add them in Messages → Saved replies.</SupportText> : null}
+        {savedReplies === null ? <SupportText>{t('msgd.s6')}</SupportText> : null}
+        {savedReplies?.length === 0 ? <SupportText>{t('msgd.s7')}</SupportText> : null}
         {savedReplies?.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Insert ${item.title}`} onPress={() => insertSaved(item)} style={styles.savedRow}><Text style={styles.savedTitle}>{item.title}</Text><SupportText>{thread.reply_language === 'ja' && item.body_ja ? '日本語' : 'English'}</SupportText></Pressable>)}
       </View> : null}
-      <TextInput accessibilityLabel="Your reply" value={reply} onChangeText={(text) => { setReply(text); setReplyMeaning(null); }} placeholder={thread.reply_language === 'ja' ? 'Reply in Japanese (use a saved reply)' : 'Write your reply'} placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.medium]} />
+      <TextInput accessibilityLabel={t('msgd.s24')} value={reply} onChangeText={(text) => { setReply(text); setReplyMeaning(null); }} placeholder={thread.reply_language === 'ja' ? 'Reply in Japanese (use a saved reply)' : 'Write your reply'} placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.medium]} />
       {replyIsJa ? <BilingualBlock ja={reply} en={replyMeaning} /> : null}
-      {replyIsJa && !replyMeaning ? <ActionButton label="Show English meaning" onPress={() => void run('meaning', async () => setReplyMeaning((await translateText(workspaceId, reply, 'en')).translation), false)} /> : null}
+      {replyIsJa && !replyMeaning ? <ActionButton label={t('msgd.s25')} onPress={() => void run('meaning', async () => setReplyMeaning((await translateText(workspaceId, reply, 'en')).translation), false)} /> : null}
       {wrongLanguage(reply) ? <SupportText tone="warning">{firstName} writes in {thread.reply_language === 'ja' ? 'Japanese' : 'English'}. Reply in the same language.</SupportText> : null}
-      {/\[[^\]\n]{1,40}\]/.test(reply) ? <SupportText tone="warning">Fill in the [brackets] before approving.</SupportText> : null}
+      {/\[[^\]\n]{1,40}\]/.test(reply) ? <SupportText tone="warning">{t('msgd.s8')}</SupportText> : null}
       <ActionButton kind="primary" label={busy === 'reply' ? 'Approving…' : 'Approve my reply'} disabled={Boolean(busy) || !reply.trim() || (replyIsJa && !replyMeaning)} onPress={() => void approveOwnReply()} />
     </Card>
 
     <Card>
-      <SectionTitle>Private notes</SectionTitle>
-      <SupportText>Only you see these. Never sent to the client.</SupportText>
+      <SectionTitle>{t('msgd.s9')}</SectionTitle>
+      <SupportText>{t('msgd.s10')}</SupportText>
       {detail.internalNotes.map((item) => <View key={item.id} style={styles.note}><Text style={styles.noteText}>{item.content}</Text><SupportText>{timeLabel(item.created_at)}</SupportText></View>)}
-      <TextInput accessibilityLabel="Add a private note" value={note} onChangeText={setNote} placeholder="Add a note" placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.small]} />
-      <ActionButton label="Save note" disabled={!note.trim() || Boolean(busy)} onPress={() => void run('note', async () => { await addThreadInternalNote(workspaceId, thread.id, note.trim()); setNote(''); })} />
+      <TextInput accessibilityLabel={t('msgd.s26')} value={note} onChangeText={setNote} placeholder={t('msgd.s27')} placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.small]} />
+      <ActionButton label={t('msgd.s28')} disabled={!note.trim() || Boolean(busy)} onPress={() => void run('note', async () => { await addThreadInternalNote(workspaceId, thread.id, note.trim()); setNote(''); })} />
     </Card>
   </Screen>;
 }
 
 function Bubble({ message, appName, manual, busy, onTranslate, onCopy, onMarkSent }: { message: ClientMessage; appName: string; manual: boolean; busy: string | null; onTranslate: () => void; onCopy: () => void; onMarkSent: () => void }) {
+  const { t } = useTranslation();
   const inbound = message.direction === 'inbound';
   const ready = message.status === 'queued' && message.metadata?.delivery === 'manual';
   const ja = isJapanese(message.body);
   return <View style={[styles.bubbleWrap, inbound ? styles.left : styles.right]}>
     <View style={[styles.bubble, inbound ? styles.inBubble : styles.outBubble]}>
       <Text maxFontSizeMultiplier={1.3} style={[styles.bubbleText, !inbound && styles.outText]}>{message.body}</Text>
-      {message.translated_body ? <View style={styles.translation}><Text style={[styles.translationLabel, !inbound && styles.outMuted]}>English meaning</Text><Text style={[styles.bubbleText, !inbound && styles.outText]}>{message.translated_body}</Text></View> : null}
+      {message.translated_body ? <View style={styles.translation}><Text style={[styles.translationLabel, !inbound && styles.outMuted]}>{t('msgd.s11')}</Text><Text style={[styles.bubbleText, !inbound && styles.outText]}>{message.translated_body}</Text></View> : null}
     </View>
     <View style={[styles.meta, inbound ? styles.left : styles.right]}>
       <Text style={styles.metaText}>{timeLabel(message.created_at)}{!inbound ? ` · ${message.status === 'sent' ? (message.metadata?.sent_by === 'owner_manual' ? 'Sent by you' : 'Sent') : ready ? 'Approved · Ready to send' : message.status === 'failed' ? 'Not sent' : message.status}` : ''}</Text>
-      {ja && !message.translated_body ? <Pressable accessibilityRole="button" accessibilityLabel="Translate to English" onPress={onTranslate} disabled={Boolean(busy)}><Text style={styles.metaLink}>{busy === `tr-${message.id}` ? 'Translating…' : 'Translate'}</Text></Pressable> : null}
+      {ja && !message.translated_body ? <Pressable accessibilityRole="button" accessibilityLabel={t('msgd.s29')} onPress={onTranslate} disabled={Boolean(busy)}><Text style={styles.metaLink}>{busy === `tr-${message.id}` ? 'Translating…' : 'Translate'}</Text></Pressable> : null}
     </View>
     {ready && manual ? <View style={[styles.inline, styles.right]}>
       <ActionButton kind="primary" label={`Copy & open ${appName}`} onPress={onCopy} />
-      <ActionButton label="I sent it" disabled={Boolean(busy)} onPress={onMarkSent} />
+      <ActionButton label={t('msgd.s30')} disabled={Boolean(busy)} onPress={onMarkSent} />
     </View> : null}
   </View>;
 }
