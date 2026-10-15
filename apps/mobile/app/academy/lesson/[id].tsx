@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { createElement, useCallback, useState } from 'react';
 import { Linking, Platform, Switch, Text, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -32,6 +33,7 @@ async function pickPhotoBase64(): Promise<string | null> {
 }
 
 export default function LessonScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [ws, setWs] = useState<string | null>(null);
   const [data, setData] = useState<Data | null>(null);
@@ -49,21 +51,21 @@ export default function LessonScreen() {
   }
   const run = async (label: string, fn: () => Promise<unknown>) => { try { await fn(); await load(); } catch (e) { void dialog.notify(label, e instanceof Error ? e.message : ''); } };
 
-  if (!data || !ws) return <Screen><Card><BodyText>Loading…</BodyText></Card></Screen>;
+  if (!data || !ws) return <Screen><Card><BodyText>{t('lsn.s0')}</BodyText></Card></Screen>;
   const { lesson, progress } = data;
   const doneItems = new Set(progress.checklist_done ?? []);
 
   if (data.role === 'owner' && edit) return <Screen>
-    <ScreenTitle>Edit lesson</ScreenTitle>
+    <ScreenTitle>{t('lsn.s1')}</ScreenTitle>
     <Card>
-      <Field label="Title" value={edit.title} onChangeText={(title) => setEdit({ ...edit, title })} />
-      <Field label="Video link (https)" value={edit.videoUrl} onChangeText={(videoUrl) => setEdit({ ...edit, videoUrl })} autoCapitalize="none" placeholder="YouTube, Vimeo or a video file link" />
-      <Field label="Lesson text" value={edit.body} onChangeText={(body) => setEdit({ ...edit, body })} multiline style={{ minHeight: 160 }} />
-      <Field label="Checklist (one step per line)" value={edit.checklist} onChangeText={(checklist) => setEdit({ ...edit, checklist })} multiline />
-      <ActionButton kind="primary" label="Save" onPress={() => void run('Could not save', () => updateLesson(ws, id!, { title: edit.title.trim(), body: edit.body, videoUrl: edit.videoUrl.trim() || null, checklist: edit.checklist.split('\n').map((s) => s.trim()).filter(Boolean) }))} />
+      <Field label={t('lsn.s8')} value={edit.title} onChangeText={(title) => setEdit({ ...edit, title })} />
+      <Field label={t('lsn.s9')} value={edit.videoUrl} onChangeText={(videoUrl) => setEdit({ ...edit, videoUrl })} autoCapitalize="none" placeholder={t('lsn.s10')} />
+      <Field label={t('lsn.s11')} value={edit.body} onChangeText={(body) => setEdit({ ...edit, body })} multiline style={{ minHeight: 160 }} />
+      <Field label={t('lsn.s12')} value={edit.checklist} onChangeText={(checklist) => setEdit({ ...edit, checklist })} multiline />
+      <ActionButton kind="primary" label={t('lsn.s13')} onPress={() => void run('Could not save', () => updateLesson(ws, id!, { title: edit.title.trim(), body: edit.body, videoUrl: edit.videoUrl.trim() || null, checklist: edit.checklist.split('\n').map((s) => s.trim()).filter(Boolean) }))} />
     </Card>
-    <Card><SectionTitle>Preview</SectionTitle><Video video={data.video} url={lesson.video_url} />{lesson.body ? <BodyText>{lesson.body}</BodyText> : null}</Card>
-    <ActionButton kind="quiet" label="Delete lesson" onPress={async () => { if (await confirm({ title: `Delete "${lesson.title}"?`, message: 'Student progress and practice photos for it are deleted too.', confirmText: 'Delete', destructive: true })) { try { await deleteLesson(ws, id!); router.back(); } catch (e) { void dialog.notify('Could not delete', e instanceof Error ? e.message : ''); } } }} />
+    <Card><SectionTitle>{t('lsn.s2')}</SectionTitle><Video video={data.video} url={lesson.video_url} />{lesson.body ? <BodyText>{lesson.body}</BodyText> : null}</Card>
+    <ActionButton kind="quiet" label={t('lsn.s14')} onPress={async () => { if (await confirm({ title: `Delete "${lesson.title}"?`, message: t('lsn.s17'), confirmText: t('lsn.s18'), destructive: true })) { try { await deleteLesson(ws, id!); router.back(); } catch (e) { void dialog.notify('Could not delete', e instanceof Error ? e.message : ''); } } }} />
   </Screen>;
 
   return <Screen>
@@ -71,14 +73,14 @@ export default function LessonScreen() {
     <Video video={data.video} url={lesson.video_url} />
     {lesson.body ? <Card><BodyText>{lesson.body}</BodyText></Card> : null}
     {lesson.checklist?.length ? <Card>
-      <SectionTitle>Checklist</SectionTitle>
+      <SectionTitle>{t('lsn.s3')}</SectionTitle>
       {lesson.checklist.map((item, i) => <View key={i} style={fieldStyles.line}><Text style={{ flex: 1 }}>{item}</Text><Switch accessibilityLabel={item} value={doneItems.has(i)} onValueChange={(v) => { const next = new Set(doneItems); if (v) next.add(i); else next.delete(i); void run('Could not save', () => saveProgress(ws, id!, { checklistDone: Array.from(next) })); }} /></View>)}
     </Card> : null}
     <ActionButton kind={progress.done_at ? 'secondary' : 'primary'} label={progress.done_at ? '✓ Done (tap to undo)' : 'Mark lesson done'} onPress={() => void run('Could not save', () => saveProgress(ws, id!, { done: !progress.done_at }))} />
     <Card>
-      <SectionTitle>Send practice photo</SectionTitle>
-      <SupportText>Your teacher reviews it and replies here.</SupportText>
-      <Field label="Note (optional)" value={note} onChangeText={setNote} multiline />
+      <SectionTitle>{t('lsn.s4')}</SectionTitle>
+      <SupportText>{t('lsn.s5')}</SupportText>
+      <Field label={t('lsn.s15')} value={note} onChangeText={setNote} multiline />
       <ActionButton kind="primary" label={sending ? 'Sending…' : 'Choose photo and send'} disabled={sending} onPress={async () => {
         const photo = await pickPhotoBase64(); if (!photo && !note.trim()) return;
         setSending(true); await run('Could not send', async () => { await submitPractice(ws, id!, { photoBase64: photo ?? undefined, note: note.trim() || undefined }); setNote(''); }); setSending(false);
@@ -88,6 +90,6 @@ export default function LessonScreen() {
         <Pill tone={s.status === 'approved' ? 'success' : s.status === 'try_again' ? 'warning' : 'secondary'}>{s.status === 'try_again' ? 'Try again' : s.status === 'approved' ? 'Approved' : 'Waiting'}</Pill>
       </View>)}
     </Card>
-    {data.role === 'owner' ? <Banner>This is the student view.</Banner> : null}
+    {data.role === 'owner' ? <Banner>{t('lsn.s6')}</Banner> : null}
   </Screen>;
 }

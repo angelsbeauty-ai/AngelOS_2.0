@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -14,6 +15,7 @@ import { dialog } from '../src/lib/dialog';
 type Tab = 'today' | 'messages' | 'tasks';
 
 export default function AutomationsScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('today');
   const [due, setDue] = useState<DueReminder[] | null>(null);
@@ -49,19 +51,19 @@ export default function AutomationsScreen() {
   }
 
   return <Screen onRefresh={() => load()}>
-    <ScreenTitle>Reminders</ScreenTitle>
-    <SupportText>AngelOS suggests client messages at the right time. Nothing is sent until you approve it in the conversation.</SupportText>
-    <Tabs value={tab} onChange={setTab} options={[{ id: 'today', label: 'Today' }, { id: 'messages', label: 'Message types' }, { id: 'tasks', label: 'Tasks' }]} />
+    <ScreenTitle>{t('auto.s0')}</ScreenTitle>
+    <SupportText>{t('auto.s1')}</SupportText>
+    <Tabs value={tab} onChange={setTab} options={[{ id: 'today', label: t('auto.s16') }, { id: 'messages', label: t('auto.s17') }, { id: 'tasks', label: t('auto.s18') }]} />
 
     {tab === 'today' ? <>
-      {due === null ? <Card><BodyText>Loading…</BodyText></Card> : null}
-      {due?.length === 0 ? <Card><BodyText>No reminder messages due today.</BodyText></Card> : null}
+      {due === null ? <Card><BodyText>{t('auto.s2')}</BodyText></Card> : null}
+      {due?.length === 0 ? <Card><BodyText>{t('auto.s3')}</BodyText></Card> : null}
       {due?.map((item) => <Card key={item.key}>
         <SectionTitle>{item.title}</SectionTitle>
         {item.language === 'ja' ? <BilingualBlock ja={item.message} en={item.meaningEn} /> : <BodyText>{item.message}</BodyText>}
         <View style={fieldStyles.row}>
           <ActionButton kind="primary" label={busy === item.key ? 'Working…' : 'Approve'} disabled={Boolean(busy)} accessibilityHint="Puts this message in the conversation as a draft" onPress={() => void approve(item)} />
-          <ActionButton label="Not today" onPress={() => { setDue((d) => d?.filter((x) => x.key !== item.key) ?? null); if (workspaceId) void dismissSuggestion(workspaceId, item.key).catch(() => undefined); }} />
+          <ActionButton label={t('auto.s8')} onPress={() => { setDue((d) => d?.filter((x) => x.key !== item.key) ?? null); if (workspaceId) void dismissSuggestion(workspaceId, item.key).catch(() => undefined); }} />
         </View>
       </Card>)}
     </> : null}
@@ -69,22 +71,22 @@ export default function AutomationsScreen() {
     {tab === 'messages' ? reminders.map((r) => <Card key={r.type}>
       <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{r.name}</Text><Switch accessibilityLabel={`${r.name} on`} value={r.enabled} onValueChange={(enabled) => { if (workspaceId) void updateReminderRule(workspaceId, r.type, { enabled }).then(load).catch((e) => void dialog.notify('Could not update', e instanceof Error ? e.message : '')); }} /></View>
       {editing?.type === r.type ? <>
-        <Field label="Message for English-speaking clients" value={editing.en} onChangeText={(en) => setEditing({ ...editing, en })} multiline hint="{name}, {service}, {date}, {time} are filled in for you." />
-        <Field label="Meaning of the Japanese message (write it in English)" value={editing.meaning} onChangeText={(meaning) => setEditing({ ...editing, meaning, ja: '' })} multiline />
-        <ActionButton label="Make Japanese version" disabled={!editing.meaning.trim()} onPress={() => { if (workspaceId) void translateText(workspaceId, editing.meaning, 'ja').then((t) => setEditing({ ...editing, ja: t.translation })).catch((e) => void dialog.notify('Could not translate', e instanceof Error ? e.message : '')); }} />
-        {editing.ja ? <BilingualBlock ja={editing.ja} en={editing.meaning} /> : <SupportText>Change the meaning, then tap "Make Japanese version" to update the Japanese message.</SupportText>}
-        <View style={fieldStyles.row}><ActionButton kind="primary" label="Save" onPress={() => void saveTemplate()} /><ActionButton kind="quiet" label="Close" onPress={() => setEditing(null)} /></View>
+        <Field label={t('auto.s9')} value={editing.en} onChangeText={(en) => setEditing({ ...editing, en })} multiline hint={t('auto.s10')} />
+        <Field label={t('auto.s11')} value={editing.meaning} onChangeText={(meaning) => setEditing({ ...editing, meaning, ja: '' })} multiline />
+        <ActionButton label={t('auto.s12')} disabled={!editing.meaning.trim()} onPress={() => { if (workspaceId) void translateText(workspaceId, editing.meaning, 'ja').then((t) => setEditing({ ...editing, ja: t.translation })).catch((e) => void dialog.notify('Could not translate', e instanceof Error ? e.message : '')); }} />
+        {editing.ja ? <BilingualBlock ja={editing.ja} en={editing.meaning} /> : <SupportText>{t('auto.s4')}</SupportText>}
+        <View style={fieldStyles.row}><ActionButton kind="primary" label={t('auto.s13')} onPress={() => void saveTemplate()} /><ActionButton kind="quiet" label={t('auto.s14')} onPress={() => setEditing(null)} /></View>
       </> : <>
         <SupportText>English: {r.en}</SupportText>
         <BilingualBlock ja={r.ja} en={r.ja_meaning} />
-        <ActionButton kind="quiet" label="Edit wording" onPress={() => setEditing({ type: r.type, en: r.en, meaning: r.ja_meaning, ja: r.ja })} />
+        <ActionButton kind="quiet" label={t('auto.s15')} onPress={() => setEditing({ type: r.type, en: r.en, meaning: r.ja_meaning, ja: r.ja })} />
       </>}
     </Card>) : null}
 
     {tab === 'tasks' ? <>
-      <Banner>These run on the server every 15 minutes and only create tasks for you. They never message clients.</Banner>
+      <Banner>{t('auto.s5')}</Banner>
       {rules.map((rule) => <Card key={rule.id}><View style={fieldStyles.line}><View style={fieldStyles.grow}><Text style={fieldStyles.strong}>{rule.name}</Text><SupportText>{rule.category.replaceAll('_', ' ')}</SupportText></View><Switch accessibilityLabel={`${rule.name} on`} value={rule.enabled} onValueChange={(enabled) => { if (workspaceId) void updateAutomationRule(workspaceId, rule.id, { enabled }).then(load).catch(() => undefined); }} /></View></Card>)}
-      <Card><SectionTitle>Recent</SectionTitle>{jobs.length ? jobs.slice(0, 15).map((j) => <SupportText key={j.id}>{new Date(j.scheduled_for).toLocaleString()} · {j.rule?.name ?? 'Task'} · {j.status.replaceAll('_', ' ')}</SupportText>) : <SupportText>Nothing yet.</SupportText>}</Card>
+      <Card><SectionTitle>{t('auto.s6')}</SectionTitle>{jobs.length ? jobs.slice(0, 15).map((j) => <SupportText key={j.id}>{new Date(j.scheduled_for).toLocaleString()} · {j.rule?.name ?? 'Task'} · {j.status.replaceAll('_', ' ')}</SupportText>) : <SupportText>{t('auto.s7')}</SupportText>}</Card>
     </> : null}
   </Screen>;
 }

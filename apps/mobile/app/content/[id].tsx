@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useCallback, useState } from 'react';
 import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -19,6 +20,7 @@ const STATUS: Record<string, string> = { draft: 'Draft', prepared: 'Draft', appr
 const errText = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Please try again.');
 
 export default function ContentDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [post, setPost] = useState<ContentPost | null>(null);
@@ -49,8 +51,8 @@ export default function ContentDetailScreen() {
     finally { setBusy(false); }
   }
 
-  if (state === 'error') return <Screen><ErrorState title="We couldn't load this post" message="Check your connection and try again." onRetry={() => { setState('loading'); void load(); }} /></Screen>;
-  if (!post || !workspaceId) return <Screen><Card><SupportText>Loading post…</SupportText></Card></Screen>;
+  if (state === 'error') return <Screen><ErrorState title={t('post.s4')} message={t('post.s5')} onRetry={() => { setState('loading'); void load(); }} /></Screen>;
+  if (!post || !workspaceId) return <Screen><Card><SupportText>{t('post.s0')}</SupportText></Card></Screen>;
   const approvedPost = ['approved', 'scheduled', 'publishing', 'published', 'failed'].includes(post.status);
   const tomorrow = addDayString(dayString(new Date()), 1);
 
@@ -73,44 +75,44 @@ export default function ContentDetailScreen() {
         </> : <>
           <View style={styles.preview}>
             <View style={styles.previewHead}><View style={styles.dot} /><Text style={styles.previewName}>your_studio</Text></View>
-            {preview ? <Image source={{ uri: preview }} style={styles.previewImage} accessibilityLabel="Post photo" /> : <View style={[styles.previewImage, styles.noPhoto]}><SupportText>No photo yet</SupportText></View>}
+            {preview ? <Image source={{ uri: preview }} style={styles.previewImage} accessibilityLabel={t('post.s6')} /> : <View style={[styles.previewImage, styles.noPhoto]}><SupportText>{t('post.s1')}</SupportText></View>}
             <Text numberOfLines={3} style={styles.previewCaption}>{variant.caption}</Text>
-            <Text style={styles.more}>… more</Text>
+            <Text style={styles.more}>{t('post.s2')}</Text>
           </View>
           <Text style={styles.label}>Caption ({variant.caption.length}/2200)</Text>
-          <TextInput accessibilityLabel="Caption" defaultValue={variant.caption} multiline editable={variant.status !== 'published'} onEndEditing={(e) => void run(() => updateContentVariant(workspaceId, variant.id, { caption: e.nativeEvent.text }))} style={[styles.input, styles.caption]} />
-          {variant.caption.length > 2200 ? <Banner tone="warning"><SupportText>Instagram allows 2,200 characters. Shorten it before posting.</SupportText></Banner> : null}
+          <TextInput accessibilityLabel={t('post.s7')} defaultValue={variant.caption} multiline editable={variant.status !== 'published'} onEndEditing={(e) => void run(() => updateContentVariant(workspaceId, variant.id, { caption: e.nativeEvent.text }))} style={[styles.input, styles.caption]} />
+          {variant.caption.length > 2200 ? <Banner tone="warning"><SupportText>{t('post.s3')}</SupportText></Banner> : null}
           {variant.hashtags.length ? <SupportText>{variant.hashtags.join(' ')}{variant.hashtags.length > 30 ? '  (Instagram allows 30)' : ''}</SupportText> : null}
         </>}
 
         {variant.status !== 'published' && approvedPost ? <View style={{ gap: 8 }}>
-          <DateField label="Post on" value={slot.day} min={dayString(new Date())} onChange={(day) => setWhen((c) => ({ ...c, [variant.id]: { ...slot, day } }))} />
-          <TimeField label="Time (best: 19:00–21:00)" value={slot.time} onChange={(time) => setWhen((c) => ({ ...c, [variant.id]: { ...slot, time } }))} />
+          <DateField label={t('post.s8')} value={slot.day} min={dayString(new Date())} onChange={(day) => setWhen((c) => ({ ...c, [variant.id]: { ...slot, day } }))} />
+          <TimeField label={t('post.s9')} value={slot.time} onChange={(time) => setWhen((c) => ({ ...c, [variant.id]: { ...slot, time } }))} />
           <ActionButton label={variant.status === 'scheduled' ? 'Change time' : 'Schedule'} disabled={busy} onPress={() => void run(() => scheduleContentVariant(workspaceId, variant.id, toIso(slot.day, slot.time)), 'Scheduled. AngelOS will remind you; it will not post by itself.')} />
         </View> : null}
 
         {ready && isLine ? <View style={{ gap: 8 }}>
           <SupportText>{estimate?.text ?? 'Checking LINE…'}</SupportText>
-          {estimate?.connected ? <ActionButton kind="primary" label="Send to LINE friends" disabled={busy} onPress={() => void (async () => {
-            const ok = await dialog.confirm({ title: 'Send this LINE broadcast?', message: `${estimate.text}\n\nEnglish meaning:\n${en ?? ''}`, confirmText: 'Send now', cancelText: 'Not yet' });
+          {estimate?.connected ? <ActionButton kind="primary" label={t('post.s10')} disabled={busy} onPress={() => void (async () => {
+            const ok = await dialog.confirm({ title: t('post.s17'), message: `${estimate.text}\n\nEnglish meaning:\n${en ?? ''}`, confirmText: t('post.s18'), cancelText: t('post.s19') });
             if (ok) await run(() => sendLineBroadcast(workspaceId, variant.id), 'Sent to your LINE friends.');
           })()} /> : <>
-            <ActionButton kind="primary" label="Copy & open LINE" onPress={() => void copyCaptionAndOpen(variant.caption, 'line')} />
-            <ActionButton label="I sent it" disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id), 'Marked as sent.')} />
+            <ActionButton kind="primary" label={t('post.s11')} onPress={() => void copyCaptionAndOpen(variant.caption, 'line')} />
+            <ActionButton label={t('post.s12')} disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id), 'Marked as sent.')} />
           </>}
         </View> : null}
 
         {ready && !isLine ? <View style={{ gap: 8 }}>
           <ActionButton kind="primary" label={`Copy caption & open ${platformLabel(variant.platform)}`} onPress={() => void copyCaptionAndOpen(full, variant.platform)} />
-          <TextInput accessibilityLabel="Link to the post" value={links[variant.id] ?? ''} onChangeText={(v) => setLinks((c) => ({ ...c, [variant.id]: v }))} placeholder="Paste the post link (optional)" autoCapitalize="none" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
-          <ActionButton label="Mark as posted" disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id, links[variant.id]?.trim() || undefined), 'Marked as posted.')} />
+          <TextInput accessibilityLabel={t('post.s13')} value={links[variant.id] ?? ''} onChangeText={(v) => setLinks((c) => ({ ...c, [variant.id]: v }))} placeholder={t('post.s14')} autoCapitalize="none" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+          <ActionButton label={t('post.s15')} disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id, links[variant.id]?.trim() || undefined), 'Marked as posted.')} />
         </View> : null}
         {variant.status === 'published' && variant.live_url ? <SupportText>Link: {variant.live_url}</SupportText> : null}
       </Card>;
     })}
 
     {!approvedPost ? <ActionButton kind="primary" label={busy ? 'Approving…' : 'Approve post'} disabled={busy} onPress={() => void run(() => approveContentPost(workspaceId, id), 'Approved. Now schedule it or post it yourself.')} /> : null}
-    <ActionButton label="Ask AngelOS about this post" onPress={() => router.push({ pathname: '/ai', params: { contextEntityType: 'content_post', contextEntityId: post.id, contextScreen: 'content' } } as any)} />
+    <ActionButton label={t('post.s16')} onPress={() => router.push({ pathname: '/ai', params: { contextEntityType: 'content_post', contextEntityId: post.id, contextScreen: 'content' } } as any)} />
   </Screen>;
 }
 

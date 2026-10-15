@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -23,6 +24,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 
 /** B10: invite → Business → Services → Hours → Done. Never a dead end. */
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ invite?: string }>();
   const deviceZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
   const [access, setAccess] = useState<BetaAccess | null>(null);
@@ -82,12 +84,12 @@ export default function OnboardingScreen() {
     finally { setSaving(false); }
   }
 
-  if (checking) return <Screen><Card><BodyText>Getting things ready…</BodyText></Card></Screen>;
+  if (checking) return <Screen><Card><BodyText>{t('onb.s0')}</BodyText></Card></Screen>;
   if (!access?.approved) return <Screen>
-    <ScreenTitle>Welcome to AngelOS</ScreenTitle>
-    <SupportText>AngelOS is invite-only while we test. Paste the invite you were sent.</SupportText>
+    <ScreenTitle>{t('onb.s1')}</ScreenTitle>
+    <SupportText>{t('onb.s2')}</SupportText>
     <Card premium>
-      <Field label="Invite code" value={invite} onChangeText={setInvite} autoCapitalize="none" autoCorrect={false} />
+      <Field label={t('onb.s11')} value={invite} onChangeText={setInvite} autoCapitalize="none" autoCorrect={false} />
       <ActionButton kind="primary" label={saving ? 'Checking…' : 'Use invite'} disabled={saving || !invite.trim()} onPress={() => void redeem()} />
     </Card>
   </Screen>;
@@ -95,45 +97,45 @@ export default function OnboardingScreen() {
   return <Screen>
     <Pill tone="gold">Step {step} of 4</Pill>
     {step === 1 ? <>
-      <ScreenTitle>Your business</ScreenTitle>
+      <ScreenTitle>{t('onb.s3')}</ScreenTitle>
       <Card>
-        <Field label="Business name" value={biz.name} onChangeText={(name) => setBiz({ ...biz, name })} autoCapitalize="words" />
-        <SupportText>Currency</SupportText>
+        <Field label={t('onb.s12')} value={biz.name} onChangeText={(name) => setBiz({ ...biz, name })} autoCapitalize="words" />
+        <SupportText>{t('onb.s4')}</SupportText>
         <View style={fieldStyles.row}>{CURRENCIES.map((c) => <Chip key={c} label={c} selected={biz.currency === c} onPress={() => setBiz({ ...biz, currency: c })} />)}</View>
-        <SupportText>Time zone</SupportText>
+        <SupportText>{t('onb.s5')}</SupportText>
         <View style={fieldStyles.row}>{Array.from(new Set(['Asia/Tokyo', deviceZone])).map((z) => <Chip key={z} label={z} selected={biz.timezone === z} onPress={() => setBiz({ ...biz, timezone: z })} />)}</View>
-        <SupportText>App language</SupportText>
+        <SupportText>{t('onb.s6')}</SupportText>
         <View style={fieldStyles.row}><Chip label="English" selected={biz.language === 'en'} onPress={() => setBiz({ ...biz, language: 'en' })} /><Chip label="日本語" selected={biz.language === 'ja'} onPress={() => setBiz({ ...biz, language: 'ja' })} /></View>
         <ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving || !biz.name.trim()} onPress={() => void saveBusiness()} />
       </Card>
     </> : null}
     {step === 2 ? <>
-      <ScreenTitle>Your services</ScreenTitle>
-      <SupportText>Start with these and change anything. You can edit them later in Services.</SupportText>
+      <ScreenTitle>{t('onb.s7')}</ScreenTitle>
+      <SupportText>{t('onb.s8')}</SupportText>
       {services.map((s, i) => <Card key={i}>
         <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{s.name || 'Service'}</Text><Switch accessibilityLabel={`Offer ${s.name}`} value={s.on} onValueChange={(on) => setServices(services.map((x, j) => (j === i ? { ...x, on } : x)))} /></View>
         {s.on ? <>
-          <Field label="Name" value={s.name} onChangeText={(name) => setServices(services.map((x, j) => (j === i ? { ...x, name } : x)))} />
+          <Field label={t('onb.s13')} value={s.name} onChangeText={(name) => setServices(services.map((x, j) => (j === i ? { ...x, name } : x)))} />
           <View style={fieldStyles.row}>
-            <View style={{ flex: 1 }}><Field label="Minutes" value={s.minutes} keyboardType="number-pad" onChangeText={(minutes) => setServices(services.map((x, j) => (j === i ? { ...x, minutes } : x)))} /></View>
+            <View style={{ flex: 1 }}><Field label={t('onb.s14')} value={s.minutes} keyboardType="number-pad" onChangeText={(minutes) => setServices(services.map((x, j) => (j === i ? { ...x, minutes } : x)))} /></View>
             <View style={{ flex: 1 }}><Field label={`Price (${workspace?.currency ?? 'JPY'})`} value={s.price} keyboardType="number-pad" onChangeText={(price) => setServices(services.map((x, j) => (j === i ? { ...x, price } : x)))} /></View>
           </View>
         </> : null}
       </Card>)}
-      <View style={fieldStyles.row}><ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving} onPress={() => void saveServices()} /><ActionButton kind="quiet" label="Skip" onPress={() => setStep(3)} /></View>
+      <View style={fieldStyles.row}><ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving} onPress={() => void saveServices()} /><ActionButton kind="quiet" label={t('onb.s15')} onPress={() => setStep(3)} /></View>
     </> : null}
     {step === 3 ? <>
-      <ScreenTitle>Your hours</ScreenTitle>
+      <ScreenTitle>{t('onb.s9')}</ScreenTitle>
       {hours.map((h, i) => <Card key={h.dayOfWeek}>
         <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{DAYS[h.dayOfWeek]}</Text><Switch accessibilityLabel={`${DAYS[h.dayOfWeek]} open`} value={h.open} onValueChange={(open) => setHours(hours.map((x, j) => (j === i ? { ...x, open } : x)))} /></View>
-        {h.open ? <View style={fieldStyles.row}><TimeField label="Opens" value={h.startTime} onChange={(startTime) => setHours(hours.map((x, j) => (j === i ? { ...x, startTime } : x)))} /><TimeField label="Closes" value={h.endTime} onChange={(endTime) => setHours(hours.map((x, j) => (j === i ? { ...x, endTime } : x)))} /></View> : null}
+        {h.open ? <View style={fieldStyles.row}><TimeField label={t('onb.s16')} value={h.startTime} onChange={(startTime) => setHours(hours.map((x, j) => (j === i ? { ...x, startTime } : x)))} /><TimeField label={t('onb.s17')} value={h.endTime} onChange={(endTime) => setHours(hours.map((x, j) => (j === i ? { ...x, endTime } : x)))} /></View> : null}
       </Card>)}
-      <View style={fieldStyles.row}><ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving} onPress={() => void saveHours()} /><ActionButton kind="quiet" label="Skip" onPress={() => setStep(4)} /></View>
+      <View style={fieldStyles.row}><ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving} onPress={() => void saveHours()} /><ActionButton kind="quiet" label={t('onb.s15')} onPress={() => setStep(4)} /></View>
     </> : null}
     {step === 4 ? <>
-      <ScreenTitle>You're all set</ScreenTitle>
+      <ScreenTitle>{t('onb.s10')}</ScreenTitle>
       <Card premium><BodyText>{workspace?.name ?? 'Your studio'} is ready. Add your first client or booking from Today.</BodyText></Card>
-      <ActionButton kind="primary" label="Go to Today" onPress={() => router.replace('/(tabs)' as any)} />
+      <ActionButton kind="primary" label={t('onb.s18')} onPress={() => router.replace('/(tabs)' as any)} />
     </> : null}
   </Screen>;
 }

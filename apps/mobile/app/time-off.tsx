@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { Screen } from '../src/components/Screen';
@@ -10,6 +11,7 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 import { confirm, dialog } from '../src/lib/dialog';
 
 export default function TimeOffScreen() {
+  const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [kind, setKind] = useState<'day' | 'hours'>('day');
@@ -38,19 +40,19 @@ export default function TimeOffScreen() {
     <ScreenTitle>Days off & blocks</ScreenTitle>
     <SupportText>Days off can't be booked. Flexible blocks ask "Book anyway?".</SupportText>
     <Card>
-      <View style={fieldStyles.row}><Chip label="Whole days" selected={kind === 'day'} onPress={() => { setKind('day'); setTitle('Day off'); }} /><Chip label="A few hours" selected={kind === 'hours'} onPress={() => { setKind('hours'); setTitle('Blocked'); }} /></View>
-      <Field label="Name" value={title} onChangeText={setTitle} />
+      <View style={fieldStyles.row}><Chip label={t('toff.s2')} selected={kind === 'day'} onPress={() => { setKind('day'); setTitle('Day off'); }} /><Chip label={t('toff.s3')} selected={kind === 'hours'} onPress={() => { setKind('hours'); setTitle('Blocked'); }} /></View>
+      <Field label={t('toff.s4')} value={title} onChangeText={setTitle} />
       <DateField label={kind === 'day' ? 'First day' : 'Day'} value={from} onChange={(d) => { setFrom(d); if (to < d) setTo(d); }} />
-      {kind === 'day' ? <DateField label="Last day" value={to} onChange={setTo} min={from} /> : <View style={fieldStyles.row}><TimeField label="From" value={start} onChange={setStart} /><TimeField label="To" value={end} onChange={setEnd} /></View>}
-      <View style={fieldStyles.row}><Chip label="Can't be booked" selected={!flexible} onPress={() => setFlexible(false)} /><Chip label="Flexible" selected={flexible} onPress={() => setFlexible(true)} /></View>
-      <ActionButton kind="primary" label="Add" onPress={() => void add()} />
+      {kind === 'day' ? <DateField label={t('toff.s5')} value={to} onChange={setTo} min={from} /> : <View style={fieldStyles.row}><TimeField label={t('toff.s6')} value={start} onChange={setStart} /><TimeField label={t('toff.s7')} value={end} onChange={setEnd} /></View>}
+      <View style={fieldStyles.row}><Chip label={t('toff.s8')} selected={!flexible} onPress={() => setFlexible(false)} /><Chip label={t('toff.s9')} selected={flexible} onPress={() => setFlexible(true)} /></View>
+      <ActionButton kind="primary" label={t('toff.s10')} onPress={() => void add()} />
     </Card>
     <Card>
-      <SectionTitle>Coming up</SectionTitle>
-      {!blocks.length ? <SupportText>No days off or blocks in the next 6 months.</SupportText> : null}
+      <SectionTitle>{t('toff.s0')}</SectionTitle>
+      {!blocks.length ? <SupportText>{t('toff.s1')}</SupportText> : null}
       {blocks.map((b) => <View key={b.id} style={fieldStyles.line}>
         <View style={fieldStyles.grow}><Text style={fieldStyles.strong}>{b.title}</Text><SupportText>{prettyDay(dayString(new Date(b.start_at)))} {new Date(b.start_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} → {prettyDay(dayString(new Date(b.end_at)))} {new Date(b.end_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })} · {b.block_type === 'soft' ? 'flexible' : "can't be booked"}</SupportText></View>
-        <ActionButton kind="quiet" label="Delete" onPress={async () => { if (workspaceId && await confirm({ title: `Delete "${b.title}"?`, message: 'That time becomes bookable again.', confirmText: 'Delete', destructive: true })) { await deleteBlock(workspaceId, b.id).catch(() => undefined); await load(); } }} />
+        <ActionButton kind="quiet" label={t('toff.s11')} onPress={async () => { if (workspaceId && await confirm({ title: `Delete "${b.title}"?`, message: t('toff.s12'), confirmText: t('toff.s11'), destructive: true })) { await deleteBlock(workspaceId, b.id).catch(() => undefined); await load(); } }} />
       </View>)}
     </Card>
   </Screen>;
