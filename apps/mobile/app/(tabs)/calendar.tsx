@@ -155,6 +155,15 @@ export default function CalendarTab() {
     setDraft({ day: d, startMin: hour * 60 + (y > HOUR_H / 2 ? 30 : 0) });
     if (ws) void listClients(ws).then((rows) => setClients(rows.map((c) => ({ id: c.id, display_name: c.display_name })))).catch(() => setClients([]));
   };
+  function openKind(kind: 'task' | 'off') {
+    setAddOpen(false);
+    setTitle(kind === 'off' ? t('cal.dayOff', 'Day off') : '');
+    setHowLong(60); setAllDay(kind === 'off'); setDesc(''); setNote(''); setLink(''); setPlace(''); setRemind(kind === 'off' ? null : 30); setClientId(null);
+    setTag(kind === 'off' ? 'private' : 'task');
+    setColor(kind === 'off' ? TAGS[3].color : TAGS[1].color);
+    setDraft({ day: anchor, startMin: 10 * 60 });
+    if (ws) void listClients(ws).then((rows) => setClients(rows.map((c) => ({ id: c.id, display_name: c.display_name })))).catch(() => setClients([]));
+  }
   async function saveDraft() {
     if (!ws || !draft || !title.trim() || saving) return;
     setSaving(true);
@@ -162,9 +171,9 @@ export default function CalendarTab() {
       const start = new Date(draft.day.getFullYear(), draft.day.getMonth(), draft.day.getDate(), allDay ? 0 : Math.floor(draft.startMin / 60), allDay ? 0 : draft.startMin % 60, 0, 0);
       const end = allDay ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1) : new Date(start.getTime() + howLong * 60000);
       const who = clients.find((c) => c.id === clientId)?.display_name;
-      const picked = TAGS.find((t) => t.id === tag) ?? TAGS[1];
+      const picked = TAGS.find((row) => row.id === tag) ?? TAGS[1];
       const lines = [`[[tag:${tag}|color:${color}]]`, desc.trim() && `Description: ${desc.trim()}`, note.trim() && `Notes: ${note.trim()}`, who && `Client: ${who}`, link.trim() && `Link: ${link.trim()}`, place.trim() && `Location: ${place.trim()}`, remind != null && `Reminder: ${remind} minutes before`].filter(Boolean).join('\n');
-      await createBlock(ws, { title: title.trim(), blockType: picked.type, startAt: start.toISOString(), endAt: end.toISOString(), notes: lines.slice(0, 1000) || undefined });
+      await createBlock(ws, { title: title.trim(), blockType: allDay && tag === 'private' ? 'hard' : picked.type, startAt: start.toISOString(), endAt: end.toISOString(), notes: lines.slice(0, 1000) || undefined });
       setDraft(null);
       void load();
     } finally { setSaving(false); }
@@ -246,12 +255,14 @@ export default function CalendarTab() {
       </View>
     </Screen>
 
-    {mode !== 'month' ? <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAddOpen(true)} style={styles.fab}><Plus size={26} color="#FFF" weight="bold" /></Pressable> : null}
+    <Pressable accessibilityRole="button" accessibilityLabel={t('cal.add', 'Add')} onPress={() => setAddOpen(true)} style={styles.fab}><Plus size={26} color="#FFF" weight="bold" /></Pressable>
 
     <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
       <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}><View style={styles.sheet}>
-        <Pressable style={styles.mi} onPress={() => { setAddOpen(false); router.push('/bookings/new' as any); }}><Text style={styles.miText}>{t('cal.newBooking', 'New booking')}</Text></Pressable>
-        <Pressable style={styles.mi} onPress={() => { setAddOpen(false); router.push('/content/new'); }}><Text style={styles.miText}>{t('social2.newPost')}</Text></Pressable>
+        <Pressable style={styles.mi} onPress={() => { setAddOpen(false); const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), 10, 0, 0, 0); router.push({ pathname: '/bookings/new', params: { start: start.toISOString() } } as any); }}><Text style={styles.miText}>{t('cal.appointment', 'Appointment')}</Text></Pressable>
+        <Pressable style={styles.mi} onPress={() => { setAddOpen(false); router.push('/content/new'); }}><Text style={styles.miText}>{t('cal.content', 'Content')}</Text></Pressable>
+        <Pressable style={styles.mi} onPress={() => openKind('task')}><Text style={styles.miText}>{t('cal.task', 'Task')}</Text></Pressable>
+        <Pressable style={styles.mi} onPress={() => openKind('off')}><Text style={styles.miText}>{t('cal.dayOff', 'Day off')}</Text></Pressable>
       </View></Pressable>
     </Modal>
 

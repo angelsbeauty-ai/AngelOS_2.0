@@ -8,7 +8,7 @@ import { DateField, TimeField, addDayString, dayString } from '../../src/compone
 import { Badge, BodyText, Button, Card, Header, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { ApiError } from '../../src/lib/api';
 import { createAppointment, listServices, type ServiceItem } from '../../src/lib/bookings';
-import { listClients, type ClientSummary } from '../../src/lib/clients';
+import { getClient, listClients, type ClientSummary } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { dialog } from '../../src/lib/dialog';
 
@@ -16,14 +16,15 @@ const two = (n: number) => String(n).padStart(2, '0');
 
 export default function NewBookingScreen() {
   const { t } = useTranslation();
-  const params = useLocalSearchParams<{ clientId?: string; start?: string }>();
+  const params = useLocalSearchParams<{ clientId?: string; start?: string; serviceId?: string }>();
   const startParam = typeof params.start === 'string' && !Number.isNaN(Date.parse(params.start)) ? new Date(params.start) : null;
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [search, setSearch] = useState('');
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [clientId, setClientId] = useState<string | null>(typeof params.clientId === 'string' ? params.clientId : null);
-  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [serviceId, setServiceId] = useState<string | null>(typeof params.serviceId === 'string' ? params.serviceId : null);
+  const [consents, setConsents] = useState<Array<{ id: string; consent_type: string; status: string }> | null>(null);
   const [date, setDate] = useState(startParam ? dayString(startParam) : addDayString(dayString(new Date()), 1));
   const [time, setTime] = useState(startParam ? `${two(startParam.getHours())}:${two(startParam.getMinutes())}` : '10:00');
   const [softConflict, setSoftConflict] = useState(false);
@@ -35,6 +36,10 @@ export default function NewBookingScreen() {
     const h = setTimeout(() => { listClients(workspaceId, search).then(setClients).catch(() => undefined); }, search ? 300 : 0);
     return () => clearTimeout(h);
   }, [search, workspaceId]);
+  useEffect(() => {
+    if (!workspaceId || !clientId) { setConsents(null); return; }
+    void getClient(workspaceId, clientId).then((detail) => setConsents(detail.consents ?? [])).catch(() => setConsents(null));
+  }, [workspaceId, clientId]);
 
   async function load() {
     try {
@@ -79,7 +84,14 @@ export default function NewBookingScreen() {
       <View style={styles.options}>
         {services.map((service) => <Chip key={service.id} label={`${service.name} · ${t('booking.min', { n: service.duration_minutes })}`} selected={serviceId === service.id} onPress={() => setServiceId(service.id)} />)}
       </View>
+      {selectedService ? <SupportText>{t('booking.estimated', { defaultValue: 'Estimated time: {{n}} min', n: selectedService.duration_minutes })}</SupportText> : null}
     </Card>
+
+    {clientId ? <Card>
+      <SectionTitle>{t('booking.consent', 'Consent')}</SectionTitle>
+      {consents == null ? <SupportText>{t('booking.consentLoading', 'Checking the consent on file.')}</SupportText> : consents.length === 0 ? <SupportText>{t('booking.noConsent', 'No consent on file yet.')}</SupportText> : consents.map((c) => <BodyText key={c.id}>{c.consent_type.replace(/_/g, ' ')}: {c.status.replace(/_/g, ' ')}</BodyText>)}
+      <Button variant="secondary" label={t('booking.addConsent', 'Add consent')} onPress={() => router.push({ pathname: `/clients/${clientId}/health`, params: { mode: 'consent' } } as any)} />
+    </Card> : null}
 
     <Card>
       <SectionTitle>{t('booking.when')}</SectionTitle>
