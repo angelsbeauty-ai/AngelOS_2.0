@@ -37,7 +37,7 @@ function AskButton({ pathname, bottom }: { pathname: string; bottom?: number }) 
   const { t } = useTranslation();
   const parts = pathname.split('/').filter(Boolean);
   const entityType = parts[0] === 'clients' && parts[1] && parts[1] !== 'new' ? 'client' : undefined;
-  const lift = bottom ?? (TAB_PATHS.has(pathname) ? 104 : showsAppTabBar(pathname) ? 96 : undefined);
+  const lift = bottom ?? (TAB_PATHS.has(pathname) ? 88 : showsAppTabBar(pathname) ? 72 : undefined);
   return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, lift != null && { bottom: lift }]}>
     <Image accessibilityIgnoresInvertColors source={logo} style={styles.askLogo} resizeMode="contain" />
   </Pressable>;
@@ -51,6 +51,6 @@ const styles = StyleSheet.create({
   webStack: { maxWidth: 480, width: '100%', paddingBottom: 120 },
   refresh: { alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.light.border },
   refreshText: { color: colors.light.secondaryText, fontSize: 13, fontWeight: '600' },
-  ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5E5E5', shadowColor: '#151515', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  askLogo: { width: 30, height: 30 }
+  ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E5E5E5', shadowColor: '#151515', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  askLogo: { width: 24, height: 24 }
 });
