@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useAppearance } from '../../src/design/appearance';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizontal';
@@ -43,6 +44,7 @@ function matches(thread: MessageThreadSummary, f: Filter | null) {
 /** NAV V1 Messages tab: Meta Business Suite style inbox shell over the existing messaging API. */
 export default function MessagesScreen() {
   const { t } = useTranslation();
+  const { palette } = useAppearance();
   const [threads, setThreads] = useState<MessageThreadSummary[]>([]);
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
   const seg = 'messages' as Seg; // Messages only (no Comments/Mentions segment).
@@ -100,14 +102,19 @@ export default function MessagesScreen() {
 
   return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
     <View style={styles.header}>
-      <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{t('messages.title')}</Text>
+      <Text accessibilityRole="header" numberOfLines={1} style={[styles.title, { color: palette.text }]}>{t('messages.title')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}>
-        <Bell size={24} color="#262626" />{threads.some((x) => x.unread) ? <View style={styles.bellDot} /> : null}</Pressable>
+        <Bell size={24} color={palette.icon} />{threads.some((x) => x.unread) ? <View style={styles.bellDot} /> : null}</Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
-        <SlidersHorizontal size={24} color={filter || plat !== 'all' ? ROSE : '#151515'} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color="#262626" /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color="#262626" weight="bold" /></Pressable>
+        <SlidersHorizontal size={24} color={palette.icon} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color={palette.icon} weight="bold" /></Pressable>
     </View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist" style={styles.tabsWrap} contentContainerStyle={styles.chips}>
+      {PLATS.map(([k, name]) => { const on = plat === k; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={k === 'all' ? t('messages.all') : name} onPress={() => setPlat(k)} style={[styles.chip, styles.tab, on && styles.chipOn]}>
+        {k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={18} /> : null}
+        <Text numberOfLines={1} style={[styles.chipText, on && { color: '#FFFFFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>; })}
+    </ScrollView>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor="#8E8E8E" style={styles.search} /> : null}
     {filter || plat !== 'all' ? <Pressable onPress={() => { setFilter(null); setPlat('all'); }}><Text style={styles.link}>{[plat !== 'all' ? PLATS.find(([k]) => k === plat)?.[1] : null, filter ? t(`inbox.f.${filter}`) : null].filter(Boolean).join(' · ')} · {t('inbox.clear')}</Text></Pressable> : null}
     {reErr ? <Card><View style={{ gap: 12 }}>
@@ -179,7 +186,9 @@ export default function MessagesScreen() {
 
 const ROSE = '#151515';
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, marginTop: 12 },
+  tabsWrap: { marginHorizontal: -tokens.space.screen, flexGrow: 0 },
+  tab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#151515' },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8C7A64', borderWidth: 1.5, borderColor: '#FFF' },
@@ -192,7 +201,7 @@ const styles = StyleSheet.create({
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: ROSE },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
-  chips: { flexDirection: 'row', gap: 8 },
+  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: tokens.space.screen },
   chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },

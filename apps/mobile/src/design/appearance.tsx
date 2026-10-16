@@ -15,10 +15,13 @@ export type Palette = {
   tint: 'light' | 'dark';
   orb: string;
   orb2: string;
+  orbEdge: string;
+  sphereOpacity: number;
+  veil: string;
 };
 
 const day: Palette = {
-  bg: '#F3F4F6',
+  bg: '#F3F3F3',
   text: '#151515',
   muted: '#6B645B',
   glass: 'rgba(255,255,255,0.52)',
@@ -27,8 +30,11 @@ const day: Palette = {
   icon: '#151515',
   blur: 32,
   tint: 'light',
-  orb: 'rgba(255,255,255,0.95)',
-  orb2: 'rgba(186,204,220,0.62)'
+  orb: '#FFFFFF',
+  orb2: '#E6E6E6',
+  orbEdge: '#CFCFCF',
+  sphereOpacity: 0.9,
+  veil: 'rgba(243,243,243,0.18)'
 };
 
 const night: Palette = {
@@ -41,8 +47,11 @@ const night: Palette = {
   icon: '#F4F4F5',
   blur: 42,
   tint: 'dark',
-  orb: 'rgba(255,255,255,0.07)',
-  orb2: 'rgba(70,70,78,0.45)'
+  orb: '#3C3C3C',
+  orb2: '#222222',
+  orbEdge: '#111111',
+  sphereOpacity: 0.9,
+  veil: 'rgba(5,5,5,0.2)'
 };
 
 const KEY = 'angelos.appearance';

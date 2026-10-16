@@ -20,6 +20,7 @@ import { contentPostDate, listContent, type ContentPost } from '../../src/lib/co
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass, D } from '../../src/design/theme';
+import { useAppearance } from '../../src/design/appearance';
 
 const ROSE = '#151515'; const BOOK = '#151515';
 const TAGS = [
@@ -44,6 +45,7 @@ function Mark({ p }: { p: string; color?: string }) {
 /** Calendar tab: Google Calendar style month grid with real bookings + posts per day. */
 export default function CalendarTab() {
   const { t, i18n } = useTranslation();
+  const { palette } = useAppearance();
   const lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const now = new Date();
   const [offset, setOffset] = useState(0);
@@ -183,13 +185,13 @@ export default function CalendarTab() {
   const dayItems = day ? byDay.get(key(day)) ?? [] : [];
 
   return <View style={{ flex: 1 }}>
-    <Screen onRefresh={load} askBottom={mode !== 'month' ? 176 : undefined}>
+    <Screen onRefresh={load} askBottom={132} askRight={20}>
       <View {...swipe.panHandlers}>
       <View style={styles.head}>
-        <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
+        <Text accessibilityRole="header" numberOfLines={1} style={[styles.headTitle, { color: palette.text }]}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
         <View style={{ flex: 1 }} />
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={D.text} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={D.text} weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
       </View>
       <View style={styles.seg} accessibilityRole="tablist">
         {(['day', 'week', 'month'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} onPress={() => setView(m)} style={[styles.segItem, mode === m && styles.segOn]}>
@@ -238,7 +240,7 @@ export default function CalendarTab() {
           return <View key={w} style={styles.week}>
           {row.map((d) => { const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={`${d.toDateString()}, ${items.length}`} onPress={() => { setAnchor(d); setMode('day'); }} style={styles.cell}>
-              <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, !inMonth && styles.dim, today && { color: '#FFF' }]}>{d.getDate()}</Text></View>
+              <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, { color: palette.text }, !inMonth && styles.dim, today && { color: '#FFF' }]}>{d.getDate()}</Text></View>
               {thisWeek ? items.slice(0, 2).map((it, i) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
                 return <Pressable key={i} onPress={() => void openItem(it)} style={[styles.chip, pend ? styles.pending : it.kind === 'post' ? styles.blocked : styles.confirmed]}>
                   <Text numberOfLines={1} style={styles.mChip}>{it.kind === 'booking' ? it.a.service_name : label(it)}</Text></Pressable>; })
@@ -247,15 +249,15 @@ export default function CalendarTab() {
         </View>; })}
         </View>
         <View style={styles.legend}>
-          <View style={[styles.legendKey, styles.confirmed]} /><Text style={styles.legendText}>{t('cal.confirmed', 'Confirmed')}</Text>
-          <View style={[styles.legendKey, styles.pending, { marginLeft: 16 }]} /><Text style={styles.legendText}>{t('cal.pending', 'Pending')}</Text>
+          <View style={[styles.legendKey, styles.confirmed]} /><Text style={[styles.legendText, { color: palette.muted }]}>{t('cal.confirmed', 'Confirmed')}</Text>
+          <View style={[styles.legendKey, styles.pending, { marginLeft: 16 }]} /><Text style={[styles.legendText, { color: palette.muted }]}>{t('cal.pending', 'Pending')}</Text>
         </View>
       </> : null}
       {state === 'error' ? <Text style={styles.err}>{t('s3.errBody')}</Text> : null}
       </View>
     </Screen>
 
-    <Pressable accessibilityRole="button" accessibilityLabel={t('cal.add', 'Add')} onPress={() => setAddOpen(true)} style={styles.fab}><Plus size={26} color="#FFF" weight="bold" /></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={t('cal.add', 'Add')} onPress={() => setAddOpen(true)} hitSlop={8} style={styles.fab}><Plus size={28} color={palette.icon} weight="bold" /></Pressable>
 
     <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
       <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}><View style={styles.sheet}>
@@ -400,7 +402,7 @@ const styles = StyleSheet.create({
   dots: { flexDirection: 'row', alignSelf: 'center', gap: 3 },
   dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: D.text },
   mChip: { fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: D.text },
-  legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -8 },
+  legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   legendKey: { width: 10, height: 12, borderRadius: 2 },
   legendText: { fontFamily: tokens.font.ui, fontSize: 13, color: D.muted },
   wkRow: { flexDirection: 'row', paddingVertical: 8, marginTop: -8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE, backgroundColor: D.bg },
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: D.text },
   more: { fontFamily: tokens.font.uiSemibold, fontSize: 10, color: '#6B645B', paddingHorizontal: 3 },
   err: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B', textAlign: 'center' },
-  fab: { position: 'absolute', right: 16, bottom: 104, width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: ROSE, shadowColor: '#151515', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  fab: { position: 'absolute', right: 16, bottom: 78, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#FFFFFF', padding: 16, paddingBottom: 32, gap: 8 },
   sheetTitle: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#151515' },
@@ -425,11 +427,11 @@ const styles = StyleSheet.create({
   bar: { width: 4, alignSelf: 'stretch', borderRadius: 2 },
   rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
   rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4, marginLeft: -6 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4 },
   icon: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
   arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, height: 44 },
-  headTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, color: '#151515' },
+  headTitle: { flexShrink: 1, fontFamily: tokens.font.uiBold, fontSize: 24, color: '#151515' },
   search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#F2F2F2', fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
   input: { minHeight: 44, borderRadius: 10, paddingHorizontal: 12, marginTop: 8, backgroundColor: '#F2F2F2', fontFamily: tokens.font.ui, fontSize: 16, color: '#151515' },
   inputTall: { minHeight: 72, textAlignVertical: 'top', paddingTop: 10 },
@@ -441,7 +443,7 @@ const styles = StyleSheet.create({
   chipBtnText: { fontFamily: tokens.font.uiMedium, fontSize: 13, color: '#151515' },
   swatch: { width: 28, height: 28, borderRadius: 14 },
   swatchOn: { borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#151515', shadowOpacity: 0.4, shadowRadius: 2 },
-  wkHead: { flexDirection: 'row', marginHorizontal: -8, marginBottom: -16, paddingBottom: 8 },
+  wkHead: { flexDirection: 'row', marginHorizontal: -8, marginBottom: -8, paddingBottom: 4 },
   wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: D.muted },
   postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED', backgroundColor: '#FFF' },
   postN: { fontFamily: tokens.font.uiSemibold, fontSize: 9, color: '#151515', marginLeft: 1 },
@@ -450,7 +452,7 @@ const styles = StyleSheet.create({
   dropItem: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16 },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', ...(webGlass as object) },
-  seg: { flexDirection: 'row', padding: 3, borderRadius: 18, backgroundColor: D.fill, marginTop: -18 },
+  seg: { flexDirection: 'row', padding: 3, borderRadius: 18, backgroundColor: D.fill },
   segItem: { flex: 1, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: '#FFFFFF', shadowColor: '#28201A', shadowOpacity: 0.06, shadowRadius: 24, shadowOffset: { width: 0, height: 8 } },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
