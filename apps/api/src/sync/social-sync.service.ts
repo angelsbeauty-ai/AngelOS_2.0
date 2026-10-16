@@ -1,3 +1,4 @@
+import { saveContactAvatar } from '../messaging/contact-avatar';
 import { Injectable, Logger, NotFoundException, type OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -9,7 +10,7 @@ import { openToken, tokenKeyReady } from '../social/token-crypto';
 import { classifyIntent } from '../messaging/messaging.service';
 import { detectLanguage } from '../messaging/language';
 import { metaNumbers } from '../social/meta-insights';
-import { fetchConversations, fetchFacebookPosts, fetchInstagramPosts, plainGraphReason, postTitle, type SyncedConversation, type SyncedPost } from './meta-sync';
+import { fetchProfilePic, fetchConversations, fetchFacebookPosts, fetchInstagramPosts, plainGraphReason, postTitle, type SyncedConversation, type SyncedPost } from './meta-sync';
 
 type Db = SupabaseClient<any, any, any>;
 type Provider = 'facebook' | 'instagram' | 'line';
@@ -119,7 +120,7 @@ export class SocialSyncService implements OnModuleInit {
     const result: PlatformSync = { platform, connected: true, at, messages: { ok: true, imported: 0, note: null }, posts: { ok: true, imported: 0, note: null } };
     try {
       const convs = await fetchConversations({ graphBase: meta.graphBase, pageId: meta.pageId, ownId: accountId, token: meta.token, platform });
-      for (const conv of convs) result.messages.imported += await this.importConversation(db, workspaceId, channel, platform, accountId, conv);
+      for (const conv of convs) result.messages.imported += await this.importConversation(db, workspaceId, channel, platform, accountId, conv, (id) => fetchProfilePic({ graphBase: meta.graphBase, userId: id, token: meta.token }));
     } catch (e) {
       result.messages = { ok: false, imported: 0, note: plainGraphReason(e, platform === 'facebook' ? 'pages_messaging' : 'instagram_manage_messages') };
     }
@@ -170,7 +171,7 @@ export class SocialSyncService implements OnModuleInit {
   }
 
   /** Upserts the thread and inserts messages not seen before (unique external_message_id). Returns new message count. */
-  private async importConversation(db: Db, workspaceId: string, channel: { id: string }, platform: 'facebook' | 'instagram', ownId: string, conv: SyncedConversation): Promise<number> {
+  private async importConversation(db: Db, workspaceId: string, channel: { id: string }, platform: 'facebook' | 'instagram', ownId: string, conv: SyncedConversation, avatar?: (contactId: string) => Promise<string | null>): Promise<number> {
     if (!conv.messages.length) return 0;
     const externalThreadId = `${platform}:${conv.contactId}`;
     const { data: identity } = await db.from('client_channel_identities').select('client_id').eq('workspace_id', workspaceId).eq('channel_id', channel.id).eq('external_user_id', conv.contactId).maybeSingle();
@@ -200,6 +201,7 @@ export class SocialSyncService implements OnModuleInit {
       if (error || !data) throw new Error(error?.message ?? 'Could not create thread');
       threadId = data.id;
     }
+    if (avatar && threadId) await saveContactAvatar(threadId, () => avatar(conv.contactId));
     const rows = conv.messages.map((m) => {
       const outbound = m.fromId === ownId;
       return {
@@ -283,8 +285,26 @@ export class SocialSyncService implements OnModuleInit {
         }
       } catch (e) { fail(`Needs reconnect: could not check the LINE webhook (${e instanceof Error ? e.message.slice(0, 120) : 'unknown'}).`); }
     }
+    await this.refreshLineAvatars(db, channel.id, row.access_token_enc);
     await this.saveStatus(db, channel, result);
     return result;
+  }
+
+  /** LINE profile photos for threads that have none yet (GET /v2/bot/profile/{userId}). Skips quietly if migration 0024 is missing. */
+  private async refreshLineAvatars(db: Db, channelId: string, tokenEnc: string) {
+    try {
+      const { data, error } = await db.from('message_threads').select('id,contact_external_user_id').eq('channel_id', channelId).is('contact_avatar_url', null).is('contact_avatar_checked_at', null).limit(25);
+      if (error || !data?.length) return;
+      const token = openToken(tokenEnc);
+      for (const t of data as Array<{ id: string; contact_external_user_id: string | null }>) {
+        if (!t.contact_external_user_id) continue;
+        await saveContactAvatar(t.id, async () => {
+          const r = await fetch(`https://api.line.me/v2/bot/profile/${encodeURIComponent(t.contact_external_user_id!)}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) });
+          const j = r.ok ? ((await r.json().catch(() => ({}))) as any) : {};
+          return typeof j.pictureUrl === 'string' && j.pictureUrl.startsWith('https://') ? j.pictureUrl : null;
+        });
+      }
+    } catch { /* optional */ }
   }
 
   /** Webhook lookup: the studio's own LINE channel by bot user id (the webhook "destination"). */

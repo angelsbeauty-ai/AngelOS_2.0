@@ -142,7 +142,7 @@ export default function MessagesScreen() {
     {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
-        const avatarUri = (thread as MessageThreadSummary & { contact_avatar_url?: string | null }).contact_avatar_url ?? null;
+        const avatarUri = thread.contact_avatar_url ?? null;
         return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: '#FAFAFA' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} />
           <View style={styles.rowBody}>

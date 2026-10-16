@@ -38,7 +38,7 @@ export class LineWebhookController {
     for (const event of events) {
       try {
         const result: any = await this.messaging.ingestFromProvider(event, (userId) => adapter.getProfileName(userId), workspaceId);
-        if (result?.threadId) stored += 1;
+        if (result?.threadId) { stored += 1; await this.messaging.saveContactAvatar(result.threadId, async () => (await adapter.getProfile(event.externalUserId)).pictureUrl); }
       } catch (error) {
         // Log without message text. LINE retries failed deliveries; duplicates are ignored by external_message_id.
         this.logger.error(`LINE event could not be stored: ${error instanceof Error ? error.message : 'unknown error'}`);

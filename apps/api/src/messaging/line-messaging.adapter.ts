@@ -175,12 +175,15 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
     } catch { return out; }
   }
 
-  async getProfileName(userId: string): Promise<string | undefined> {
+  async getProfileName(userId: string): Promise<string | undefined> { return (await this.getProfile(userId)).displayName; }
+
+  /** GET /v2/bot/profile/{userId}: display name + profile photo URL (either may be missing). */
+  async getProfile(userId: string): Promise<{ displayName?: string; pictureUrl?: string }> {
     try {
       const response = await this.fetchImpl(`${this.config.apiBase}/v2/bot/profile/${encodeURIComponent(userId)}`, { headers: { Authorization: `Bearer ${this.config.channelAccessToken}` } });
-      if (!response.ok) return undefined;
+      if (!response.ok) return {};
       const json = (await response.json()) as any;
-      return typeof json.displayName === 'string' ? json.displayName.slice(0, 120) : undefined;
-    } catch { return undefined; }
+      return { displayName: typeof json.displayName === 'string' ? json.displayName.slice(0, 120) : undefined, pictureUrl: typeof json.pictureUrl === 'string' && /^https:\/\//.test(json.pictureUrl) ? json.pictureUrl : undefined };
+    } catch { return {}; }
   }
 }

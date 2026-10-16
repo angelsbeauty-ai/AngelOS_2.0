@@ -13,6 +13,8 @@ import { Skeleton } from '../../src/components/ui';
 import { getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment } from '../../src/lib/bookings';
 import { PostThumb } from '../../src/components/PostThumb';
 import { List } from 'phosphor-react-native/src/icons/List';
+import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
+import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
@@ -109,6 +111,8 @@ export default function CalendarTab() {
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.pickMonth', 'Choose month')} onPress={() => setPickOpen(true)} style={styles.titleBtn}>
           <Text numberOfLines={1} style={styles.headTitle}>{mode === 'month' ? base.toLocaleDateString(lang, { month: 'short', year: 'numeric' }) : mode === 'day' ? anchor.toLocaleDateString(lang, { month: 'short', day: 'numeric' }) : `${tlDays[0].toLocaleDateString(lang, { month: 'short', day: 'numeric' })} – ${tlDays[6].getDate()}`}</Text>
           <CaretDown size={18} color="#000" weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color="#262626" weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color="#262626" weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color="#000" /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setFilterOpen(true)} style={styles.icon}><Funnel size={24} color={show !== 'all' ? tokens.color.tide : '#000'} weight={show !== 'all' ? 'fill' : 'regular'} /></Pressable>
@@ -272,9 +276,10 @@ const styles = StyleSheet.create({
   rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626' },
   rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4 },
-  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
+  arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6, height: 44 },
-  headTitle: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#000' },
+  headTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, color: '#000' },
   search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFEFEF', fontFamily: tokens.font.ui, fontSize: 15, color: '#000' },
   wkHead: { flexDirection: 'row', marginHorizontal: -16, marginBottom: -24, paddingBottom: 8 },
   wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#262626' },

@@ -91,6 +91,16 @@ export async function fetchConversations(input: { graphBase: string; pageId: str
   return rows.map((row) => toConversation(row, input.ownId, input.pageId)).filter((c): c is SyncedConversation => c !== null);
 }
 
+/** Contact profile photo: GET /{IGSID|PSID}?fields=profile_pic with the page token. Null when Meta does not share it. */
+export async function fetchProfilePic(input: { graphBase: string; userId: string; token: string }, fetchImpl: Fetch = fetch): Promise<string | null> {
+  try {
+    const r = await fetchImpl(`${input.graphBase}/${encodeURIComponent(input.userId)}?${new URLSearchParams({ fields: 'profile_pic', access_token: input.token })}`);
+    if (!r.ok) return null;
+    const j = (await r.json()) as any;
+    return typeof j?.profile_pic === 'string' && /^https:\/\//.test(j.profile_pic) ? j.profile_pic : null;
+  } catch { return null; }
+}
+
 export function toConversation(row: any, ownId: string, pageId: string): SyncedConversation | null {
   const own = new Set([ownId, pageId].filter(Boolean));
   const people: any[] = row?.participants?.data ?? [];

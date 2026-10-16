@@ -1,3 +1,4 @@
+import { saveContactAvatar } from './contact-avatar';
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../auth/auth-user';
@@ -275,6 +276,8 @@ export class MessagingService {
       throw caught;
     }
   }
+
+  async saveContactAvatar(threadId: string, fetchUrl: () => Promise<string | null | undefined>) { return saveContactAvatar(threadId, fetchUrl); }
 
   private async recordInbound(db: Db, input: InboundRecordInput) {
     const { workspaceId, channel } = input;

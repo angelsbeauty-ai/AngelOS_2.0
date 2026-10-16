@@ -29,6 +29,8 @@ export interface MessageThreadSummary {
   unread: boolean;
   archived: boolean;
   needs_reply: boolean;
+  /** Contact profile photo (Instagram/Messenger profile_pic, LINE pictureUrl) when the server has one. */
+  contact_avatar_url?: string | null;
 }
 
 export interface ClientMessage {
