@@ -22,6 +22,40 @@ test('messages keep read state separate from booking state', () => {
   const m = h.messagesBox([t('a', { unread: true, intent: 'booking' }), t('b', { status: 'booking_in_progress' }), t('c', { status: 'spam_scam', unread: true })]);
   assert.equal(m.unread, 1); assert.equal(m.booking.inProgress, 1); assert.equal(m.booking.inquiries, 1); assert.equal(m.total, 2);
 });
+test('weekly goals count only saved story and carousel formats', () => {
+  const w = h.weekCounts([{ format: 'story' }, { format: 'story' }, { format: 'carousel' }, { format: 'reel' }, { format: null }, { format: 'photo' }]);
+  assert.equal(w.stories, 2);
+  assert.equal(w.carousels, 1);
+  assert.equal(w.reels, 1);
+  assert.equal(w.photos, 1);
+  assert.deepEqual(w.goals, { stories: 3, carousels: 1 });
+});
+test('inspiration is the most-viewed titled post, or nothing', () => {
+  assert.equal(h.pickInspiration([{ title: 'A', platform: 'instagram', views: null, published_at: '2026-10-01' }]), null);
+  const top = h.pickInspiration([
+    { title: 'Low', platform: 'instagram', views: 10, published_at: '2026-10-02' },
+    { title: 'High', platform: 'facebook', views: 40, published_at: '2026-10-01' },
+    { title: null, platform: 'instagram', views: 99, published_at: '2026-10-03' }
+  ]);
+  assert.equal(top.title, 'High');
+  assert.equal(top.views, 40);
+  assert.equal(top.platform, 'facebook');
+});
+
+const bill = require('../dist/ai/openai-bill.js');
+test('OpenAI cost payload sums to dollars and a missing payload is not zero', () => {
+  assert.equal(bill.sumCostUsd(null), null);
+  assert.equal(bill.sumCostUsd({}), null);
+  assert.equal(bill.sumCostUsd({ data: [{ results: [{ amount: { value: '10.00' } }, { amount: { value: 2.5 } }] }] }), 12.5);
+  assert.equal(bill.sumCostUsd({ data: [] }), 0);
+});
+test('a real bill is split by use counts and still adds up', () => {
+  assert.deepEqual(bill.shareBill(50, [30, 20]), [30, 20]);
+  const parts = bill.shareBill(0.01, [1, 1, 1]);
+  assert.equal(Math.round(parts.reduce((a, b) => a + b, 0) * 100), 1);
+  assert.deepEqual(bill.shareBill(50, []), []);
+  assert.deepEqual(bill.shareBill(50, [0, 0]), [0, 0]);
+});
 test('empty studio briefing is honest and invents nothing', () => {
   const s = { schedule: h.scheduleBox([], new Set(), 0, new Date()), messages: h.messagesBox([]), social: h.socialBox([], []), assistant: h.assistantBox([], 0) };
   assert.deepEqual(h.factLines(s, 'day'), ['No bookings today.', 'No messages waiting for a reply.']);

@@ -11,6 +11,8 @@ export interface HomeSummary {
   social: { connected: string[]; followers: number | null; engagement: number | null; reach: number | null; followersChange7d: number | null; postsInPeriod: number;
     recentPosts: Array<{ title: string; platform: string; published_at: string | null }>; platforms: Array<{ platform: string; followers: number | null; engagement: number | null; reach: number | null }> };
   important?: { scheduledPosts: number | null; tasks: number; approvals: number };
+  weekWork?: { stories: number; carousels: number; reels: number; photos: number; goals: { stories: number; carousels: number } } | null;
+  inspiration?: { title: string; platform: string; views: number; published_at: string | null } | null;
   assistant: { suggestions: Array<{ key: string; title: string; reason?: string | null }>; pendingApprovals: number };
 }
 export interface Briefing { text: string; source: 'ai' | 'facts'; at: string; facts: string[]; cached: boolean }

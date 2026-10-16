@@ -6,7 +6,7 @@ import { SocialAccountsService } from '../social/social-accounts.service';
 import { ClientsService } from '../clients/clients.service';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { SuggestionsService } from '../suggestions/suggestions.service';
-import { assistantBox, BRIEFING_INSTRUCTIONS, factLines, messagesBox, periodWindow, scheduleBox, socialBox, type Period } from './home-logic';
+import { assistantBox, BRIEFING_INSTRUCTIONS, factLines, messagesBox, periodWindow, pickInspiration, scheduleBox, socialBox, weekCounts, type Period } from './home-logic';
 
 @Injectable()
 export class HomeService {
@@ -43,7 +43,19 @@ export class HomeService {
     const messages = messagesBox((threads as any[]).filter((t) => t.channel?.provider !== 'manual').map((t) => ({ id: t.id, unread: !!t.unread, needs_reply: !!t.needs_reply, status: t.status, intent: t.intent, priority: t.priority, needs_owner: !!t.needs_owner, name: t.client?.display_name ?? t.contact_display_name ?? 'Client', platform_label: t.platform_label, last_message_at: t.last_message_at, preview: t.last_preview ?? null })));
     const social = socialBox((numbers?.items ?? []) as any[], ((postsRes?.data ?? []) as any[]).map((p) => ({ title: p.post?.title ?? '', platform: p.platform, published_at: p.published_at })));
     const assistant = assistantBox(((sugRes?.suggestions ?? []) as any[]).map((x) => ({ key: x.key, title: x.title, reason: x.detail ?? null })), pendingRes?.count ?? 0);
-    return { period, range: { start: start.toISOString(), end: end.toISOString() }, generatedAt: now.toISOString(), schedule, messages, social, assistant, important: { scheduledPosts: schedRes?.error ? null : (schedRes?.count ?? 0), tasks: assistant.pendingApprovals + assistant.suggestions.length, approvals: assistant.pendingApprovals }, unavailable: Array.from(new Set(notes)) };
+    const week = periodWindow('week', now);
+    const since30 = new Date(now.getTime() - 30 * 86400000).toISOString();
+    const [weekRes, inspireRes] = await Promise.all([
+      safe('week posts', db.from('content_variants').select('format').eq('workspace_id', workspaceId).eq('status', 'published').gte('published_at', week.start.toISOString()).lt('published_at', week.end.toISOString()).limit(500).then((r: any) => r), { error: true, data: null } as any),
+      safe('inspiration', db.from('content_variants').select('platform,published_at,post:content_posts(title),snaps:content_metric_snapshots(captured_at,views,reach)').eq('workspace_id', workspaceId).eq('status', 'published').gte('published_at', since30).order('published_at', { ascending: false }).limit(80).then((r: any) => r), { error: true, data: null } as any)
+    ]);
+    const weekWork = weekRes?.error ? null : weekCounts((weekRes?.data ?? []) as Array<{ format?: string | null }>);
+    const inspiration = inspireRes?.error ? null : pickInspiration(((inspireRes?.data ?? []) as any[]).map((r) => {
+      const last = [...(r.snaps ?? [])].sort((a: any, b: any) => String(b.captured_at).localeCompare(String(a.captured_at)))[0];
+      const views = last?.views ?? last?.reach ?? null;
+      return { title: r.post?.title ?? null, platform: r.platform, views: views == null ? null : Number(views), published_at: r.published_at ?? null };
+    }));
+    return { period, range: { start: start.toISOString(), end: end.toISOString() }, generatedAt: now.toISOString(), schedule, messages, social, assistant, important: { scheduledPosts: schedRes?.error ? null : (schedRes?.count ?? 0), tasks: assistant.pendingApprovals + assistant.suggestions.length, approvals: assistant.pendingApprovals }, weekWork, inspiration, unavailable: Array.from(new Set(notes)) };
   }
 
   /** Numbers-only briefing, cached per studio per day (and refreshed when the facts change). */

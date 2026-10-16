@@ -60,6 +60,28 @@ export function assistantBox(suggestions: SuggestionIn[], pendingApprovals: numb
   return { suggestions: suggestions.slice(0, 6), pendingApprovals };
 }
 
+export const WEEKLY_GOALS = { stories: 3, carousels: 1 };
+
+/** Counts published posts this week. A missing format is not counted as a story or a carousel. */
+export function weekCounts(rows: Array<{ format?: string | null }>) {
+  const counts = { stories: 0, carousels: 0, reels: 0, photos: 0 };
+  for (const row of rows) {
+    if (row.format === 'story') counts.stories += 1;
+    else if (row.format === 'carousel') counts.carousels += 1;
+    else if (row.format === 'reel') counts.reels += 1;
+    else if (row.format === 'photo') counts.photos += 1;
+  }
+  return { ...counts, goals: WEEKLY_GOALS };
+}
+
+/** The post with the most recorded views. No views means no inspiration — nothing is invented. */
+export function pickInspiration(posts: Array<{ title: string | null; platform: string; views: number | null; published_at: string | null }>) {
+  const ranked = posts.filter((p) => p.title && p.views != null);
+  ranked.sort((a, b) => (b.views! - a.views!) || String(b.published_at).localeCompare(String(a.published_at)));
+  const top = ranked[0];
+  return top ? { title: top.title as string, platform: top.platform, views: top.views as number, published_at: top.published_at } : null;
+}
+
 type Summary = { schedule: ReturnType<typeof scheduleBox>; messages: ReturnType<typeof messagesBox>; social: ReturnType<typeof socialBox>; assistant: ReturnType<typeof assistantBox> };
 
 /** Facts only. Used as the briefing when AI is off, and as the only input given to the AI. */

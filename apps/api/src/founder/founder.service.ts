@@ -1,4 +1,5 @@
-import { costPerUseUsd, jstBounds, limits } from '../ai/ai-usage';
+import { jstBounds, limits } from '../ai/ai-usage';
+import { fetchOpenAiMonthUsd, shareBill } from '../ai/openai-bill';
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
 import type { AuthUser } from '../auth/auth-user';
@@ -15,23 +16,36 @@ type WorkspaceFounderRow = { id: string; name: string; business_type?: string | 
 export class FounderService {
   async me(user: AuthUser) { return { founder: true, userId: user.id, email: user.email ?? null }; }
 
-  /** AI uses this month (Japan time) per user and overall, with estimated cost vs the monthly cap. */
+  /** Real OpenAI bill this month, plus each person's share of the times AngelOS used it. Not a credit percentage. */
   async aiUsage() {
     const service = createServiceSupabaseClient();
     const b = jstBounds();
-    const { data, error } = await service.from('product_usage_events').select('user_id,workspace_id,created_at').eq('feature', 'ai').eq('action_key', 'ai_call').gte('created_at', b.month).limit(50000);
-    if (error) return { available: false, reason: 'AI usage could not be read right now.', users: [], total: null };
+    const [{ data, error }, founders, bill] = await Promise.all([
+      service.from('product_usage_events').select('user_id,workspace_id,created_at').eq('feature', 'ai').eq('action_key', 'ai_call').gte('created_at', b.month).limit(50000),
+      service.from('platform_founders').select('user_id'),
+      fetchOpenAiMonthUsd(b.month)
+    ]);
+    if (error) return { available: false, reason: 'AI usage could not be read right now.', bill: null, youUsd: null, othersUsd: null, users: [] };
+    const founderIds = new Set((founders.data ?? []).map((r: { user_id: string }) => r.user_id));
     const per = new Map<string, { userId: string; month: number; today: number }>();
     for (const r of data ?? []) { const u = per.get(r.user_id) ?? { userId: r.user_id, month: 0, today: 0 }; u.month += 1; if (r.created_at >= b.day) u.today += 1; per.set(r.user_id, u); }
-    const lim = limits(); const cost = costPerUseUsd();
-    const users = await Promise.all(Array.from(per.values()).sort((a, z) => z.month - a.month).slice(0, 100).map(async (u) => {
+    const lim = limits();
+    const ranked = Array.from(per.values()).sort((a, z) => z.month - a.month).slice(0, 100);
+    const billUsd = 'usd' in bill ? bill.usd : null;
+    const called = ranked.reduce((s, u) => s + u.month, 0);
+    const dollars = shareBill(billUsd ?? 0, ranked.map((u) => u.month));
+    const users = await Promise.all(ranked.map(async (u, i) => {
       const { data: au } = await service.auth.admin.getUserById(u.userId).catch(() => ({ data: null as any }));
-      return { ...u, email: au?.user?.email ?? null, estCostUsd: Math.round(u.month * cost * 100) / 100, monthlyLimit: lim.monthly, dailyLimit: lim.daily };
+      return { ...u, email: au?.user?.email ?? null, yours: founderIds.has(u.userId), usd: billUsd == null || called <= 0 ? null : dollars[i], monthlyLimit: lim.monthly, dailyLimit: lim.daily };
     }));
-    const totalUses = (data ?? []).length;
-    const budget = Number(process.env.AI_MONTHLY_BUDGET_USD);
-    return { available: true, month: b.month, costPerUseUsd: cost, users,
-      total: { uses: totalUses, estCostUsd: Math.round(totalUses * cost * 100) / 100, capUses: per.size * lim.monthly, capUsd: Number.isFinite(budget) && budget > 0 ? budget : Math.round(per.size * lim.monthly * cost * 100) / 100, budgetSet: Number.isFinite(budget) && budget > 0 } };
+    const canSplit = billUsd != null && called > 0;
+    const youUsd = !canSplit ? null : Math.round(users.filter((u) => u.yours).reduce((s, u) => s + (u.usd ?? 0), 0) * 100) / 100;
+    const othersUsd = !canSplit ? null : Math.round(((billUsd as number) - (youUsd ?? 0)) * 100) / 100;
+    return {
+      available: true, month: b.month, users,
+      bill: { usd: billUsd, currency: 'usd', source: billUsd == null ? null : 'openai', reason: 'error' in bill ? bill.error : null },
+      youUsd, othersUsd
+    };
   }
 
   async overview() {
