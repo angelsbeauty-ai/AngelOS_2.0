@@ -1,6 +1,16 @@
 import { CanActivate, ConflictException, ExecutionContext, Injectable } from '@nestjs/common';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../../config/supabase';
 
+/** Staging only. Founders keep working when a workspace trial or subscription is read-only. Production is unchanged. */
+export function matchesStagingFounderEnv(environment: string | undefined, userId: string, email?: string | null): boolean {
+  if ((environment ?? '').trim() !== 'staging') return false;
+  const ids = String(process.env.FOUNDER_USER_IDS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+  if (ids.includes(userId)) return true;
+  const normalized = email?.trim().toLowerCase();
+  const emails = String(process.env.FOUNDER_EMAIL ?? '').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean);
+  return Boolean(normalized && emails.includes(normalized));
+}
+
 @Injectable()
 export class SubscriptionAccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -18,6 +28,8 @@ export class SubscriptionAccessGuard implements CanActivate {
     const userClient = createUserSupabaseClient(token);
     const { data: workspace } = await userClient.from('workspaces').select('id').eq('id', workspaceId).maybeSingle();
     if (!workspace) return true;
+
+    if (await this.stagingFounder(token)) return true;
 
     const service = createServiceSupabaseClient();
     const { data: subscription } = await service.from('workspace_subscriptions').select('status,trial_ends_at,read_only_until').eq('workspace_id', workspaceId).maybeSingle();
@@ -39,5 +51,21 @@ export class SubscriptionAccessGuard implements CanActivate {
         : 'AngelOS subscription access has expired. Reactivate to resume business actions.');
     }
     return true;
+  }
+
+  private async stagingFounder(token: string): Promise<boolean> {
+    if ((process.env.NODE_ENV ?? '').trim() !== 'staging') return false;
+    try {
+      const userClient = createUserSupabaseClient(token);
+      const { data: auth } = await userClient.auth.getUser(token);
+      const userId = auth.user?.id;
+      if (!userId) return false;
+      if (matchesStagingFounderEnv(process.env.NODE_ENV, userId, auth.user?.email)) return true;
+      const service = createServiceSupabaseClient();
+      const { data } = await service.from('platform_founders').select('user_id').eq('user_id', userId).maybeSingle();
+      return Boolean(data);
+    } catch {
+      return false;
+    }
   }
 }

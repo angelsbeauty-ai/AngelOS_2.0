@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
+import { matchesStagingFounderEnv } from '../common/guards/subscription-access.guard';
 import { createHash } from 'crypto';
 import type { BillingProvider } from './billing-provider';
 import { UnconfiguredBillingProvider } from './billing-provider';
@@ -13,7 +14,8 @@ export class SubscriptionsService {
 
   async getStatus(user: AuthUser, workspaceId: string) {
     await this.assertWorkspaceAccess(user, workspaceId);
-    const subscription = await this.normalizeSubscription(workspaceId);
+    const founder = await this.stagingFounder(user);
+    const subscription = founder ? await this.readSubscription(workspaceId) : await this.normalizeSubscription(workspaceId);
     const service = createServiceSupabaseClient();
     const { data: plan, error: planError } = await service.from('subscription_plans').select('*').eq('code', subscription.plan_code).single();
     if (planError || !plan) throw new InternalServerErrorException(planError?.message ?? 'Subscription plan not found');
@@ -22,7 +24,7 @@ export class SubscriptionsService {
       subscription,
       plan,
       pricing: effective,
-      access: this.accessFor(subscription),
+      access: this.accessFor(subscription, founder),
       billingProvider: { name: this.billing.name, configured: this.billing.configured },
       policy: { readOnlyDaysAfterCancellation: READ_ONLY_DAYS, studentDiscountPercent: 20 }
     };
@@ -116,9 +118,29 @@ export class SubscriptionsService {
     return { currency: plan.currency, billingInterval: interval, baseCents, discountPercent, finalCents };
   }
 
-  private accessFor(subscription: any) {
-    const writeEnabled = ['trialing','active','past_due'].includes(subscription.status);
-    return { readEnabled: subscription.status !== 'expired', writeEnabled, aiEnabled: writeEnabled, publishingEnabled: writeEnabled, automationsEnabled: writeEnabled, reason: writeEnabled ? null : subscription.status === 'read_only' ? 'Subscription is in the 60-day read-only period.' : 'Subscription access has expired.' };
+  private accessFor(subscription: any, founderOnStaging = false) {
+    const writeEnabled = founderOnStaging || ['trialing','active','past_due'].includes(subscription.status);
+    return { readEnabled: subscription.status !== 'expired' || founderOnStaging, writeEnabled, aiEnabled: writeEnabled, publishingEnabled: writeEnabled, automationsEnabled: writeEnabled, reason: writeEnabled ? null : subscription.status === 'read_only' ? 'Subscription is in the 60-day read-only period.' : 'Subscription access has expired.' };
+  }
+
+  private async readSubscription(workspaceId: string) {
+    const service = createServiceSupabaseClient();
+    const { data: row, error } = await service.from('workspace_subscriptions').select('*').eq('workspace_id', workspaceId).maybeSingle();
+    if (error) throw new InternalServerErrorException(error.message);
+    if (!row) throw new NotFoundException('Subscription not found');
+    return row;
+  }
+
+  private async stagingFounder(user: AuthUser) {
+    if ((process.env.NODE_ENV ?? '').trim() !== 'staging') return false;
+    if (matchesStagingFounderEnv(process.env.NODE_ENV, user.id, user.email)) return true;
+    try {
+      const service = createServiceSupabaseClient();
+      const { data } = await service.from('platform_founders').select('user_id').eq('user_id', user.id).maybeSingle();
+      return Boolean(data);
+    } catch {
+      return false;
+    }
   }
 
   private async assertWorkspaceAccess(user: AuthUser, workspaceId: string) {
