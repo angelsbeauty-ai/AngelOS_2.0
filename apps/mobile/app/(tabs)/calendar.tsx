@@ -22,8 +22,6 @@ import { contentPostDate, listContent, type ContentPost } from '../../src/lib/co
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass, D } from '../../src/design/theme';
-import { List } from 'phosphor-react-native/src/icons/List';
-import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { FunnelSimple } from 'phosphor-react-native/src/icons/FunnelSimple';
 
 const ROSE = '#151515'; const BOOK = '#151515';
@@ -104,9 +102,7 @@ export default function CalendarTab() {
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load} askBottom={mode !== 'month' ? 176 : undefined}>
       <View style={styles.head}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><List size={24} color={D.text} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.today', 'Today')} onPress={() => { setOffset(0); setAnchor(new Date(now.getFullYear(), now.getMonth(), now.getDate())); }} style={styles.titleBtn}>
-          <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'short', year: 'numeric' })}</Text><CaretDown size={14} color={D.text} weight="bold" /></Pressable>
+        <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color={D.text} weight="bold" /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color={D.text} weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />

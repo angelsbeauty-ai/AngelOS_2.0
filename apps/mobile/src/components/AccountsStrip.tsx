@@ -27,22 +27,29 @@ export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: s
     <Button small variant="secondary" label={t('inbox.connectBtn')} onPress={() => router.push('/content/accounts')} />
   </View>;
   return <View style={styles.card}>
-    {shown.map((a) => <Pressable key={a.platform} accessibilityRole="button" accessibilityLabel={`${PLATFORM_NAME[a.platform]} ${a.name ?? ''}`} onPress={() => router.push('/content/accounts')} style={styles.row}>
-      <View style={[styles.avatar, { alignItems: 'center', justifyContent: 'center' }]}><BrandLogo platform={a.platform} size={32} /></View>
+    {shown.map((a) => {
+      const id = a.handle || a.name || '';
+      return <Pressable key={a.platform} accessibilityRole="button" accessibilityLabel={`${id} ${PLATFORM_NAME[a.platform]}`} onPress={() => router.push('/content/accounts')} style={styles.row}>
+      {a.pictureUrl ? <Image source={{ uri: a.pictureUrl }} style={styles.photo} /> : <View style={[styles.avatar, styles.avatarEmpty]}><Text style={styles.avatarText}>{(id.replace(/^@/, '')[0] ?? '?').toUpperCase()}</Text></View>}
       <View style={{ flex: 1, gap: 2 }}>
-        <Text numberOfLines={1} style={styles.title}>{PLATFORM_NAME[a.platform]}{a.name ? ` · ${a.handle ?? a.name}` : ''}</Text>
-        <Text numberOfLines={1} style={styles.body}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {fmt(a.followers)}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${fmt(a.posts)}` : ''}</Text>
+        <Text numberOfLines={1} style={styles.title}>{id}</Text>
+        <View style={styles.stat}>
+          <BrandLogo platform={a.platform} size={14} />
+          <Text numberOfLines={1} style={styles.body}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {fmt(a.followers)}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${fmt(a.posts)}` : ''}</Text>
+        </View>
         {a.state === 'needs_reconnect' ? <Text numberOfLines={3} style={styles.warn}>{a.reason ?? t('sml.reconnect')}</Text> : null}
         {a.syncError ? <Text numberOfLines={3} style={styles.warn}>{a.syncError}</Text> : null}
       </View>
-    </Pressable>)}
+    </Pressable>; })}
   </View>;
 }
 
 const styles = StyleSheet.create({
   card: { gap: 12, padding: 14, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
+  photo: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F2F2F2' },
   avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.12)' },
   avatarText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   title: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
