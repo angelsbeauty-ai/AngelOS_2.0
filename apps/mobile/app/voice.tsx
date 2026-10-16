@@ -11,10 +11,12 @@ import { VoiceOrb } from '../src/components/VoiceOrb';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing } from '../src/lib/home';
 import { D, tokens } from '../src/design/theme';
+import { useAppearance } from '../src/design/appearance';
 
 /** Voice (final-D2 07): top row, orb (placeholder), live caption, hint, mute + close. Same OpenAI/LiveKit voice logic. */
 export default function VoiceScreen() {
   const { t } = useTranslation();
+  const { palette } = useAppearance();
   const [ws, setWs] = useState<string | null>(null);
   const [facts, setFacts] = useState<string | undefined>(undefined);
   const [noWs, setNoWs] = useState(false);
@@ -32,22 +34,22 @@ export default function VoiceScreen() {
     : null;
   const hint = live ? t('voice.tapPause', 'Tap the orb to pause') : t('voice.tapStart', 'Tap the orb to start');
 
-  return <View style={styles.page}>
+  return <View style={[styles.page, { backgroundColor: palette.bg }]}>
     <View style={styles.topRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={styles.iconBtn}><X size={22} color={D.text} /></Pressable>
-      <Text style={styles.label} numberOfLines={1}>{top}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.captions', 'Captions')} accessibilityState={{ selected: cc }} onPress={() => setCc(!cc)} style={styles.iconBtn}><ClosedCaptioning size={24} color={cc ? D.text : D.faint} weight={cc ? 'regular' : 'regular'} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={styles.iconBtn}><X size={22} color={palette.text} /></Pressable>
+      <Text style={[styles.label, { color: palette.muted }]} numberOfLines={1}>{top}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.captions', 'Captions')} accessibilityState={{ selected: cc }} onPress={() => setCc(!cc)} style={styles.iconBtn}><ClosedCaptioning size={24} color={cc ? palette.text : palette.muted} /></Pressable>
     </View>
     <View style={styles.center}>
       <Pressable accessibilityRole="button" accessibilityLabel={live ? t('voice.stop', 'Stop') : t('voice.start', 'Start talking')} disabled={noWs || !!off || voice.state === 'connecting'} onPress={() => (live ? voice.stop() : void voice.start())}>
         <VoiceOrb state={voice.state} dimmed={!!off || noWs} />
       </Pressable>
-      {cc && caption ? <Text style={styles.caption}>{caption}</Text> : null}
-      <Text style={styles.hint}>{hint}</Text>
+      {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{caption}</Text> : null}
+      <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>
     </View>
     <View style={styles.buttons}>
-      <Pressable accessibilityRole="button" accessibilityLabel={voice.muted ? t('voice.unmute', 'Unmute') : t('voice.mute', 'Mute')} accessibilityState={{ selected: voice.muted }} disabled={!live} onPress={() => voice.setMuted(!voice.muted)} style={[styles.round, styles.mute, !live && { opacity: 0.5 }]}>
-        {voice.muted ? <MicrophoneSlash size={24} color={D.text} /> : <Microphone size={24} color={D.text} />}
+      <Pressable accessibilityRole="button" accessibilityLabel={voice.muted ? t('voice.unmute', 'Unmute') : t('voice.mute', 'Mute')} accessibilityState={{ selected: voice.muted }} disabled={!live} onPress={() => voice.setMuted(!voice.muted)} style={[styles.round, styles.mute, { backgroundColor: palette.glass, borderColor: palette.border }, !live && { opacity: 0.5 }]}>
+        {voice.muted ? <MicrophoneSlash size={24} color={palette.text} /> : <Microphone size={24} color={palette.text} />}
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={[styles.round, styles.end]}><X size={24} color="#FFFFFF" /></Pressable>
     </View>
