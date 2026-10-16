@@ -22,7 +22,7 @@ const GREY = '#6B645B';
 /** Analytics, Meta Business Suite Insights style: last 30 days vs the 30 before. Stored real metrics only. */
 export default function AnalyticsScreen() {
   const { palette, mode: look } = useAppearance();
-  const nt = look === 'night' ? { color: palette.text } : null; const nm = look === 'night' ? { color: palette.muted } : null;
+  const nt = look === 'night' ? { color: palette.text } : null; const nm = look === 'night' ? { color: palette.muted } : null; const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0 } : null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const [plat, setPlat] = useState<Plat>('all');
@@ -46,7 +46,7 @@ export default function AnalyticsScreen() {
   return <Screen onRefresh={() => load()}>
     <View style={screenHeader.row}>
       <Text accessibilityRole="header" style={[screenHeader.title, nt]}>{t('tabs.analytics')}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('ins.platform', { defaultValue: 'Platform' })} onPress={() => setPickOpen(true)} style={styles.picker}>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('ins.platform', { defaultValue: 'Platform' })} onPress={() => setPickOpen(true)} style={[styles.picker, nc]}>
         <View style={styles.logos}>{(plat === 'all' ? ['instagram', 'facebook', 'line'] : [plat]).map((p, i) => <View key={p} style={[styles.logoRing, i > 0 && { marginLeft: -6 }]}><BrandLogo platform={p} size={20} /></View>)}</View>
         <CaretDown size={14} color={D.text} weight="bold" />
       </Pressable>
@@ -68,19 +68,19 @@ export default function AnalyticsScreen() {
         : h.change > 0 ? t('ins.headUp', { defaultValue: 'A good month. Your {{name}}views are a little above your usual.', name }) : t('ins.headDown', { defaultValue: 'A quieter month. Your {{name}}views are a little below your usual.', name })}</Text>
       <Text style={[styles.period, nm]}>{t('ins.period', 'Last 30 days · vs your previous 30')}</Text>
       {data.note ? <Text style={[styles.muted, nm]}>{data.note}</Text> : null}
-      <View style={styles.grid}>{data.cards.map((c) => <View key={c.key} style={styles.card}>
-        <Text style={styles.cardTitle} numberOfLines={2}>{label[c.key]}</Text>
+      <View style={styles.grid}>{data.cards.map((c) => <View key={c.key} style={[styles.card, nc]}>
+        <Text style={[styles.cardTitle, nt]} numberOfLines={2}>{label[c.key]}</Text>
         {c.total == null && c.key === 'linkClicks' ? null : <Spark lines={c.lines} />}
         <View style={styles.numRow}>
-          <Text style={[styles.num, c.total == null && { color: D.faint }]}>{c.total == null ? (c.key === 'linkClicks' ? '—' : '0') : fmt(c.total)}</Text>
+          <Text style={[styles.num, nt, c.total == null && { color: D.faint }]}>{c.total == null ? (c.key === 'linkClicks' ? '—' : '0') : fmt(c.total)}</Text>
           {c.total != null ? <Change v={c.change} prev={c.previous} /> : null}
         </View>
-        {c.total == null && c.key === 'linkClicks' ? <Text style={styles.na}>{t('ins.linkHint', 'Add a link to your bio and clicks will appear here')}</Text> : null}
+        {c.total == null && c.key === 'linkClicks' ? <Text style={[styles.na, nm]}>{t('ins.linkHint', 'Add a link to your bio and clicks will appear here')}</Text> : null}
       </View>)}</View>
 
       <View style={styles.topHead}><Text style={[styles.h2, nt]}>{t('ins.topBy', 'Top content by')} {tab === 'views' ? t('ins.viewsLc', 'views') : tab === 'interactions' ? t('ins.interLc', 'interactions') : t('ins.followsLc', 'follows')}</Text>
         <Pressable onPress={() => router.push({ pathname: '/calendar' } as any)}><Text style={[styles.seeAll, nt]}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
-      <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, tab === k && styles.tabOn]}><Text style={[styles.tabText, tab === k && { color: '#FFFFFF' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
+      <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, nc, tab === k && styles.tabOn, tab === k && look === 'night' && { backgroundColor: '#F4F4F5', borderColor: '#F4F4F5' }]}><Text style={[styles.tabText, nt, tab === k && { color: look === 'night' ? '#151515' : '#FFFFFF' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
       {top.length ? <View style={styles.tiles}>{top.slice(0, 3).map((p) => <Pressable key={p.variantId} style={styles.tile} onPress={() => p.post?.id && router.push(`/content/${p.post.id}` as any)}>
         {p.post ? <PostThumb workspaceId={ws} post={p.post} size={112} radius={12} /> : <View style={[styles.tileBlank]} />}
         <View style={styles.badge}><Text style={styles.badgeText}>{fmt(p.value)}</Text></View></Pressable>)}</View>
@@ -93,10 +93,11 @@ export default function AnalyticsScreen() {
 /** Compared with her own previous period only. Never red or green. */
 function Change({ v, prev }: { v: number | null; prev: number | null }) {
   const { t } = useTranslation();
+  const { palette, mode } = useAppearance(); const c = mode === 'night' ? { color: palette.muted } : null;
   if (v == null) return null;
-  if (Math.abs(v) < 5) return <Text style={styles.chg}>{t('ins.same', 'about the same')}</Text>;
-  if (v < 0) return <Text style={styles.chg} numberOfLines={2}>{t('ins.quieter', 'a little quieter than usual')}</Text>;
-  return <Text style={styles.chg}>{t('ins.vsYou', { defaultValue: '+{{n}}% vs you', n: v })}</Text>;
+  if (Math.abs(v) < 5) return <Text style={[styles.chg, c]}>{t('ins.same', 'about the same')}</Text>;
+  if (v < 0) return <Text style={[styles.chg, c]} numberOfLines={2}>{t('ins.quieter', 'a little quieter than usual')}</Text>;
+  return <Text style={[styles.chg, c]}>{t('ins.vsYou', { defaultValue: '+{{n}}% vs you', n: v })}</Text>;
 }
 
 function Spark({ lines }: { lines: InsightCard['lines'] }) {

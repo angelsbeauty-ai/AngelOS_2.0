@@ -1743,6 +1743,8 @@
   "uses": "{{n}} uses"
  },
  "acs": {
+  "reconnectStats": "Reconnect to see stats",
+  "syncing": "Stats syncing…",
   "na": "not available",
   "loadFail": "Could not load your accounts",
   "none": "No accounts connected yet",

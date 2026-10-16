@@ -102,7 +102,7 @@ export default function ProfileScreen() {
         <Text numberOfLines={1} style={[styles.studio, { color: palette.muted }]}>{ws?.name ?? t('pf.noStudio')}</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>{plan ? <Chip label={t('pf.plan', { name: plan })} /> : null}{me.founder ? <Chip tone="rose" label={t('pf.founder').toUpperCase()} /> : null}</View>
       </View>
-      <Pressable accessibilityRole="button" onPress={() => router.push('/profile/edit' as any)} hitSlop={10}><Text style={styles.edit}>{t('pf.edit')}</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/profile/edit' as any)} hitSlop={10}><Text style={[styles.edit, mode === 'night' && { color: palette.text }]}>{t('pf.edit')}</Text></Pressable>
     </View> : null}
 
     {ws && owner ? <AccountsStrip workspaceId={ws.id} /> : null}
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
 
     {me?.founder ? <SettingsGroup highlight title={t('pf.founder')} badge={t('pf.onlyYou')} icon={<Crown size={14} color={ROSE} weight="duotone" />}>
       <SettingsRow icon={<Heartbeat {...ink} />} title={t('pf.health')} sub={health === 'error' ? t('pf.cantCheck') : checkedMin == null ? undefined : checkedLabel(t, checkedMin)}
-        trailing={health === 'error' ? <Pressable onPress={() => { setHealth(null); if (ws) void getSystemHealth(ws.id).then(setHealth).catch(() => setHealth('error')); }}><Text style={styles.edit}>{t('pf.tryAgain')}</Text></Pressable> : health ? <Chip tone={health.overallStatus === 'healthy' ? 'success' : 'danger'} label={t(`pf.status.${health.overallStatus}`)} /> : null}
+        trailing={health === 'error' ? <Pressable onPress={() => { setHealth(null); if (ws) void getSystemHealth(ws.id).then(setHealth).catch(() => setHealth('error')); }}><Text style={[styles.edit, mode === 'night' && { color: palette.text }]}>{t('pf.tryAgain')}</Text></Pressable> : health ? <Chip tone={health.overallStatus === 'healthy' ? 'success' : 'danger'} label={t(`pf.status.${health.overallStatus}`)} /> : null}
         onPress={() => router.push('/system-health')} />
       <SettingsRow icon={<Key {...ink} />} title={t('pf.admin')} onPress={() => router.push('/founder-admin')} />
       <SettingsRow icon={<ChatText {...ink} />} title={t('pf.beta')} trailing={newFeedback ? <Chip label={t('pf.newN', { count: newFeedback })} /> : null} onPress={() => router.push('/founder-admin')} />

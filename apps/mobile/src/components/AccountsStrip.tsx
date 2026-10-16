@@ -5,11 +5,16 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Button } from './ui';
 import { tokens, webGlass } from '../design/theme';
+import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
+import { useAppearance } from '../design/appearance';
 import { getSocialAccounts, PLATFORM_NAME, type SocialAccount } from '../lib/social';
 
 /** Real connected accounts: photo, name, followers, posts. Unknown numbers say "not available" (never 0). Sync problems are shown, not hidden. */
 export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: string; accounts?: SocialAccount[] }) {
   const { t, i18n } = useTranslation();
+  const { palette, mode } = useAppearance();
+  const nc = mode === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border } : null;
+  const nt = mode === 'night' ? { color: palette.text } : null; const nm = mode === 'night' ? { color: palette.muted } : null;
   const [items, setItems] = useState<SocialAccount[] | null>(given ?? null);
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(() => {
@@ -19,23 +24,24 @@ export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: s
   }, [workspaceId, given, t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
   const fmt = (n: number | null | undefined) => (n == null ? t('acs.na') : n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US'));
-  if (error) return <View style={styles.card}><Text style={styles.warn}>{t('acs.loadFail')}: {error}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={load} /></View>;
+  if (error) return <View style={[styles.card, nc]}><Text style={styles.warn}>{t('acs.loadFail')}: {error}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={load} /></View>;
   if (!items) return null;
   const shown = items.filter((a) => a.state !== 'not_connected');
-  if (!shown.length) return <View style={styles.card}>
+  if (!shown.length) return <View style={[styles.card, nc]}>
     <Text style={styles.title}>{t('acs.none')}</Text>
     <Button small variant="secondary" label={t('inbox.connectBtn')} onPress={() => router.push('/content/accounts')} />
   </View>;
-  return <View style={styles.card}>
+  return <View style={[styles.card, nc]}>
     {shown.map((a) => {
       const id = a.handle || a.name || '';
       return <Pressable key={a.platform} accessibilityRole="button" accessibilityLabel={`${id} ${PLATFORM_NAME[a.platform]}`} onPress={() => router.push('/content/accounts')} style={styles.row}>
-      {a.pictureUrl ? <Image source={{ uri: a.pictureUrl }} style={styles.photo} /> : <View style={[styles.avatar, styles.avatarEmpty]}><Text style={styles.avatarText}>{(id.replace(/^@/, '')[0] ?? '?').toUpperCase()}</Text></View>}
+      {a.pictureUrl ? <Image source={{ uri: a.pictureUrl }} style={styles.photo} /> : <View style={[styles.avatar, styles.avatarEmpty]}><Text style={[styles.avatarText, nt]}>{(id.replace(/^@/, '')[0] ?? '?').toUpperCase()}</Text></View>}
       <View style={{ flex: 1, gap: 2 }}>
-        <Text numberOfLines={1} style={styles.title}>{id}</Text>
+        <Text numberOfLines={1} style={[styles.title, nt]}>{id}</Text>
         <View style={styles.stat}>
           <BrandLogo platform={a.platform} size={14} />
-          <Text numberOfLines={1} style={styles.body}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {fmt(a.followers)}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${fmt(a.posts)}` : ''}</Text>
+          {a.followers == null && (a.platform === 'line' || a.posts == null) ? <><Text numberOfLines={1} style={[styles.body, nm]}>{a.state === 'needs_reconnect' || a.syncError ? t('acs.reconnectStats', 'Reconnect to see stats') : t('acs.syncing', 'Stats syncing…')}</Text>{a.state === 'needs_reconnect' || a.syncError ? <CaretRight size={12} color={palette.muted} /> : null}</>
+            : <Text numberOfLines={1} style={[styles.body, nm]}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {fmt(a.followers)}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${fmt(a.posts)}` : ''}</Text>}
         </View>
         {a.state === 'needs_reconnect' ? <Text numberOfLines={3} style={styles.warn}>{a.reason ?? t('sml.reconnect')}</Text> : null}
         {a.syncError ? <Text numberOfLines={3} style={styles.warn}>{a.syncError}</Text> : null}

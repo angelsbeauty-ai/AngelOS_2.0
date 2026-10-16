@@ -1,6 +1,6 @@
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View , Platform } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
@@ -46,6 +46,7 @@ function Mark({ p }: { p: string; color?: string }) {
 export default function CalendarTab() {
   const { t, i18n } = useTranslation();
   const { palette, mode: look } = useAppearance();
+  const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border } : null;
   const ln = look === 'night' ? { borderColor: 'rgba(255,255,255,0.10)' } : null;
   const lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const now = new Date();
@@ -194,23 +195,23 @@ export default function CalendarTab() {
         <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
       </View>
-      <View style={styles.seg} accessibilityRole="tablist">
-        {(['day', 'week', 'month'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} onPress={() => setView(m)} style={[styles.segItem, mode === m && styles.segOn]}>
-          <Text style={[styles.segText, mode !== m && { color: D.text2 }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' })}</Text></Pressable>)}
+      <View style={[styles.seg, look === 'night' && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
+        {(['day', 'week', 'month'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} onPress={() => setView(m)} style={[styles.segItem, mode === m && styles.segOn, mode === m && look === 'night' && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
+          <Text style={[styles.segText, look === 'night' && { color: palette.text }, mode !== m && { color: look === 'night' ? palette.muted : D.text2 }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' })}</Text></Pressable>)}
       </View>
       {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor={D.faint} style={styles.search} /> : null}
 
       {state === 'nostudio' ? <NoStudio /> : null}
       {mode === 'day' && state === 'ready' ? (() => { const its = (byDay.get(key(anchor)) ?? []).filter((x) => x.kind === 'booking'); const hrs = its.reduce((n, x) => n + (x.kind === 'booking' ? (new Date(x.a.end_at).getTime() - x.at.getTime()) / 3600000 : 0), 0);
         return <View style={styles.dayHead}>
-          <View style={[styles.num, styles.numToday, styles.numBig]}><Text style={[styles.numText, { color: '#FFF' }]}>{anchor.getDate()}</Text></View>
+          <View style={[styles.num, styles.numToday, styles.numBig, look === 'night' && { backgroundColor: '#F4F4F5' }]}><Text style={[styles.numText, { color: look === 'night' ? '#151515' : '#FFF' }]}>{anchor.getDate()}</Text></View>
           <View style={{ gap: 2 }}><Text style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString(lang, { weekday: 'long' })}</Text>
             <Text style={[styles.rowSub, { color: palette.muted }]}>{t('cal.dayCount', { defaultValue: '{{n}} bookings · {{h}} h booked', n: its.length, h: Math.round(hrs * 10) / 10 })}</Text></View>
         </View>; })() : null}
       {mode !== 'month' && state === 'ready' ? <View style={[styles.grid, ln]}>
-        {mode === 'week' ? <View style={[styles.wkRow, ln, look === 'night' && { backgroundColor: palette.bg }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+        {mode === 'week' ? <View style={[styles.wkRow, ln, { backgroundColor: palette.glass }, Platform.OS === 'web' && ({ backdropFilter: 'blur(20px)' } as object)]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
           <Text style={styles.wk}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text>
-          <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, { color: palette.text }, today && { color: '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
+          <View style={[styles.num, today && styles.numToday, today && look === 'night' && { backgroundColor: '#F4F4F5' }]}><Text style={[styles.numText, { color: palette.text }, today && { color: look === 'night' ? '#151515' : '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
         <View style={{ flexDirection: 'row', paddingTop: 12 }}>
           <View style={{ width: GUTTER }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text style={styles.hour}>{hourLabel(h, lang)}</Text></View>)}</View>
           {tlDays.map((d) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
@@ -224,9 +225,9 @@ export default function CalendarTab() {
               const top = (Math.max(startH, HOURS[0]) - HOURS[0]) * HOUR_H; const h = Math.max(22, ((endAt.getTime() - it.at.getTime()) / 3600000) * HOUR_H - 2);
               const kind = it.kind === 'post' ? styles.blocked : PENDING.test(it.a.status) ? styles.pending : styles.confirmed;
               const title = it.kind === 'booking' ? it.a.service_name : label(it); const sub = it.kind === 'booking' ? it.a.client?.display_name ?? '' : it.platforms.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ');
-              return <Pressable key={i} accessibilityRole="button" onPress={() => void openItem(it)} style={[styles.block, kind, { top, height: h }]}>
-                <Text numberOfLines={mode === 'day' ? 1 : 2} style={styles.chipText}>{title}</Text>
-                {sub ? <Text numberOfLines={1} style={styles.blockSub}>{sub}</Text> : null}
+              return <Pressable key={i} accessibilityRole="button" onPress={() => void openItem(it)} style={[styles.block, kind, look === 'night' && kind !== styles.confirmed && nc, look === 'night' && kind === styles.confirmed && { backgroundColor: 'rgba(255,255,255,0.10)' }, { top, height: h }]}>
+                <Text numberOfLines={mode === 'day' ? 1 : 2} style={[styles.chipText, look === 'night' && { color: palette.text }]}>{title}</Text>
+                {sub && mode === 'day' ? <Text numberOfLines={1} style={[styles.blockSub, look === 'night' && { color: palette.muted }]}>{sub}</Text> : null}
               </Pressable>; })}
             {isToday && nowTop > 0 && nowTop < HOURS.length * HOUR_H ? <View pointerEvents="none" style={[styles.nowLine, { top: nowTop }]}><View style={styles.nowDot} /></View> : null}
           </View>; })}
@@ -241,10 +242,10 @@ export default function CalendarTab() {
           return <View key={w} style={[styles.week, ln]}>
           {row.map((d) => { const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={`${d.toDateString()}, ${items.length}`} onPress={() => { setAnchor(d); setMode('day'); }} style={styles.cell}>
-              <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, { color: palette.text }, !inMonth && styles.dim, today && { color: '#FFF' }]}>{d.getDate()}</Text></View>
+              <View style={[styles.num, today && styles.numToday, today && look === 'night' && { backgroundColor: '#F4F4F5' }]}><Text style={[styles.numText, { color: palette.text }, !inMonth && styles.dim, today && { color: look === 'night' ? '#151515' : '#FFF' }]}>{d.getDate()}</Text></View>
               {thisWeek ? items.slice(0, 2).map((it, i) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
-                return <Pressable key={i} onPress={() => void openItem(it)} style={[styles.chip, pend ? styles.pending : it.kind === 'post' ? styles.blocked : styles.confirmed]}>
-                  <Text numberOfLines={1} style={styles.mChip}>{it.kind === 'booking' ? it.a.service_name : label(it)}</Text></Pressable>; })
+                return <Pressable key={i} onPress={() => void openItem(it)} style={[styles.chip, pend ? styles.pending : it.kind === 'post' ? styles.blocked : styles.confirmed, nc]}>
+                  <Text numberOfLines={1} style={[styles.mChip, look === 'night' && { color: palette.text }]}>{it.kind === 'booking' ? it.a.service_name : label(it)}</Text></Pressable>; })
                 : items.length ? <View style={styles.dots}>{items.slice(0, 3).map((_, i) => <View key={i} style={styles.dot} />)}</View> : null}
             </Pressable>; })}
         </View>; })}
@@ -406,7 +407,7 @@ const styles = StyleSheet.create({
   legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
   legendKey: { width: 10, height: 12, borderRadius: 2 },
   legendText: { fontFamily: tokens.font.ui, fontSize: 13, color: D.muted },
-  wkRow: { flexDirection: 'row', paddingVertical: 8, marginTop: -8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE, backgroundColor: D.bg },
+  wkRow: { flexDirection: 'row', paddingVertical: 8, marginTop: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE, backgroundColor: D.bg },
   wk: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#766E64' },
   week: { flexDirection: 'row', minHeight: 88, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   cell: { flex: 1, paddingTop: 6, paddingHorizontal: 2, gap: 3, overflow: 'hidden' },

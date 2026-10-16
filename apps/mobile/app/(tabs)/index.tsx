@@ -85,14 +85,14 @@ export default function HomeScreen() {
     {noStudio ? <NoStudio /> : <>
       {sumErr && !sum ? <Text style={styles.muted}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
       <View style={styles.grid}>
-        <Box icon={<CalendarBlank {...icon} />} title={t('home.schedule', "Today's schedule")} value={s ? n(s.total, t('home.booking1', 'booking'), t('home.bookings', 'bookings')) : '–'} onPress={() => openReport('schedule')}
+        <Box icon={<CalendarBlank {...icon} />} title={t('home.scheduleShort', 'Today')} value={s ? n(s.total, t('home.booking1', 'booking'), t('home.bookings', 'bookings')) : '–'} onPress={() => openReport('schedule')}
           lines={s ? [s.next ? `${t('home.next', 'Next')} ${time(s.next.start_at)}${s.next.service ? ` · ${s.next.service}` : ''}` : t('home.noMore', 'Nothing else booked today'), s.pending ? `${s.pending} ${t('home.pending', 'waiting to confirm')}` : '', s.cancelled ? `${s.cancelled} ${t('home.cancelled', 'cancelled')}` : '', s.total ? `${s.newClients} ${t('home.new', 'new')} · ${s.returningClients} ${t('home.returning', 'returning')}` : ''] : []} />
         <Box icon={<ChatCircleDots {...icon} />} title={t('home.messages', 'Messages')} value={m ? `${m.unread} ${t('home.unread', 'unread')}` : '–'} onPress={() => router.push('/messages' as any)}
           lines={m ? [`${m.needsReply} ${t('home.needReply', 'need a reply')}`, m.important ? `${m.important} ${t('home.important', 'important')}` : '', m.booking.inProgress ? `${m.booking.inProgress} ${t('home.bookingInProgress', 'booking in progress')}` : ''] : []} />
         <Box icon={<ListChecks {...icon} />} title={t('home.importantTitle', 'Important')} value={tasks != null ? n(tasks, t('home.task1', 'task'), t('home.tasks', 'tasks')) : '–'} onPress={() => openReport('assistant')}
           lines={[imp?.scheduledPosts != null ? n(imp.scheduledPosts, t('home.schedPost1', 'scheduled post'), t('home.schedPosts', 'scheduled posts')) : '', a?.pendingApprovals ? `${a.pendingApprovals} ${t('home.approvals', 'waiting for approval')}` : '', s?.touchUpsDue ? `${s.touchUpsDue} ${t('home.touchUps', 'touch-ups due')}` : '']} />
         <Box icon={<ShareNetwork {...icon} />} title={t('home.social', 'Social media')} value={so?.followers != null ? `${so.followers.toLocaleString(locale)}` : '–'} unit={so?.followers != null ? t('home.followers', 'followers') : ''} onPress={() => openReport('social')}
-          lines={so ? (so.connected.length ? [so.followersChange7d != null ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'this week')}` : '', so.engagement != null ? `${so.engagement.toLocaleString(locale)} ${t('home.interactions', 'recent interactions')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
+          lines={so ? (so.connected.length ? [so.followersChange7d != null ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'this week')}` : '', so.engagement != null ? `${so.engagement.toLocaleString(locale)} ${t('home.interactionsShort', 'interactions')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
       </View>
 
     </>}

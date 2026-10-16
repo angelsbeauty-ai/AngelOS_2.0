@@ -111,12 +111,12 @@ export default function MessagesScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color={palette.icon} weight="bold" /></Pressable>
     </View>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist" style={styles.tabsWrap} contentContainerStyle={styles.chips}>
-      {PLATS.map(([k, name]) => { const on = plat === k; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={k === 'all' ? t('messages.all') : name} onPress={() => setPlat(k)} style={[styles.chip, styles.tab, on && styles.chipOn]}>
+      {PLATS.map(([k, name]) => { const on = plat === k; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={k === 'all' ? t('messages.all') : name} onPress={() => setPlat(k)} style={[styles.chip, styles.tab, mode === 'night' && { backgroundColor: palette.glass, borderColor: palette.border }, on && styles.chipOn, on && mode === 'night' && { backgroundColor: '#F4F4F5', borderColor: '#F4F4F5' }]}>
         {k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={18} /> : null}
-        <Text numberOfLines={1} style={[styles.chipText, on && { color: '#FFFFFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>; })}
+        <Text numberOfLines={1} style={[styles.chipText, mode === 'night' && { color: palette.text }, on && { color: mode === 'night' ? '#151515' : '#FFFFFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>; })}
     </ScrollView>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor="#8E8E8E" style={styles.search} /> : null}
-    {filter || plat !== 'all' ? <Pressable onPress={() => { setFilter(null); setPlat('all'); }}><Text style={[styles.link, { color: palette.text }]}>{[plat !== 'all' ? PLATS.find(([k]) => k === plat)?.[1] : null, filter ? t(`inbox.f.${filter}`) : null].filter(Boolean).join(' · ')} · {t('inbox.clear')}</Text></Pressable> : null}
+    {filter ? <Pressable onPress={() => setFilter(null)}><Text style={[styles.link, { color: palette.text }]}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
     {reErr ? <Card><View style={{ gap: 12 }}>
       <Text style={styles.errText}>{reErr.kind === 'line' ? t('messages.lineIssue') : t('messages.reconnectFailed')} ({PLATFORM_NAME[reErr.provider]})</Text>
       <Text style={styles.errBody}>{reErr.message}</Text>
