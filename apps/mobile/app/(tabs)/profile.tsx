@@ -89,7 +89,6 @@ export default function ProfileScreen() {
   return <Screen onRefresh={load}>
     <View style={{ gap: 2 }}><Overline>{t('pf.eyebrow')}</Overline><ScreenTitle>{t('pf.title')}</ScreenTitle></View>
 
-    {me && ws ? <AiMeter workspaceId={ws.id} founder={Boolean(me.founder)} /> : null}
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
     {me ? <View style={styles.card}>
@@ -103,16 +102,6 @@ export default function ProfileScreen() {
     </View> : null}
 
     {ws && owner ? <AccountsStrip workspaceId={ws.id} /> : null}
-
-    {me?.founder ? <SettingsGroup highlight title={t('pf.founder')} badge={t('pf.onlyYou')} icon={<Crown size={14} color={ROSE} weight="duotone" />}>
-      <SettingsRow icon={<Heartbeat {...I} />} title={t('pf.health')} sub={health === 'error' ? t('pf.cantCheck') : checkedMin == null ? undefined : checkedLabel(t, checkedMin)}
-        trailing={health === 'error' ? <Pressable onPress={() => { setHealth(null); if (ws) void getSystemHealth(ws.id).then(setHealth).catch(() => setHealth('error')); }}><Text style={styles.edit}>{t('pf.tryAgain')}</Text></Pressable> : health ? <Chip tone={health.overallStatus === 'healthy' ? 'success' : 'danger'} label={t(`pf.status.${health.overallStatus}`)} /> : null}
-        onPress={() => router.push('/system-health')} />
-      <SettingsRow icon={<Key {...I} />} title={t('pf.admin')} onPress={() => router.push('/founder-admin')} />
-      <SettingsRow icon={<ChatText {...I} />} title={t('pf.beta')} trailing={newFeedback ? <Chip label={t('pf.newN', { count: newFeedback })} /> : null} onPress={() => router.push('/founder-admin')} />
-      <SettingsRow icon={<CreditCard {...I} />} title={t('pf.billing')} sub={t('pf.viewOnly')} onPress={() => router.push('/subscription')} />
-      <SettingsRow last icon={<ChartLine {...I} />} title={t('pf.analytics')} onPress={() => router.push('/analytics')} />
-    </SettingsGroup> : null}
 
     <SettingsGroup title={t('pf.account')}>
       <SettingsRow icon={<User {...I} />} title={t('pf.account')} value={me?.email ?? ''} onPress={() => router.push('/profile/edit' as any)} />
@@ -140,6 +129,18 @@ export default function ProfileScreen() {
       <SettingsRow icon={<Question {...I} />} title={t('pf.help')} onPress={() => router.push('/help')} />
       <SettingsRow last icon={<ChatText {...I} />} title={t('pf.feedback')} onPress={() => router.push('/beta-feedback')} />
     </SettingsGroup>
+
+    {me?.founder ? <SettingsGroup highlight title={t('pf.founder')} badge={t('pf.onlyYou')} icon={<Crown size={14} color={ROSE} weight="duotone" />}>
+      <SettingsRow icon={<Heartbeat {...I} />} title={t('pf.health')} sub={health === 'error' ? t('pf.cantCheck') : checkedMin == null ? undefined : checkedLabel(t, checkedMin)}
+        trailing={health === 'error' ? <Pressable onPress={() => { setHealth(null); if (ws) void getSystemHealth(ws.id).then(setHealth).catch(() => setHealth('error')); }}><Text style={styles.edit}>{t('pf.tryAgain')}</Text></Pressable> : health ? <Chip tone={health.overallStatus === 'healthy' ? 'success' : 'danger'} label={t(`pf.status.${health.overallStatus}`)} /> : null}
+        onPress={() => router.push('/system-health')} />
+      <SettingsRow icon={<Key {...I} />} title={t('pf.admin')} onPress={() => router.push('/founder-admin')} />
+      <SettingsRow icon={<ChatText {...I} />} title={t('pf.beta')} trailing={newFeedback ? <Chip label={t('pf.newN', { count: newFeedback })} /> : null} onPress={() => router.push('/founder-admin')} />
+      <SettingsRow icon={<CreditCard {...I} />} title={t('pf.billing')} sub={t('pf.viewOnly')} onPress={() => router.push('/subscription')} />
+      <SettingsRow last icon={<ChartLine {...I} />} title={t('pf.analytics')} onPress={() => router.push('/analytics')} />
+    </SettingsGroup> : null}
+
+    {me && ws ? <AiMeter workspaceId={ws.id} founder={Boolean(me.founder)} /> : null}
 
     <View style={{ gap: 10 }}>
       <Button variant="secondary" label={t('pf.logout')} onPress={() => void logout()} />
