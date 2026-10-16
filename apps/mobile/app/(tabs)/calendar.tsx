@@ -14,8 +14,6 @@ import { Skeleton } from '../../src/components/ui';
 import { createBlock, getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment, type CalendarBlock } from '../../src/lib/bookings';
 import { listClients } from '../../src/lib/clients';
 import { PostThumb } from '../../src/components/PostThumb';
-import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
-import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { DotsThreeVertical } from 'phosphor-react-native/src/icons/DotsThreeVertical';
 import { contentPostDate, listContent, type ContentPost } from '../../src/lib/content';
@@ -98,7 +96,32 @@ export default function CalendarTab() {
   const tlDays = mode === 'day' ? [anchor] : Array.from({ length: 7 }, (_, i) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i));
   const rangeStart = mode === 'month' ? gridStart : tlDays[0];
   const rangeDays = mode === 'month' ? weeks * 7 : tlDays.length;
-  function step(n: number) { if (mode === 'month') setOffset(offset + n); else setAnchor(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() + n * (mode === 'day' ? 1 : 7))); }
+  function shiftMonth(n: number) {
+    const next = new Date(anchor.getFullYear(), anchor.getMonth() + n, 1);
+    const day = Math.min(anchor.getDate(), new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate());
+    const moved = new Date(next.getFullYear(), next.getMonth(), day);
+    setAnchor(moved);
+    setOffset((moved.getFullYear() - now.getFullYear()) * 12 + (moved.getMonth() - now.getMonth()));
+  }
+  function shiftView(n: number) {
+    const order = ['day', 'week', 'month'] as const;
+    setView(order[(order.indexOf(mode) + n + order.length) % order.length]);
+  }
+  const nav = useRef({ mode, shiftMonth, shiftView });
+  nav.current = { mode, shiftMonth, shiftView };
+  const swipe = useRef(PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (e, g) => {
+      const horizontal = Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy);
+      const vertical = Math.abs(g.dy) > 14 && Math.abs(g.dy) > Math.abs(g.dx);
+      if (horizontal) return true;
+      if (!vertical) return false;
+      return nav.current.mode === 'month' || e.nativeEvent.pageY < 210;
+    },
+    onPanResponderRelease: (_, g) => {
+      if (Math.abs(g.dx) > Math.abs(g.dy) && Math.abs(g.dx) > 42) nav.current.shiftView(g.dx < 0 ? 1 : -1);
+      else if (Math.abs(g.dy) > 42) nav.current.shiftMonth(g.dy < 0 ? -1 : 1);
+    }
+  })).current;
   const reqId = useRef(0);
 
   const load = useCallback(async () => {
@@ -152,10 +175,9 @@ export default function CalendarTab() {
 
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load} askBottom={mode !== 'month' ? 176 : undefined}>
+      <View {...swipe.panHandlers}>
       <View style={styles.head}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color={D.text} weight="bold" /></Pressable>
         <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color={D.text} weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={D.text} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={D.text} weight="bold" /></Pressable>
@@ -221,6 +243,7 @@ export default function CalendarTab() {
         </View>
       </> : null}
       {state === 'error' ? <Text style={styles.err}>{t('s3.errBody')}</Text> : null}
+      </View>
     </Screen>
 
     {mode !== 'month' ? <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAddOpen(true)} style={styles.fab}><Plus size={26} color="#FFF" weight="bold" /></Pressable> : null}
