@@ -51,7 +51,7 @@ export function AppTabBar() {
 }
 
 const styles = StyleSheet.create({
-  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 64, flexDirection: 'row', backgroundColor: D.bgTab, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEDED' },
+  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 58, flexDirection: 'row', backgroundColor: D.bgTab, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEDED' },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   itemOn: {},
   label: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14 },

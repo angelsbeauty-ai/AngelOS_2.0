@@ -16,13 +16,11 @@ import { PostThumb } from '../../src/components/PostThumb';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
-import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
 import { DotsThreeVertical } from 'phosphor-react-native/src/icons/DotsThreeVertical';
 import { contentPostDate, listContent, type ContentPost } from '../../src/lib/content';
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass, D } from '../../src/design/theme';
-import { FunnelSimple } from 'phosphor-react-native/src/icons/FunnelSimple';
 
 const ROSE = '#151515'; const BOOK = '#151515';
 const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#151515', line: '#06C755' }; const POSTED = '#151515';
@@ -47,8 +45,8 @@ export default function CalendarTab() {
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('week');
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
-  const [moreOpen, setMoreOpen] = useState(false); const [filterOpen, setFilterOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts'>('all');
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts' | 'tasks'>('all');
   function setView(m: 'day' | 'week' | 'month') { setMode(m); if (m !== 'month') setAnchor(offset === 0 ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : base); }
   const [anchor, setAnchor] = useState(() => new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   const [sel, setSel] = useState<Item | null>(null);
@@ -89,8 +87,8 @@ export default function CalendarTab() {
     const m = new Map<string, Item[]>();
     const add = (it: Item) => m.set(key(it.at), [...(m.get(key(it.at)) ?? []), it]);
     const q = query.trim().toLowerCase(); const hit = (txt: string) => !q || txt.toLowerCase().includes(q);
-    if (show !== 'posts') appts.filter((a) => hit(`${a.client?.display_name ?? ''} ${a.service_name}`)).forEach((a) => add({ kind: 'booking', a, at: new Date(a.start_at) }));
-    if (show !== 'bookings') posts.filter((p) => hit(`${p.title} ${p.variants?.[0]?.caption ?? ''}`)).forEach((p) => { const d = contentPostDate(p); if (d) add({ kind: 'post', p, at: d, platforms: Array.from(new Set((p.variants ?? []).map((v) => v.platform.split('_')[0]))) }); });
+    if (show === 'all' || show === 'bookings') appts.filter((a) => hit(`${a.client?.display_name ?? ''} ${a.service_name}`)).forEach((a) => add({ kind: 'booking', a, at: new Date(a.start_at) }));
+    if (show === 'all' || show === 'posts') posts.filter((p) => hit(`${p.title} ${p.variants?.[0]?.caption ?? ''}`)).forEach((p) => { const d = contentPostDate(p); if (d) add({ kind: 'post', p, at: d, platforms: Array.from(new Set((p.variants ?? []).map((v) => v.platform.split('_')[0]))) }); });
     m.forEach((v) => v.sort((x, y) => x.at.getTime() - y.at.getTime()));
     return m;
   }, [appts, posts, show, query]);
@@ -102,12 +100,11 @@ export default function CalendarTab() {
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load} askBottom={mode !== 'month' ? 176 : undefined}>
       <View style={styles.head}>
-        <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color={D.text} weight="bold" /></Pressable>
+        <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color={D.text} weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={D.text} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setFilterOpen(true)} style={styles.icon}><FunnelSimple size={24} color={D.text} weight={show !== 'all' ? 'fill' : 'regular'} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={D.text} weight="bold" /></Pressable>
       </View>
       <View style={styles.seg} accessibilityRole="tablist">
@@ -130,7 +127,7 @@ export default function CalendarTab() {
         <View style={{ flexDirection: 'row', paddingTop: 12 }}>
           <View style={{ width: GUTTER }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text style={styles.hour}>{hourLabel(h, lang)}</Text></View>)}</View>
           {tlDays.map((d) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
-            const dayBlocks = blocks.filter((bl) => key(new Date(bl.start_at)) === key(d));
+            const dayBlocks = (show === 'all' || show === 'tasks') ? blocks.filter((bl) => key(new Date(bl.start_at)) === key(d)) : [];
             return <View key={key(d)} style={[styles.col, mode === 'day' && { borderLeftWidth: 0 }]}>
             {HOURS.map((h) => <View key={h} style={styles.hourLine} />)}
             {dayBlocks.map((bl) => { const st = new Date(bl.start_at); const en = new Date(bl.end_at); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
@@ -200,15 +197,11 @@ export default function CalendarTab() {
     </Modal>
     <Modal visible={moreOpen} transparent animationType="fade" onRequestClose={() => setMoreOpen(false)}>
       <Pressable style={styles.dropBack} onPress={() => setMoreOpen(false)}><View style={[styles.drop, { alignSelf: 'flex-end' }]}>
-        {(['day', 'week', 'month'] as const).map((m) => <Pressable key={m} style={styles.dropItem} onPress={() => { setView(m); setMoreOpen(false); }}><Text style={[styles.miText, mode === m && { color: tokens.color.tide }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' })}</Text></Pressable>)}
-        <Pressable style={styles.dropItem} onPress={() => { setMoreOpen(false); setOffset(0); setAnchor(new Date(now.getFullYear(), now.getMonth(), now.getDate())); }}><Text style={styles.miText}>{t('cal.today', 'Today')}</Text></Pressable>
-        <Pressable style={styles.dropItem} onPress={() => { setMoreOpen(false); router.push('/bookings/week' as any); }}><Text style={styles.miText}>{t('nav2.bookingsCal')}</Text></Pressable>
-        <Pressable style={styles.dropItem} onPress={() => { setMoreOpen(false); router.push('/content/accounts' as any); }}><Text style={styles.miText}>{t('nav3.accounts')}</Text></Pressable>
-      </View></Pressable>
-    </Modal>
-    <Modal visible={filterOpen} transparent animationType="fade" onRequestClose={() => setFilterOpen(false)}>
-      <Pressable style={styles.dropBack} onPress={() => setFilterOpen(false)}><View style={[styles.drop, { alignSelf: 'flex-end' }]}>
-        {(['all', 'bookings', 'posts'] as const).map((m) => <Pressable key={m} style={styles.dropItem} onPress={() => { setShow(m); setFilterOpen(false); }}><Text style={[styles.miText, show === m && { color: tokens.color.tide }]}>{m === 'all' ? t('messages.all') : m === 'bookings' ? t('cal.bookings', 'Bookings') : t('cal.posts', 'Posts')}</Text></Pressable>)}
+        {([
+          ['posts', 'Scheduled posts'],
+          ['bookings', 'Appointments'],
+          ['tasks', 'Tasks']
+        ] as const).map(([id, label]) => <Pressable key={id} style={styles.dropItem} onPress={() => { setShow(show === id ? 'all' : id); setMoreOpen(false); }}><Text style={[styles.miText, show === id && { color: tokens.color.tide }]}>{label}</Text></Pressable>)}
       </View></Pressable>
     </Modal>
     <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
@@ -224,7 +217,10 @@ export default function CalendarTab() {
             {a ? <Field k={t('cal.price', 'Price')} v={new Intl.NumberFormat(lang, { style: 'currency', currency: a.currency || 'JPY' }).format(a.price_snapshot)} /> : null}
             <Field k={t('cal.status', 'Status')} v={sel.a.status} />
             {a?.client?.phone ? <Field k={t('cal.contact', 'Contact')} v={a.client.phone} /> : null}
-            {a?.notes ? <Field k={t('cal.notes', 'Notes')} v={a.notes} /> : null}
+            {a?.notes ? <Field k={t('cal.notes', 'Notes')} v={a.notes} /> : <Field k={t('cal.notes', 'Notes')} v={t('cal.none', 'None')} />}
+            <Field k={t('cal.description', 'Description')} v={sel.a.service_name} />
+            <Field k={t('cal.link', 'Link')} v={t('cal.none', 'None')} />
+            <Field k={t('cal.attachments', 'Attachments')} v={t('cal.none', 'None')} />
             {detailErr ? <Text style={styles.rowSub}>{t('s3.errBody')}</Text> : null}
             <View style={styles.btnRow}>
               {c?.id || a?.client_id ? <Pressable style={styles.btn} onPress={() => { setSel(null); router.push(`/clients/${c?.id ?? a?.client_id}` as any); }}><Text style={styles.btnText}>{t('cal.profile', 'Client profile')}</Text></Pressable> : null}
@@ -240,6 +236,10 @@ export default function CalendarTab() {
           <Field k={t('cal.platforms', 'Platforms')} v={sel.platforms.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ') || '—'} />
           <Field k={t('cal.status', 'Status')} v={sel.p.status} />
           <Field k={t('cal.when', 'When')} v={`${sel.at.toLocaleDateString(lang, { weekday: 'short', month: 'short', day: 'numeric' })} · ${time(sel.at)}`} />
+          <Field k={t('cal.description', 'Description')} v={sel.p.variants?.[0]?.caption?.trim() || t('cal.none', 'None')} />
+          <Field k={t('cal.notes', 'Notes')} v={sel.p.strategy_reason?.trim() || t('cal.none', 'None')} />
+          <Field k={t('cal.link', 'Link')} v={sel.p.variants?.find((v) => v.live_url)?.live_url || t('cal.none', 'None')} />
+          <Field k={t('cal.attachments', 'Attachments')} v={sel.p.media?.map((m) => m.asset?.original_filename).filter(Boolean).join(', ') || t('cal.none', 'None')} />
           <Pressable style={[styles.btn, styles.btnPrimary]} onPress={() => { setSel(null); router.push(`/content/${sel.p.id}` as any); }}><Text style={[styles.btnText, { color: '#FFF' }]}>{t('cal.edit', 'Edit post')}</Text></Pressable>
         </View> : null}
       </Pressable></Pressable>
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   dropItem: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16 },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', ...(webGlass as object) },
-  seg: { flexDirection: 'row', padding: 3, borderRadius: 18, backgroundColor: D.fill, marginTop: -8 },
+  seg: { flexDirection: 'row', padding: 3, borderRadius: 18, backgroundColor: D.fill, marginTop: -18 },
   segItem: { flex: 1, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: '#FFFFFF', shadowColor: '#28201A', shadowOpacity: 0.06, shadowRadius: 24, shadowOffset: { width: 0, height: 8 } },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
