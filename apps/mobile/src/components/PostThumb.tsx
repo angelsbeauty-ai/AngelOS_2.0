@@ -16,8 +16,8 @@ export function PostThumb({ workspaceId, post, size = 60, radius = 14 }: { works
     return () => { live = false; };
   }, [workspaceId, asset?.id]);
   const box = { width: size, height: size, borderRadius: radius };
-  if (url) return <Image source={{ uri: url }} style={[box, { backgroundColor: '#E5DDD5' }]} accessibilityIgnoresInvertColors />;
-  return <View style={[box, styles.ph]}><View style={[styles.half, { backgroundColor: '#D9CFC6' }]} /><View style={{ width: 2 }} /><View style={[styles.half, { backgroundColor: '#C9A99B' }]} /></View>;
+  if (url) return <Image source={{ uri: url }} style={[box, { backgroundColor: '#EFEFEF' }]} accessibilityIgnoresInvertColors />;
+  return <View style={[box, styles.ph]}><View style={[styles.half, { backgroundColor: '#DBDBDB' }]} /><View style={{ width: 2 }} /><View style={[styles.half, { backgroundColor: '#DBDBDB' }]} /></View>;
 }
 
 const styles = StyleSheet.create({ ph: { overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' }, half: { flex: 1 } });

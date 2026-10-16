@@ -91,7 +91,7 @@ function Spark({ lines }: { lines: InsightCard['lines'] }) {
     <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
       {lines.length ? lines.map((l) => { const n = l.points.length; const pts = l.points.map((v, i) => `${((i / Math.max(1, n - 1)) * W).toFixed(1)},${(H - 2 - ((v ?? 0) / max) * (H - 6)).toFixed(1)}`).join(' ');
         return <Polyline key={l.platform} points={pts} fill="none" stroke={lines.length > 1 ? BRAND[l.platform] ?? '#000000' : '#000000'} strokeWidth={1.4} />; })
-        : <Polyline points={`0,${H - 2} ${W},${H - 2}`} fill="none" stroke="#9DB8E0" strokeWidth={1.4} />}
+        : <Polyline points={`0,${H - 2} ${W},${H - 2}`} fill="none" stroke="#DBDBDB" strokeWidth={1.4} />}
     </Svg>
   </View>;
 }

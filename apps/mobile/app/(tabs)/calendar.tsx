@@ -26,7 +26,7 @@ import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass } from '../../src/design/theme';
 
 const ROSE = '#000000'; const BOOK = '#000000';
-const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#000000', line: '#06C755' }; const POSTED = '#366A49';
+const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#000000', line: '#06C755' }; const POSTED = '#000000';
 const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date } | { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
 
@@ -256,7 +256,7 @@ const styles = StyleSheet.create({
   num: { alignSelf: 'center', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   numToday: { backgroundColor: tokens.color.tide },
   numText: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#262626' },
-  dim: { color: '#A69C94' },
+  dim: { color: '#8E8E8E' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 4, paddingHorizontal: 3, paddingVertical: 2 },
   chipText: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: '#FFF' },
   more: { fontFamily: tokens.font.uiSemibold, fontSize: 10, color: '#737373', paddingHorizontal: 3 },

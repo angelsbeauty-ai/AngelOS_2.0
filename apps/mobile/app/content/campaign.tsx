@@ -44,13 +44,13 @@ export default function PlanCampaign() {
   return <Screen hideAsk>
     <View style={styles.card}>
       <Text style={styles.label}>{t('s3.cName')}</Text>
-      <TextInput value={f.name} onChangeText={(name) => setF({ ...f, name })} placeholder={t('s3.cNamePh')} placeholderTextColor="#A69C94" style={styles.input} accessibilityLabel={t('s3.cName')} />
+      <TextInput value={f.name} onChangeText={(name) => setF({ ...f, name })} placeholder={t('s3.cNamePh')} placeholderTextColor="#8E8E8E" style={styles.input} accessibilityLabel={t('s3.cName')} />
       <Text style={styles.label}>{t('s3.cGoal')}</Text>
       <View style={styles.chips}>{GOALS.map((g) => <Pressable key={g} accessibilityRole="button" accessibilityState={{ selected: f.goal === g }} onPress={() => setF({ ...f, goal: g })} style={[styles.pill, f.goal === g && styles.pillOn]}><Text style={[styles.pillText, f.goal === g && { color: '#FFF' }]}>{t(`s3.goal.${g}`)}</Text></Pressable>)}</View>
       <DateField label={t('s3.cStart')} value={f.startsOn} min={today} onChange={(startsOn) => setF({ ...f, startsOn })} />
       <DateField label={t('s3.cEnd')} value={f.endsOn} min={f.startsOn} onChange={(endsOn) => setF({ ...f, endsOn })} />
       <Text style={styles.label}>{t('s3.cOffer')}</Text>
-      <TextInput value={f.offer} onChangeText={(offer) => setF({ ...f, offer })} placeholder={t('s3.cOfferPh')} placeholderTextColor="#A69C94" style={styles.input} accessibilityLabel={t('s3.cOffer')} />
+      <TextInput value={f.offer} onChangeText={(offer) => setF({ ...f, offer })} placeholder={t('s3.cOfferPh')} placeholderTextColor="#8E8E8E" style={styles.input} accessibilityLabel={t('s3.cOffer')} />
     </View>
     <View style={styles.card}>
       <Text style={styles.label}>{t('s3.cIdeas')}</Text>

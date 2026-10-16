@@ -18,9 +18,9 @@ export const tokens = {
     warning: '#262626',
     error: '#B3261E',
     glassTint: '#FFFFFF',
-    seaGlass: '#625B56',
+    seaGlass: '#737373',
     hairline: '#DBDBDB',
-    onCharcoal: '#FAF8F5'
+    onCharcoal: '#FFFFFF'
   },
   type: {
     largeTitle: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 40, lineHeight: 44 },
@@ -34,16 +34,16 @@ export const tokens = {
     maxFontScale: 1.3
   },
   font: {
-    display: 'CormorantGaramond_600SemiBold',
-    displayMedium: 'CormorantGaramond_500Medium',
-    displayItalic: 'CormorantGaramond_500Medium_Italic',
+    display: 'Manrope_700Bold',
+    displayMedium: 'Manrope_600SemiBold',
+    displayItalic: 'Manrope_500Medium',
     ui: 'Manrope_400Regular',
     uiMedium: 'Manrope_500Medium',
     uiSemibold: 'Manrope_600SemiBold',
     uiBold: 'Manrope_700Bold'
   },
   numerals: ['lining-nums', 'tabular-nums'] as const,
-  icon: { weight: 'duotone' as const, duotoneColor: '#B98474', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
+  icon: { weight: 'duotone' as const, duotoneColor: '#8E8E8E', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
   space: { screen: 16, tap: 44 },
   radius: { pill: 999, block: 20, card: 28 }
 } as const;

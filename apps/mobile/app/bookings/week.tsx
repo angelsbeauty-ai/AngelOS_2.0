@@ -52,9 +52,9 @@ export default function CalendarScreen() {
     {focusLabel ? <Card premium><SectionTitle>{t('calendar.checking')}</SectionTitle><BodyText>{focusLabel}</BodyText></Card> : null}
     <View style={styles.navRow}>
       <View style={{ flex: 1 }}><Tabs value={mode} onChange={setMode} options={[{ id: 'day', label: t('calendar.day') }, { id: 'week', label: t('calendar.week') }]} /></View>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.back')} onPress={() => setAnchor(addDayString(anchor, -step))} style={styles.navBtn}><CaretLeft size={18} color="#2A2725" /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.back')} onPress={() => setAnchor(addDayString(anchor, -step))} style={styles.navBtn}><CaretLeft size={18} color="#262626" /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.today')} onPress={() => setAnchor(dayString(new Date()))} style={styles.navPill}><Text numberOfLines={1} style={styles.navToday}>{t('calendar.today')}</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} style={styles.navBtn}><CaretRight size={18} color="#2A2725" /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('calendar.next')} onPress={() => setAnchor(addDayString(anchor, step))} style={styles.navBtn}><CaretRight size={18} color="#262626" /></Pressable>
     </View>
     {busy && !appointments.length ? <Skeleton rows={2} height={56} /> : null}
     {!busy && !loadError && !noStudio && !appointments.length && !blocks.length ? <Card><EmptyState title={mode === 'day' ? t('calendar.emptyDay') : t('calendar.emptyWeek')} action={{ label: t('calendar.newBooking'), onPress: () => router.push('/bookings/new') }} /></Card> : null}

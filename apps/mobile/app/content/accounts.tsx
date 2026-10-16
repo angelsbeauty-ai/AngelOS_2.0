@@ -101,7 +101,7 @@ export default function SocialAccounts() {
           <Text numberOfLines={1} style={styles.title}>{PLATFORM_NAME[a.platform]}</Text>
           <Text numberOfLines={1} style={styles.body}>{a.state === 'connected' ? [a.name, a.handle].filter(Boolean).join(' · ') || t('sml.connected') : a.state === 'needs_reconnect' ? t('sml.reconnect') : t('sml.notConnected')}</Text>
         </View>
-        <View style={[styles.dot, { backgroundColor: a.state === 'connected' ? tokens.color.success : a.state === 'needs_reconnect' ? tokens.color.warning : '#B9B1AA' }]} />
+        <View style={[styles.dot, { backgroundColor: a.state === 'connected' ? tokens.color.success : a.state === 'needs_reconnect' ? tokens.color.warning : '#A8A8A8' }]} />
       </View>
       {a.state !== 'not_connected' ? <Text style={styles.body}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {a.followers == null ? t('acs.na') : a.followers.toLocaleString()}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${a.posts == null ? t('acs.na') : a.posts.toLocaleString()}` : ''}</Text> : null}
       {a.state === 'connected' ? <Text style={styles.ok}>{t('sml.connected')}</Text> : null}

@@ -17,24 +17,24 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={title} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.row, !last && styles.sep, pressed && { backgroundColor: 'rgba(42,39,37,0.04)' }]}>
     {icon ? <View style={styles.icon}>{icon}</View> : null}
     <View style={{ flex: 1, gap: 2 }}>
-      <Text numberOfLines={1} style={[styles.title, danger && { color: '#A8432C' }]}>{title}</Text>
+      <Text numberOfLines={1} style={[styles.title, danger && { color: '#000000' }]}>{title}</Text>
       {sub ? <Text numberOfLines={1} style={styles.sub}>{sub}</Text> : null}
     </View>
     {trailing}
     {value != null && value !== '' ? <Text numberOfLines={1} style={styles.value}>{value}</Text> : null}
-    {onPress && !danger ? <CaretRight size={16} color="#A69C94" /> : null}
+    {onPress && !danger ? <CaretRight size={16} color="#8E8E8E" /> : null}
   </Pressable>;
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'rose' | 'success' | 'danger' }) {
-  const c = { neutral: ['rgba(42,39,37,0.07)', '#737373'], rose: ['#C98B78', '#FFFFFF'], success: ['rgba(0,0,0,0.12)', '#000000'], danger: ['rgba(168,67,44,0.12)', '#A8432C'] }[tone];
+  const c = { neutral: ['rgba(42,39,37,0.07)', '#737373'], rose: ['#8E8E8E', '#FFFFFF'], success: ['rgba(0,0,0,0.12)', '#000000'], danger: ['rgba(168,67,44,0.12)', '#000000'] }[tone];
   return <View style={[styles.chip, { backgroundColor: c[0] }]}><Text style={[styles.chipText, { color: c[1] }]}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
   groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#737373' },
-  onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#FFFFFF', backgroundColor: '#C98B78', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
+  onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#FFFFFF', backgroundColor: '#8E8E8E', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
   group: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
   sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBDBDB' },

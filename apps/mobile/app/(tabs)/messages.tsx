@@ -68,7 +68,7 @@ export default function MessagesScreen() {
         listConnections(workspace.id).catch(() => [] as ConnectionStatus[]),
         getSocialAccounts(workspace.id).catch(() => [] as SocialAccount[])
       ]);
-      setThreads(rows); setConnections(conn); setAccounts(accs); setState('ready');
+      setThreads(rows.filter((r) => !(r.channel?.provider === 'manual' || (r.channel?.capabilities as any)?.demo === true))); setConnections(conn); setAccounts(accs); setState('ready');
     } catch (error) {
       if (isNoWorkspace(error)) { setState('nostudio'); return; }
       const friendly = toFriendly(error, { action: 'load', thing: 'messages' });
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: '#262626', borderColor: '#262626' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#262626' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
-  errBody: { fontFamily: tokens.font.ui, fontSize: 15, color: '#4A443F', lineHeight: 21 },
+  errBody: { fontFamily: tokens.font.ui, fontSize: 15, color: '#262626', lineHeight: 21 },
   errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626', lineHeight: 22 },
   menu: { width: 240, borderRadius: 22, backgroundColor: '#FFFFFF', overflow: 'hidden', ...(webGlass as object) },
   menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#737373', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   bannerTitle: { fontFamily: tokens.font.uiBold, fontSize: 15, color: ui.colors.primaryText },
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, color: tokens.color.tide, paddingVertical: 6 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  note: { fontSize: 13, color: '#6B6460', paddingHorizontal: 4 },
+  note: { fontSize: 13, color: '#737373', paddingHorizontal: 4 },
   list: { marginHorizontal: -16, marginTop: -8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 96, paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
   rowBody: { flex: 1, gap: 4 },

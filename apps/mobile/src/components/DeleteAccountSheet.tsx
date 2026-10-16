@@ -41,11 +41,11 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
         <Text style={[styles.body, { fontFamily: tokens.font.uiSemibold }]}>{t('pf.delSentSub')}</Text>
         <Button label={t('pf.delDone')} onPress={() => { setSent(false); onClose(); }} />
       </> : <>
-      <View style={styles.warn}><Warning size={30} color="#A8432C" weight="duotone" /></View>
+      <View style={styles.warn}><Warning size={30} color="#000000" weight="duotone" /></View>
       <Text style={styles.title}>{t('pf.delTitle')}</Text>
       <Text style={styles.body}>{t('pf.delBody')}</Text>
       <Text style={styles.label}>{t('pf.delType')}</Text>
-      <TextInput value={text} onChangeText={setText} autoCapitalize="characters" autoCorrect={false} placeholder="DELETE" placeholderTextColor="#A69C94" style={styles.input} accessibilityLabel={t('pf.delType')} />
+      <TextInput value={text} onChangeText={setText} autoCapitalize="characters" autoCorrect={false} placeholder="DELETE" placeholderTextColor="#8E8E8E" style={styles.input} accessibilityLabel={t('pf.delType')} />
       <Button label={t('pf.delKeep')} onPress={() => { setText(''); onClose(); }} />
       <Pressable accessibilityRole="button" accessibilityState={{ disabled: !ok || busy }} disabled={!ok || busy} onPress={() => void send()} style={[styles.danger, (!ok || busy) && { opacity: 0.4 }]}><Text style={styles.dangerText}>{t('pf.delGo')}</Text></Pressable>
       </>}
@@ -55,12 +55,12 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
-  sheet: { gap: 12, padding: 22, paddingBottom: 40, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: '#F5F2EE' },
+  sheet: { gap: 12, padding: 22, paddingBottom: 40, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: '#FAFAFA' },
   warn: { alignSelf: 'center', width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(168,67,44,0.12)' },
   title: { fontFamily: tokens.font.display, fontSize: 28, color: '#262626', textAlign: 'center' },
   body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373', textAlign: 'center' },
   label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#737373', marginTop: 6 },
   input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.15)', backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 16, color: '#262626' },
   danger: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  dangerText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#A8432C' }
+  dangerText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#000000' }
 });

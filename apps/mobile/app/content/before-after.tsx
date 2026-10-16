@@ -33,7 +33,7 @@ async function render(canvas: any, opts: { urls: string[]; layout: Layout; ratio
   const W = 1080; const H = Math.round(W / RATIO[opts.ratio]);
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#F4EFEA'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#FAFAFA'; ctx.fillRect(0, 0, W, H);
   const images = await Promise.all(opts.urls.map(loadImage));
   const n = images.length;
   const cells = opts.layout === 'stack'

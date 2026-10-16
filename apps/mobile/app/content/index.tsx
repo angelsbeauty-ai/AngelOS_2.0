@@ -89,9 +89,9 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       <View style={styles.head}>
         <View style={{ flex: 1 }}>{!asCalendar ? <Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline> : null}<ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
         
-        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable> : null}
-        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable> : null}
-        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#262626" weight={month ? 'fill' : 'regular'} /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#262626" /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#262626" /></Pressable> : null}
       </View>
 
       {state === 'loading' ? <><Skeleton rows={1} height={64} /><Skeleton rows={4} height={86} /></> : null}
@@ -109,9 +109,9 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       {state === 'ready' && !empty ? <>
         {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
         {month ? <View style={styles.monthNav}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color="#2A2725" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color="#262626" weight="bold" /></Pressable>
           <Pressable accessibilityRole="button" onPress={() => { setOffset(0); setDay(null); }} style={{ flex: 1 }}><Text style={styles.monthLabel}>{base.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color="#2A2725" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color="#262626" weight="bold" /></Pressable>
         </View> : null}
         <View style={[styles.strip, month && styles.stripBig]}>
           {month ? Array.from({ length: 7 }, (_, i) => <View key={`w${i}`} style={styles.wd}><Text style={styles.dow}>{new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })}</Text></View>) : null}
@@ -129,7 +129,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
           <Text numberOfLines={1} style={[styles.segText, active === v && { color: '#FFF' }]}>{t(`social2.${v}`)}</Text></Pressable>)}</View>
 
         {active === 'ideas' ? <View style={styles.list}>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/content/campaign')} style={styles.row}><View style={[styles.thumb, styles.thumbIcon]}><Lightbulb size={24} color={ROSE} weight="duotone" /></View><View style={{ flex: 1 }}><Text style={styles.cap}>{t('s3.planCampaign')}</Text><Text style={styles.meta}>{t('s3.planCampaignSub')}</Text></View><CaretRight size={16} color="#A69C94" /></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/content/campaign')} style={styles.row}><View style={[styles.thumb, styles.thumbIcon]}><Lightbulb size={24} color={ROSE} weight="duotone" /></View><View style={{ flex: 1 }}><Text style={styles.cap}>{t('s3.planCampaign')}</Text><Text style={styles.meta}>{t('s3.planCampaignSub')}</Text></View><CaretRight size={16} color="#8E8E8E" /></Pressable>
           {ideas.map((idea) => <Pressable key={idea.key} accessibilityRole="button" onPress={() => router.push({ pathname: '/content/new', params: { title: idea.title, goal: idea.objective } })} style={styles.row}>
             <View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.cap}>{idea.title}</Text><View style={styles.metaRow}><Chip label={t('s3.idea')} /><Text numberOfLines={1} style={styles.meta}>{idea.angle}</Text></View></View></Pressable>)}
         </View> : listed.length ? <View style={styles.list}>{listed.map((p) => { const d = contentPostDate(p); const g = p.status === 'failed' ? 'failed' : GROUP[p.status] ?? 'drafts';
