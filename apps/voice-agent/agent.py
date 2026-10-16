@@ -10,6 +10,7 @@ Run from this folder:
   python agent.py dev
 """
 
+import json
 import os
 import sys
 
@@ -54,9 +55,15 @@ async def entrypoint(ctx: JobContext) -> None:
     )
     await session.start(agent=StudioAssistant(), room=ctx.room)
     await ctx.connect()
-    await session.generate_reply(
-        instructions="Greet her as the Angel OS studio assistant and ask how you can help.",
-    )
+    instructions = "Greet her as the Angel OS studio assistant and ask how you can help."
+    raw = getattr(ctx.job, "metadata", "") or ""
+    try:
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        data = {}
+    if isinstance(data, dict) and data.get("instructions"):
+        instructions = str(data["instructions"])[:4000]
+    await session.generate_reply(instructions=instructions)
 
 
 if __name__ == "__main__":

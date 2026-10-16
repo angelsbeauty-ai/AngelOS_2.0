@@ -8,6 +8,8 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
+      "@livekit/react-native-expo-plugin",
+      "@config-plugins/react-native-webrtc",
       [
         "expo-image-picker",
         {
@@ -34,7 +36,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.angelos.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "AngelOS uses the microphone only while you talk to your assistant. Nothing is recorded."
       }
     },
     "android": {

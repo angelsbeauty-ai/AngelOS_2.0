@@ -1,10 +1,12 @@
 import { assertAiAllowed, recordAiUse } from '../ai-usage';
 import { BadGatewayException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
-import { createHash } from 'node:crypto';
+import { AccessToken, AgentDispatchClient } from 'livekit-server-sdk';
 import type { AuthUser } from '../../auth/auth-user';
 import { createUserSupabaseClient } from '../../config/supabase';
 
-/** Live voice instructions. Voice is never recorded or stored and no transcript is kept, by AngelOS or in this session config. */
+const AGENT_NAME = 'angelos-studio';
+
+/** Live voice instructions. Voice is never recorded or stored and no transcript is kept. */
 export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null; context?: string | null }) {
   return [
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
@@ -18,21 +20,27 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
 }
 
 /**
- * Mints a short-lived OpenAI Realtime client secret on the server. The main OPENAI_API_KEY never leaves the server.
- * No audio and no transcript passes through or is saved by AngelOS; the browser talks to OpenAI directly over WebRTC.
+ * Opens a LiveKit room and asks the AngelOS voice worker to join it.
+ * The LiveKit secret stays on the server. The phone only receives a short-lived room token.
  */
 @Injectable()
 export class VoiceService {
   private readonly recent = new Map<string, number[]>();
 
   status() {
-    const live = process.env.AI_PROVIDER_MODE === 'openai' && Boolean(process.env.OPENAI_API_KEY);
-    return { available: live, mode: live ? 'live' : 'mock', reason: live ? null : 'Live voice is off: the server needs AI_PROVIDER_MODE=openai and OPENAI_API_KEY (Angel sets these).', stored: false };
+    const live = Boolean(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
+    return {
+      available: live,
+      mode: live ? 'live' as const : 'mock' as const,
+      reason: live ? null : 'Live voice is off until the LiveKit keys are set on the server.',
+      stored: false as const
+    };
   }
 
   async createSession(user: AuthUser, workspaceId: string, screen?: string | null, context?: string | null) {
     const status = this.status();
-    if (!status.available) return { ...status, clientSecret: null, expiresAt: null, model: null };
+    const empty = { ...status, clientSecret: null, token: null, url: null, room: null, expiresAt: null, model: null };
+    if (!status.available) return empty;
     await assertAiAllowed(user.id);
     const now = Date.now();
     const recent = (this.recent.get(user.id) ?? []).filter((t) => now - t < 3600000);
@@ -45,19 +53,29 @@ export class VoiceService {
       supabase.from('ai_assistant_profiles').select('display_name').eq('workspace_id', workspaceId).maybeSingle()
     ]);
     if (!ws) throw new HttpException('Workspace not found', HttpStatus.NOT_FOUND);
-    void recordAiUse('voice', { userId: user.id, workspaceId });
-    const model = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime';
-    const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'OpenAI-Safety-Identifier': createHash('sha256').update(user.id).digest('hex') },
-      body: JSON.stringify({
-        expires_after: { anchor: 'created_at', seconds: 120 },
-        session: { type: 'realtime', model, instructions: voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context }), audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } }
+
+    const url = process.env.LIVEKIT_URL as string;
+    const apiKey = process.env.LIVEKIT_API_KEY as string;
+    const apiSecret = process.env.LIVEKIT_API_SECRET as string;
+    const room = `angelos-${workspaceId.slice(0, 8)}-${now.toString(36)}`;
+    const tokenBuilder = new AccessToken(apiKey, apiSecret, { identity: user.id, ttl: '10m' });
+    tokenBuilder.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true });
+    const token = await tokenBuilder.toJwt();
+    const metadata = JSON.stringify({
+      instructions: voiceInstructions({
+        assistantName: profile?.display_name ?? 'AngelOS',
+        workspaceName: ws.name,
+        screen,
+        context
       })
     });
-    if (!response.ok) throw new BadGatewayException(`Voice could not start (${response.status}).`);
-    const payload = (await response.json()) as any;
-    if (!payload?.value) throw new BadGatewayException('Voice could not start.');
-    return { ...status, clientSecret: String(payload.value), expiresAt: payload.expires_at ?? null, model };
+    try {
+      const dispatch = new AgentDispatchClient(url, apiKey, apiSecret);
+      await dispatch.createDispatch(room, AGENT_NAME, { metadata });
+    } catch {
+      throw new BadGatewayException('Voice could not start.');
+    }
+    void recordAiUse('voice', { userId: user.id, workspaceId });
+    return { ...status, clientSecret: null, token, url, room, expiresAt: null, model: 'gpt-4o-mini' };
   }
 }

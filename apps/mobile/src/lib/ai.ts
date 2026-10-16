@@ -151,6 +151,6 @@ export const getBrainSummaries = (workspaceId: string) =>
 // C1 tools registry + live voice (ephemeral session minted by the server; nothing recorded or stored).
 export interface AiTool { key: string; kind: 'read' | 'draft' | 'change'; risk: 'low' | 'medium' | 'high'; label: string; example: string; touchesClients: boolean }
 export const listAiTools = (workspaceId: string) => apiFetch<{ tools: AiTool[] }>(`/workspaces/${workspaceId}/ai/tools`);
-export interface VoiceSession { available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; expiresAt: number | null; model: string | null; stored: false }
-export const getVoiceStatus = (workspaceId: string) => apiFetch<Omit<VoiceSession, 'clientSecret' | 'expiresAt' | 'model'>>(`/workspaces/${workspaceId}/ai/voice/status`);
+export interface VoiceSession { available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; token: string | null; url: string | null; room: string | null; expiresAt: number | null; model: string | null; stored: false }
+export const getVoiceStatus = (workspaceId: string) => apiFetch<Pick<VoiceSession, 'available' | 'mode' | 'reason' | 'stored'>>(`/workspaces/${workspaceId}/ai/voice/status`);
 export const createVoiceSession = (workspaceId: string, screen?: string, context?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen, context }) });
