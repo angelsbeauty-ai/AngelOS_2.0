@@ -11,6 +11,7 @@ Run from this folder:
 """
 
 import os
+import sys
 
 from dotenv import load_dotenv
 from livekit.agents import Agent, AgentServer, AgentSession, JobContext, JobProcess, cli
@@ -59,6 +60,7 @@ async def entrypoint(ctx: JobContext) -> None:
 
 
 if __name__ == "__main__":
-    if not os.environ.get("LIVEKIT_URL"):
-        raise SystemExit("Copy .env.example to .env and fill in the keys first.")
+    if len(sys.argv) > 1 and sys.argv[1] not in ("download-files", "download-model"):
+        if not os.environ.get("LIVEKIT_URL"):
+            raise SystemExit("Copy .env.example to .env and fill in the keys first.")
     cli.run_app(server)
