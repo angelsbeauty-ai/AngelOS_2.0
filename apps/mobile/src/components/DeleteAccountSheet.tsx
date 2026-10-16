@@ -34,7 +34,7 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
     <View style={styles.backdrop}><View style={styles.sheet}>
       {sent ? <>
-        <View style={[styles.warn, { backgroundColor: 'rgba(54,106,73,0.12)' }]}><CheckCircle size={30} color="#366A49" weight="duotone" /></View>
+        <View style={[styles.warn, { backgroundColor: 'rgba(0,0,0,0.12)' }]}><CheckCircle size={30} color="#000000" weight="duotone" /></View>
         <Text style={styles.title}>{t('pf.delSent')}</Text>
         <Text style={styles.body}>{t('pf.delSentMsg')}</Text>
         <Text style={styles.body}>{t('pf.delSentData')}</Text>

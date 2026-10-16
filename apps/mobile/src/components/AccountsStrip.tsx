@@ -42,8 +42,8 @@ const styles = StyleSheet.create({
   card: { gap: 12, padding: 14, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
-  avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.12)' },
-  avatarText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#8C5547' },
+  avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.12)' },
+  avatarText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#000000' },
   title: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' },
   body: { fontFamily: tokens.font.ui, fontSize: 13, color: '#737373' },
   warn: { fontFamily: tokens.font.uiMedium, fontSize: 13, lineHeight: 18, color: tokens.color.warning }

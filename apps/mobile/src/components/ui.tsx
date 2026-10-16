@@ -77,8 +77,8 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
 }
 
 const BADGE: Record<string, { bg: string; fg: string }> = {
-  confirmed: { bg: 'rgba(54,106,73,0.14)', fg: palette.success }, request: { bg: 'rgba(138,90,0,0.14)', fg: palette.warning }, requested: { bg: 'rgba(138,90,0,0.14)', fg: palette.warning },
-  cancelled: { bg: '#DBDBDB', fg: tokens.color.charcoal3 }, no_show: { bg: 'rgba(179,38,30,0.12)', fg: palette.critical }, completed: { bg: 'rgba(140,85,71,0.14)', fg: tokens.color.tide }, done: { bg: 'rgba(140,85,71,0.14)', fg: tokens.color.tide },
+  confirmed: { bg: 'rgba(0,0,0,0.14)', fg: palette.success }, request: { bg: 'rgba(138,90,0,0.14)', fg: palette.warning }, requested: { bg: 'rgba(138,90,0,0.14)', fg: palette.warning },
+  cancelled: { bg: '#DBDBDB', fg: tokens.color.charcoal3 }, no_show: { bg: 'rgba(179,38,30,0.12)', fg: palette.critical }, completed: { bg: 'rgba(0,0,0,0.14)', fg: tokens.color.tide }, done: { bg: 'rgba(0,0,0,0.14)', fg: tokens.color.tide },
 };
 /** Status badge: confirmed=success, request=warning, cancelled=muted, no_show=error, done=tide. */
 export function Badge({ status, label }: { status: string; label?: string }) {

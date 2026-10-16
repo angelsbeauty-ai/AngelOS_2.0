@@ -3,13 +3,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { tokens, webGlass } from '../design/theme';
 
-export const ROSE = '#8C5547';
+export const ROSE = '#000000';
 
 /** Grouped settings list (final-A1 P1): small caps group title, solid rounded surface, 56pt rows. */
 export function SettingsGroup({ title, badge, icon, children, highlight }: { title: string; badge?: string; icon?: ReactNode; children: ReactNode; highlight?: boolean }) {
   return <View style={{ gap: 8 }}>
     <View style={styles.groupHead}>{icon}<Text style={[styles.groupTitle, highlight && { color: ROSE }]}>{title.toUpperCase()}</Text>{badge ? <Text style={styles.onlyYou}>{badge.toUpperCase()}</Text> : null}</View>
-    <View style={[styles.group, highlight && { borderColor: 'rgba(140,85,71,0.35)' }]}>{children}</View>
+    <View style={[styles.group, highlight && { borderColor: 'rgba(0,0,0,0.35)' }]}>{children}</View>
   </View>;
 }
 
@@ -27,7 +27,7 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'rose' | 'success' | 'danger' }) {
-  const c = { neutral: ['rgba(42,39,37,0.07)', '#737373'], rose: ['#C98B78', '#FFFFFF'], success: ['rgba(54,106,73,0.12)', '#366A49'], danger: ['rgba(168,67,44,0.12)', '#A8432C'] }[tone];
+  const c = { neutral: ['rgba(42,39,37,0.07)', '#737373'], rose: ['#C98B78', '#FFFFFF'], success: ['rgba(0,0,0,0.12)', '#000000'], danger: ['rgba(168,67,44,0.12)', '#A8432C'] }[tone];
   return <View style={[styles.chip, { backgroundColor: c[0] }]}><Text style={[styles.chipText, { color: c[1] }]}>{label}</Text></View>;
 }
 
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
   group: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
   sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBDBDB' },
-  icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
+  icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   title: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#262626' },
   sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#737373' },
   value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373', maxWidth: 170 },

@@ -10,6 +10,7 @@ export interface HomeSummary {
     alerts: Array<{ id: string; name: string; platform: string; at: string | null; unread: boolean; needsReply: boolean; important: boolean; preview: string | null }> };
   social: { connected: string[]; followers: number | null; engagement: number | null; reach: number | null; followersChange7d: number | null; postsInPeriod: number;
     recentPosts: Array<{ title: string; platform: string; published_at: string | null }>; platforms: Array<{ platform: string; followers: number | null; engagement: number | null; reach: number | null }> };
+  important?: { scheduledPosts: number | null; tasks: number; approvals: number };
   assistant: { suggestions: Array<{ key: string; title: string; reason?: string | null }>; pendingApprovals: number };
 }
 export interface Briefing { text: string; source: 'ai' | 'facts'; at: string; facts: string[]; cached: boolean }

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { getFounderAiUsage } from '../lib/founder';
 import { tokens } from '../design/theme';
 
-const GREEN = '#1F7A4D';
+const GREEN = '#000000';
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
 /** Founder: AI uses this month per user and overall, estimated cost vs the monthly cap. */
@@ -19,7 +19,7 @@ export function FounderAiUsage() {
         <View style={styles.t}><Text style={styles.n}>{usd(d.total.estCostUsd)}</Text><Text style={styles.l}>estimated cost</Text></View>
         <View style={styles.t}><Text style={styles.n}>{usd(d.total.capUsd)}</Text><Text style={styles.l}>{d.total.budgetSet ? 'monthly budget' : 'cap (users × limit)'}</Text></View>
       </View>
-      <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#8A5A00' : GREEN }]} /></View>
+      <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#262626' : GREEN }]} /></View>
       <Text style={styles.note}>Estimate: {usd(d.costPerUseUsd)} per AI use. Limits: {d.users[0]?.dailyLimit ?? 50}/day and {d.users[0]?.monthlyLimit ?? 600}/month per user.</Text>
       {d.users.length ? d.users.map((u: any) => <View key={u.userId} style={styles.row}>
         <Text style={styles.email} numberOfLines={1}>{u.email ?? 'Unknown user'}</Text>

@@ -9,7 +9,7 @@ import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton } from '../../src/components/ui';
 import { PostThumb } from '../../src/components/PostThumb';
-import { BusinessInsightsCard } from '../../src/components/BusinessInsightsCard';
+import { BrandLogo } from '../../src/components/BrandBadge';
 import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
@@ -17,7 +17,7 @@ import { tokens } from '../../src/design/theme';
 const PLATS = ['all', 'instagram', 'facebook', 'line'] as const;
 type Plat = typeof PLATS[number];
 const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', line: '#06C755', tiktok: '#000000' };
-const UP = '#1F7A4D'; const DOWN = '#B3261E'; const GREY = '#737373';
+const UP = '#000000'; const DOWN = '#B3261E'; const GREY = '#737373';
 
 /** Analytics, Meta Business Suite Insights style: last 30 days vs the 30 before. Stored real metrics only. */
 export default function AnalyticsScreen() {
@@ -43,7 +43,7 @@ export default function AnalyticsScreen() {
   return <Screen onRefresh={() => load()}>
     <Text accessibilityRole="header" style={styles.title}>{t('tabs.analytics')}</Text>
     <View style={styles.seg}>{PLATS.map((p) => <Pressable key={p} accessibilityRole="tab" accessibilityState={{ selected: plat === p }} onPress={() => pick(p)} style={[styles.segItem, plat === p && styles.segOn]}>
-      <Text numberOfLines={1} style={[styles.segText, plat === p && { color: '#FFF' }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text></Pressable>)}</View>
+      {p !== 'all' ? <BrandLogo platform={p} size={16} /> : null}<Text numberOfLines={1} style={[styles.segText, plat === p && { color: '#FFF' }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text></Pressable>)}</View>
 
     {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'loading' ? <Skeleton rows={3} height={110} /> : null}
@@ -66,13 +66,12 @@ export default function AnalyticsScreen() {
 
       <View style={styles.topHead}><Text style={styles.h2}>{t('ins.topBy', 'Top content by')} {tab === 'views' ? t('ins.viewsLc', 'views') : tab === 'interactions' ? t('ins.interLc', 'interactions') : t('ins.followsLc', 'follows')}</Text>
         <Pressable onPress={() => router.push({ pathname: '/calendar' } as any)}><Text style={styles.seeAll}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
-      <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, tab === k && styles.tabOn]}><Text style={[styles.tabText, tab === k && { color: '#1877F2' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
+      <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, tab === k && styles.tabOn]}><Text style={[styles.tabText, tab === k && { color: '#000000' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
       {top.length ? <View style={styles.tiles}>{top.slice(0, 3).map((p) => <Pressable key={p.variantId} style={styles.tile} onPress={() => p.post?.id && router.push(`/content/${p.post.id}` as any)}>
         {p.post ? <PostThumb workspaceId={ws} post={p.post} size={112} radius={12} /> : <View style={[styles.tileBlank]} />}
         <View style={styles.badge}><Text style={styles.badgeText}>{fmt(p.value)}</Text></View></Pressable>)}</View>
         : <Text style={styles.muted}>{tab === 'follows' ? t('ins.noFollowsPer', 'Follows per post are not available from the platforms yet.') : t('ins.noTop', 'No post numbers recorded in the last 30 days yet.')}</Text>}
 
-      {ws && plat === 'all' ? <BusinessInsightsCard workspaceId={ws} /> : null}
     </> : null}
   </Screen>;
 }
@@ -91,7 +90,7 @@ function Spark({ lines }: { lines: InsightCard['lines'] }) {
   return <View style={{ height: H, justifyContent: 'flex-end' }}>
     <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
       {lines.length ? lines.map((l) => { const n = l.points.length; const pts = l.points.map((v, i) => `${((i / Math.max(1, n - 1)) * W).toFixed(1)},${(H - 2 - ((v ?? 0) / max) * (H - 6)).toFixed(1)}`).join(' ');
-        return <Polyline key={l.platform} points={pts} fill="none" stroke={lines.length > 1 ? BRAND[l.platform] ?? '#1877F2' : '#1877F2'} strokeWidth={1.4} />; })
+        return <Polyline key={l.platform} points={pts} fill="none" stroke={lines.length > 1 ? BRAND[l.platform] ?? '#000000' : '#000000'} strokeWidth={1.4} />; })
         : <Polyline points={`0,${H - 2} ${W},${H - 2}`} fill="none" stroke="#9DB8E0" strokeWidth={1.4} />}
     </Svg>
   </View>;
@@ -100,7 +99,7 @@ function Spark({ lines }: { lines: InsightCard['lines'] }) {
 const styles = StyleSheet.create({
   title: { fontFamily: tokens.font.uiBold, fontSize: 24, color: '#000', marginTop: -4 },
   seg: { flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: '#EFEFEF' },
-  segItem: { flex: 1, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  segItem: { flex: 1, flexDirection: 'row', gap: 5, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   segOn: { backgroundColor: '#262626' },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 13.5, color: '#262626' },
   headline: { fontFamily: tokens.font.uiBold, fontSize: 21, lineHeight: 28, color: '#262626', textAlign: 'center' },
@@ -113,10 +112,10 @@ const styles = StyleSheet.create({
   na: { fontFamily: tokens.font.ui, fontSize: 11.5, color: '#8E8E8E', marginTop: -4 },
   topHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: -8 },
   h2: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#262626' },
-  seeAll: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#1877F2' },
+  seeAll: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#000000' },
   tabs: { flexDirection: 'row', gap: 6 },
   tab: { height: 36, paddingHorizontal: 14, borderRadius: 8, justifyContent: 'center' },
-  tabOn: { backgroundColor: '#E7F0FD' },
+  tabOn: { backgroundColor: '#EFEFEF' },
   tabText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' },
   tiles: { flexDirection: 'row', justifyContent: 'space-between' },
   tile: { width: '32%', aspectRatio: 0.85, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EFEFEF', alignItems: 'center', justifyContent: 'center' },

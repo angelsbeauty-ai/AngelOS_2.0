@@ -3,12 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getActiveWorkspace } from '../src/lib/workspace';
-import { getHomeSummary, type HomeSummary, type Period } from '../src/lib/home';
+import { getBriefing, getHomeSummary, type HomeSummary, type Period } from '../src/lib/home';
 import { Skeleton } from '../src/components/ui';
 import { PLATFORM_NAME } from '../src/lib/social';
 import { tokens } from '../src/design/theme';
 
-const GREEN = '#1F7A4D'; const GREY = '#737373'; const LINE = '#EFEFEF';
+const GREEN = '#000000'; const GREY = '#737373'; const LINE = '#EFEFEF';
 
 /** Full report of the four Home sections, for today / this week / this month. Real data only. */
 export default function Reports() {
@@ -16,12 +16,13 @@ export default function Reports() {
   const params = useLocalSearchParams<{ section?: string }>();
   const [period, setPeriod] = useState<Period>('day');
   const [data, setData] = useState<HomeSummary | null>(null);
+  const [brief, setBrief] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const scroll = useRef<ScrollView>(null); const pos = useRef<Record<string, number>>({});
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const load = useCallback(async (p: Period) => {
     setState('loading');
-    try { const w = await getActiveWorkspace(); setData(await getHomeSummary(w.id, p)); setState('ready'); } catch { setState('error'); }
+    try { const w = await getActiveWorkspace(); if (p === 'day') void getBriefing(w.id).then((b) => setBrief(b.text)).catch(() => setBrief(null)); setData(await getHomeSummary(w.id, p)); setState('ready'); } catch { setState('error'); }
   }, []);
   useEffect(() => { void load(period); }, [period, load]);
   useEffect(() => { if (state === 'ready' && params.section) setTimeout(() => scroll.current?.scrollTo({ y: Math.max(0, (pos.current[params.section!] ?? 0) - 8), animated: true }), 50); }, [state, params.section]);
@@ -36,6 +37,7 @@ export default function Reports() {
     {state === 'loading' ? <Skeleton rows={4} height={90} /> : null}
     {state === 'error' ? <Text style={styles.muted}>{t('rep.error', 'The report could not load. Please try again.')}</Text> : null}
     {state === 'ready' && data ? <>
+      {period === 'day' && brief ? <View style={styles.section}><Text style={styles.h}>{t('home.briefing', 'Daily briefing')}</Text><Text style={styles.brief}>{brief}</Text></View> : null}
       {data.unavailable.length ? <Text style={styles.muted}>{t('rep.partial', 'Some parts could not load right now:')} {data.unavailable.join(', ')}</Text> : null}
 
       <View {...mark('schedule')} style={styles.section}>
@@ -84,6 +86,7 @@ function Stats({ items }: { items: Array<[number, string]> }) {
 }
 
 const styles = StyleSheet.create({
+  brief: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 22, color: '#262626' },
   page: { padding: 16, gap: 24, paddingBottom: 120, maxWidth: 520, width: '100%', alignSelf: 'center' },
   seg: { flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: '#EFEFEF' },
   segItem: { flex: 1, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },

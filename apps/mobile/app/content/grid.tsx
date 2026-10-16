@@ -41,6 +41,6 @@ export default function GridPlanner() {
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 2, borderRadius: 16, overflow: 'hidden' },
-  tag: { position: 'absolute', top: 6, left: 6, backgroundColor: 'rgba(140,85,71,0.92)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
+  tag: { position: 'absolute', top: 6, left: 6, backgroundColor: 'rgba(0,0,0,0.92)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 },
   tagText: { color: '#FFF', fontSize: 10, fontFamily: 'Manrope_700Bold' }
 });

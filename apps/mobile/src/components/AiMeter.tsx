@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getAiUsage, type AiUsage } from '../lib/home';
 import { tokens } from '../design/theme';
 
-const GREEN = '#1F7A4D';
+const GREEN = '#000000';
 
 /** AI credit meter: today's uses / daily limit and this month's / monthly limit (counted and enforced by the API). */
 export function AiMeter({ workspaceId }: { workspaceId: string | null }) {
@@ -27,7 +27,7 @@ export function AiMeter({ workspaceId }: { workspaceId: string | null }) {
 
 function Bar({ label, n, max }: { label: string; n: number; max: number }) {
   const pct = max ? Math.min(1, n / max) : 0;
-  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#8A5A00' : GREEN;
+  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#262626' : GREEN;
   return <View style={{ gap: 6 }}>
     <View style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.count}>{n} / {max}</Text></View>
     <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: color }]} /></View>

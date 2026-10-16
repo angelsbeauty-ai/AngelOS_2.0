@@ -1,3 +1,4 @@
+import { BrandLogo } from '../../src/components/BrandBadge';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -24,18 +25,13 @@ import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass } from '../../src/design/theme';
 
-const ROSE = '#8B4A3C'; const BOOK = '#8B4A3C';
+const ROSE = '#000000'; const BOOK = '#000000';
 const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#000000', line: '#06C755' }; const POSTED = '#366A49';
 const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date } | { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
 
-function Mark({ p, color }: { p: string; color: string }) {
-  const c = { size: 10, color, weight: 'bold' as const };
-  if (p === 'instagram') return <InstagramLogo {...c} />;
-  if (p === 'facebook') return <FacebookLogo {...c} />;
-  if (p === 'tiktok') return <TiktokLogo {...c} />;
-  if (p === 'line') return <ChatCircle {...c} />;
-  return null;
+function Mark({ p }: { p: string; color?: string }) {
+  return <BrandLogo platform={p} size={12} />;
 }
 
 /** Calendar tab: Google Calendar style month grid with real bookings + posts per day. */
@@ -299,7 +295,7 @@ const styles = StyleSheet.create({
   col: { flex: 1, borderLeftWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   hourLine: { height: HOUR_H_STYLE, borderTopWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   block: { position: 'absolute', left: 2, right: 2, borderRadius: 6, padding: 4, overflow: 'hidden' },
-  avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.14)' },
+  avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.14)' },
   avatarText: { fontFamily: tokens.font.uiSemibold, fontSize: 22, color: '#262626' },
   field: { flexDirection: 'row', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   fieldK: { width: 90, fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#8E8E8E' },

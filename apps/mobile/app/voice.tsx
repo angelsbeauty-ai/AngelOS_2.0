@@ -9,7 +9,7 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing } from '../src/lib/home';
 import { tokens } from '../src/design/theme';
 
-const GREEN = '#1F7A4D';
+const GREEN = '#000000';
 
 /** Voice mode: an orb, greets with today's facts (from the same Home briefing), interruptible. Web only for now. */
 export default function VoiceScreen() {
@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#FFFFFF', padding: 24, paddingTop: 56 },
   close: { position: 'absolute', top: 48, right: 16, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
-  halo: { width: 220, height: 220, borderRadius: 110, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F3EC' },
+  halo: { width: 220, height: 220, borderRadius: 110, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFEFEF' },
   orb: { width: 150, height: 150, borderRadius: 75, alignItems: 'center', justifyContent: 'center', backgroundColor: GREEN, shadowColor: GREEN, shadowOpacity: 0.35, shadowRadius: 30, shadowOffset: { width: 0, height: 10 } },
   title: { fontFamily: tokens.font.uiBold, fontSize: 24, color: '#000', textAlign: 'center' },
   sub: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 22, color: '#737373', textAlign: 'center', maxWidth: 320 },

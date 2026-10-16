@@ -1,3 +1,4 @@
+import { BrandLogo } from '../../src/components/BrandBadge';
 import { PostThumb } from '../../src/components/PostThumb';
 import { NoStudio } from '../../src/components/NoStudio';
 import { useCallback, useMemo, useState } from 'react';
@@ -32,13 +33,8 @@ const GROUP: Record<string, View_> = { draft: 'drafts', prepared: 'drafts', appr
 const TONE: Record<string, 'neutral' | 'rose' | 'success' | 'danger'> = { drafts: 'neutral', scheduled: 'rose', posted: 'success', failed: 'danger' };
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
-function PlatformMark({ p, size = 16, color = '#737373' }: { p: string; size?: number; color?: string }) {
-  const c = { size, color };
-  if (p === 'instagram') return <InstagramLogo {...c} />;
-  if (p === 'facebook') return <FacebookLogo {...c} />;
-  if (p === 'tiktok') return <TiktokLogo {...c} />;
-  if (p === 'line') return <ChatCircle {...c} />;
-  return null;
+function PlatformMark({ p, size = 16 }: { p: string; size?: number; color?: string }) {
+  return <BrandLogo platform={p} size={size} />;
 }
 
 export default function SocialHome() { return <SocialHomeView />; }
@@ -121,7 +117,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
           {month ? Array.from({ length: 7 }, (_, i) => <View key={`w${i}`} style={styles.wd}><Text style={styles.dow}>{new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })}</Text></View>) : null}
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
-            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#366A49' : ps.length ? ROSE : 'transparent';
+            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#000000' : ps.length ? ROSE : 'transparent';
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, month && styles.cellBig, today && styles.cellToday, sel && !today && styles.cellSel]}>
               {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
               <Text numberOfLines={1} style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
@@ -175,7 +171,7 @@ const styles = StyleSheet.create({
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
   monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#262626', textAlign: 'center' },
-  cellToday: { backgroundColor: '#262626' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
+  cellToday: { backgroundColor: '#262626' }, cellSel: { backgroundColor: 'rgba(0,0,0,0.12)' },
   dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8E8E8E' },
   dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#262626', fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
@@ -188,7 +184,7 @@ const styles = StyleSheet.create({
   list: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBDBDB' },
   thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' },
-  thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
+  thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   half: { flex: 1 },
   cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#262626' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
@@ -197,7 +193,7 @@ const styles = StyleSheet.create({
   calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
   calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#262626', textAlign: 'center' },
   calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373', textAlign: 'center' },
-  emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
+  emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ROSE, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   fabText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#FFF' },
   backdrop: { flex: 1, justifyContent: 'center', padding: 32, backgroundColor: 'rgba(0,0,0,0.25)' },

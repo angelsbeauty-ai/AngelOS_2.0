@@ -9,7 +9,7 @@ import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
-import { ContactAvatar } from '../../src/components/BrandBadge';
+import { ContactAvatar, BrandLogo } from '../../src/components/BrandBadge';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
@@ -162,7 +162,7 @@ export default function MessagesScreen() {
   <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
     <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}><View style={styles.menu}>
       <Text style={styles.menuHead}>{t('messages.platform', { defaultValue: 'Platform' })}</Text>
-      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => { setPlat(k); setMenuOpen(false); }} style={styles.mi}>
+      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => { setPlat(k); setMenuOpen(false); }} style={styles.mi}>{k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={20} /> : null}
         <Text style={[styles.miText, plat === k && { color: ROSE }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
       <Text style={[styles.menuHead, styles.miSep]}>{t('inbox.filter')}</Text>
       {FILTERS.map((f) => <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: filter === f }} onPress={() => { setFilter(filter === f ? null : f); setMenuOpen(false); }} style={styles.mi}>
@@ -178,7 +178,7 @@ export default function MessagesScreen() {
   </Modal></View>;
 }
 
-const ROSE = '#8C5547';
+const ROSE = '#000000';
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 },
   title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#000000' },
