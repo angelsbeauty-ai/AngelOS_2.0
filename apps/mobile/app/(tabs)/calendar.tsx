@@ -10,7 +10,7 @@ import { TiktokLogo } from 'phosphor-react-native/src/icons/TiktokLogo';
 import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
-import { Skeleton } from '../../src/components/ui';
+import { Skeleton, screenHeader } from '../../src/components/ui';
 import { createBlock, getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment, type CalendarBlock } from '../../src/lib/bookings';
 import { listClients } from '../../src/lib/clients';
 import { PostThumb } from '../../src/components/PostThumb';
@@ -188,8 +188,8 @@ export default function CalendarTab() {
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load} askBottom={132} askRight={20}>
       <View {...swipe.panHandlers}>
-      <View style={styles.head}>
-        <Text accessibilityRole="header" numberOfLines={1} style={[styles.headTitle, { color: palette.text }]}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
+      <View style={screenHeader.row}>
+        <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
         <View style={{ flex: 1 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
   rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4 },
-  icon: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, height: 44 },
   headTitle: { flexShrink: 1, fontFamily: tokens.font.uiBold, fontSize: 24, color: '#151515' },

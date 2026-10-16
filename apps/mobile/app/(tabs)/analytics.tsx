@@ -6,7 +6,7 @@ import Svg, { Circle, G, Polygon, Polyline } from 'react-native-svg';
 import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
-import { Skeleton } from '../../src/components/ui';
+import { Skeleton, screenHeader } from '../../src/components/ui';
 import { PostThumb } from '../../src/components/PostThumb';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
@@ -44,8 +44,8 @@ export default function AnalyticsScreen() {
   const top = data ? (tab === 'follows' ? [] : data.top[tab]) : [];
 
   return <Screen onRefresh={() => load()}>
-    <View style={styles.headRow}>
-      <Text accessibilityRole="header" style={[styles.title, nt]}>{t('tabs.analytics')}</Text>
+    <View style={screenHeader.row}>
+      <Text accessibilityRole="header" style={[screenHeader.title, nt]}>{t('tabs.analytics')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('ins.platform', { defaultValue: 'Platform' })} onPress={() => setPickOpen(true)} style={styles.picker}>
         <View style={styles.logos}>{(plat === 'all' ? ['instagram', 'facebook', 'line'] : [plat]).map((p, i) => <View key={p} style={[styles.logoRing, i > 0 && { marginLeft: -6 }]}><BrandLogo platform={p} size={20} /></View>)}</View>
         <CaretDown size={14} color={D.text} weight="bold" />

@@ -184,3 +184,9 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
   overline: { color: palette.gold, fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
 });
+
+/** LOCKED screen title standard (the Messages title): one row, title left, icons right. */
+export const screenHeader = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, marginTop: 12 },
+  title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#151515' }
+});

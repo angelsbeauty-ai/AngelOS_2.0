@@ -23,7 +23,7 @@ import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
 import { Clock } from 'phosphor-react-native/src/icons/Clock';
 import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
 import { Screen } from '../../src/components/Screen';
-import { Overline, ScreenTitle, Skeleton, SupportText, Button } from '../../src/components/ui';
+import { screenHeader, Skeleton, SupportText, Button } from '../../src/components/ui';
 import { Chip, ROSE, SettingsGroup, SettingsRow } from '../../src/components/SettingsList';
 import { DeleteAccountSheet } from '../../src/components/DeleteAccountSheet';
 import { clearMe, getMe, updateMe, type Me } from '../../src/lib/me';
@@ -91,7 +91,7 @@ export default function ProfileScreen() {
   const checkedMin = health && health !== 'error' ? Math.max(0, Math.round((Date.now() - Math.max(...health.components.map((c) => Date.parse(c.last_checked_at) || 0), 0)) / 60000)) : null;
 
   return <Screen onRefresh={load}>
-    <View style={{ gap: 2 }}><Overline color={mode === 'night' ? palette.muted : undefined}>{t('pf.eyebrow')}</Overline><ScreenTitle color={mode === 'night' ? palette.text : undefined}>{t('pf.title')}</ScreenTitle></View>
+    <View style={screenHeader.row}><Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('pf.title')}</Text></View>
 
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}

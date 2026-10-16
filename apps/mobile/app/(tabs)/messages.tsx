@@ -14,7 +14,7 @@ import { ContactAvatar, BrandLogo } from '../../src/components/BrandBadge';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
-import { Card, EmptyState, ScreenTitle, Skeleton, ui } from '../../src/components/ui';
+import { Card, EmptyState, ScreenTitle, Skeleton, ui, screenHeader } from '../../src/components/ui';
 import { Avatar, PlatformBadge, UnreadDot } from '../../src/components/MessagingBits';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { listConnections, listMessageThreads, syncMessages, timeLabel, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
@@ -101,8 +101,8 @@ export default function MessagesScreen() {
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
   return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
-    <View style={styles.header}>
-      <Text accessibilityRole="header" numberOfLines={1} style={[styles.title, { color: palette.text }]}>{t('messages.title')}</Text>
+    <View style={screenHeader.row}>
+      <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('messages.title')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}>
         <Bell size={24} color={palette.icon} />{threads.some((x) => x.unread) ? <View style={styles.bellDot} /> : null}</Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
