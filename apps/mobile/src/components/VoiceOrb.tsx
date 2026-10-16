@@ -32,15 +32,16 @@ export function VoiceOrb({ size = 240, state = 'idle', dimmed, level }: { size?:
   return <View accessibilityElementsHidden style={[styles.hold, { width: size, height: size, opacity: dimmed ? 0.4 : 1 }]}>
     <Svg width={size} height={size}>
       <Defs>
-        <Filter id="orbGlow" x="-20%" y="-20%" width="140%" height="140%"><FeGaussianBlur stdDeviation={size * 0.03} /></Filter>
+        <Filter id="orbGlow" x="-20%" y="-20%" width="140%" height="140%"><FeGaussianBlur stdDeviation={size * 0.022} /></Filter>
         <LinearGradient id="orbSpec" x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" /><Stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.95" /><Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" /></LinearGradient>
         <Filter id="orbSoft" x="-10%" y="-10%" width="120%" height="120%"><FeGaussianBlur stdDeviation={size * 0.006} /></Filter>
       </Defs>
-      <Path d={ring.glow} stroke={ink} strokeOpacity={0.22 + frame.lv * 0.25} strokeWidth={size * (0.05 + frame.lv * 0.04)} fill="none" filter="url(#orbGlow)" />
-      <G filter="url(#orbSoft)">{ring.wisps.map((w, i) => <Path key={i} d={w.d} stroke={ink} strokeOpacity={Math.min(1, w.o)} strokeWidth={w.w} fill="none" />)}</G>
+      {ring.cores.map((d, i) => <Path key={`c${i}`} d={d} fill={ink} fillRule="evenodd" fillOpacity={(i === 0 ? 0.32 : 0.42) + frame.lv * 0.2} filter={i === 0 ? 'url(#orbGlow)' : 'url(#orbSoft)'} />)}
+      <G filter="url(#orbSoft)">{ring.wisps.map((w, i) => <Path key={i} d={w.d} stroke={ink} strokeOpacity={Math.min(1, w.o)} strokeWidth={w.w} fill="none" />)}
+        {ring.curls.map((w, i) => <Path key={`k${i}`} d={w.d} stroke={ink} strokeOpacity={w.o} strokeWidth={w.w} strokeLinecap="round" fill="none" />)}</G>
       {/* Glassy sheen: thin specular arc on the top edge, a soft wide sheen under it, and a faint reflection low inside. */}
-      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.15, Math.PI * 1.85, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={size * 0.03} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.18 : 0.5} filter="url(#orbSoft)" />
-      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.25, Math.PI * 1.75, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={1.4} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.85 : 0.95} />
+      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.15, Math.PI * 1.85, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={size * 0.03} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.12 : 0.35} filter="url(#orbSoft)" />
+      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.25, Math.PI * 1.75, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.5 : 0.7} />
       <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 0.3, Math.PI * 0.7, -size * 0.05)} stroke={ink} strokeOpacity={0.08} strokeWidth={size * 0.02} strokeLinecap="round" fill="none" filter="url(#orbGlow)" />
       {ring.particles.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={p.r} fill={ink} fillOpacity={p.o} />)}
     </Svg>
