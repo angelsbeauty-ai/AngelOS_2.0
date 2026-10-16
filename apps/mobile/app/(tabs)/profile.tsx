@@ -164,17 +164,17 @@ function checkedLabel(t: (k: string, o?: Record<string, unknown>) => string, min
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
   avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#B87766' },
   avatarText: { color: '#FFFFFF', fontFamily: tokens.font.display, fontSize: 26 },
-  name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#2A2725' },
-  studio: { fontFamily: tokens.font.ui, fontSize: 13, color: '#625B56' },
+  name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#262626' },
+  studio: { fontFamily: tokens.font.ui, fontSize: 13, color: '#737373' },
   edit: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: ROSE },
-  version: { textAlign: 'center', fontFamily: tokens.font.ui, fontSize: 12, color: '#8C847D', marginTop: 4 },
+  version: { textAlign: 'center', fontFamily: tokens.font.ui, fontSize: 12, color: '#8E8E8E', marginTop: 4 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#F5F2EE' },
-  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#2A2725', textAlign: 'center', marginBottom: 4 },
+  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#262626', textAlign: 'center', marginBottom: 4 },
   option: { minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)' },
-  optionOn: { backgroundColor: '#2A2725', borderColor: '#2A2725' },
-  optionText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#2A2725' }
+  optionOn: { backgroundColor: '#262626', borderColor: '#262626' },
+  optionText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626' }
 });

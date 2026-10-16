@@ -2,15 +2,15 @@ import { useEffect, type PropsWithChildren } from 'react';
 import { STUDENT_ALLOWED, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ImageBackground, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { colors, spacing, tokens } from '../design/theme';
 import { TopBar } from './TopBar';
 import { showsAppTabBar } from './AppTabBar';
 
 // A1 silk backdrop: gives the glass cards something to blur (mockup .A .screen).
-const SILK = require('../../assets/brand/silk.jpg');
 const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
+const OWN_HEADER = new Set(['/messages', '/calendar']);
 const NO_ASK = /^\/(ai|login|onboarding|forgot-password|reset-password)(\/|$)/;
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
@@ -23,10 +23,10 @@ export function Screen({ children, hideAsk, onRefresh }: PropsWithChildren<{ hid
   // B9 route guard: students only reach the Academy and their own settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
   const showAsk = !TAB_PATHS.has(pathname) && !hideAsk && role !== 'student' && !NO_ASK.test(pathname);
-  return <ImageBackground source={SILK} resizeMode="cover" style={styles.bg}><SafeAreaView style={styles.safe}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{TAB_PATHS.has(pathname) && role !== 'student' ? <TopBar /> : null}{children}</View></ScrollView>
+  return <View style={styles.bg}><SafeAreaView style={styles.safe}>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{TAB_PATHS.has(pathname) && role !== 'student' && !OWN_HEADER.has(pathname) ? <TopBar /> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} /> : null}
-  </SafeAreaView></ImageBackground>;
+  </SafeAreaView></View>;
 }
 
 /** C3: "Ask AngelOS" on every screen. Opens the assistant with this screen as context. */
@@ -40,7 +40,7 @@ function AskButton({ pathname }: { pathname: string }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: tokens.color.pearl },
+  bg: { flex: 1, backgroundColor: '#FFFFFF' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: tokens.space.screen, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   stack: { gap: spacing.md },

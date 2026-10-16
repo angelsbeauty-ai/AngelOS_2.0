@@ -48,8 +48,8 @@ export function AppTabBar() {
 }
 
 const styles = StyleSheet.create({
-  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 12, right: 12, bottom: 14, height: 72, borderRadius: 36, overflow: 'hidden', flexDirection: 'row', paddingHorizontal: 2, backgroundColor: 'transparent', shadowColor: '#2A2725', shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', marginVertical: 5, marginHorizontal: 2, borderRadius: 31, gap: 2 },
-  itemOn: { backgroundColor: 'rgba(255,255,255,0.66)' },
+  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 64, flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  itemOn: {},
   label: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14 },
 });

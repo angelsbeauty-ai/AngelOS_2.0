@@ -44,7 +44,7 @@ export default function EditProfileScreen() {
 
   return <Screen hideAsk>
     <Stack.Screen options={{ title: t('pf.editTitle'),
-      headerLeft: () => <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={8}><Text style={{ fontSize: 16, color: '#2A2725' }}>{t('pf.cancel')}</Text></Pressable>,
+      headerLeft: () => <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={8}><Text style={{ fontSize: 16, color: '#262626' }}>{t('pf.cancel')}</Text></Pressable>,
       headerRight: () => <Pressable accessibilityRole="button" disabled={!changed || busy} onPress={() => void save()} hitSlop={8}><Text style={{ fontSize: 16, fontWeight: '700', color: ROSE, opacity: !changed || busy ? 0.4 : 1 }}>{t('pf.save')}</Text></Pressable> }} />
     <Card>
       <TextField label={t('pf.name')} value={form.name} onChangeText={(name) => setForm({ ...form, name })} error={errors.name} />

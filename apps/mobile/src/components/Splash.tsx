@@ -12,7 +12,7 @@ export function Splash() {
 }
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  disc: { width: 200, height: 200, borderRadius: 100, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.78)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', marginBottom: 28 },
-  name: { fontFamily: 'serif', fontSize: 40, color: '#2A2725' },
+  disc: { width: 200, height: 200, borderRadius: 100, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', marginBottom: 28 },
+  name: { fontFamily: 'serif', fontSize: 40, color: '#262626' },
   tag: { fontSize: 14, color: '#6B645E' }
 });

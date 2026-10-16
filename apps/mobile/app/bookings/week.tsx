@@ -99,9 +99,9 @@ function pos(start: string, end: string, day: string) {
 
 const styles = StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'nowrap' },
-  navBtn: { flexShrink: 0, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
-  navPill: { flexShrink: 0, height: 40, minWidth: 64, paddingHorizontal: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
-  navToday: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: '#2A2725' },
+  navBtn: { flexShrink: 0, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB' },
+  navPill: { flexShrink: 0, height: 40, minWidth: 64, paddingHorizontal: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB' },
+  navToday: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: '#262626' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: ui.spacing.sm },
   grid: { flexDirection: 'row', flex: 1, paddingTop: 4 },
   gutter: { width: 44, position: 'relative' },

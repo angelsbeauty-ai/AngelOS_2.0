@@ -1,25 +1,25 @@
 import { Platform as _P } from 'react-native';
 // AngelOS Option A design tokens: Palette 2, Greige & Rose Gold.
-const charcoal = '#2A2725';
+const charcoal = '#262626';
 
 export const tokens = {
   color: {
     charcoal,
-    charcoal2: '#625B56',
+    charcoal2: '#737373',
     charcoal3: 'rgba(42,39,37,0.45)',
-    ivory: 'rgba(250,248,245,0.84)',
-    ivorySolid: 'rgba(250,248,245,0.94)',
+    ivory: '#FFFFFF',
+    ivorySolid: '#FFFFFF',
     raised: '#FFFFFF',
-    pearl: '#ECE7E1',
-    tide: '#8C5547',
+    pearl: '#FFFFFF',
+    tide: '#8B4A3C',
     accentPressed: '#72443A',
     coral: '#B3261E',
     success: '#366A49',
     warning: '#8A5A00',
     error: '#B3261E',
-    glassTint: '#F3EDE7',
+    glassTint: '#FFFFFF',
     seaGlass: '#625B56',
-    hairline: 'rgba(42,39,37,0.14)',
+    hairline: '#DBDBDB',
     onCharcoal: '#FAF8F5'
   },
   type: {
@@ -75,7 +75,7 @@ const lightCompat = {
   secondaryText: tokens.color.charcoal2,
   border: tokens.color.hairline,
   gold: tokens.color.tide,
-  softGold: 'rgba(140,85,71,0.12)',
+  softGold: '#EFEFEF',
   success: tokens.color.success,
   warning: tokens.color.warning,
   critical: tokens.color.error
@@ -85,16 +85,12 @@ export const colors = { light: lightCompat, dark: lightCompat };
 export const spacing = { xs: 8, sm: 16, md: 24 };
 export const radius = { card: tokens.radius.card, control: tokens.radius.block, pill: 999 };
 export const typography = { display: 40, screenTitle: 40, section: 17, body: 17, support: 15, metadata: 13 };
-export const shadow = { soft: { shadowColor: charcoal, shadowOpacity: 0.16, shadowRadius: 15, shadowOffset: { width: 0, height: 14 }, elevation: 3 } };
+export const shadow = { soft: { shadowColor: charcoal, shadowOpacity: 0, shadowRadius: 0, shadowOffset: { width: 0, height: 0 }, elevation: 0 } };
 
 /**
  * Web-only A1 glass (mockup .glass): translucent ivory + backdrop blur + inner highlight.
  * React Native ignores these keys on native, where GlassSurface/BlurView handle it.
  */
-export const webGlass: Record<string, unknown> = _P.OS === 'web' ? {
-  backgroundColor: 'rgba(250,248,245,0.78)',
-  backdropFilter: 'blur(14px) saturate(1.2)',
-  WebkitBackdropFilter: 'blur(14px) saturate(1.2)',
-  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95), inset 0 0 0 0.5px rgba(255,255,255,0.6), 0 1px 2px rgba(42,39,37,0.06), 0 16px 30px -20px rgba(42,39,37,0.38)',
-  borderColor: 'rgba(255,255,255,0.7)'
-} : {};
+/** Flat Instagram-style surfaces: solid white, no blur/shadow (name kept for compatibility). */
+export const webGlass: Record<string, unknown> = { backgroundColor: '#FFFFFF' };
+void _P;

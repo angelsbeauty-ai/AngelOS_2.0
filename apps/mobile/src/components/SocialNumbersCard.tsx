@@ -35,12 +35,12 @@ export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
-  title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#2A2725' },
-  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#625B56' },
+  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF' },
+  title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#262626' },
+  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373' },
   row: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  name: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725', flexShrink: 0, minWidth: 90 },
+  name: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626', flexShrink: 0, minWidth: 90 },
   vals: { flex: 1, alignItems: 'flex-end', gap: 2 },
-  val: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725' },
-  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#625B56' }
+  val: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' },
+  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#737373' }
 });

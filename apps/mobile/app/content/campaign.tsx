@@ -62,13 +62,13 @@ export default function PlanCampaign() {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
-  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#625B56' },
-  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)', backgroundColor: '#FFF', paddingHorizontal: 14, fontSize: 16, color: '#2A2725', fontFamily: tokens.font.ui },
+  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF' },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#737373' },
+  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)', backgroundColor: '#FFF', paddingHorizontal: 14, fontSize: 16, color: '#262626', fontFamily: tokens.font.ui },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: { height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)' },
   pillOn: { backgroundColor: ROSE, borderColor: ROSE },
-  pillText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#2A2725' },
-  idea: { gap: 2, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(42,39,37,0.10)' },
-  ideaTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725' }
+  pillText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#262626' },
+  idea: { gap: 2, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
+  ideaTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' }
 });

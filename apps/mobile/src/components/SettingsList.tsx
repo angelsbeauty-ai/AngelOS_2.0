@@ -27,21 +27,21 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'rose' | 'success' | 'danger' }) {
-  const c = { neutral: ['rgba(42,39,37,0.07)', '#625B56'], rose: ['#C98B78', '#FFFFFF'], success: ['rgba(54,106,73,0.12)', '#366A49'], danger: ['rgba(168,67,44,0.12)', '#A8432C'] }[tone];
+  const c = { neutral: ['rgba(42,39,37,0.07)', '#737373'], rose: ['#C98B78', '#FFFFFF'], success: ['rgba(54,106,73,0.12)', '#366A49'], danger: ['rgba(168,67,44,0.12)', '#A8432C'] }[tone];
   return <View style={[styles.chip, { backgroundColor: c[0] }]}><Text style={[styles.chipText, { color: c[1] }]}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
-  groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#625B56' },
+  groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#737373' },
   onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#FFFFFF', backgroundColor: '#C98B78', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
-  group: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden', ...(webGlass as object) },
+  group: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
-  sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(42,39,37,0.10)' },
+  sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBDBDB' },
   icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
-  title: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#2A2725' },
-  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#625B56' },
-  value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#625B56', maxWidth: 170 },
+  title: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#262626' },
+  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#737373' },
+  value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373', maxWidth: 170 },
   chip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 8, paddingVertical: 3 },
   chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 12 }
 });

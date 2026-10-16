@@ -95,7 +95,7 @@ export function DialogHost() {
   );
 }
 
-const webGlass = { backdropFilter: 'blur(20px) saturate(1.4)' } as unknown as object;
+const webGlass = {} as object;
 
 /** Throws if no DialogHost is mounted so callers (src/lib/dialog.ts) can fall back. */
 export function notify(title: string, message?: string): Promise<void> {

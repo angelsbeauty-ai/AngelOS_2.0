@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   outText: { color: tokens.color.onCharcoal },
   translation: { gap: 2, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ui.colors.border, paddingTop: 8 },
   translationLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: ui.colors.secondaryText },
-  outMuted: { color: 'rgba(250,248,245,0.7)' },
+  outMuted: { color: '#FFFFFF' },
   meta: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   metaText: { fontFamily: tokens.font.uiMedium, fontSize: 12, color: ui.colors.secondaryText },
   metaLink: { fontFamily: tokens.font.uiBold, fontSize: 12, color: tokens.color.tide, paddingVertical: 4 },

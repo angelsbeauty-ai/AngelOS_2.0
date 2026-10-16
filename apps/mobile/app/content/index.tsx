@@ -32,7 +32,7 @@ const GROUP: Record<string, View_> = { draft: 'drafts', prepared: 'drafts', appr
 const TONE: Record<string, 'neutral' | 'rose' | 'success' | 'danger'> = { drafts: 'neutral', scheduled: 'rose', posted: 'success', failed: 'danger' };
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
-function PlatformMark({ p, size = 16, color = '#625B56' }: { p: string; size?: number; color?: string }) {
+function PlatformMark({ p, size = 16, color = '#737373' }: { p: string; size?: number; color?: string }) {
   const c = { size, color };
   if (p === 'instagram') return <InstagramLogo {...c} />;
   if (p === 'facebook') return <FacebookLogo {...c} />;
@@ -166,42 +166,42 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
-  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
+  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
   cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
   stripBig: { paddingVertical: 14, paddingHorizontal: 4, marginHorizontal: -10 },
   cellBig: { paddingVertical: 12, minHeight: 64 },
   wd: { width: '14.28%', alignItems: 'center', paddingBottom: 6 },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
-  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#2A2725', textAlign: 'center' },
-  cellToday: { backgroundColor: '#2A2725' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
-  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8C847D' },
-  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#2A2725', fontVariant: ['lining-nums'] },
+  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
+  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#262626', textAlign: 'center' },
+  cellToday: { backgroundColor: '#262626' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
+  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8E8E8E' },
+  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#262626', fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   marks: { flexDirection: 'row', gap: 1, minHeight: 11 },
   dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },
   seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: ROSE },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#2A2725' },
-  list: { borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', overflow: 'hidden', ...(webGlass as object) },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(42,39,37,0.10)' },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#262626' },
+  list: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', overflow: 'hidden', ...(webGlass as object) },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBDBDB' },
   thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' },
   thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
   half: { flex: 1 },
-  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#2A2725' },
+  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#262626' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   fail: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16, color: '#A3392F' },
-  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#625B56', flexShrink: 1 },
-  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
-  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#2A2725', textAlign: 'center' },
-  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#625B56', textAlign: 'center' },
+  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#737373', flexShrink: 1 },
+  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
+  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#262626', textAlign: 'center' },
+  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373', textAlign: 'center' },
   emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.10)' },
   fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ROSE, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   fabText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#FFF' },
   backdrop: { flex: 1, justifyContent: 'center', padding: 32, backgroundColor: 'rgba(0,0,0,0.25)' },
-  menu: { borderRadius: 20, backgroundColor: 'rgba(250,248,245,0.97)', overflow: 'hidden' },
-  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(42,39,37,0.10)' },
-  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#2A2725' }
+  menu: { borderRadius: 20, backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#262626' }
 });

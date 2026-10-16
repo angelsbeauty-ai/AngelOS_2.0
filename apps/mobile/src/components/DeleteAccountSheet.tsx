@@ -57,10 +57,10 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
   sheet: { gap: 12, padding: 22, paddingBottom: 40, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: '#F5F2EE' },
   warn: { alignSelf: 'center', width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(168,67,44,0.12)' },
-  title: { fontFamily: tokens.font.display, fontSize: 28, color: '#2A2725', textAlign: 'center' },
-  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#625B56', textAlign: 'center' },
-  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#625B56', marginTop: 6 },
-  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.15)', backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 16, color: '#2A2725' },
+  title: { fontFamily: tokens.font.display, fontSize: 28, color: '#262626', textAlign: 'center' },
+  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373', textAlign: 'center' },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#737373', marginTop: 6 },
+  input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.15)', backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 16, color: '#262626' },
   danger: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   dangerText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#A8432C' }
 });

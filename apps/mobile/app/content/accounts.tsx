@@ -130,18 +130,18 @@ export default function SocialAccounts() {
 
 const styles = StyleSheet.create({
   warn: { fontFamily: tokens.font.uiMedium, fontSize: 14, lineHeight: 20, color: tokens.color.warning },
-  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)' },
+  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(140,85,71,0.12)' },
   avatarText: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#8C5547' },
-  title: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#2A2725' },
-  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#625B56' },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 18, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
+  title: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#262626' },
+  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373' },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 18, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB' },
   chev: { fontSize: 24, color: '#8C5547' },
   dot: { width: 10, height: 10, borderRadius: 5 },
   ok: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: tokens.color.success },
-  soon: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#625B56' },
-  step: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#2A2725' },
-  input: { minHeight: 46, borderWidth: 1, borderColor: 'rgba(42,39,37,0.14)', borderRadius: 14, paddingHorizontal: 14, fontFamily: tokens.font.ui, fontSize: 16, color: '#2A2725', backgroundColor: '#FFF' }
+  soon: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#737373' },
+  step: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#262626' },
+  input: { minHeight: 46, borderWidth: 1, borderColor: 'rgba(42,39,37,0.14)', borderRadius: 14, paddingHorizontal: 14, fontFamily: tokens.font.ui, fontSize: 16, color: '#262626', backgroundColor: '#FFF' }
 });

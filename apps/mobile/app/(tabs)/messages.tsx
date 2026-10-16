@@ -1,12 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizontal';
 import { Button } from '../../src/components/ui';
 import { getSocialAccounts, PLATFORM_NAME, type SocialAccount, type SocialPlatform } from '../../src/lib/social';
 import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
-import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
+import { Bell } from 'phosphor-react-native/src/icons/Bell';
+import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
+import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
+import { ContactAvatar } from '../../src/components/BrandBadge';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
@@ -47,6 +50,9 @@ export default function MessagesScreen() {
   const [plat, setPlat] = useState<Plat>('all');
   const [filter, setFilter] = useState<Filter | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [errorText, setErrorText] = useState({ title: '', message: '' });
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
@@ -72,7 +78,7 @@ export default function MessagesScreen() {
 
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
-  const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter)), [threads, plat, filter]);
+  const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter) && (!query.trim() || `${th.client?.display_name ?? ''} ${th.contact_display_name ?? ''} ${th.last_preview ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))), [threads, plat, filter, query]);
   /** A platform-level sync problem (missing permission, expired login). Raw Meta text is never shown. */
   const platError = plat !== 'all' ? connections.find((x) => x.provider === plat && PROBLEM.test(x.detail ?? '')) ?? null : null;
   /** Meta accounts that need a fresh login (e.g. messaging permission not granted). Plain English from the server. */
@@ -96,16 +102,15 @@ export default function MessagesScreen() {
   return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
     <View style={styles.header}>
       <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{t('messages.title')}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} onPress={() => setMenuOpen(true)} style={[styles.round, filter && styles.roundOn]}>
-        {filter ? <Funnel size={18} color="#FFF" weight="fill" /> : <SlidersHorizontal size={20} color="#2A2725" weight="bold" />}
-      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}>
+        <Bell size={24} color="#262626" />{threads.some((x) => x.unread) ? <View style={styles.bellDot} /> : null}</Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
+        <SlidersHorizontal size={24} color={filter || plat !== 'all' ? ROSE : '#262626'} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color="#262626" /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color="#262626" weight="bold" /></Pressable>
     </View>
-
-
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}>
-        <Text numberOfLines={1} style={[styles.chipText, plat === k && { color: '#FFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
-    </ScrollView>
+    {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor="#8E8E8E" style={styles.search} /> : null}
+    {filter || plat !== 'all' ? <Pressable onPress={() => { setFilter(null); setPlat('all'); }}><Text style={styles.link}>{[plat !== 'all' ? PLATS.find(([k]) => k === plat)?.[1] : null, filter ? t(`inbox.f.${filter}`) : null].filter(Boolean).join(' · ')} · {t('inbox.clear')}</Text></Pressable> : null}
     {reErr ? <Card><View style={{ gap: 12 }}>
       <Text style={styles.errText}>{reErr.kind === 'line' ? t('messages.lineIssue') : t('messages.reconnectFailed')} ({PLATFORM_NAME[reErr.provider]})</Text>
       <Text style={styles.errBody}>{reErr.message}</Text>
@@ -123,7 +128,6 @@ export default function MessagesScreen() {
       {platError.provider === 'line' ? <Button label={t('messages.openLine')} onPress={() => router.push('/content/accounts' as any)} />
         : <Button label={reBusy ? '…' : t('messages.reconnect')} disabled={reBusy} onPress={() => void reconnect(platError.provider as SocialPlatform)} />}
     </View></Card> : null}
-    {filter ? <Pressable onPress={() => setFilter(null)}><Text style={styles.link}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
 
     {state === 'loading' ? <Skeleton rows={4} height={72} /> : null}
     {state === 'nostudio' ? <NoStudio /> : null}
@@ -138,20 +142,18 @@ export default function MessagesScreen() {
     {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
-        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { transform: [{ scale: 0.98 }] }]}>
-          <Avatar name={name} />
+        const avatarUri = (thread as MessageThreadSummary & { contact_avatar_url?: string | null }).contact_avatar_url ?? null;
+        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: '#FAFAFA' }]}>
+          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} />
           <View style={styles.rowBody}>
+            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.name}>{name}</Text>
             <View style={styles.rowTop}>
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.name, thread.unread && styles.nameUnread]}>{name}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.time}>{timeLabel(thread.last_message_at)}</Text>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.preview, !thread.unread && !thread.needs_reply && styles.previewRead]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
+              <Text maxFontSizeMultiplier={1.3} style={styles.time}>{rel(thread.last_message_at)}</Text>
             </View>
-            <View style={styles.rowMid}>
-              <PlatformBadge platform={thread.platform} label={thread.platform_label} />
-              {thread.status === 'done' ? <Text style={styles.done}>{t('messages.done')}</Text> : thread.needs_reply ? <Text style={styles.flag}>{t('messages.needsReply')}</Text> : null}
-            </View>
-            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.preview}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
+            {thread.status === 'done' ? <Text style={styles.done}>{t('messages.done')}</Text> : null}
           </View>
-          <UnreadDot visible={thread.unread} />
+          {thread.unread || thread.needs_reply ? <View accessibilityLabel="Unread" style={styles.unread} /> : <View style={{ width: 8 }} />}
         </Pressable>;
       })}
     </View> : null}
@@ -159,50 +161,70 @@ export default function MessagesScreen() {
 
   <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
     <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}><View style={styles.menu}>
-      <Text style={styles.menuHead}>{t('inbox.filter')}</Text>
+      <Text style={styles.menuHead}>{t('messages.platform', { defaultValue: 'Platform' })}</Text>
+      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => { setPlat(k); setMenuOpen(false); }} style={styles.mi}>
+        <Text style={[styles.miText, plat === k && { color: ROSE }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
+      <Text style={[styles.menuHead, styles.miSep]}>{t('inbox.filter')}</Text>
       {FILTERS.map((f) => <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: filter === f }} onPress={() => { setFilter(filter === f ? null : f); setMenuOpen(false); }} style={styles.mi}>
         <Text style={[styles.miText, filter === f && { color: ROSE }]}>{t(`inbox.f.${f}`)}</Text></Pressable>)}
-      <Pressable style={[styles.mi, styles.miSep]} onPress={() => { setMenuOpen(false); router.push('/messages/new' as any); }}><Text style={styles.miText}>{t('messages.newConv')}</Text></Pressable>
-      <Pressable style={styles.mi} onPress={() => { setMenuOpen(false); router.push('/messages/saved-replies' as any); }}><Text style={styles.miText}>{t('messages.saved')}</Text></Pressable>
+    </View></Pressable>
+  </Modal>
+  <Modal visible={moreOpen} transparent animationType="fade" onRequestClose={() => setMoreOpen(false)}>
+    <Pressable style={styles.backdrop} onPress={() => setMoreOpen(false)}><View style={styles.menu}>
+      <Pressable style={styles.mi} onPress={() => { setMoreOpen(false); router.push('/messages/new' as any); }}><Text style={styles.miText}>{t('messages.newConv')}</Text></Pressable>
+      <Pressable style={styles.mi} onPress={() => { setMoreOpen(false); router.push('/messages/saved-replies' as any); }}><Text style={styles.miText}>{t('messages.saved')}</Text></Pressable>
+      <Pressable style={styles.mi} onPress={() => { setMoreOpen(false); router.push('/content/accounts' as any); }}><Text style={styles.miText}>{t('nav3.accounts')}</Text></Pressable>
     </View></Pressable>
   </Modal></View>;
 }
 
 const ROSE = '#8C5547';
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#2A2725' },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 },
+  title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#000000' },
+  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3040', borderWidth: 1.5, borderColor: '#FFF' },
+  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFEFEF', fontFamily: tokens.font.ui, fontSize: 15, color: '#000' },
+  unread: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3040' },
+  previewRead: { fontFamily: tokens.font.ui, color: '#737373' },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
   roundOn: { backgroundColor: ROSE },
   seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: ROSE },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#2A2725' },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#262626' },
   chips: { flexDirection: 'row', gap: 8 },
-  chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.10)' },
-  chipOn: { backgroundColor: '#2A2725', borderColor: '#2A2725' },
-  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#2A2725' },
+  chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB' },
+  chipOn: { backgroundColor: '#262626', borderColor: '#262626' },
+  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#262626' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
   errBody: { fontFamily: tokens.font.ui, fontSize: 15, color: '#4A443F', lineHeight: 21 },
-  errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#2A2725', lineHeight: 22 },
-  menu: { width: 240, borderRadius: 22, backgroundColor: 'rgba(250,248,245,0.97)', overflow: 'hidden', ...(webGlass as object) },
-  menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#625B56', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
-  mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(42,39,37,0.10)' },
+  errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626', lineHeight: 22 },
+  menu: { width: 240, borderRadius: 22, backgroundColor: '#FFFFFF', overflow: 'hidden', ...(webGlass as object) },
+  menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#737373', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
+  mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
   miSep: { borderTopWidth: 6, borderTopColor: 'rgba(42,39,37,0.06)' },
-  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#2A2725' },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#262626' },
   bannerTitle: { fontFamily: tokens.font.uiBold, fontSize: 15, color: ui.colors.primaryText },
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, color: tokens.color.tide, paddingVertical: 6 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   note: { fontSize: 13, color: '#6B6460', paddingHorizontal: 4 },
-  list: { marginHorizontal: -4, borderRadius: 24, backgroundColor: tokens.color.raised, paddingVertical: 4, paddingHorizontal: 0, ...(webGlass as object) },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 80, paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ui.colors.border },
+  list: { marginHorizontal: -16, marginTop: -8 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 96, paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
   rowBody: { flex: 1, gap: 4 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowMid: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 16, color: ui.colors.primaryText },
+  name: { fontFamily: tokens.font.ui, fontSize: 15, color: '#000000' },
   nameUnread: { fontFamily: tokens.font.uiBold },
-  time: { fontFamily: tokens.font.uiMedium, fontSize: 13, color: ui.colors.secondaryText },
-  preview: { fontFamily: tokens.font.ui, fontSize: 15, color: ui.colors.secondaryText },
+  time: { fontFamily: tokens.font.ui, fontSize: 14, color: '#8E8E8E' },
+  preview: { flexShrink: 1, fontFamily: tokens.font.uiBold, fontSize: 16, color: '#000000' },
   flag: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.warning },
   done: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.success }
 });
+
+/** Relative time like Meta Inbox: now, 5m, 1h, 13h, 1d, 3w. */
+function rel(iso: string | null) {
+  if (!iso) return '';
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (m < 1) return 'now'; if (m < 60) return `${m}m`; const h = Math.round(m / 60); if (h < 24) return `${h}h`; const d = Math.round(h / 24); if (d < 7) return `${d}d`; return `${Math.round(d / 7)}w`;
+}

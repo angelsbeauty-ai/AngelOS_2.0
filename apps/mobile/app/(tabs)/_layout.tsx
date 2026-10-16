@@ -24,9 +24,9 @@ export default function TabsLayout() {
     tabBarBackground: () => <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />,
     tabBarShowLabel: true,
     tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14, paddingBottom: 0 },
-    tabBarItemStyle: { marginVertical: 5, marginHorizontal: 2, paddingTop: 3, paddingBottom: 3, borderRadius: 31, overflow: 'hidden' as const },
+    tabBarItemStyle: { paddingTop: 3, paddingBottom: 3 },
     // A1 .tab.on: raised white pill behind the active tab.
-    tabBarActiveBackgroundColor: 'rgba(255,255,255,0.66)',
+    tabBarActiveBackgroundColor: 'transparent',
   };
 
   return (
@@ -45,20 +45,5 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 14,
-    height: 72,
-    borderRadius: 36,
-    borderTopWidth: 0,
-    overflow: 'hidden',
-    backgroundColor: 'transparent',
-    shadowColor: '#2A2725',
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 6,
-  },
+  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 84, paddingTop: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB', backgroundColor: '#FFFFFF', elevation: 0, shadowOpacity: 0 },
 });

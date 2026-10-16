@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ui } from './ui';
 import { tokens } from '../design/theme';
 
-const PLATFORM_COLORS: Record<string, string> = { line: '#366A49', instagram: '#8C5547', facebook: '#3B5998', other: '#625B56', manual: '#625B56', tiktok: '#2A2725' };
+const PLATFORM_COLORS: Record<string, string> = { line: '#366A49', instagram: '#8C5547', facebook: '#3B5998', other: '#737373', manual: '#737373', tiktok: '#262626' };
 
 export function PlatformBadge({ platform, label }: { platform: string; label: string }) {
   return <View style={[styles.badge, { borderColor: PLATFORM_COLORS[platform] ?? ui.colors.border }]}><Text maxFontSizeMultiplier={1.3} style={[styles.badgeText, { color: PLATFORM_COLORS[platform] ?? ui.colors.secondaryText }]}>{label}</Text></View>;

@@ -58,7 +58,7 @@ export function Heatmap({ grid, best, dayLabels, slotLabels, width }: { grid: nu
     {grid.map((row, d) => <View key={d} style={{ flexDirection: 'row', alignItems: 'center', marginTop: gap }}>
       <Text style={{ width: left, fontFamily: tokens.font.ui, fontSize: 11, color: INK50 }}>{dayLabels[d]}</Text>
       {row.map((v, s) => { const isBest = best && best.day === d && best.slot === s;
-        return <View key={s} style={{ width: cell - gap, height: cell * 0.62, marginRight: gap, borderRadius: 6, backgroundColor: `rgba(140,85,71,${(0.06 + 0.88 * (v / max)).toFixed(2)})`, borderWidth: isBest ? 2 : 0, borderColor: '#2A2725' }} />; })}
+        return <View key={s} style={{ width: cell - gap, height: cell * 0.62, marginRight: gap, borderRadius: 6, backgroundColor: `rgba(140,85,71,${(0.06 + 0.88 * (v / max)).toFixed(2)})`, borderWidth: isBest ? 2 : 0, borderColor: '#262626' }} />; })}
     </View>)}
   </View>;
 }
