@@ -40,14 +40,16 @@ test('AI meter: Japan-time day and month bounds', () => {
 });
 
 const ins = require('../dist/social/insights-logic.js');
-test('insights: totals, % change and honest nulls', () => {
+test('insights: snapshots are never summed; views come from per-post numbers', () => {
   const rows = [];
-  for (let i = 0; i < 60; i++) { const d = new Date(Date.parse('2026-10-16T00:00:00Z') - i * 86400000).toISOString().slice(0, 10); rows.push({ platform: 'instagram', metric_date: d, followers: 1000 - i, engagement: i < 30 ? 2 : 4, reach: i < 30 ? 10 : 20 }); }
-  const out = ins.buildInsights({ rows, platforms: ['instagram', 'facebook'], today: '2026-10-16', posts: [] });
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.parse('2026-10-16T00:00:00Z') - i * 86400000).toISOString().slice(0, 10); rows.push({ platform: 'instagram', metric_date: d, followers: 1000 - i, engagement: i < 30 ? 20 : 40, reach: null }); }
+  const posts = [{ variantId: 'a', platform: 'instagram', published_at: '2026-10-10T03:00:00Z', views: 100, interactions: null, post: {} }, { variantId: 'b', platform: 'instagram', published_at: '2026-08-30T03:00:00Z', views: 200, interactions: null, post: {} }];
+  const out = ins.buildInsights({ rows, platforms: ['instagram', 'facebook'], today: '2026-10-16', posts });
   const [views, inter, follows, links] = out.cards;
-  assert.equal(views.total, 300); assert.equal(views.previous, 600); assert.equal(views.change, -50);
-  assert.equal(inter.total, 60); assert.equal(follows.total, 30);
-  assert.equal(links.total, null); assert.equal(links.change, null);
-  assert.equal(views.lines.length, 1); // facebook has no data: no fake line
+  assert.equal(views.total, 100); assert.equal(views.previous, 200); assert.equal(views.change, -50);
+  assert.equal(inter.total, 20); assert.equal(inter.previous, 40); // latest snapshot, not 30 x 20
+  assert.equal(follows.total, 30);
+  assert.equal(links.total, null);
+  assert.equal(views.lines.length, 1);
   assert.equal(ins.pctChange(0, 0), 0); assert.equal(ins.pctChange(5, 0), null);
 });

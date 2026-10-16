@@ -224,7 +224,8 @@ export class SocialAccountsService {
       return { variantId: r.id, platform: r.platform, published_at: r.published_at, views: last ? (last.views ?? last.reach ?? null) : null, interactions: last && ['likes', 'comments', 'saves', 'shares'].some((k) => last[k] != null) ? inter : null, linkClicks: last?.link_clicks ?? null, post: r.post };
     });
     const lc = (from: string, to?: string) => { const xs = posts.filter((p: any) => p.published_at >= from && (!to || p.published_at < to) && p.linkClicks != null); return xs.length ? xs.reduce((s2: number, p: any) => s2 + Number(p.linkClicks), 0) : null; };
-    const out = buildInsights({ rows: (m.error ? [] : m.data ?? []) as any[], platforms, today, posts: posts.filter((p: any) => p.published_at >= midTs), linkClicks: { current: lc(midTs), previous: lc(sinceTs, midTs) } });
+    const out0 = buildInsights({ rows: (m.error ? [] : m.data ?? []) as any[], platforms, today, posts, linkClicks: { current: lc(midTs), previous: lc(sinceTs, midTs) } });
+    const out = { ...out0, top: { ...out0.top, views: out0.top.views.filter((x: any) => x.published_at >= midTs), interactions: out0.top.interactions.filter((x: any) => x.published_at >= midTs) } };
     return { platform, connected, ...out, note: m.error && !isMissingRelation(m.error) ? 'Some numbers could not be read right now.' : null };
   }
 
