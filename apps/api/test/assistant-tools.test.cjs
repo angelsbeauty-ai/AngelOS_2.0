@@ -73,7 +73,8 @@ test('live voice: off without key, never stores, instructions forbid changes', a
   const s = await svc.createSession({ id: 'u', accessToken: 'x' }, 'w', 'calendar');
   assert.equal(s.clientSecret, null);
   const text = live.voiceInstructions({ assistantName: 'AngelOS', workspaceName: 'Studio', screen: 'calendar' });
-  assert.match(text, /cannot change bookings/); assert.match(text, /approval card/);
+  assert.match(text, /look_up_studio/); assert.match(text, /send_reply/); assert.match(text, /Settings stay off/);
+  assert.doesNotMatch(text, /typed chat/);
   if (prev.mode === undefined) delete process.env.AI_PROVIDER_MODE; else process.env.AI_PROVIDER_MODE = prev.mode;
   if (prev.key !== undefined) process.env.OPENAI_API_KEY = prev.key;
 });

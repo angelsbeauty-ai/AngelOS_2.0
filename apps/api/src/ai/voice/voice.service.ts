@@ -7,14 +7,42 @@ import { createUserSupabaseClient } from '../../config/supabase';
 
 const AGENT_NAME = 'angelos-studio';
 
+const VOICE_TOOLS = [
+  {
+    type: 'function',
+    name: 'look_up_studio',
+    description: 'Read real studio records. Call this before answering unread messages, who needs a reply, or what is booked today.',
+    parameters: {
+      type: 'object',
+      properties: { topic: { type: 'string', enum: ['unread', 'today'] } },
+      required: ['topic']
+    }
+  },
+  {
+    type: 'function',
+    name: 'send_reply',
+    description: 'Send one reply after the owner has said yes to these exact words. Never call this for a draft she has not approved out loud.',
+    parameters: {
+      type: 'object',
+      properties: {
+        threadId: { type: 'string' },
+        body: { type: 'string' }
+      },
+      required: ['threadId', 'body']
+    }
+  }
+];
+
 /** Live voice instructions. Voice is never recorded or stored and no transcript is kept. */
 export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null; context?: string | null }) {
   return [
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
-    'You are talking with the owner by live voice. Speak English, short and warm. Ask one question at a time.',
-    'You can explain, plan and give advice. You cannot change bookings, money, posts or send client messages in voice:',
-    'for any change, tell her to type it in the AngelOS chat, where an approval card appears.',
-    'Never invent business facts (prices, hours, client details). Say you do not know instead.',
+    'You are talking with the owner by live voice. While voice is on, you run the studio for her. Do not send her away to type it somewhere else.',
+    'Speak in short, warm sentences. Use her language. Ask one question at a time.',
+    'When she asks for a fact, call look_up_studio first. Never invent a count, a name, a price, an hour, or a booking.',
+    'Unread replies: call look_up_studio with topic unread. Say the number. Then take them one by one. Read who it is from and the short preview. Propose one short reply in the client\'s language. Wait until she says yes. Only then call send_reply with that thread id and the exact words she approved. Then the next one.',
+    'If send_reply was not actually sent, say it is ready to copy because that app is not connected. Never claim a message was sent when it was not.',
+    'Settings stay off: account, password, billing, connected apps, and deleting anything. If she clearly asks to change a setting, say voice cannot change settings.',
     input.screen ? `She opened voice from the "${input.screen}" screen.` : '',
     input.context ? `Start by greeting her and summarising today in 2-3 short sentences using ONLY these facts from AngelOS (do not add anything):\n${input.context}\nThen ask what she would like to do. If she interrupts, stop and listen.` : ''
   ].filter(Boolean).join('\n');
@@ -73,13 +101,17 @@ export class VoiceService {
     const tokenBuilder = new AccessToken(apiKey, apiSecret, { identity: user.id, ttl: '10m' });
     tokenBuilder.addGrant({ roomJoin: true, room, canPublish: true, canSubscribe: true });
     const token = await tokenBuilder.toJwt();
+    const apiBase = (process.env.PUBLIC_API_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'https://angelosapi-staging.up.railway.app')).replace(/\/$/, '');
     const metadata = JSON.stringify({
       instructions: voiceInstructions({
         assistantName: profile?.display_name ?? 'AngelOS',
         workspaceName: ws.name,
         screen,
         context
-      })
+      }),
+      workspaceId,
+      accessToken: user.accessToken,
+      apiBase
     });
     try {
       const dispatch = new AgentDispatchClient(url, apiKey, apiSecret);
@@ -97,7 +129,7 @@ export class VoiceService {
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'OpenAI-Safety-Identifier': createHash('sha256').update(user.id).digest('hex') },
-      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 120 }, session: { type: 'realtime', model, instructions, audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
+      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 600 }, session: { type: 'realtime', model, instructions, tools: VOICE_TOOLS, audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
     });
     if (!response.ok) throw new BadGatewayException(`Voice could not start (${response.status}).`);
     const payload = (await response.json()) as any;

@@ -5,9 +5,47 @@ import { Room, RoomEvent, Track } from 'livekit-client';
 import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
 import { createVoiceSession, getVoiceStatus } from '../lib/ai';
+import { getHomeSummary } from '../lib/home';
+import { createMessageReply } from '../lib/messaging';
 import { startVoiceAudio, stopVoiceAudio } from '../lib/livekit-globals';
 
 type State = 'idle' | 'connecting' | 'live' | 'error';
+
+function voiceToolCall(ev: any): { name: string; callId: string; args: string } | null {
+  if (ev?.type === 'response.function_call_arguments.done' && ev.name && ev.call_id) return { name: ev.name, callId: ev.call_id, args: ev.arguments ?? '{}' };
+  const item = ev?.item ?? ev?.output_item;
+  if (item?.type === 'function_call' && item.name && item.call_id && item.arguments && /output_item\.done$/.test(ev?.type ?? '')) return { name: item.name, callId: item.call_id, args: item.arguments };
+  return null;
+}
+
+async function runVoiceTool(workspaceId: string, name: string, raw: string): Promise<string> {
+  let args: any = {};
+  try { args = raw ? JSON.parse(raw) : {}; } catch { args = {}; }
+  try {
+    if (name === 'look_up_studio') {
+      const home = await getHomeSummary(workspaceId, 'day');
+      if (args.topic === 'today') {
+        return JSON.stringify({
+          bookings: home.schedule.total,
+          next: home.schedule.next ? { client: home.schedule.next.client, service: home.schedule.next.service, start: home.schedule.next.start_at } : null,
+          items: home.schedule.items.slice(0, 8).map((item) => ({ client: item.client, service: item.service, start: item.start_at, status: item.status }))
+        });
+      }
+      const conversations = home.messages.alerts.filter((item) => item.unread || item.needsReply).slice(0, 7).map((item) => ({ threadId: item.id, name: item.name, platform: item.platform, preview: item.preview, unread: item.unread, needsReply: item.needsReply }));
+      return JSON.stringify({ unread: home.messages.unread, needsReply: home.messages.needsReply, conversations });
+    }
+    if (name === 'send_reply') {
+      const threadId = String(args.threadId ?? '');
+      const body = String(args.body ?? '').trim();
+      if (!threadId || !body) return JSON.stringify({ sent: false, error: 'Missing the conversation or the reply.' });
+      const result = await createMessageReply(workspaceId, threadId, body, true);
+      return JSON.stringify({ sent: result.sent, delivery: result.delivery ?? (result.sent ? 'sent' : 'manual') });
+    }
+    return JSON.stringify({ error: 'Unknown voice tool.' });
+  } catch (error) {
+    return JSON.stringify({ error: error instanceof Error ? error.message : 'That did not work.' });
+  }
+}
 
 /**
  * Live voice. With LiveKit keys the server opens a LiveKit room; otherwise it mints a 2-minute OpenAI Realtime key and
@@ -66,8 +104,23 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     micRef.current = stream;
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
-    const dc = peer.createDataChannel('oai-events'); // events are not saved anywhere; only the latest spoken line is shown as a caption
-    dc.onmessage = (e: any) => { try { const ev = JSON.parse(e.data); if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) setCaption(ev.transcript.trim()); } catch { /* ignore */ } };
+    const dc = peer.createDataChannel('oai-events');
+    const answered = new Set<string>();
+    dc.onmessage = (e: any) => {
+      try {
+        const ev = JSON.parse(e.data);
+        if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) setCaption(ev.transcript.trim());
+        const call = voiceToolCall(ev);
+        if (!call || !workspaceId || answered.has(call.callId)) return;
+        answered.add(call.callId);
+        const studioId = workspaceId;
+        void runVoiceTool(studioId, call.name, call.args).then((output) => {
+          if (dc.readyState !== 'open') return;
+          dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
+          dc.send(JSON.stringify({ type: 'response.create' }));
+        });
+      } catch { /* ignore */ }
+    };
     const offer = await peer.createOffer({ offerToReceiveAudio: true });
     await peer.setLocalDescription(offer);
     const res = await fetch('https://api.openai.com/v1/realtime/calls', { method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/sdp' } });
