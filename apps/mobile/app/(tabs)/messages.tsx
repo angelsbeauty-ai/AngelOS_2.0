@@ -44,7 +44,7 @@ function matches(thread: MessageThreadSummary, f: Filter | null) {
 /** NAV V1 Messages tab: Meta Business Suite style inbox shell over the existing messaging API. */
 export default function MessagesScreen() {
   const { t } = useTranslation();
-  const { palette } = useAppearance();
+  const { palette, mode } = useAppearance();
   const [threads, setThreads] = useState<MessageThreadSummary[]>([]);
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
   const seg = 'messages' as Seg; // Messages only (no Comments/Mentions segment).
@@ -116,7 +116,7 @@ export default function MessagesScreen() {
         <Text numberOfLines={1} style={[styles.chipText, on && { color: '#FFFFFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>; })}
     </ScrollView>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor="#8E8E8E" style={styles.search} /> : null}
-    {filter || plat !== 'all' ? <Pressable onPress={() => { setFilter(null); setPlat('all'); }}><Text style={styles.link}>{[plat !== 'all' ? PLATS.find(([k]) => k === plat)?.[1] : null, filter ? t(`inbox.f.${filter}`) : null].filter(Boolean).join(' · ')} · {t('inbox.clear')}</Text></Pressable> : null}
+    {filter || plat !== 'all' ? <Pressable onPress={() => { setFilter(null); setPlat('all'); }}><Text style={[styles.link, { color: palette.text }]}>{[plat !== 'all' ? PLATS.find(([k]) => k === plat)?.[1] : null, filter ? t(`inbox.f.${filter}`) : null].filter(Boolean).join(' · ')} · {t('inbox.clear')}</Text></Pressable> : null}
     {reErr ? <Card><View style={{ gap: 12 }}>
       <Text style={styles.errText}>{reErr.kind === 'line' ? t('messages.lineIssue') : t('messages.reconnectFailed')} ({PLATFORM_NAME[reErr.provider]})</Text>
       <Text style={styles.errBody}>{reErr.message}</Text>
@@ -145,21 +145,21 @@ export default function MessagesScreen() {
     {seg === 'messages' && noAccounts ? <Card><EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
     {seg === 'messages' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <Card><EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
 
-    {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
+    {seg === 'messages' && state === 'ready' && visible.length ? <View style={[styles.list, mode === 'night' && { backgroundColor: palette.glass, borderColor: palette.border }]}>
       {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
-        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: '#FFFFFF' }]}>
+        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : '#FFFFFF' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
-            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.name}>{name}</Text>
+            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.name, { color: palette.text }]}>{name}</Text>
             <View style={styles.rowTop}>
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.preview, !thread.unread && !thread.needs_reply && styles.previewRead]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.time}>· {rel(thread.last_message_at)}</Text>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.time, { color: palette.muted }]}>· {rel(thread.last_message_at)}</Text>
             </View>
             {thread.status === 'done' ? <View style={styles.donePill}><Text style={styles.done}>{t('messages.done')}</Text></View> : null}
           </View>
-          {thread.unread || thread.needs_reply ? <View accessibilityLabel="Unread" style={styles.unread} /> : <View style={{ width: 8 }} />}
+          {thread.unread || thread.needs_reply ? <View accessibilityLabel="Unread" style={[styles.unread, { backgroundColor: palette.text }]} /> : <View style={{ width: 8 }} />}
         </Pressable>;
       })}
     </View> : null}

@@ -21,7 +21,7 @@ function toneColor(tone: TextTone) {
 const textProps = { maxFontSizeMultiplier: tokens.type.maxFontScale } as const;
 
 export function AppTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.appTitle}>{children}</Text>; }
-export function ScreenTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.screenTitle}>{children}</Text>; }
+export function ScreenTitle({ children, color }: PropsWithChildren<{ color?: string }>) { return <Text {...textProps} style={[styles.screenTitle, color ? { color } : null]}>{children}</Text>; }
 export function SectionTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.sectionTitle}>{children}</Text>; }
 export function BodyText({ children, tone = 'primary' }: PropsWithChildren<{ tone?: TextTone }>) { return <Text {...textProps} style={[styles.body, { color: toneColor(tone) }]}>{children}</Text>; }
 export function SupportText({ children, tone = 'secondary' }: PropsWithChildren<{ tone?: TextTone }>) { return <Text {...textProps} style={[styles.support, { color: toneColor(tone) }]}>{children}</Text>; }
@@ -118,7 +118,7 @@ export function Header({ title, subtitle, eyebrow, action }: { title: string; su
   );
 }
 
-export function Overline({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.overline}>{children}</Text>; }
+export function Overline({ children, color }: PropsWithChildren<{ color?: string }>) { return <Text {...textProps} style={[styles.overline, color ? { color } : null]}>{children}</Text>; }
 
 /** Pulsing placeholder rows. Static when reduced motion is on. */
 export function Skeleton({ rows = 3, height = 64 }: { rows?: number; height?: number }) {

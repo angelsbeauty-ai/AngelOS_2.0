@@ -12,6 +12,7 @@ import { BrandLogo } from '../../src/components/BrandBadge';
 import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, D } from '../../src/design/theme';
+import { useAppearance } from '../../src/design/appearance';
 
 const PLATS = ['all', 'instagram', 'facebook', 'line'] as const;
 type Plat = typeof PLATS[number];
@@ -20,6 +21,8 @@ const GREY = '#6B645B';
 
 /** Analytics, Meta Business Suite Insights style: last 30 days vs the 30 before. Stored real metrics only. */
 export default function AnalyticsScreen() {
+  const { palette, mode: look } = useAppearance();
+  const nt = look === 'night' ? { color: palette.text } : null; const nm = look === 'night' ? { color: palette.muted } : null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const [plat, setPlat] = useState<Plat>('all');
@@ -42,7 +45,7 @@ export default function AnalyticsScreen() {
 
   return <Screen onRefresh={() => load()}>
     <View style={styles.headRow}>
-      <Text accessibilityRole="header" style={styles.title}>{t('tabs.analytics')}</Text>
+      <Text accessibilityRole="header" style={[styles.title, nt]}>{t('tabs.analytics')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('ins.platform', { defaultValue: 'Platform' })} onPress={() => setPickOpen(true)} style={styles.picker}>
         <View style={styles.logos}>{(plat === 'all' ? ['instagram', 'facebook', 'line'] : [plat]).map((p, i) => <View key={p} style={[styles.logoRing, i > 0 && { marginLeft: -6 }]}><BrandLogo platform={p} size={20} /></View>)}</View>
         <CaretDown size={14} color={D.text} weight="bold" />
@@ -57,14 +60,14 @@ export default function AnalyticsScreen() {
 
     {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'loading' ? <Skeleton rows={3} height={110} /> : null}
-    {state === 'error' ? <Text style={styles.muted}>{t('ins.error', 'Insights could not load right now. Pull down to try again.')}</Text> : null}
+    {state === 'error' ? <Text style={[styles.muted, nm]}>{t('ins.error', 'Insights could not load right now. Pull down to try again.')}</Text> : null}
     {state === 'ready' && data ? <>
-      {!data.connected.length ? <Text style={styles.muted}>{t('ins.noAccounts', 'Connect Instagram, Facebook or LINE to see insights here.')}</Text> : null}
-      <Text style={styles.headline}>{h == null ? t('ins.noData', { defaultValue: 'No {{name}}views recorded in the last 30 days yet.', name }) : h.change == null ? t('ins.headFlatNew', { defaultValue: 'Your {{name}}views: {{n}} in the last 30 days', name, n: fmt(h.total) })
+      {!data.connected.length ? <Text style={[styles.muted, nm]}>{t('ins.noAccounts', 'Connect Instagram, Facebook or LINE to see insights here.')}</Text> : null}
+      <Text style={[styles.headline, nt]}>{h == null ? t('ins.noData', { defaultValue: 'No {{name}}views recorded in the last 30 days yet.', name }) : h.change == null ? t('ins.headFlatNew', { defaultValue: 'Your {{name}}views: {{n}} in the last 30 days', name, n: fmt(h.total) })
         : Math.abs(h.change) < 5 ? t('ins.headSteady', { defaultValue: 'A steady month. Your {{name}}views are about the same as usual.', name })
         : h.change > 0 ? t('ins.headUp', { defaultValue: 'A good month. Your {{name}}views are a little above your usual.', name }) : t('ins.headDown', { defaultValue: 'A quieter month. Your {{name}}views are a little below your usual.', name })}</Text>
-      <Text style={styles.period}>{t('ins.period', 'Last 30 days · vs your previous 30')}</Text>
-      {data.note ? <Text style={styles.muted}>{data.note}</Text> : null}
+      <Text style={[styles.period, nm]}>{t('ins.period', 'Last 30 days · vs your previous 30')}</Text>
+      {data.note ? <Text style={[styles.muted, nm]}>{data.note}</Text> : null}
       <View style={styles.grid}>{data.cards.map((c) => <View key={c.key} style={styles.card}>
         <Text style={styles.cardTitle} numberOfLines={2}>{label[c.key]}</Text>
         {c.total == null && c.key === 'linkClicks' ? null : <Spark lines={c.lines} />}
@@ -75,13 +78,13 @@ export default function AnalyticsScreen() {
         {c.total == null && c.key === 'linkClicks' ? <Text style={styles.na}>{t('ins.linkHint', 'Add a link to your bio and clicks will appear here')}</Text> : null}
       </View>)}</View>
 
-      <View style={styles.topHead}><Text style={styles.h2}>{t('ins.topBy', 'Top content by')} {tab === 'views' ? t('ins.viewsLc', 'views') : tab === 'interactions' ? t('ins.interLc', 'interactions') : t('ins.followsLc', 'follows')}</Text>
-        <Pressable onPress={() => router.push({ pathname: '/calendar' } as any)}><Text style={styles.seeAll}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
+      <View style={styles.topHead}><Text style={[styles.h2, nt]}>{t('ins.topBy', 'Top content by')} {tab === 'views' ? t('ins.viewsLc', 'views') : tab === 'interactions' ? t('ins.interLc', 'interactions') : t('ins.followsLc', 'follows')}</Text>
+        <Pressable onPress={() => router.push({ pathname: '/calendar' } as any)}><Text style={[styles.seeAll, nt]}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
       <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, tab === k && styles.tabOn]}><Text style={[styles.tabText, tab === k && { color: '#FFFFFF' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
       {top.length ? <View style={styles.tiles}>{top.slice(0, 3).map((p) => <Pressable key={p.variantId} style={styles.tile} onPress={() => p.post?.id && router.push(`/content/${p.post.id}` as any)}>
         {p.post ? <PostThumb workspaceId={ws} post={p.post} size={112} radius={12} /> : <View style={[styles.tileBlank]} />}
         <View style={styles.badge}><Text style={styles.badgeText}>{fmt(p.value)}</Text></View></Pressable>)}</View>
-        : <Text style={styles.muted}>{tab === 'follows' ? t('ins.noFollowsPer', 'Follows per post are not available from the platforms yet.') : t('ins.noTop', 'No post numbers recorded in the last 30 days yet.')}</Text>}
+        : <Text style={[styles.muted, nm]}>{tab === 'follows' ? t('ins.noFollowsPer', 'Follows per post are not available from the platforms yet.') : t('ins.noTop', 'No post numbers recorded in the last 30 days yet.')}</Text>}
 
     </> : null}
   </Screen>;

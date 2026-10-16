@@ -45,7 +45,8 @@ function Mark({ p }: { p: string; color?: string }) {
 /** Calendar tab: Google Calendar style month grid with real bookings + posts per day. */
 export default function CalendarTab() {
   const { t, i18n } = useTranslation();
-  const { palette } = useAppearance();
+  const { palette, mode: look } = useAppearance();
+  const ln = look === 'night' ? { borderColor: 'rgba(255,255,255,0.10)' } : null;
   const lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const now = new Date();
   const [offset, setOffset] = useState(0);
@@ -203,19 +204,19 @@ export default function CalendarTab() {
       {mode === 'day' && state === 'ready' ? (() => { const its = (byDay.get(key(anchor)) ?? []).filter((x) => x.kind === 'booking'); const hrs = its.reduce((n, x) => n + (x.kind === 'booking' ? (new Date(x.a.end_at).getTime() - x.at.getTime()) / 3600000 : 0), 0);
         return <View style={styles.dayHead}>
           <View style={[styles.num, styles.numToday, styles.numBig]}><Text style={[styles.numText, { color: '#FFF' }]}>{anchor.getDate()}</Text></View>
-          <View style={{ gap: 2 }}><Text style={styles.rowTitle}>{anchor.toLocaleDateString(lang, { weekday: 'long' })}</Text>
-            <Text style={styles.rowSub}>{t('cal.dayCount', { defaultValue: '{{n}} bookings · {{h}} h booked', n: its.length, h: Math.round(hrs * 10) / 10 })}</Text></View>
+          <View style={{ gap: 2 }}><Text style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString(lang, { weekday: 'long' })}</Text>
+            <Text style={[styles.rowSub, { color: palette.muted }]}>{t('cal.dayCount', { defaultValue: '{{n}} bookings · {{h}} h booked', n: its.length, h: Math.round(hrs * 10) / 10 })}</Text></View>
         </View>; })() : null}
-      {mode !== 'month' && state === 'ready' ? <View style={styles.grid}>
-        {mode === 'week' ? <View style={styles.wkRow}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+      {mode !== 'month' && state === 'ready' ? <View style={[styles.grid, ln]}>
+        {mode === 'week' ? <View style={[styles.wkRow, ln, look === 'night' && { backgroundColor: palette.bg }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
           <Text style={styles.wk}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text>
-          <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, today && { color: '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
+          <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, { color: palette.text }, today && { color: '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
         <View style={{ flexDirection: 'row', paddingTop: 12 }}>
           <View style={{ width: GUTTER }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text style={styles.hour}>{hourLabel(h, lang)}</Text></View>)}</View>
           {tlDays.map((d) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
             const dayBlocks = (show === 'all' || show === 'tasks') ? blocks.filter((bl) => key(new Date(bl.start_at)) === key(d)) : [];
-            return <View key={key(d)} style={[styles.col, mode === 'day' && { borderLeftWidth: 0 }]}>
-            {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAt', { defaultValue: 'Add an appointment' })} onPress={(e) => addAt(d, h, e.nativeEvent.locationY)} onLongPress={(e) => addAt(d, h, e.nativeEvent.locationY)} style={styles.hourLine} />)}
+            return <View key={key(d)} style={[styles.col, ln, mode === 'day' && { borderLeftWidth: 0 }]}>
+            {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAt', { defaultValue: 'Add an appointment' })} onPress={(e) => addAt(d, h, e.nativeEvent.locationY)} onLongPress={(e) => addAt(d, h, e.nativeEvent.locationY)} style={[styles.hourLine, ln]} />)}
             {dayBlocks.map((bl) => { const st = new Date(bl.start_at); const en = new Date(bl.end_at); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
               const mark = blockMark(bl.notes);
               return <View key={bl.id} style={[styles.block, styles.blocked, { top, height: h }, mark && { backgroundColor: `${mark.color}22`, borderColor: mark.color, borderLeftWidth: 3, borderLeftColor: mark.color }]}><Text numberOfLines={2} style={[styles.chipText, mark && { color: mark.color }]}>{bl.title}</Text>{mode === 'day' ? <Text style={styles.blockSub}>{TAGS.find((row) => row.id === mark?.tag)?.label ?? t('cal.blocked', 'Blocked')}</Text> : null}</View>; })}
@@ -235,9 +236,9 @@ export default function CalendarTab() {
 
       {mode === 'month' && state !== 'nostudio' && state !== 'loading' ? <>
         <View style={styles.wkHead}>{cells.slice(0, 7).map((d, i) => <Text key={i} style={styles.wkH}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text>)}</View>
-        <View style={styles.mgrid}>
+        <View style={[styles.mgrid, ln]}>
         {Array.from({ length: weeks }, (_, w) => { const row = cells.slice(w * 7, w * 7 + 7); const thisWeek = row.some((d) => key(d) === key(now));
-          return <View key={w} style={styles.week}>
+          return <View key={w} style={[styles.week, ln]}>
           {row.map((d) => { const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={`${d.toDateString()}, ${items.length}`} onPress={() => { setAnchor(d); setMode('day'); }} style={styles.cell}>
               <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, { color: palette.text }, !inMonth && styles.dim, today && { color: '#FFF' }]}>{d.getDate()}</Text></View>
