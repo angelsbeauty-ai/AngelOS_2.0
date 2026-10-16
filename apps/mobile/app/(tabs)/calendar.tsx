@@ -119,7 +119,7 @@ export default function CalendarTab() {
           <Text style={styles.wk}>{d.toLocaleDateString(lang, { weekday: mode === 'day' ? 'long' : 'narrow' })}</Text>
           <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, today && { color: '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View>
         <View style={{ flexDirection: 'row' }}>
-          <View style={{ width: 40 }}>{HOURS.map((h) => <Text key={h} style={styles.hour}>{`${h}:00`}</Text>)}</View>
+          <View style={{ width: 40 }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text style={styles.hour}>{`${h}:00`}</Text></View>)}</View>
           {tlDays.map((d) => <View key={key(d)} style={styles.col}>
             {HOURS.map((h) => <View key={h} style={styles.hourLine} />)}
             {(byDay.get(key(d)) ?? []).map((it, i) => { const startH = it.at.getHours() + it.at.getMinutes() / 60; const endAt = it.kind === 'booking' ? new Date(it.a.end_at) : new Date(it.at.getTime() + 30 * 60000);
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   segOn: { backgroundColor: '#2A2725' },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725' },
   rangeLabel: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#2A2725', textAlign: 'center' },
-  hour: { height: HOUR_H_STYLE, fontFamily: tokens.font.ui, fontSize: 10, color: '#8C847D', textAlign: 'right', paddingRight: 4, marginTop: -6 },
+  hour: { fontFamily: tokens.font.ui, fontSize: 10, color: '#8C847D', textAlign: 'right', paddingRight: 4, marginTop: -6 },
   col: { flex: 1, borderLeftWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   hourLine: { height: HOUR_H_STYLE, borderTopWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   block: { position: 'absolute', left: 2, right: 2, borderRadius: 6, padding: 4, overflow: 'hidden' },
