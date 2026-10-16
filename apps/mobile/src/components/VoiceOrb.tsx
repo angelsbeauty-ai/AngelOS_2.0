@@ -1,51 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Defs, FeGaussianBlur, Filter, G, LinearGradient, Path, Stop } from 'react-native-svg';
+import { useMemo } from 'react';
+import { PixelRatio, StyleSheet, View } from 'react-native';
+import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
 import { useAppearance } from '../design/appearance';
-import { ringArc, smokeRing } from './smokeRing';
+import { ORB_SKSL } from './orbShader';
+import { useOrbMotion, type OrbState } from './orbMotion';
+
+const effect = Skia.RuntimeEffect.Make(ORB_SKSL);
 
 /**
- * Voice orb: a thin wispy smoke ring with a hollow centre (white on night, charcoal on daylight).
- * Reacts to the live voice level at ~60fps: louder swells the ring, speeds the flow, adds ripples and shed particles.
+ * HD smoke-ring orb (ORB_HD_SPEC): one SkSL runtime shader ported 1:1 from the Designer's orbhd.py,
+ * drawn by Skia at the full device pixel ratio. Softness comes from the shader field, never from a blur.
+ * Canvas 320 pt, ring radius 100 pt; the layout box stays `size` so the screen does not move.
  */
-export function VoiceOrb({ size = 240, state = 'idle', dimmed, level }: { size?: number; state?: 'idle' | 'connecting' | 'live' | 'error'; dimmed?: boolean; /** Returns the current 0..1 voice level (mic while she talks, assistant output while it speaks). */ level?: () => number }) {
+export function VoiceOrb({ size = 240, state = 'idle', dimmed, level }: { size?: number; state?: OrbState; dimmed?: boolean; level?: () => number }) {
   const { mode } = useAppearance();
-  const ink = mode === 'night' ? '#FFFFFF' : '#2B2B2B';
-  const [frame, setFrame] = useState({ phase: 0, lv: 0 });
-  const s = useRef({ phase: 0, lv: 0, last: 0 });
-  const live = state === 'live';
-  useEffect(() => {
-    let id = 0;
-    const tick = (now: number) => {
-      const st = s.current; const dt = st.last ? Math.min(0.05, (now - st.last) / 1000) : 0.016; st.last = now;
-      const raw = live && level ? Math.max(0, Math.min(1, level())) : 0;
-      // Fast attack, slower release, so speech reads as breathing rather than flicker.
-      st.lv += (raw - st.lv) * (raw > st.lv ? 0.35 : 0.08);
-      st.phase += dt * (0.35 + st.lv * 3.2 + (state === 'connecting' ? 0.4 : 0));
-      setFrame({ phase: st.phase, lv: st.lv });
-      id = requestAnimationFrame(tick);
-    };
-    id = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(id);
-  }, [live, level, state]);
-  const ring = smokeRing(size, frame.phase, frame.lv);
+  const f = useOrbMotion(state, level);
+  const C = 320; const R = 100; const dpr = PixelRatio.get();
+  // Skia canvases are in points with the DPR transform applied, so the shader works in points and AA widths scale by 1/dpr.
+  const uniforms = useMemo(() => ({ uT: f.t, uPhase: f.phase, uL: f.L, uScale: f.scale, uR: R, uRes: [C, C], uNight: mode === 'night' ? 1 : 0, uDpr: dpr }), [f, mode, dpr]);
+  if (!effect) return <View style={{ width: size, height: size }} />;
   return <View accessibilityElementsHidden style={[styles.hold, { width: size, height: size, opacity: dimmed ? 0.4 : 1 }]}>
-    <Svg width={size} height={size}>
-      <Defs>
-        <Filter id="orbGlow" x="-20%" y="-20%" width="140%" height="140%"><FeGaussianBlur stdDeviation={size * 0.022} /></Filter>
-        <LinearGradient id="orbSpec" x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" /><Stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.95" /><Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" /></LinearGradient>
-        <Filter id="orbSoft" x="-10%" y="-10%" width="120%" height="120%"><FeGaussianBlur stdDeviation={size * 0.006} /></Filter>
-      </Defs>
-      {ring.cores.map((d, i) => <Path key={`c${i}`} d={d} fill={ink} fillRule="evenodd" fillOpacity={(i === 0 ? 0.32 : 0.42) + frame.lv * 0.2} filter={i === 0 ? 'url(#orbGlow)' : 'url(#orbSoft)'} />)}
-      <G filter="url(#orbSoft)">{ring.wisps.map((w, i) => <Path key={i} d={w.d} stroke={ink} strokeOpacity={Math.min(1, w.o)} strokeWidth={w.w} fill="none" />)}
-        {ring.curls.map((w, i) => <Path key={`k${i}`} d={w.d} stroke={ink} strokeOpacity={w.o} strokeWidth={w.w} strokeLinecap="round" fill="none" />)}</G>
-      {/* Glassy sheen: thin specular arc on the top edge, a soft wide sheen under it, and a faint reflection low inside. */}
-      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.15, Math.PI * 1.85, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={size * 0.03} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.12 : 0.35} filter="url(#orbSoft)" />
-      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.25, Math.PI * 1.75, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={1.2} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.5 : 0.7} />
-      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 0.3, Math.PI * 0.7, -size * 0.05)} stroke={ink} strokeOpacity={0.08} strokeWidth={size * 0.02} strokeLinecap="round" fill="none" filter="url(#orbGlow)" />
-      {ring.particles.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={p.r} fill={ink} fillOpacity={p.o} />)}
-    </Svg>
+    <Canvas style={{ width: C, height: C, margin: (size - C) / 2 }}>
+      <Fill><Shader source={effect} uniforms={uniforms} /></Fill>
+    </Canvas>
   </View>;
 }
 
-const styles = StyleSheet.create({ hold: { alignItems: 'center', justifyContent: 'center' } });
+const styles = StyleSheet.create({ hold: { alignItems: 'center', justifyContent: 'center', overflow: 'visible' } });

@@ -1408,6 +1408,7 @@
  },
  "aip": {
   "s0": "Your calm AI business partner.",
+  "stillNeedApproval": "Changes and messages still need your approval.",
   "s1": "Settings",
   "s2": "Approve",
   "s3": "Cancel",

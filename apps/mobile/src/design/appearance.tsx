@@ -23,35 +23,35 @@ export type Palette = {
   gloss: Record<string, unknown>;
 };
 
-function gloss(rim: string, edge: string, sheen: string): Record<string, unknown> {
-  const img = `linear-gradient(180deg, ${sheen} 0%, rgba(255,255,255,0) 42%)`;
-  return { boxShadow: `inset 0 1px 0 ${rim}, inset 0 0 0 0.5px ${edge}`, ...(Platform.OS === 'web' ? { backgroundImage: img } : { experimental_backgroundImage: img }) };
+/** GLASS_HD_TOKENS §1: 1 pt hairline, 1 pt inner top specular rim, soft sheen gradient, mode shadow. */
+function gloss(rim: string, sheen: string, shadow: string): Record<string, unknown> {
+  return { borderWidth: 1, boxShadow: `inset 0 1px 0 ${rim}, ${shadow}`, ...(Platform.OS === 'web' ? { backgroundImage: sheen } : { experimental_backgroundImage: sheen }) };
 }
 
 const day: Palette = {
   bg: '#F3F3F3',
   text: '#151515',
   muted: '#6B645B',
-  glass: 'rgba(255,255,255,0.46)',
-  border: 'rgba(255,255,255,0.82)',
+  glass: 'rgba(255,255,255,0.80)',
+  border: 'rgba(0,0,0,0.06)',
   fill: 'rgba(255,255,255,0.38)',
   icon: '#151515',
-  blur: 18,
+  blur: 24,
   tint: 'light',
   orb: '#FFFFFF',
   orb2: '#E6E6E6',
   orbEdge: '#CFCFCF',
   sphereOpacity: 0.9,
   veil: 'rgba(243,243,243,0.18)',
-  gloss: gloss('rgba(255,255,255,0.95)', 'rgba(0,0,0,0.06)', 'rgba(255,255,255,0.55)')
+  gloss: gloss('rgba(255,255,255,0.90)', 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 40%)', '0 6px 22px rgba(0,0,0,0.055)')
 };
 
 const night: Palette = {
-  bg: '#050506',
+  bg: '#050505',
   text: '#F4F4F5',
-  muted: '#A1A1AA',
-  glass: 'rgba(20,20,20,0.40)',
-  border: 'rgba(255,255,255,0.16)',
+  muted: '#8E8E93',
+  glass: 'rgba(18,18,20,0.66)',
+  border: 'rgba(255,255,255,0.11)',
   fill: 'rgba(255,255,255,0.05)',
   icon: '#F4F4F5',
   blur: 24,
@@ -61,7 +61,7 @@ const night: Palette = {
   orbEdge: '#111111',
   sphereOpacity: 0.9,
   veil: 'rgba(5,5,5,0.2)',
-  gloss: gloss('rgba(255,255,255,0.22)', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0.07)')
+  gloss: gloss('rgba(255,255,255,0.16)', 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 35%)', '0 1px 0 rgba(0,0,0,0.40)')
 };
 
 const KEY = 'angelos.appearance';
