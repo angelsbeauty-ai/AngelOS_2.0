@@ -21,6 +21,8 @@ function parseEnvironment(): AngelosEnvironment {
   return value as AngelosEnvironment;
 }
 
+const STAGING_PAGES_ORIGIN = 'https://angelsbeauty-ai.github.io';
+
 function parseOrigins(raw: string | undefined, environment: AngelosEnvironment) {
   const origins = String(raw ?? '')
     .split(',')
@@ -30,6 +32,8 @@ function parseOrigins(raw: string | undefined, environment: AngelosEnvironment) 
   if (environment === 'production' && origins.length === 0) {
     throw new Error('CORS_ORIGINS is required in production');
   }
+  // Staging web build is also hosted on GitHub Pages (free) since the Netlify site ran out of credit.
+  if (environment === 'staging' && !origins.includes(STAGING_PAGES_ORIGIN)) origins.push(STAGING_PAGES_ORIGIN);
 
   return origins;
 }
