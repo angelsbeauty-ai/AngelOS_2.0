@@ -13,8 +13,8 @@ export function GlassBackdrop() {
   const web = Platform.OS === 'web';
   return <View pointerEvents="none" style={[styles.fill, { backgroundColor: palette.bg }]}>
     {SPHERES.map((s) => <View key={s.id} style={[styles.sphere, s.pos, { width: s.size, height: s.size, borderRadius: s.size / 2, opacity: palette.sphereOpacity, backgroundColor: palette.orb2 },
-      web ? ({ backgroundImage: `radial-gradient(circle at 34% 28%, ${palette.orb} 0%, ${palette.orb2} 58%, ${palette.orbEdge} 100%)`, filter: 'blur(8px)' } as object) : null]} />)}
-    <View style={[styles.fill, { backgroundColor: palette.veil }, web ? ({ backdropFilter: 'blur(6px)' } as object) : null]} />
+      web ? ({ backgroundImage: `radial-gradient(circle at 34% 28%, ${palette.orb} 0%, ${palette.orb2} 58%, ${palette.orbEdge} 100%)`, filter: 'blur(5px)' } as object) : null]} />)}
+    <View style={[styles.fill, { backgroundColor: palette.veil }, web ? ({ backdropFilter: 'blur(3px)' } as object) : null]} />
   </View>;
 }
 

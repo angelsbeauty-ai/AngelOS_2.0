@@ -101,7 +101,7 @@ export default function HomeScreen() {
 
 function Box({ icon, title, value, unit, lines, onPress }: { icon: ReactNode; title: string; value: string; unit?: string; lines: string[]; onPress: () => void }) {
   const { palette } = useAppearance();
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }, pressed && { backgroundColor: palette.fill }]}>
     <View style={styles.titleRow}>{icon}<Text style={[styles.boxTitle, { color: palette.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text></View>
     <Text style={[styles.value, { color: palette.text }]} numberOfLines={1} adjustsFontSizeToFit>{value}{unit ? <Text style={[styles.unit, { color: palette.muted }]}> {unit}</Text> : null}</Text>
     <View style={{ gap: 4, flex: 1 }}>{lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={[styles.line, { color: palette.muted }]} numberOfLines={1}>{l}</Text>)}</View>

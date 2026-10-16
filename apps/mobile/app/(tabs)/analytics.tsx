@@ -22,7 +22,7 @@ const GREY = '#6B645B';
 /** Analytics, Meta Business Suite Insights style: last 30 days vs the 30 before. Stored real metrics only. */
 export default function AnalyticsScreen() {
   const { palette, mode: look } = useAppearance();
-  const nt = look === 'night' ? { color: palette.text } : null; const nm = look === 'night' ? { color: palette.muted } : null; const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0 } : null;
+  const nt = look === 'night' ? { color: palette.text } : null; const nm = look === 'night' ? { color: palette.muted } : null; const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0, ...palette.gloss } : null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const [plat, setPlat] = useState<Plat>('all');

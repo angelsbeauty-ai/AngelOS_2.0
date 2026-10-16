@@ -11,7 +11,7 @@ export function SettingsGroup({ title, badge, icon, children, highlight }: { tit
   const { palette } = useAppearance();
   return <View style={{ gap: 8 }}>
     <View style={styles.groupHead}>{icon}<Text style={[styles.groupTitle, { color: palette.muted }, highlight && { color: palette.text }]}>{title.toUpperCase()}</Text>{badge ? <Text style={[styles.onlyYou, { color: palette.text, backgroundColor: palette.fill }]}>{badge.toUpperCase()}</Text> : null}</View>
-    <View style={[styles.group, { backgroundColor: palette.glass, borderColor: palette.border }]}>{children}</View>
+    <View style={[styles.group, { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>{children}</View>
   </View>;
 }
 

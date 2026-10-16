@@ -46,7 +46,7 @@ function Mark({ p }: { p: string; color?: string }) {
 export default function CalendarTab() {
   const { t, i18n } = useTranslation();
   const { palette, mode: look } = useAppearance();
-  const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border } : null;
+  const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss } : null;
   const ln = look === 'night' ? { borderColor: 'rgba(255,255,255,0.10)' } : null;
   const lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const now = new Date();

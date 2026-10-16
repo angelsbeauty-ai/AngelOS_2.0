@@ -42,7 +42,7 @@ export default function VoiceScreen() {
     </View>
     <View style={styles.center}>
       <Pressable accessibilityRole="button" accessibilityLabel={live ? t('voice.stop', 'Stop') : t('voice.start', 'Start talking')} disabled={noWs || !!off || voice.state === 'connecting'} onPress={() => (live ? voice.stop() : void voice.start())}>
-        <VoiceOrb state={voice.state} dimmed={!!off || noWs} />
+        <VoiceOrb state={voice.state} dimmed={!!off || noWs} level={voice.getLevel} />
       </Pressable>
       {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{caption}</Text> : null}
       <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>

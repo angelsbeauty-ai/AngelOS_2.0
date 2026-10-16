@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { ActionButton, Banner } from './MessagingBits';
@@ -61,8 +61,13 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const roomRef = useRef<Room | null>(null);
   const pcRef = useRef<any>(null); const micRef = useRef<any>(null); const outRef = useRef<any>(null);
   const audioRef = useRef<HTMLMediaElement[]>([]);
+  /** Live voice level 0..1: the louder of her mic and the assistant's output. Read by the orb each frame. */
+  const levelRef = useRef(0); const meterRef = useRef<{ stop: () => void } | null>(null);
+  const mutedRef = useRef(false);
+  const getLevel = useCallback(() => levelRef.current, []);
 
   function stop() {
+    meterRef.current?.stop(); meterRef.current = null; levelRef.current = 0;
     const room = roomRef.current;
     roomRef.current = null;
     audioRef.current.forEach((el) => { el.srcObject = null; el.remove(); });
@@ -79,7 +84,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
 
   /** Mute only the microphone; the session stays open. */
   function setMuted(m: boolean) {
-    setMutedState(m);
+    setMutedState(m); mutedRef.current = m;
     try { micRef.current?.getTracks?.().forEach((t: any) => { t.enabled = !m; }); } catch { /* ignore */ }
     void roomRef.current?.localParticipant.setMicrophoneEnabled(!m).catch(() => undefined);
   }
@@ -127,6 +132,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     if (!res.ok) throw new Error(`Voice could not connect (${res.status}).`);
     const answer = await res.text();
     await peer.setRemoteDescription(Platform.OS === 'web' ? { type: 'answer', sdp: answer } : new g.RTCSessionDescription({ type: 'answer', sdp: answer }));
+    meterRef.current = startMeter({ pc: peer, mic: stream, out: () => outRef.current?.srcObject ?? null }, levelRef, mutedRef);
     peer.addEventListener?.('connectionstatechange', () => { if (['failed', 'closed'].includes(peer.connectionState)) stop(); });
     setState('live');
   }
@@ -156,6 +162,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       });
       await room.connect(session.url, session.token);
       await room.localParticipant.setMicrophoneEnabled(true);
+      meterRef.current = startMeter({ room }, levelRef, mutedRef);
       setState('live');
     } catch (e) {
       stop();
@@ -164,7 +171,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop, muted, setMuted, caption };
+  return { status, state, error, start, stop, muted, setMuted, caption, getLevel };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {
@@ -180,4 +187,42 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
     {error ? <SupportText tone="warning">{error}</SupportText> : null}
     <SupportText>{t('lv.s2')}</SupportText>
   </Card>;
+}
+
+/** Speech amplitude (0..1, linear) mapped so normal talking lands mid-range and loud speech near 1. */
+const shape = (a: number) => Math.min(1, Math.sqrt(Math.max(0, a)) * 1.9);
+
+/**
+ * Real audio levels for the orb.
+ * Web: Web Audio analysers on the mic and the remote stream (true realtime).
+ * iPhone (react-native-webrtc) and any fallback: RTCPeerConnection stats audioLevel (media-source = mic, inbound-rtp = assistant), polled every 50 ms.
+ * LiveKit rooms: participant audioLevel (local mic and remote agent).
+ * The orb smooths these at its 60 fps frame rate.
+ */
+function startMeter(src: { pc?: any; mic?: any; out?: () => any; room?: Room }, level: { current: number }, muted: { current: boolean }) {
+  const g: any = globalThis as any; let stopped = false; const cleanups: Array<() => void> = [];
+  let web: { read: () => number } | null = null;
+  if (Platform.OS === 'web' && src.pc && g.AudioContext) {
+    try {
+      const ctx = new g.AudioContext(); cleanups.push(() => void ctx.close());
+      const make = (stream: any) => { const an = ctx.createAnalyser(); an.fftSize = 512; ctx.createMediaStreamSource(stream).connect(an); const buf = new Float32Array(an.fftSize); return () => { an.getFloatTimeDomainData(buf); let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]; return Math.sqrt(sum / buf.length) * 2.2; }; };
+      const mic = src.mic ? make(src.mic) : () => 0; let out: (() => number) | null = null;
+      web = { read: () => { if (!out) { const st = src.out?.(); if (st) { try { out = make(st); } catch { out = () => 0; } } } return Math.max(muted.current ? 0 : mic(), out ? out() : 0); } };
+    } catch { web = null; }
+  }
+  const tick = async () => {
+    if (stopped) return;
+    try {
+      if (web) level.current = shape(web.read());
+      else if (src.room) { const r = src.room; let lv = muted.current ? 0 : r.localParticipant.audioLevel ?? 0; r.remoteParticipants.forEach((p) => { lv = Math.max(lv, p.audioLevel ?? 0); }); level.current = shape(lv); }
+      else if (src.pc?.getStats) {
+        const stats = await src.pc.getStats(); let mic = 0; let out = 0;
+        stats.forEach((r: any) => { if (r.kind !== 'audio' && r.mediaType !== 'audio') return; if (r.type === 'media-source' && typeof r.audioLevel === 'number') mic = r.audioLevel; if (r.type === 'inbound-rtp' && typeof r.audioLevel === 'number') out = r.audioLevel; });
+        level.current = shape(Math.max(muted.current ? 0 : mic, out));
+      }
+    } catch { /* keep last level */ }
+    if (!stopped) timer = setTimeout(() => void tick(), web ? 16 : 50);
+  };
+  let timer: any = setTimeout(() => void tick(), 0);
+  return { stop: () => { stopped = true; clearTimeout(timer); cleanups.forEach((f) => f()); level.current = 0; } };
 }

@@ -145,7 +145,7 @@ export default function MessagesScreen() {
     {seg === 'messages' && noAccounts ? <Card><EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /></Card> : null}
     {seg === 'messages' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <Card><EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
 
-    {seg === 'messages' && state === 'ready' && visible.length ? <View style={[styles.list, mode === 'night' && { backgroundColor: palette.glass, borderColor: palette.border }]}>
+    {seg === 'messages' && state === 'ready' && visible.length ? <View style={[styles.list, mode === 'night' && { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>
       {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;

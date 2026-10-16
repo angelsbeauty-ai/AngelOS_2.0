@@ -1,59 +1,50 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
+import Svg, { Circle, Defs, FeGaussianBlur, Filter, G, LinearGradient, Path, Stop } from 'react-native-svg';
 import { useAppearance } from '../design/appearance';
+import { ringArc, smokeRing } from './smokeRing';
 
 /**
- * Living voice orb. A soft light that drifts and swells, like ChatGPT voice mode.
- * It stays quiet while waiting and moves more when the assistant is listening.
+ * Voice orb: a thin wispy smoke ring with a hollow centre (white on night, charcoal on daylight).
+ * Reacts to the live voice level at ~60fps: louder swells the ring, speeds the flow, adds ripples and shed particles.
  */
-export function VoiceOrb({ size = 240, state = 'idle', dimmed }: { size?: number; state?: 'idle' | 'connecting' | 'live' | 'error'; dimmed?: boolean }) {
+export function VoiceOrb({ size = 240, state = 'idle', dimmed, level }: { size?: number; state?: 'idle' | 'connecting' | 'live' | 'error'; dimmed?: boolean; /** Returns the current 0..1 voice level (mic while she talks, assistant output while it speaks). */ level?: () => number }) {
   const { mode } = useAppearance();
-  const night = mode === 'night';
+  const ink = mode === 'night' ? '#FFFFFF' : '#2B2B2B';
+  const [frame, setFrame] = useState({ phase: 0, lv: 0 });
+  const s = useRef({ phase: 0, lv: 0, last: 0 });
   const live = state === 'live';
-  const a = useRef(new Animated.Value(0)).current;
-  const b = useRef(new Animated.Value(0)).current;
-  const c = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
-    const pace = live ? 900 : state === 'connecting' ? 1400 : 2600;
-    const loop = (v: Animated.Value, duration: number) => Animated.loop(Animated.sequence([
-      Animated.timing(v, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
-    ]));
-    const one = loop(a, pace);
-    const two = loop(b, pace * 1.35);
-    const three = loop(c, pace * 0.8);
-    one.start(); two.start(); three.start();
-    return () => { one.stop(); two.stop(); three.stop(); };
-  }, [a, b, c, live, state]);
-
-  const travel = live ? size * 0.16 : size * 0.07;
-  const swell = live ? [0.86, 1.16] : [0.94, 1.06];
-  const move = (v: Animated.Value, dx: number, dy: number) => ({
-    transform: [
-      { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [dx, -dx] }) },
-      { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-dy, dy] }) },
-      { scale: v.interpolate({ inputRange: [0, 1], outputRange: swell }) }
-    ]
-  });
-  const colors = night
-    ? ['rgba(120,170,255,0.85)', 'rgba(210,225,255,0.55)', 'rgba(170,140,255,0.55)', 'rgba(80,210,255,0.40)']
-    : ['rgba(120,176,255,0.90)', 'rgba(255,255,255,0.80)', 'rgba(186,170,255,0.62)', 'rgba(150,220,255,0.50)'];
-
+    let id = 0;
+    const tick = (now: number) => {
+      const st = s.current; const dt = st.last ? Math.min(0.05, (now - st.last) / 1000) : 0.016; st.last = now;
+      const raw = live && level ? Math.max(0, Math.min(1, level())) : 0;
+      // Fast attack, slower release, so speech reads as breathing rather than flicker.
+      st.lv += (raw - st.lv) * (raw > st.lv ? 0.35 : 0.08);
+      st.phase += dt * (0.35 + st.lv * 3.2 + (state === 'connecting' ? 0.4 : 0));
+      setFrame({ phase: st.phase, lv: st.lv });
+      id = requestAnimationFrame(tick);
+    };
+    id = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(id);
+  }, [live, level, state]);
+  const ring = smokeRing(size, frame.phase, frame.lv);
   return <View accessibilityElementsHidden style={[styles.hold, { width: size, height: size, opacity: dimmed ? 0.4 : 1 }]}>
-    <View pointerEvents="none" style={[styles.glow, { width: size * 0.92, height: size * 0.92, borderRadius: size, backgroundColor: night ? 'rgba(90,140,255,0.22)' : 'rgba(150,190,255,0.28)' }]} />
-    <View style={[styles.clip, { width: size * 0.72, height: size * 0.72, borderRadius: size }]}>
-      <Animated.View style={[styles.blob, { width: size * 0.62, height: size * 0.62, backgroundColor: colors[0], left: size * 0.04, top: size * 0.06 }, move(a, travel, travel * 0.7)]} />
-      <Animated.View style={[styles.blob, { width: size * 0.5, height: size * 0.5, backgroundColor: colors[1], right: size * 0.02, top: size * 0.08 }, move(b, travel * 0.8, travel)]} />
-      <Animated.View style={[styles.blob, { width: size * 0.46, height: size * 0.46, backgroundColor: colors[2], left: size * 0.12, bottom: size * 0.02 }, move(c, travel * 0.6, travel * 0.9)]} />
-      <Animated.View style={[styles.blob, { width: size * 0.28, height: size * 0.28, backgroundColor: colors[3], right: size * 0.12, bottom: size * 0.1 }, move(a, travel * 0.4, travel * 0.5)]} />
-    </View>
+    <Svg width={size} height={size}>
+      <Defs>
+        <Filter id="orbGlow" x="-20%" y="-20%" width="140%" height="140%"><FeGaussianBlur stdDeviation={size * 0.03} /></Filter>
+        <LinearGradient id="orbSpec" x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor="#FFFFFF" stopOpacity="0" /><Stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.95" /><Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" /></LinearGradient>
+        <Filter id="orbSoft" x="-10%" y="-10%" width="120%" height="120%"><FeGaussianBlur stdDeviation={size * 0.006} /></Filter>
+      </Defs>
+      <Path d={ring.glow} stroke={ink} strokeOpacity={0.22 + frame.lv * 0.25} strokeWidth={size * (0.05 + frame.lv * 0.04)} fill="none" filter="url(#orbGlow)" />
+      <G filter="url(#orbSoft)">{ring.wisps.map((w, i) => <Path key={i} d={w.d} stroke={ink} strokeOpacity={Math.min(1, w.o)} strokeWidth={w.w} fill="none" />)}</G>
+      {/* Glassy sheen: thin specular arc on the top edge, a soft wide sheen under it, and a faint reflection low inside. */}
+      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.15, Math.PI * 1.85, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={size * 0.03} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.18 : 0.5} filter="url(#orbSoft)" />
+      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 1.25, Math.PI * 1.75, -size * 0.012)} stroke="url(#orbSpec)" strokeWidth={1.4} strokeLinecap="round" fill="none" opacity={mode === 'night' ? 0.85 : 0.95} />
+      <Path d={ringArc(size, frame.phase, frame.lv, Math.PI * 0.3, Math.PI * 0.7, -size * 0.05)} stroke={ink} strokeOpacity={0.08} strokeWidth={size * 0.02} strokeLinecap="round" fill="none" filter="url(#orbGlow)" />
+      {ring.particles.map((p, i) => <Circle key={i} cx={p.x} cy={p.y} r={p.r} fill={ink} fillOpacity={p.o} />)}
+    </Svg>
   </View>;
 }
 
-const styles = StyleSheet.create({
-  hold: { alignItems: 'center', justifyContent: 'center' },
-  glow: { position: 'absolute' },
-  clip: { overflow: 'hidden' },
-  blob: { position: 'absolute', borderRadius: 999 }
-});
+const styles = StyleSheet.create({ hold: { alignItems: 'center', justifyContent: 'center' } });

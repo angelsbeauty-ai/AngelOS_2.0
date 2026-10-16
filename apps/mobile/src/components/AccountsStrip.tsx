@@ -13,7 +13,7 @@ import { getSocialAccounts, PLATFORM_NAME, type SocialAccount } from '../lib/soc
 export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: string; accounts?: SocialAccount[] }) {
   const { t, i18n } = useTranslation();
   const { palette, mode } = useAppearance();
-  const nc = mode === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border } : null;
+  const nc = mode === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss } : null;
   const nt = mode === 'night' ? { color: palette.text } : null; const nm = mode === 'night' ? { color: palette.muted } : null;
   const [items, setItems] = useState<SocialAccount[] | null>(given ?? null);
   const [error, setError] = useState<string | null>(null);

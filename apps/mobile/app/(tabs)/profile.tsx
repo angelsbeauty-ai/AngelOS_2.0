@@ -95,7 +95,7 @@ export default function ProfileScreen() {
 
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
-    {me ? <View style={[styles.card, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+    {me ? <View style={[styles.card, { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>
       <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
