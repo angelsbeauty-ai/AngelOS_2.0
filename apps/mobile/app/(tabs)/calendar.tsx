@@ -24,6 +24,17 @@ import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass, D } from '../../src/design/theme';
 
 const ROSE = '#151515'; const BOOK = '#151515';
+const TAGS = [
+  { id: 'appointment', type: 'soft', label: 'Appointment', color: '#151515' },
+  { id: 'task', type: 'other', label: 'Task', color: '#8C6A3D' },
+  { id: 'time', type: 'content', label: 'Scheduled time', color: '#3D6B8C' },
+  { id: 'private', type: 'personal', label: 'Private', color: '#6B5B7A' }
+] as const;
+const COLORS = ['#151515', '#8C6A3D', '#3D6B8C', '#6B5B7A', '#2F6B4F', '#8C3D3D'];
+function blockMark(notes?: string | null) {
+  const m = notes?.match(/\[\[tag:(\w+)\|color:(#[0-9A-Fa-f]{6})\]\]/);
+  return m ? { tag: m[1], color: m[2] } : null;
+}
 const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#151515', line: '#06C755' }; const POSTED = '#151515';
 const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date } | { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
@@ -56,6 +67,8 @@ export default function CalendarTab() {
   const [link, setLink] = useState('');
   const [place, setPlace] = useState('');
   const [remind, setRemind] = useState<number | null>(30);
+  const [tag, setTag] = useState<(typeof TAGS)[number]['id']>('task');
+  const [color, setColor] = useState<string>(TAGS[1].color);
   const [clientId, setClientId] = useState<string | null>(null);
   const [clients, setClients] = useState<Array<{ id: string; display_name: string }>>([]);
   const [saving, setSaving] = useState(false);
@@ -115,7 +128,7 @@ export default function CalendarTab() {
   }, [appts, posts, show, query]);
 
   const addAt = (d: Date, hour: number, y = 0) => {
-    setTitle(''); setHowLong(60); setAllDay(false); setDesc(''); setNote(''); setLink(''); setPlace(''); setRemind(30); setClientId(null);
+    setTitle(''); setHowLong(60); setAllDay(false); setDesc(''); setNote(''); setLink(''); setPlace(''); setRemind(30); setClientId(null); setTag('task'); setColor(TAGS[1].color);
     setDraft({ day: d, startMin: hour * 60 + (y > HOUR_H / 2 ? 30 : 0) });
     if (ws) void listClients(ws).then((rows) => setClients(rows.map((c) => ({ id: c.id, display_name: c.display_name })))).catch(() => setClients([]));
   };
@@ -126,8 +139,9 @@ export default function CalendarTab() {
       const start = new Date(draft.day.getFullYear(), draft.day.getMonth(), draft.day.getDate(), allDay ? 0 : Math.floor(draft.startMin / 60), allDay ? 0 : draft.startMin % 60, 0, 0);
       const end = allDay ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1) : new Date(start.getTime() + howLong * 60000);
       const who = clients.find((c) => c.id === clientId)?.display_name;
-      const lines = [desc.trim() && `Description: ${desc.trim()}`, note.trim() && `Notes: ${note.trim()}`, who && `Client: ${who}`, link.trim() && `Link: ${link.trim()}`, place.trim() && `Location: ${place.trim()}`, remind != null && `Reminder: ${remind} minutes before`].filter(Boolean).join('\n');
-      await createBlock(ws, { title: title.trim(), blockType: 'other', startAt: start.toISOString(), endAt: end.toISOString(), notes: lines.slice(0, 1000) || undefined });
+      const picked = TAGS.find((t) => t.id === tag) ?? TAGS[1];
+      const lines = [`[[tag:${tag}|color:${color}]]`, desc.trim() && `Description: ${desc.trim()}`, note.trim() && `Notes: ${note.trim()}`, who && `Client: ${who}`, link.trim() && `Link: ${link.trim()}`, place.trim() && `Location: ${place.trim()}`, remind != null && `Reminder: ${remind} minutes before`].filter(Boolean).join('\n');
+      await createBlock(ws, { title: title.trim(), blockType: picked.type, startAt: start.toISOString(), endAt: end.toISOString(), notes: lines.slice(0, 1000) || undefined });
       setDraft(null);
       void load();
     } finally { setSaving(false); }
@@ -170,7 +184,8 @@ export default function CalendarTab() {
             return <View key={key(d)} style={[styles.col, mode === 'day' && { borderLeftWidth: 0 }]}>
             {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAt', { defaultValue: 'Add an appointment' })} onPress={(e) => addAt(d, h, e.nativeEvent.locationY)} onLongPress={(e) => addAt(d, h, e.nativeEvent.locationY)} style={styles.hourLine} />)}
             {dayBlocks.map((bl) => { const st = new Date(bl.start_at); const en = new Date(bl.end_at); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
-              return <View key={bl.id} style={[styles.block, styles.blocked, { top, height: h }]}><Text numberOfLines={2} style={[styles.chipText, { color: D.text2 }]}>{bl.title}</Text>{mode === 'day' ? <Text style={styles.blockSub}>{t('cal.blocked', 'Blocked')}</Text> : null}</View>; })}
+              const mark = blockMark(bl.notes);
+              return <View key={bl.id} style={[styles.block, styles.blocked, { top, height: h }, mark && { backgroundColor: `${mark.color}22`, borderColor: mark.color, borderLeftWidth: 3, borderLeftColor: mark.color }]}><Text numberOfLines={2} style={[styles.chipText, mark && { color: mark.color }]}>{bl.title}</Text>{mode === 'day' ? <Text style={styles.blockSub}>{TAGS.find((row) => row.id === mark?.tag)?.label ?? t('cal.blocked', 'Blocked')}</Text> : null}</View>; })}
             {(byDay.get(key(d)) ?? []).map((it, i) => { const startH = it.at.getHours() + it.at.getMinutes() / 60; const endAt = it.kind === 'booking' ? new Date(it.a.end_at) : new Date(it.at.getTime() + 30 * 60000);
               const top = (Math.max(startH, HOURS[0]) - HOURS[0]) * HOUR_H; const h = Math.max(22, ((endAt.getTime() - it.at.getTime()) / 3600000) * HOUR_H - 2);
               const kind = it.kind === 'post' ? styles.blocked : PENDING.test(it.a.status) ? styles.pending : styles.confirmed;
@@ -229,6 +244,14 @@ export default function CalendarTab() {
             <Text style={styles.rowTitle}>{howLong >= 60 ? `${Math.floor(howLong / 60)} h${howLong % 60 ? ` ${howLong % 60} m` : ''}` : `${howLong} m`}</Text>
             <Text style={styles.rowSub}>{t('cal.slide', 'Slide up or down')}</Text>
           </View>}
+          <Text style={styles.fieldK}>{t('cal.tag', 'Tag')}</Text>
+          <View style={styles.remindRow}>
+            {TAGS.map((row) => <Pressable key={row.id} onPress={() => { setTag(row.id); setColor(row.color); }} style={[styles.chipBtn, tag === row.id && { backgroundColor: row.color }]}><Text style={[styles.chipBtnText, tag === row.id && { color: '#FFF' }]}>{row.label}</Text></Pressable>)}
+          </View>
+          <Text style={styles.fieldK}>{t('cal.color', 'Color')}</Text>
+          <View style={styles.remindRow}>
+            {COLORS.map((c) => <Pressable key={c} accessibilityRole="button" accessibilityLabel={c} onPress={() => setColor(c)} style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchOn]} />)}
+          </View>
           <TextInput value={desc} onChangeText={setDesc} placeholder={t('cal.description', 'Description')} placeholderTextColor="#766E64" style={[styles.input, styles.inputTall]} multiline />
           <TextInput value={note} onChangeText={setNote} placeholder={t('cal.notes', 'Notes')} placeholderTextColor="#766E64" style={[styles.input, styles.inputTall]} multiline />
           <Text style={styles.fieldK}>{t('cal.client', 'Client')}</Text>
@@ -382,6 +405,8 @@ const styles = StyleSheet.create({
   chipBtn: { height: 32, paddingHorizontal: 12, borderRadius: 16, justifyContent: 'center', backgroundColor: '#F2F2F2' },
   chipOn: { backgroundColor: '#151515' },
   chipBtnText: { fontFamily: tokens.font.uiMedium, fontSize: 13, color: '#151515' },
+  swatch: { width: 28, height: 28, borderRadius: 14 },
+  swatchOn: { borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#151515', shadowOpacity: 0.4, shadowRadius: 2 },
   wkHead: { flexDirection: 'row', marginHorizontal: -8, marginBottom: -16, paddingBottom: 8 },
   wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: D.muted },
   postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED', backgroundColor: '#FFF' },
