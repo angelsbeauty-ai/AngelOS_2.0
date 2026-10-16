@@ -22,10 +22,10 @@ import { tokens, webGlass } from '../../src/design/theme';
 
 type Seg = 'messages' | 'comments' | 'mentions';
 type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
-type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'touch_up' | 'done';
+type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'done';
 const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
 const PROBLEM = /needs permission|needs reconnect|could not read|meta said|permission|error|expired/i;
-const FILTERS: Filter[] = ['unread', 'unanswered', 'booked', 'follow_up', 'touch_up', 'done'];
+const FILTERS: Filter[] = ['unread', 'unanswered', 'booked', 'follow_up', 'done'];
 
 /** Filter rules use only real thread fields (no invented states). */
 function matches(thread: MessageThreadSummary, f: Filter | null) {
@@ -35,7 +35,6 @@ function matches(thread: MessageThreadSummary, f: Filter | null) {
     case 'unanswered': return thread.needs_reply;
     case 'booked': return /book/.test(tag);
     case 'follow_up': return /follow/.test(tag);
-    case 'touch_up': return /touch/.test(tag);
     case 'done': return thread.status === 'done';
     default: return true;
   }
@@ -144,7 +143,7 @@ export default function MessagesScreen() {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
         return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: '#FAFAFA' }]}>
-          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} />
+          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={44} />
           <View style={styles.rowBody}>
             <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.name}>{name}</Text>
             <View style={styles.rowTop}>
@@ -210,14 +209,14 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   note: { fontSize: 13, color: '#737373', paddingHorizontal: 4 },
   list: { marginHorizontal: -16, marginTop: -8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 96, paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
-  rowBody: { flex: 1, gap: 4 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 6, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
+  rowBody: { flex: 1, gap: 1 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowMid: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontFamily: tokens.font.ui, fontSize: 15, color: '#000000' },
+  name: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#000000' },
   nameUnread: { fontFamily: tokens.font.uiBold },
-  time: { fontFamily: tokens.font.ui, fontSize: 14, color: '#8E8E8E' },
-  preview: { flexShrink: 1, fontFamily: tokens.font.uiBold, fontSize: 16, color: '#000000' },
+  time: { fontFamily: tokens.font.ui, fontSize: 12, color: '#8E8E8E' },
+  preview: { flexShrink: 1, fontFamily: tokens.font.ui, fontSize: 13, color: '#000000' },
   flag: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.warning },
   done: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.success }
 });

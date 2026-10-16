@@ -35,7 +35,7 @@ export function TopBar() {
     <Pressable accessibilityRole="button" accessibilityLabel={t('top.create', { defaultValue: 'Create' })} hitSlop={8} style={styles.btn} onPress={() => setOpen('create')}><Plus size={22} color={ink} weight="bold" /></Pressable>
     <View style={styles.right}>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={8} style={styles.btn} onPress={() => router.push('/notifications' as any)}><Heart size={22} color={ink} weight="regular" /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={8} style={styles.btn} onPress={() => setOpen('menu')}><List size={22} color={ink} weight="bold" /></Pressable>
+      {pathname !== '/' ? <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={8} style={styles.btn} onPress={() => setOpen('menu')}><List size={22} color={ink} weight="bold" /></Pressable> : null}
     </View>
     {open === 'create' ? <Sheet title={t('top.create', { defaultValue: 'Create' })} onClose={() => setOpen(null)} items={[
       { label: t('top.newMessage', { defaultValue: 'New message' }), href: '/messages/new' },

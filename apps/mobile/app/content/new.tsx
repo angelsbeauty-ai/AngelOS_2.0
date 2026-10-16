@@ -2,12 +2,13 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { Card, Pill, PrimaryActionLabel, SecondaryActionLabel, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
+import { ScreenTitle, SupportText } from '../../src/components/ui';
 import { useToast } from '../../src/components/Toast';
 import { tokens } from '../../src/design/theme';
+import { BrandLogo } from '../../src/components/BrandBadge';
 import { ApiError } from '../../src/lib/api';
 import { approveContentPost, scheduleContentVariant, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
@@ -36,12 +37,8 @@ const PLATFORMS: { id: ContentPlatform; label: string }[] = [
   { id: 'line', label: 'LINE' },
 ];
 
-const FORMATS: { id: ContentFormat; label: string }[] = [
-  { id: 'photo', label: 'Photo' },
-  { id: 'carousel', label: 'Carousel' },
-  { id: 'reel', label: 'Reel' },
-  { id: 'story', label: 'Story' },
-];
+type Kind = 'story' | 'post' | 'carousel' | 'reel' | 'live' | 'thread';
+const KINDS: Kind[] = ['story', 'post', 'carousel', 'reel', 'live', 'thread'];
 
 const TIMES = ['10:00', '12:00', '18:00', '19:00', '20:00', '21:00'];
 const IG_CAPTION_LIMIT = 2200;
@@ -67,12 +64,17 @@ export default function NewPostScreen() {
   const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string; format?: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [goalIndex, setGoalIndex] = useState<number | null>(null);
+  const [goalIndex, setGoalIndex] = useState<number | null>(0);
   const [language, setLanguage] = useState<Language>('ja');
   const [caption, setCaption] = useState('');
   const [hashtagText, setHashtagText] = useState('');
-  const [format, setFormat] = useState<ContentFormat>(params.format === 'story' || params.format === 'reel' || params.format === 'carousel' ? params.format : 'photo');
+  const [kind, setKind] = useState<Kind>(params.format === 'story' || params.format === 'reel' || params.format === 'carousel' ? params.format : 'post');
   const [platforms, setPlatforms] = useState<ContentPlatform[]>(['instagram']);
+  const [commentsOn, setCommentsOn] = useState(true);
+  const [tags, setTags] = useState('');
+  const [place, setPlace] = useState('');
+  const [link, setLink] = useState('');
+  const [showRepost, setShowRepost] = useState(false);
   const [day, setDay] = useState<Date>(() => parseDayParam(params.date));
   const [time, setTime] = useState('19:00');
   const [media, setMedia] = useState<MediaAsset[]>([]);
@@ -118,16 +120,17 @@ export default function NewPostScreen() {
   const postedCaption = useMemo(() => {
     const primary = caption.trim();
     const english = captionEn.trim();
-    if (language === 'both' && english && !primary.includes(english)) return `${primary}\n\n${english}`.trim();
-    return primary;
-  }, [caption, captionEn, language]);
+    const text = language === 'both' && english && !primary.includes(english) ? `${primary}\n\n${english}`.trim() : primary;
+    const mentions = tags.split(/[\s,、]+/).map((tag) => tag.trim()).filter(Boolean).map((tag) => tag.startsWith('@') ? tag : `@${tag}`);
+    return [text, mentions.join(' '), place.trim(), link.trim()].filter(Boolean).join('\n');
+  }, [caption, captionEn, language, tags, place, link]);
   const plannedAt = useMemo(() => {
     const [hours, minutes] = time.split(':').map(Number);
     return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes);
   }, [day, time]);
   const today = startOfDay(new Date());
-  const captionTooLongForInstagram = platforms.includes('instagram') && postedCaption.length > IG_CAPTION_LIMIT;
-  const canSave = Boolean(workspaceId && goalIndex !== null && postedCaption && platforms.length && !busy && !captionBusy);
+  const savable = kind === 'post' || kind === 'story' || kind === 'carousel' || kind === 'reel';
+  const canSave = Boolean(workspaceId && savable && platforms.length && (postedCaption.trim() || selectedMedia.length) && !busy && !captionBusy);
 
   function togglePlatform(id: ContentPlatform) {
     setPlatforms((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
@@ -136,23 +139,35 @@ export default function NewPostScreen() {
     setSelectedMedia((current) => current.includes(id) ? current.filter((item) => item !== id) : current.length >= 10 ? current : [...current, id]);
   }
 
-  async function addFromPhone() {
-    if (!workspaceId) return;
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { void dialog.notify(t('imp.photosPerm'), t('imp.photosPermMsg')); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: false, quality: 1 });
-    if (result.canceled || !result.assets[0]) return;
-    const a = result.assets[0];
+  async function addAssets(assets: ImagePicker.ImagePickerAsset[]) {
+    if (!workspaceId || !assets.length) return;
     setBusy(true);
     try {
-      // Angel picks this photo herself for a public post, so it is saved as approved for marketing.
-      const asset = await importMedia(workspaceId, { uri: a.uri, filename: a.fileName || `post_${Date.now()}.jpg`, mimeType: a.mimeType || 'image/jpeg', sizeBytes: a.fileSize, width: a.width, height: a.height, source: 'phone_photos' }, { role: 'other', marketingPermission: 'marketing_approved' });
-      setMedia((m) => [asset, ...m.filter((x) => x.id !== asset.id)]);
-      setPreviews((p) => ({ ...p, [asset.id]: a.uri }));
-      setSelectedMedia((cur) => [asset.id, ...cur].slice(0, 10));
+      const saved: string[] = [];
+      for (const a of assets.slice(0, 10)) {
+        const asset = await importMedia(workspaceId, { uri: a.uri, filename: a.fileName || `post_${Date.now()}.jpg`, mimeType: a.mimeType || 'image/jpeg', sizeBytes: a.fileSize, width: a.width, height: a.height, source: 'phone_photos' }, { role: 'other', marketingPermission: 'marketing_approved' });
+        setMedia((m) => [asset, ...m.filter((x) => x.id !== asset.id)]);
+        setPreviews((p) => ({ ...p, [asset.id]: a.uri }));
+        saved.push(asset.id);
+      }
+      setSelectedMedia((cur) => [...saved, ...cur].slice(0, 10));
       setMediaState('ready');
     } catch (e) { void dialog.notify(t('imp.fail'), e instanceof Error ? e.message : t('imp.unknown')); }
     finally { setBusy(false); }
+  }
+
+  async function takePhoto() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) { void dialog.notify(t('imp.photosPerm'), t('imp.photosPermMsg')); return; }
+    const result = await ImagePicker.launchCameraAsync({ quality: 1 });
+    if (!result.canceled) await addAssets(result.assets);
+  }
+
+  async function fromAlbum() {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { void dialog.notify(t('imp.photosPerm'), t('imp.photosPermMsg')); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images', 'videos'], allowsMultipleSelection: true, quality: 1 });
+    if (!result.canceled) await addAssets(result.assets);
   }
 
   async function writeCaption(tone: CaptionTone) {
@@ -188,29 +203,32 @@ export default function NewPostScreen() {
     }
   }
 
-  async function save(schedule = false) {
-    if (!workspaceId || goalIndex === null || !postedCaption || !platforms.length) return;
-    const goal = GOALS[goalIndex];
+  async function save(mode: 'now' | 'schedule') {
+    const fmt: ContentFormat | null = kind === 'post' ? 'photo' : kind === 'story' || kind === 'carousel' || kind === 'reel' ? kind : null;
+    if (!workspaceId || !fmt || !platforms.length) return;
+    const goal = GOALS[goalIndex ?? 0];
+    const when = mode === 'now' ? new Date() : plannedAt;
+    const text = postedCaption.trim() || ' ';
     setBusy(true);
     try {
-      if (schedule && plannedAt.getTime() <= Date.now() + 60000) { void dialog.notify(t('sml.pastTitle'), t('sml.pastBody')); return; }
+      if (mode === 'schedule' && when.getTime() <= Date.now() + 60000) { void dialog.notify(t('sml.pastTitle'), t('sml.pastBody')); return; }
       const draft = await createComposerDraft(workspaceId, {
         title: title.trim() || undefined,
         objective: goal.objective,
         goal: goal.goal,
         language,
-        caption: postedCaption,
+        caption: text,
         hashtags: hashtags.slice(0, HASHTAG_LIMIT),
-        format,
+        format: fmt,
         platforms,
-        plannedFor: plannedAt.toISOString(),
+        plannedFor: when.toISOString(),
         mediaAssetIds: selectedMedia.length ? selectedMedia : undefined,
       });
-      if (schedule) {
+      if (mode === 'schedule') {
         await approveContentPost(workspaceId, draft.id);
-        for (const v of draft.variants ?? []) await scheduleContentVariant(workspaceId, v.id, plannedAt.toISOString());
+        for (const v of draft.variants ?? []) await scheduleContentVariant(workspaceId, v.id, when.toISOString());
       }
-      toast.show({ title: schedule ? t('sml.scheduled') : t('cnew.s34'), message: t('sml.onCalendar', { when: `${plannedAt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}` }), tone: 'success' });
+      toast.show({ title: mode === 'now' ? t('cnew.savedHere') : t('sml.scheduled'), message: mode === 'now' ? t('cnew.notSent') : t('sml.onCalendar', { when: `${when.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}` }), tone: 'success' });
       if (router.canGoBack()) router.back();
       else router.replace('/social');
     } catch (error) {
@@ -225,184 +243,117 @@ export default function NewPostScreen() {
     }
   }
 
+  const captionTooLongForInstagram = platforms.includes('instagram') && postedCaption.length > IG_CAPTION_LIMIT;
+  const kindLabel = (id: Kind) => id === 'story' ? 'Story' : id === 'post' ? t('cnew.post') : id === 'carousel' ? 'Carousel' : id === 'reel' ? 'Reel' : id === 'live' ? t('cnew.live') : t('cnew.thread');
+
   return (
     <Screen>
-      <Pill tone="gold">Social</Pill>
       <ScreenTitle>{t('cnew.s0')}</ScreenTitle>
-      <SupportText>{t('sml.composerSub')}</SupportText>
 
-      <Card>
-        <SectionTitle>{t('cnew.s1')}</SectionTitle>
-        <View style={styles.chips}>
-          {GOALS.map((item, index) => (
-            <Chip key={item.goal} label={item.label} selected={goalIndex === index} onPress={() => setGoalIndex(index)} />
-          ))}
-        </View>
-      </Card>
+      <View style={styles.chips}>
+        <Chip label={t('cnew.photo')} selected={false} onPress={() => void takePhoto()} />
+        <Chip label={t('cnew.album')} selected={false} onPress={() => void fromAlbum()} />
+        <Chip label={t('cnew.repost')} selected={showRepost} onPress={() => setShowRepost((v) => !v)} />
+      </View>
 
-      <Card>
-        <SectionTitle>{t('cnew.s2')}</SectionTitle>
-        <View style={styles.chips}>
-          <Chip label="日本語" selected={language === 'ja'} onPress={() => setLanguage('ja')} />
-          <Chip label={t('cnew.s13')} selected={language === 'en'} onPress={() => setLanguage('en')} />
-          <Chip label={t('cnew.s14')} selected={language === 'both'} onPress={() => setLanguage('both')} />
-        </View>
-        <TextInput
-          value={title}
-          onChangeText={setTitle}
-          placeholder={t('cnew.s15')}
-          placeholderTextColor={colors.charcoal3}
-          maxLength={160}
-          accessibilityLabel={t('cnew.s16')}
-          maxFontSizeMultiplier={1.3}
-          style={styles.input}
-        />
-        <TextInput
-          value={caption}
-          onChangeText={setCaption}
-          placeholder={language === 'en' ? 'Write your caption…' : 'キャプションを書いてください…'}
-          placeholderTextColor={colors.charcoal3}
-          multiline
-          maxLength={5000}
-          accessibilityLabel={t('cnew.s2')}
-          maxFontSizeMultiplier={1.3}
-          style={styles.captionInput}
-        />
-        {language === 'both' ? (
-          <TextInput
-            value={captionEn}
-            onChangeText={setCaptionEn}
-            placeholder={t('cnew.s39')}
-            placeholderTextColor={colors.charcoal3}
-            multiline
-            maxLength={5000}
-            accessibilityLabel={t('cnew.s39')}
-            maxFontSizeMultiplier={1.3}
-            style={styles.captionInput}
-          />
-        ) : null}
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s35')} disabled={captionBusy} onPress={() => void writeCaption('write')} style={captionBusy ? styles.disabled : null}>
-          <Text style={styles.link}>{captionBusy ? t('cnew.s36') : t('cnew.s35')}</Text>
+      <Text style={styles.label}>{t('cnew.type')}</Text>
+      <View style={styles.chips}>
+        {KINDS.map((id) => <Chip key={id} label={kindLabel(id)} selected={kind === id} onPress={() => setKind(id)} />)}
+      </View>
+      {!savable ? <SupportText>{t('cnew.noLive')}</SupportText> : null}
+
+      <Text style={styles.label}>{t('cnew.plats')}</Text>
+      <View style={styles.chips}>
+        {PLATFORMS.map((item) => (
+          <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: platforms.includes(item.id) }} onPress={() => togglePlatform(item.id)} style={[styles.plat, platforms.includes(item.id) && styles.platOn]}>
+            <BrandLogo platform={item.id} size={18} />
+            <Text style={styles.platText}>{item.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {platforms.includes('line') ? <SupportText tone="warning">{t('cnew.s5')}</SupportText> : null}
+
+      <TextInput
+        value={caption}
+        onChangeText={setCaption}
+        placeholder={language === 'en' ? 'Write here…' : 'ここに書く…'}
+        placeholderTextColor={colors.charcoal3}
+        multiline
+        maxLength={5000}
+        accessibilityLabel={t('cnew.s2')}
+        maxFontSizeMultiplier={1.3}
+        style={styles.captionInput}
+      />
+      <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s35')} disabled={captionBusy} onPress={() => void writeCaption('write')}>
+        <Text style={styles.link}>{captionBusy ? t('cnew.s36') : t('cnew.s35')}</Text>
+      </Pressable>
+      <SupportText tone={captionTooLongForInstagram ? 'critical' : 'secondary'}>
+        {postedCaption.length}{platforms.includes('instagram') ? ` / ${IG_CAPTION_LIMIT}` : ''}
+      </SupportText>
+
+      <Text style={styles.label}>{t('cnew.presets')}</Text>
+      <View style={styles.switchRow}>
+        <Text style={styles.switchLabel}>{t('cnew.comments')}</Text>
+        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#EFEFEF', true: '#000' }} thumbColor="#FFF" />
+      </View>
+      {!commentsOn ? <SupportText>{t('cnew.commentsOff')}</SupportText> : null}
+      <TextInput value={tags} onChangeText={setTags} placeholder={t('cnew.tagPeople')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" style={styles.input} />
+      <TextInput value={place} onChangeText={setPlace} placeholder={t('cnew.location')} placeholderTextColor={colors.charcoal3} style={styles.input} />
+      <TextInput value={link} onChangeText={setLink} placeholder={t('cnew.link')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" keyboardType="url" style={styles.input} />
+
+      <Text style={styles.label}>{t('cnew.s18')}</Text>
+      <TextInput
+        value={hashtagText}
+        onChangeText={setHashtagText}
+        placeholder={t('cnew.s17')}
+        placeholderTextColor={colors.charcoal3}
+        autoCapitalize="none"
+        accessibilityLabel={t('cnew.s18')}
+        maxFontSizeMultiplier={1.3}
+        style={styles.input}
+      />
+      <SupportText tone={hashtags.length > HASHTAG_LIMIT ? 'critical' : 'secondary'}>
+        {hashtags.length} / {HASHTAG_LIMIT}
+      </SupportText>
+
+      <Text style={styles.label}>{t('cnew.s6')}</Text>
+      <View style={styles.dayRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s19')} onPress={() => setDay((current) => addDays(current, -1))} style={styles.dayNav}>
+          <Text style={styles.dayNavText}>‹</Text>
         </Pressable>
-        <View style={styles.chips}>
-          {([
-            ['shorter', 's40'],
-            ['warmer', 's41'],
-            ['professional', 's42'],
-            ['price', 's43'],
-            ['booking', 's44'],
-            ['again', 's45']
-          ] as const).map(([tone, key]) => (
-            <Chip key={tone} label={t(`cnew.${key}`)} selected={false} onPress={() => void writeCaption(tone)} />
-          ))}
-        </View>
-        {captionNote ? <SupportText>{captionNote}</SupportText> : null}
-        <SupportText tone={captionTooLongForInstagram ? 'critical' : 'secondary'}>
-          {postedCaption.length} characters{platforms.includes('instagram') ? ` · Instagram limit ${IG_CAPTION_LIMIT}` : ''}
-        </SupportText>
-        <TextInput
-          value={hashtagText}
-          onChangeText={setHashtagText}
-          placeholder={t('cnew.s17')}
-          placeholderTextColor={colors.charcoal3}
-          autoCapitalize="none"
-          accessibilityLabel={t('cnew.s18')}
-          maxFontSizeMultiplier={1.3}
-          style={styles.input}
-        />
-        <SupportText tone={hashtags.length > HASHTAG_LIMIT ? 'critical' : 'secondary'}>
-          {hashtags.length} hashtag{hashtags.length === 1 ? '' : 's'} · max {HASHTAG_LIMIT}
-        </SupportText>
-        {hashtagSets.length ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{hashtagSets.map((set) => (
-          <Pressable key={set.id} accessibilityRole="button" accessibilityLabel={`Add hashtag set ${set.name}`} onPress={() => setHashtagText((t) => Array.from(new Set([...parseHashtags(t), ...set.tags])).join(' '))} style={styles.chip}><Text style={{ fontFamily: tokens.font.uiSemibold, fontSize: 14, color: colors.charcoal }}>+ {set.name}</Text></Pressable>
-        ))}</View> : null}
-      </Card>
+        <Text maxFontSizeMultiplier={1.3} style={styles.dayLabel}>
+          {day.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })}
+        </Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s20')} onPress={() => setDay((current) => addDays(current, 1))} style={styles.dayNav}>
+          <Text style={styles.dayNavText}>›</Text>
+        </Pressable>
+      </View>
+      <View style={styles.chips}>
+        {TIMES.map((value) => <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />)}
+      </View>
 
-      <Card>
-        <SectionTitle>{t('cnew.s3')}</SectionTitle>
-        <View style={styles.chips}>
-          {PLATFORMS.map((item) => (
-            <Chip key={item.id} label={item.label} selected={platforms.includes(item.id)} onPress={() => togglePlatform(item.id)} />
-          ))}
-        </View>
-        <View style={styles.chips}>
-          {FORMATS.map((item) => (
-            <Chip key={item.id} label={item.label} selected={format === item.id} onPress={() => setFormat(item.id)} />
-          ))}
-        </View>
-        <SupportText>{t('cnew.s4')}</SupportText>
-        {platforms.includes('line') ? <SupportText tone="warning">{t('cnew.s5')}</SupportText> : null}
-      </Card>
-
-      <Card>
-        <SectionTitle>{t('cnew.s6')}</SectionTitle>
-        <View style={styles.dayRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s19')} onPress={() => setDay((current) => addDays(current, -1))} style={styles.dayNav}>
-            <Text style={styles.dayNavText}>‹</Text>
-          </Pressable>
-          <Text maxFontSizeMultiplier={1.3} style={styles.dayLabel}>
-            {day.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
-          </Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s20')} onPress={() => setDay((current) => addDays(current, 1))} style={styles.dayNav}>
-            <Text style={styles.dayNavText}>›</Text>
-          </Pressable>
-        </View>
-        <View style={styles.chips}>
-          <Chip label={t('cnew.s21')} selected={sameDay(day, today)} onPress={() => setDay(today)} />
-          <Chip label={t('cnew.s22')} selected={sameDay(day, addDays(today, 1))} onPress={() => setDay(addDays(today, 1))} />
-          <Chip label={t('cnew.s23')} selected={sameDay(day, addDays(today, 7))} onPress={() => setDay(addDays(today, 7))} />
-        </View>
-        <View style={styles.chips}>
-          {TIMES.map((value) => <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />)}
-        </View>
-        <SupportText>{t('cnew.s7')}</SupportText>
-      </Card>
-
-      <Card>
-        <SectionTitle>{t('sml.photos')}</SectionTitle>
-        <Pressable accessibilityRole="button" disabled={busy || !workspaceId} onPress={() => void addFromPhone()}><Text style={styles.link}>{t('sml.addFromPhone')}</Text></Pressable>
+      {showRepost ? <View style={{ gap: 8 }}>
+        <Text style={styles.label}>{t('cnew.repost')}</Text>
         {mediaState === 'loading' ? <SupportText>{t('cnew.s8')}</SupportText> : null}
-        {mediaState === 'error' ? (
-          <Pressable accessibilityRole="button" onPress={() => void loadMedia()}>
-            <SupportText tone="critical">{t('cnew.s9')}</SupportText>
-          </Pressable>
-        ) : null}
-        {mediaState === 'ready' && !media.length ? (
-          <View style={styles.emptyMedia}>
-            <SupportText>{t('cnew.s10')}</SupportText>
-            <Link href="/media" asChild><Pressable accessibilityRole="link"><Text style={styles.link}>{t('cnew.s11')}</Text></Pressable></Link>
-          </View>
-        ) : null}
-        {media.length ? (
-          <View style={styles.grid}>
-            {media.map((asset) => {
-              const order = selectedMedia.indexOf(asset.id);
-              return (
-                <Pressable
-                  key={asset.id}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: order >= 0 }}
-                  accessibilityLabel={asset.original_filename}
-                  onPress={() => toggleMedia(asset.id)}
-                  style={[styles.tile, order >= 0 && styles.tileSelected]}
-                >
-                  {previews[asset.id] ? <Image source={{ uri: previews[asset.id] }} style={styles.tileImage} /> : <Text numberOfLines={2} style={styles.tileName}>{asset.original_filename}</Text>}
-                  {order >= 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{order + 1}</Text></View> : null}
-                </Pressable>
-              );
-            })}
-          </View>
-        ) : null}
-      </Card>
+        {mediaState === 'error' ? <Pressable accessibilityRole="button" onPress={() => void loadMedia()}><SupportText tone="critical">{t('cnew.s9')}</SupportText></Pressable> : null}
+        {mediaState === 'ready' && !media.length ? <SupportText>{t('cnew.s10')}</SupportText> : null}
+        {media.length ? <View style={styles.grid}>{media.map((asset) => {
+          const order = selectedMedia.indexOf(asset.id);
+          return <Pressable key={asset.id} accessibilityRole="checkbox" accessibilityState={{ checked: order >= 0 }} onPress={() => toggleMedia(asset.id)} style={[styles.tile, order >= 0 && styles.tileSelected]}>
+            {previews[asset.id] ? <Image source={{ uri: previews[asset.id] }} style={styles.tileImage} /> : <Text numberOfLines={2} style={styles.tileName}>{asset.original_filename}</Text>}
+            {order >= 0 ? <View style={styles.badge}><Text style={styles.badgeText}>{order + 1}</Text></View> : null}
+          </Pressable>;
+        })}</View> : null}
+      </View> : null}
 
       <View style={styles.actions}>
-        {!canSave && !busy ? <SupportText>{t('cnew.s12')}</SupportText> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel={t('sml.schedule')} disabled={!canSave} onPress={() => void save(true)} style={!canSave ? styles.disabled : null}>
-          <PrimaryActionLabel>{busy ? t('sml.saving') : t('sml.schedule')}</PrimaryActionLabel>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.postNow')} disabled={!canSave} onPress={() => void save('now')} style={[styles.primaryBtn, !canSave && styles.disabled]}>
+          <Text style={styles.primaryText}>{busy ? t('sml.saving') : t('cnew.postNow')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s24')} disabled={!canSave} onPress={() => void save(false)} style={[styles.secondaryBtn, !canSave ? styles.disabled : null]}>
-          <SecondaryActionLabel>{t('sml.saveDraft')}</SecondaryActionLabel>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedulePost')} disabled={!canSave} onPress={() => void save('schedule')} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
+          <Text style={styles.secondaryText}>{t('cnew.schedulePost')}</Text>
         </Pressable>
+        <SupportText>{t('cnew.notSent')}</SupportText>
       </View>
     </Screen>
   );
@@ -418,10 +369,19 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 },
-  chip: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.raised, borderWidth: 1, borderColor: colors.hairline },
-  chipSelected: { backgroundColor: colors.charcoal, borderColor: colors.charcoal },
-  chipText: { color: colors.charcoal, fontFamily: tokens.font.uiSemibold, fontSize: 14 },
-  chipTextSelected: { color: colors.onCharcoal },
+  chip: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
+  chipSelected: { backgroundColor: '#EFEFEF', borderColor: '#EFEFEF' },
+  chipText: { color: '#262626', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
+  chipTextSelected: { color: '#000' },
+  label: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#000', marginTop: 8 },
+  plat: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
+  platOn: { backgroundColor: '#EFEFEF', borderColor: '#EFEFEF' },
+  platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#000' },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
+  switchLabel: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#000' },
+  primaryBtn: { minHeight: 48, borderRadius: 12, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  primaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#FFF' },
+  secondaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#000' },
   input: { minHeight: 44, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.block, paddingHorizontal: 14, marginVertical: 6, color: colors.charcoal, backgroundColor: colors.raised, fontFamily: tokens.font.ui, fontSize: 16 },
   captionInput: { minHeight: 140, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.block, padding: 14, marginVertical: 6, color: colors.charcoal, backgroundColor: colors.raised, fontFamily: tokens.font.ui, fontSize: 16, textAlignVertical: 'top' },
   dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

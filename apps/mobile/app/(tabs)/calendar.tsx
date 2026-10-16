@@ -13,10 +13,8 @@ import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton } from '../../src/components/ui';
 import { getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment } from '../../src/lib/bookings';
 import { PostThumb } from '../../src/components/PostThumb';
-import { List } from 'phosphor-react-native/src/icons/List';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
-import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { Funnel } from 'phosphor-react-native/src/icons/Funnel';
 import { DotsThreeVertical } from 'phosphor-react-native/src/icons/DotsThreeVertical';
@@ -47,7 +45,7 @@ export default function CalendarTab() {
   const [day, setDay] = useState<Date | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<'day' | 'week' | 'month'>('month');
-  const [pickOpen, setPickOpen] = useState(false); const [moreOpen, setMoreOpen] = useState(false); const [filterOpen, setFilterOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false); const [filterOpen, setFilterOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts'>('all');
   function setView(m: 'day' | 'week' | 'month') { setMode(m); if (m !== 'month') setAnchor(offset === 0 ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : base); }
   const [anchor, setAnchor] = useState(() => new Date(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -95,7 +93,6 @@ export default function CalendarTab() {
     return m;
   }, [appts, posts, show, query]);
 
-  const months = Array.from({ length: 15 }, (_, i) => i - 2);
   const time = (d: Date) => d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
   const label = (it: Item) => it.kind === 'booking' ? `${it.a.client?.display_name ?? ''} ${it.a.service_name}`.trim() : (it.p.variants?.[0]?.caption || it.p.title || t('tabs.calendar'));
   const dayItems = day ? byDay.get(key(day)) ?? [] : [];
@@ -103,12 +100,9 @@ export default function CalendarTab() {
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load}>
       <View style={styles.head}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={6} onPress={() => router.push('/settings' as any)} style={styles.icon}><List size={26} color="#000" /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.pickMonth', 'Choose month')} onPress={() => setPickOpen(true)} style={styles.titleBtn}>
-          <Text numberOfLines={1} style={styles.headTitle}>{mode === 'month' ? base.toLocaleDateString(lang, { month: 'short', year: 'numeric' }) : mode === 'day' ? anchor.toLocaleDateString(lang, { month: 'short', day: 'numeric' }) : `${tlDays[0].toLocaleDateString(lang, { month: 'short', day: 'numeric' })} – ${tlDays[6].getDate()}`}</Text>
-          <CaretDown size={18} color="#000" weight="bold" /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color="#262626" weight="bold" /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color="#262626" weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color="#000" weight="bold" /></Pressable>
+        <Text numberOfLines={1} style={styles.headTitle}>{mode === 'month' ? base.toLocaleDateString(lang, { month: 'long', year: 'numeric' }) : mode === 'day' ? anchor.toLocaleDateString(lang, { month: 'long', day: 'numeric' }) : `${tlDays[0].toLocaleDateString(lang, { month: 'short', day: 'numeric' })} – ${tlDays[6].getDate()}`}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color="#000" weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />
         <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color="#000" /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setFilterOpen(true)} style={styles.icon}><Funnel size={24} color={show !== 'all' ? tokens.color.tide : '#000'} weight={show !== 'all' ? 'fill' : 'regular'} /></Pressable>
@@ -180,12 +174,6 @@ export default function CalendarTab() {
         </ScrollView>
         {ws ? <Pressable style={styles.mi} onPress={() => { setDay(null); router.push('/bookings/week' as any); }}><Text style={[styles.miText, { color: ROSE }]}>{t('nav2.bookingsCal')}</Text></Pressable> : null}
       </Pressable></Pressable>
-    </Modal>
-    <Modal visible={pickOpen} transparent animationType="fade" onRequestClose={() => setPickOpen(false)}>
-      <Pressable style={styles.dropBack} onPress={() => setPickOpen(false)}><View style={styles.drop}>
-        <ScrollView style={{ maxHeight: 420 }}>{months.map((o) => { const d = new Date(now.getFullYear(), now.getMonth() + o, 1);
-          return <Pressable key={o} style={styles.dropItem} onPress={() => { setOffset(o); setMode('month'); setPickOpen(false); }}><Text style={[styles.miText, o === offset && mode === 'month' && { color: tokens.color.tide }]}>{d.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text></Pressable>; })}</ScrollView>
-      </View></Pressable>
     </Modal>
     <Modal visible={moreOpen} transparent animationType="fade" onRequestClose={() => setMoreOpen(false)}>
       <Pressable style={styles.dropBack} onPress={() => setMoreOpen(false)}><View style={[styles.drop, { alignSelf: 'flex-end' }]}>
