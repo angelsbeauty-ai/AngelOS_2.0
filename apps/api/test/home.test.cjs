@@ -38,3 +38,16 @@ test('AI meter: Japan-time day and month bounds', () => {
   const b = u.jstBounds(new Date('2026-10-16T01:00:00Z'));
   assert.equal(b.day, '2026-10-15T15:00:00.000Z'); assert.equal(b.month, '2026-09-30T15:00:00.000Z');
 });
+
+const ins = require('../dist/social/insights-logic.js');
+test('insights: totals, % change and honest nulls', () => {
+  const rows = [];
+  for (let i = 0; i < 60; i++) { const d = new Date(Date.parse('2026-10-16T00:00:00Z') - i * 86400000).toISOString().slice(0, 10); rows.push({ platform: 'instagram', metric_date: d, followers: 1000 - i, engagement: i < 30 ? 2 : 4, reach: i < 30 ? 10 : 20 }); }
+  const out = ins.buildInsights({ rows, platforms: ['instagram', 'facebook'], today: '2026-10-16', posts: [] });
+  const [views, inter, follows, links] = out.cards;
+  assert.equal(views.total, 300); assert.equal(views.previous, 600); assert.equal(views.change, -50);
+  assert.equal(inter.total, 60); assert.equal(follows.total, 30);
+  assert.equal(links.total, null); assert.equal(links.change, null);
+  assert.equal(views.lines.length, 1); // facebook has no data: no fake line
+  assert.equal(ins.pctChange(0, 0), 0); assert.equal(ins.pctChange(5, 0), null);
+});

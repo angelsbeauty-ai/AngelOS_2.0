@@ -77,3 +77,8 @@ export function changePct(values: number[]) {
 export function swapSlots<T extends { variantId: string; at: string }>(a: T, b: T) {
   return [{ variantId: a.variantId, scheduledFor: b.at }, { variantId: b.variantId, scheduledFor: a.at }];
 }
+
+export interface InsightCard { key: 'views' | 'interactions' | 'follows' | 'linkClicks'; total: number | null; previous: number | null; change: number | null; lines: Array<{ platform: string; points: Array<number | null> }> }
+export interface Insights { platform: string; connected: string[]; days: number; from: string; to: string; cards: InsightCard[]; headline: { metric: string; change: number | null; total: number } | null;
+  top: { views: Array<{ variantId: string; platform: string; published_at: string | null; value: number; post: any }>; interactions: Array<{ variantId: string; platform: string; published_at: string | null; value: number; post: any }>; follows: any[] }; note: string | null }
+export const getInsights = (workspaceId: string, platform: string) => apiFetch<Insights>(`/workspaces/${workspaceId}/social/insights?platform=${platform}`);

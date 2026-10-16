@@ -6,6 +6,7 @@ import { LineMessagingAdapter, readLineConfig } from '../messaging/line-messagin
 import { isMissingRelation } from '../messaging/saved-replies.service';
 import { readMetaConfig, type MetaConfig } from '../meta/meta.config';
 import { metaNumbers, metaReadReady } from './meta-insights';
+import { buildInsights } from './insights-logic';
 import { plainNote } from '../sync/meta-sync';
 import { missingMessagingScopes } from '../meta/meta-oauth';
 import { decryptToken } from '../meta/meta-crypto';
@@ -201,6 +202,30 @@ export class SocialAccountsService {
     if (!metaReadReady(platform, cfg)) return null; // read only: never needs META_PUBLISHING_ENABLED
     const n = await metaNumbers(platform, cfg);
     return { followers: n.followers, engagement: n.engagement, reach: null, posts: n.posts, raw: { posts: n.posts, error: n.error ?? null } };
+  }
+
+  /** Insights (Meta Business Suite style): last 30 days vs the 30 before, per platform, from stored metrics only. */
+  async insights(user: AuthUser, workspaceId: string, platform: string) {
+    const db = createUserSupabaseClient(user.accessToken);
+    const { accounts } = await this.accounts(user, workspaceId);
+    const connected = accounts.filter((a) => a.state !== 'not_connected').map((a) => a.platform as string);
+    const platforms = platform === 'all' ? connected : connected.filter((p) => p === platform);
+    const today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+    const since = new Date(Date.parse(`${today}T00:00:00Z`) - 61 * 86400000).toISOString().slice(0, 10);
+    const sinceTs = new Date(Date.parse(`${today}T00:00:00Z`) - 60 * 86400000).toISOString();
+    const midTs = new Date(Date.parse(`${today}T00:00:00Z`) - 29 * 86400000).toISOString();
+    const [m, v] = await Promise.all([
+      platforms.length ? db.from('social_account_metrics').select('platform,metric_date,followers,engagement,reach').eq('workspace_id', workspaceId).in('platform', platforms).gte('metric_date', since).order('metric_date') : Promise.resolve({ data: [], error: null } as any),
+      platforms.length ? db.from('content_variants').select('id,platform,published_at,post:content_posts(id,title,status,media:content_post_media(id,position,role,asset:media_assets(id,original_filename,media_type,content_status,marketing_permission))),snaps:content_metric_snapshots(captured_at,views,reach,likes,comments,saves,shares,link_clicks)').eq('workspace_id', workspaceId).in('platform', platforms).eq('status', 'published').gte('published_at', sinceTs).order('published_at', { ascending: false }).limit(200) : Promise.resolve({ data: [], error: null } as any)
+    ]);
+    const posts = ((v.error ? [] : v.data) ?? []).map((r: any) => {
+      const last = [...(r.snaps ?? [])].sort((a: any, b: any) => String(b.captured_at).localeCompare(String(a.captured_at)))[0];
+      const inter = last ? ['likes', 'comments', 'saves', 'shares'].reduce((s2, k) => s2 + Number(last[k] ?? 0), 0) : null;
+      return { variantId: r.id, platform: r.platform, published_at: r.published_at, views: last ? (last.views ?? last.reach ?? null) : null, interactions: last && ['likes', 'comments', 'saves', 'shares'].some((k) => last[k] != null) ? inter : null, linkClicks: last?.link_clicks ?? null, post: r.post };
+    });
+    const lc = (from: string, to?: string) => { const xs = posts.filter((p: any) => p.published_at >= from && (!to || p.published_at < to) && p.linkClicks != null); return xs.length ? xs.reduce((s2: number, p: any) => s2 + Number(p.linkClicks), 0) : null; };
+    const out = buildInsights({ rows: (m.error ? [] : m.data ?? []) as any[], platforms, today, posts: posts.filter((p: any) => p.published_at >= midTs), linkClicks: { current: lc(midTs), previous: lc(sinceTs, midTs) } });
+    return { platform, connected, ...out, note: m.error && !isMissingRelation(m.error) ? 'Some numbers could not be read right now.' : null };
   }
 
   async numbers(user: AuthUser, workspaceId: string) {

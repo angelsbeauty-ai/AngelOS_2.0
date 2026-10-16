@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Query, Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { IsString, MaxLength } from 'class-validator';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -18,5 +18,6 @@ export class SocialController {
   constructor(private readonly accounts: SocialAccountsService) {}
   @Get('accounts') list(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.accounts.accounts(user, ws); }
   @Post('line/connect') connectLine(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Body() dto: ConnectLineDto) { return this.accounts.connectLine(user, ws, dto); }
+  @Get('insights') insights(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Query('platform') platform?: string) { return this.accounts.insights(user, ws, ['instagram', 'facebook', 'line'].includes(platform ?? '') ? platform! : 'all'); }
   @Get('numbers') numbers(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string) { return this.accounts.numbers(user, ws); }
 }

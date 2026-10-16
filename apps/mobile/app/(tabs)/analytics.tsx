@@ -1,51 +1,127 @@
-import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { Link } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { dialog } from '../../src/lib/dialog';
+import { router, useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import Svg, { Polyline } from 'react-native-svg';
+import { ArrowDown } from 'phosphor-react-native/src/icons/ArrowDown';
+import { ArrowUp } from 'phosphor-react-native/src/icons/ArrowUp';
 import { Screen } from '../../src/components/Screen';
-import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SecondaryActionLabel, SectionTitle, StatCard, SupportText, ui } from '../../src/components/ui';
-import { getAnalyticsOverview, runMarketingCoach, type AnalyticsOverview } from '../../src/lib/analytics';
-import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
-import { router } from 'expo-router';
-import { ScrollView } from 'react-native';
-import { Plug } from 'phosphor-react-native/src/icons/Plug';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton } from '../../src/components/ui';
-import { MetaTiles, PLATS, type Plat } from '../../src/components/MetaTiles';
-import { webGlass } from '../../src/design/theme';
-import { SocialInsightsCard } from '../../src/components/SocialInsightsCard';
+import { PostThumb } from '../../src/components/PostThumb';
 import { BusinessInsightsCard } from '../../src/components/BusinessInsightsCard';
+import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
+import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
+import { tokens } from '../../src/design/theme';
 
+const PLATS = ['all', 'instagram', 'facebook', 'line'] as const;
+type Plat = typeof PLATS[number];
+const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', line: '#06C755', tiktok: '#000000' };
+const UP = '#1F7A4D'; const DOWN = '#B3261E'; const GREY = '#737373';
+
+/** Analytics, Meta Business Suite Insights style: last 30 days vs the 30 before. Stored real metrics only. */
 export default function AnalyticsScreen() {
-  const { t } = useTranslation();
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(null); const [wsId, setWsId] = useState<string | null>(null); const [coach, setCoach] = useState<string | null>(null); const [busy, setBusy] = useState(true); const [plat, setPlat] = useState<Plat>('all'); const [noStudio, setNoStudio] = useState(false); const [coachBusy, setCoachBusy] = useState(false);
-  useEffect(() => { void load(); }, []);
-  async function load() { setBusy(true); try { const workspace = await getActiveWorkspace(); setWsId(workspace.id); setOverview(await getAnalyticsOverview(workspace.id, 30)); } catch (error) { if (isNoWorkspace(error)) { setNoStudio(true); return; } /* overview is optional here; the tiles and cards above load on their own */ } finally { setBusy(false); } }
-  async function askCoach() { setCoachBusy(true); try { const workspace = await getActiveWorkspace(); const result = await runMarketingCoach(workspace.id, 30); setCoach(result.recommendation); setOverview(result.evidence); } catch (error) { void dialog.notify('Marketing Coach unavailable', error instanceof Error ? error.message : 'Unknown error'); } finally { setCoachBusy(false); } }
-  const totals = overview?.totals;
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
+  const [plat, setPlat] = useState<Plat>('all');
+  const [ws, setWs] = useState<string | null>(null);
+  const [data, setData] = useState<Insights | null>(null);
+  const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
+  const [tab, setTab] = useState<'views' | 'interactions' | 'follows'>('views');
+  const load = useCallback(async (p: Plat = plat) => {
+    try { const w = await getActiveWorkspace(); setWs(w.id); setData(await getInsights(w.id, p)); setState('ready'); }
+    catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
+  }, [plat]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  const pick = (p: Plat) => { setPlat(p); setState('loading'); void load(p); };
+  const fmt = (n: number | null) => n == null ? '—' : n.toLocaleString(locale);
+  const name = plat === 'all' ? '' : `${PLATFORM_NAME[plat as keyof typeof PLATFORM_NAME] ?? plat} `;
+  const h = data?.headline;
+  const label: Record<InsightCard['key'], string> = { views: t('ins.views', 'Views'), interactions: t('ins.interactions', 'Content interactions'), follows: t('ins.follows', 'Follows'), linkClicks: t('ins.linkClicks', 'Link clicks') };
+  const top = data ? (tab === 'follows' ? [] : data.top[tab]) : [];
 
   return <Screen onRefresh={() => load()}>
-    <View style={styles.header}><View style={styles.headerCopy}><ScreenTitle>{t('tabs.analytics')}</ScreenTitle></View><Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable></View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => setPlat(k)} style={[styles.chip, plat === k && styles.chipOn]}><Text numberOfLines={1} style={[styles.chipText, plat === k && { color: '#FFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
-    </ScrollView>
-    {busy ? <Skeleton rows={2} height={86} /> : null}
-    {noStudio ? <NoStudio /> : null}
-    {wsId ? <MetaTiles workspaceId={wsId} platform={plat} /> : null}
-    {wsId && plat === 'all' ? <BusinessInsightsCard workspaceId={wsId} /> : null}
-    {wsId && plat === 'all' ? <SocialInsightsCard workspaceId={wsId} /> : null}
-    {overview && plat === 'all' ? <>
-      <View style={styles.grid}><StatCard label={t('anl.s17')} value={metric(totals?.views)} detail={t('anl.s18')}/><StatCard label={t('anl.s19')} value={metric(totals?.saves)} detail={t('anl.s20')}/></View>
-      <View style={styles.grid}><StatCard label={t('anl.s21')} value={metric(totals?.inquiries)} detail={t('anl.s22')}/><StatCard label={t('anl.s23')} value={metric(totals?.bookings)} detail={t('anl.s24')}/></View>
-      <Card premium><View style={styles.cardHeader}><SectionTitle>{t('anl.s5')}</SectionTitle><Pill tone={overview.evidence.ownedDataConfidence === 'high' ? 'success' : overview.evidence.ownedDataConfidence === 'low' ? 'warning' : 'gold'}>{overview.evidence.ownedDataConfidence} confidence</Pill></View><SupportText>{overview.evidence.measuredVariants} measured post{overview.evidence.measuredVariants === 1 ? '' : 's'} | {overview.evidence.audienceActivitySamples} audience activity sample{overview.evidence.audienceActivitySamples === 1 ? '' : 's'}</SupportText></Card>
-      <Card><SectionTitle>{t('anl.s6')}</SectionTitle>{overview.postingWindow.label ? <><Text style={styles.featureValue}>{overview.postingWindow.label}</Text><SupportText>{overview.postingWindow.confidence} confidence from available evidence.</SupportText></> : <SupportText>{overview.postingWindow.message ?? 'Not enough data yet.'}</SupportText>}</Card>
-      <Card><SectionTitle>{t('anl.s7')}</SectionTitle>{overview.topPost ? <><Text style={styles.featureValue}>{overview.topPost.title}</Text><SupportText>{overview.topPost.platform} | {overview.topPost.format}</SupportText><BodyText>{t('anl.s8')}</BodyText></> : <SupportText>{t('anl.s9')}</SupportText>}</Card>
-      <Card premium><Pill tone="gold">{t('anl.s10')}</Pill><SectionTitle>What should I do next?</SectionTitle><SupportText>{t('anl.s11')}</SupportText>{coach ? <BodyText>{coach}</BodyText> : null}<Pressable disabled={coachBusy} onPress={() => void askCoach()}><PrimaryActionLabel>{coachBusy ? 'Reviewing...' : 'Give Me One Next Move'}</PrimaryActionLabel></Pressable></Card>
-      <Card><SectionTitle>{t('anl.s12')}</SectionTitle><SupportText>{t('anl.s13')}</SupportText><Link href="/marketing-profile" style={styles.link}>{t('anl.s14')}</Link></Card>
-      <Card><SectionTitle>{t('anl.s15')}</SectionTitle><SupportText>{t('anl.s16')}</SupportText></Card>
+    <Text accessibilityRole="header" style={styles.title}>{t('tabs.analytics')}</Text>
+    <View style={styles.seg}>{PLATS.map((p) => <Pressable key={p} accessibilityRole="tab" accessibilityState={{ selected: plat === p }} onPress={() => pick(p)} style={[styles.segItem, plat === p && styles.segOn]}>
+      <Text numberOfLines={1} style={[styles.segText, plat === p && { color: '#FFF' }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text></Pressable>)}</View>
+
+    {state === 'nostudio' ? <NoStudio /> : null}
+    {state === 'loading' ? <Skeleton rows={3} height={110} /> : null}
+    {state === 'error' ? <Text style={styles.muted}>{t('ins.error', 'Insights could not load right now. Pull down to try again.')}</Text> : null}
+    {state === 'ready' && data ? <>
+      {!data.connected.length ? <Text style={styles.muted}>{t('ins.noAccounts', 'Connect Instagram, Facebook or LINE to see insights here.')}</Text> : null}
+      <Text style={styles.headline}>{h == null ? t('ins.noData', { defaultValue: 'No {{name}}views recorded in the last 30 days yet.', name }) : h.change == null ? t('ins.headFlatNew', { defaultValue: 'Your {{name}}views: {{n}} in the last 30 days', name, n: fmt(h.total) })
+        : h.change === 0 ? t('ins.headSame', { defaultValue: 'Your {{name}}views stayed the same in the last 30 days', name })
+        : <>{t('ins.headPre', { defaultValue: 'Your {{name}}views {{dir}} by ', name, dir: h.change > 0 ? t('ins.increased', 'increased') : t('ins.decreased', 'decreased') })}<Text style={{ color: h.change > 0 ? UP : DOWN }}>{Math.abs(h.change)}%</Text>{t('ins.headPost', ' in the last 30 days')}</>}</Text>
+      {data.note ? <Text style={styles.muted}>{data.note}</Text> : null}
+      <View style={styles.grid}>{data.cards.map((c) => <View key={c.key} style={styles.card}>
+        <Text style={styles.cardTitle} numberOfLines={2}>{label[c.key]}</Text>
+        <Spark lines={c.lines} />
+        <View style={styles.numRow}>
+          <Text style={styles.num}>{c.total == null ? (c.key === 'linkClicks' ? '—' : '0') : fmt(c.total)}</Text>
+          <Change v={c.change} />
+        </View>
+        {c.total == null && c.key === 'linkClicks' ? <Text style={styles.na}>{t('ins.na', 'Not available yet')}</Text> : null}
+      </View>)}</View>
+
+      <View style={styles.topHead}><Text style={styles.h2}>{t('ins.topBy', 'Top content by')} {tab === 'views' ? t('ins.viewsLc', 'views') : tab === 'interactions' ? t('ins.interLc', 'interactions') : t('ins.followsLc', 'follows')}</Text>
+        <Pressable onPress={() => router.push({ pathname: '/calendar' } as any)}><Text style={styles.seeAll}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
+      <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, tab === k && styles.tabOn]}><Text style={[styles.tabText, tab === k && { color: '#1877F2' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
+      {top.length ? <View style={styles.tiles}>{top.slice(0, 3).map((p) => <Pressable key={p.variantId} style={styles.tile} onPress={() => p.post?.id && router.push(`/content/${p.post.id}` as any)}>
+        {p.post ? <PostThumb workspaceId={ws} post={p.post} size={112} radius={12} /> : <View style={[styles.tileBlank]} />}
+        <View style={styles.badge}><Text style={styles.badgeText}>{fmt(p.value)}</Text></View></Pressable>)}</View>
+        : <Text style={styles.muted}>{tab === 'follows' ? t('ins.noFollowsPer', 'Follows per post are not available from the platforms yet.') : t('ins.noTop', 'No post numbers recorded in the last 30 days yet.')}</Text>}
+
+      {ws && plat === 'all' ? <BusinessInsightsCard workspaceId={ws} /> : null}
     </> : null}
   </Screen>;
 }
-function metric(value: number | null | undefined) { return value == null ? '—' : new Intl.NumberFormat().format(value); }
-const styles = StyleSheet.create({header:{flexDirection:'row',alignItems:'flex-end',gap:ui.spacing.sm},round:{width:44,height:44,borderRadius:22,alignItems:'center',justifyContent:'center',backgroundColor:'#FFFFFF',...(webGlass as object)},chips:{flexDirection:'row',gap:8},chip:{flexShrink:0,height:36,paddingHorizontal:14,borderRadius:18,justifyContent:'center',backgroundColor:'#FFFFFF',borderWidth:StyleSheet.hairlineWidth,borderColor:'#DBDBDB'},chipOn:{backgroundColor:'#262626',borderColor:'#262626'},chipText:{fontFamily:'Manrope_500Medium',fontSize:15,color:'#262626'},headerCopy:{flex:1,gap:ui.spacing.xs},refresh:{width:104},grid:{flexDirection:'row',gap:ui.spacing.sm},cardHeader:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:ui.spacing.sm},featureValue:{color:ui.colors.primaryText,fontSize:20,fontWeight:'700'},link:{color:ui.colors.gold,fontSize:15,fontWeight:'700',paddingVertical:ui.spacing.xs}});
+
+function Change({ v }: { v: number | null }) {
+  if (v == null) return <Text style={[styles.chg, { color: GREY }]}>··</Text>;
+  if (v === 0) return <Text style={[styles.chg, { color: GREY }]}>·· 0%</Text>;
+  const up = v > 0;
+  return <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>{up ? <ArrowUp size={13} color={UP} weight="bold" /> : <ArrowDown size={13} color={DOWN} weight="bold" />}<Text style={[styles.chg, { color: up ? UP : DOWN }]}>{Math.abs(v)}%</Text></View>;
+}
+
+function Spark({ lines }: { lines: InsightCard['lines'] }) {
+  const W = 140, H = 34;
+  const all = lines.flatMap((l) => l.points).filter((x): x is number => x != null);
+  const max = Math.max(1, ...all);
+  return <View style={{ height: H, justifyContent: 'flex-end' }}>
+    <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+      {lines.length ? lines.map((l) => { const n = l.points.length; const pts = l.points.map((v, i) => `${((i / Math.max(1, n - 1)) * W).toFixed(1)},${(H - 2 - ((v ?? 0) / max) * (H - 6)).toFixed(1)}`).join(' ');
+        return <Polyline key={l.platform} points={pts} fill="none" stroke={lines.length > 1 ? BRAND[l.platform] ?? '#1877F2' : '#1877F2'} strokeWidth={1.4} />; })
+        : <Polyline points={`0,${H - 2} ${W},${H - 2}`} fill="none" stroke="#9DB8E0" strokeWidth={1.4} />}
+    </Svg>
+  </View>;
+}
+
+const styles = StyleSheet.create({
+  title: { fontFamily: tokens.font.uiBold, fontSize: 24, color: '#000', marginTop: -4 },
+  seg: { flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: '#EFEFEF' },
+  segItem: { flex: 1, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  segOn: { backgroundColor: '#262626' },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 13.5, color: '#262626' },
+  headline: { fontFamily: tokens.font.uiBold, fontSize: 21, lineHeight: 28, color: '#262626', textAlign: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  card: { width: '48.5%', minHeight: 150, padding: 14, gap: 8, borderRadius: 10, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
+  cardTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, lineHeight: 20, color: '#262626', minHeight: 40 },
+  numRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  num: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#000', fontVariant: ['tabular-nums'] },
+  chg: { fontFamily: tokens.font.uiMedium, fontSize: 13.5 },
+  na: { fontFamily: tokens.font.ui, fontSize: 11.5, color: '#8E8E8E', marginTop: -4 },
+  topHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: -8 },
+  h2: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#262626' },
+  seeAll: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#1877F2' },
+  tabs: { flexDirection: 'row', gap: 6 },
+  tab: { height: 36, paddingHorizontal: 14, borderRadius: 8, justifyContent: 'center' },
+  tabOn: { backgroundColor: '#E7F0FD' },
+  tabText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' },
+  tiles: { flexDirection: 'row', justifyContent: 'space-between' },
+  tile: { width: '32%', aspectRatio: 0.85, borderRadius: 12, overflow: 'hidden', backgroundColor: '#EFEFEF', alignItems: 'center', justifyContent: 'center' },
+  tileBlank: { flex: 1, alignSelf: 'stretch' },
+  badge: { position: 'absolute', bottom: 8, alignSelf: 'center', minWidth: 44, paddingHorizontal: 10, height: 22, borderRadius: 11, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: tokens.font.uiSemibold, fontSize: 12.5, color: '#262626' },
+  muted: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 21, color: GREY }
+});
