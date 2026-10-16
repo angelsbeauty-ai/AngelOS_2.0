@@ -1,6 +1,6 @@
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
@@ -11,7 +11,8 @@ import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton } from '../../src/components/ui';
-import { getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment, type CalendarBlock } from '../../src/lib/bookings';
+import { createBlock, getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment, type CalendarBlock } from '../../src/lib/bookings';
+import { listClients } from '../../src/lib/clients';
 import { PostThumb } from '../../src/components/PostThumb';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
@@ -43,9 +44,29 @@ export default function CalendarTab() {
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [day, setDay] = useState<Date | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [mode, setMode] = useState<'day' | 'week' | 'month'>('week');
+  const [mode, setMode] = useState<'day' | 'week' | 'month'>('month');
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [draft, setDraft] = useState<{ day: Date; startMin: number } | null>(null);
+  const [title, setTitle] = useState('');
+  const [howLong, setHowLong] = useState(60);
+  const [allDay, setAllDay] = useState(false);
+  const [desc, setDesc] = useState('');
+  const [note, setNote] = useState('');
+  const [link, setLink] = useState('');
+  const [place, setPlace] = useState('');
+  const [remind, setRemind] = useState<number | null>(30);
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [clients, setClients] = useState<Array<{ id: string; display_name: string }>>([]);
+  const [saving, setSaving] = useState(false);
+  const howLongRef = useRef(60);
+  howLongRef.current = howLong;
+  const lengthBase = useRef(60);
+  const lengthPan = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { lengthBase.current = howLongRef.current; },
+    onPanResponderMove: (_e, g) => setHowLong(Math.min(720, Math.max(15, lengthBase.current + Math.round(g.dy / 28) * 15)))
+  })).current;
   const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts' | 'tasks'>('all');
   function setView(m: 'day' | 'week' | 'month') { setMode(m); if (m !== 'month') setAnchor(offset === 0 ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : base); }
   const [anchor, setAnchor] = useState(() => new Date(now.getFullYear(), now.getMonth(), now.getDate()));
@@ -94,9 +115,23 @@ export default function CalendarTab() {
   }, [appts, posts, show, query]);
 
   const addAt = (d: Date, hour: number, y = 0) => {
-    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, y > HOUR_H / 2 ? 30 : 0, 0, 0);
-    router.push({ pathname: '/bookings/new', params: { start: start.toISOString() } } as any);
+    setTitle(''); setHowLong(60); setAllDay(false); setDesc(''); setNote(''); setLink(''); setPlace(''); setRemind(30); setClientId(null);
+    setDraft({ day: d, startMin: hour * 60 + (y > HOUR_H / 2 ? 30 : 0) });
+    if (ws) void listClients(ws).then((rows) => setClients(rows.map((c) => ({ id: c.id, display_name: c.display_name })))).catch(() => setClients([]));
   };
+  async function saveDraft() {
+    if (!ws || !draft || !title.trim() || saving) return;
+    setSaving(true);
+    try {
+      const start = new Date(draft.day.getFullYear(), draft.day.getMonth(), draft.day.getDate(), allDay ? 0 : Math.floor(draft.startMin / 60), allDay ? 0 : draft.startMin % 60, 0, 0);
+      const end = allDay ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1) : new Date(start.getTime() + howLong * 60000);
+      const who = clients.find((c) => c.id === clientId)?.display_name;
+      const lines = [desc.trim() && `Description: ${desc.trim()}`, note.trim() && `Notes: ${note.trim()}`, who && `Client: ${who}`, link.trim() && `Link: ${link.trim()}`, place.trim() && `Location: ${place.trim()}`, remind != null && `Reminder: ${remind} minutes before`].filter(Boolean).join('\n');
+      await createBlock(ws, { title: title.trim(), blockType: 'other', startAt: start.toISOString(), endAt: end.toISOString(), notes: lines.slice(0, 1000) || undefined });
+      setDraft(null);
+      void load();
+    } finally { setSaving(false); }
+  }
   const time = (d: Date) => d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
   const label = (it: Item) => it.kind === 'booking' ? `${it.a.client?.display_name ?? ''} ${it.a.service_name}`.trim() : (it.p.variants?.[0]?.caption || it.p.title || t('tabs.calendar'));
   const dayItems = day ? byDay.get(key(day)) ?? [] : [];
@@ -156,7 +191,7 @@ export default function CalendarTab() {
         {Array.from({ length: weeks }, (_, w) => { const row = cells.slice(w * 7, w * 7 + 7); const thisWeek = row.some((d) => key(d) === key(now));
           return <View key={w} style={styles.week}>
           {row.map((d) => { const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
-            return <Pressable key={k} accessibilityRole="button" accessibilityLabel={`${d.toDateString()}, ${items.length}`} onPress={() => setDay(d)} style={styles.cell}>
+            return <Pressable key={k} accessibilityRole="button" accessibilityLabel={`${d.toDateString()}, ${items.length}`} onPress={() => { setAnchor(d); setMode('day'); }} style={styles.cell}>
               <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, !inMonth && styles.dim, today && { color: '#FFF' }]}>{d.getDate()}</Text></View>
               {thisWeek ? items.slice(0, 2).map((it, i) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
                 return <Pressable key={i} onPress={() => void openItem(it)} style={[styles.chip, pend ? styles.pending : it.kind === 'post' ? styles.blocked : styles.confirmed]}>
@@ -180,6 +215,36 @@ export default function CalendarTab() {
         <Pressable style={styles.mi} onPress={() => { setAddOpen(false); router.push('/bookings/new' as any); }}><Text style={styles.miText}>{t('cal.newBooking', 'New booking')}</Text></Pressable>
         <Pressable style={styles.mi} onPress={() => { setAddOpen(false); router.push('/content/new'); }}><Text style={styles.miText}>{t('social2.newPost')}</Text></Pressable>
       </View></Pressable>
+    </Modal>
+
+    <Modal visible={!!draft} transparent animationType="slide" onRequestClose={() => setDraft(null)}>
+      <Pressable style={styles.backdrop} onPress={() => setDraft(null)}><Pressable style={styles.sheet} onPress={() => undefined}>
+        <Text style={styles.sheetTitle}>{t('cal.newSchedule', 'New schedule')}</Text>
+        {draft ? <Text style={styles.sheetSub}>{draft.day.toLocaleDateString(lang, { weekday: 'long', month: 'long', day: 'numeric' })}{allDay ? '' : ` · ${hourLabel(Math.floor(draft.startMin / 60), lang)}${draft.startMin % 60 ? `:${String(draft.startMin % 60).padStart(2, '0')}` : ''}`}</Text> : null}
+        <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">
+          <TextInput value={title} onChangeText={setTitle} placeholder={t('cal.scheduleTitle', 'Title')} placeholderTextColor="#766E64" style={styles.input} />
+          <View style={styles.switchRow}><Text style={styles.miText}>{t('cal.allDay', 'All day')}</Text><Switch value={allDay} onValueChange={setAllDay} /></View>
+          {allDay ? null : <View style={styles.len} {...lengthPan.panHandlers}>
+            <Text style={styles.miText}>{t('cal.howLong', 'How long')}</Text>
+            <Text style={styles.rowTitle}>{howLong >= 60 ? `${Math.floor(howLong / 60)} h${howLong % 60 ? ` ${howLong % 60} m` : ''}` : `${howLong} m`}</Text>
+            <Text style={styles.rowSub}>{t('cal.slide', 'Slide up or down')}</Text>
+          </View>}
+          <TextInput value={desc} onChangeText={setDesc} placeholder={t('cal.description', 'Description')} placeholderTextColor="#766E64" style={[styles.input, styles.inputTall]} multiline />
+          <TextInput value={note} onChangeText={setNote} placeholder={t('cal.notes', 'Notes')} placeholderTextColor="#766E64" style={[styles.input, styles.inputTall]} multiline />
+          <Text style={styles.fieldK}>{t('cal.client', 'Client')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 6 }}>
+            <Pressable onPress={() => setClientId(null)} style={[styles.chipBtn, !clientId && styles.chipOn]}><Text style={[styles.chipBtnText, !clientId && { color: '#FFF' }]}>{t('cal.noClient', 'None')}</Text></Pressable>
+            {clients.slice(0, 20).map((c) => <Pressable key={c.id} onPress={() => setClientId(c.id)} style={[styles.chipBtn, clientId === c.id && styles.chipOn]}><Text style={[styles.chipBtnText, clientId === c.id && { color: '#FFF' }]}>{c.display_name}</Text></Pressable>)}
+          </ScrollView>
+          <TextInput value={link} onChangeText={setLink} placeholder={t('cal.link', 'Link')} placeholderTextColor="#766E64" autoCapitalize="none" style={styles.input} />
+          <TextInput value={place} onChangeText={setPlace} placeholder={t('cal.location', 'Location')} placeholderTextColor="#766E64" style={styles.input} />
+          <Text style={styles.fieldK}>{t('cal.reminder', 'Reminder')}</Text>
+          <View style={styles.remindRow}>
+            {([[null, 'Off'], [10, '10m'], [30, '30m'], [60, '1h'], [1440, '1d']] as const).map(([mins, name]) => <Pressable key={name} onPress={() => setRemind(mins)} style={[styles.chipBtn, remind === mins && styles.chipOn]}><Text style={[styles.chipBtnText, remind === mins && { color: '#FFF' }]}>{name}</Text></Pressable>)}
+          </View>
+          <Pressable disabled={!title.trim() || saving} onPress={() => void saveDraft()} style={[styles.btn, styles.btnPrimary, (!title.trim() || saving) && { opacity: 0.4 }]}><Text style={[styles.btnText, { color: '#FFF' }]}>{saving ? t('cal.saving', 'Saving…') : t('cal.save', 'Save')}</Text></Pressable>
+        </ScrollView>
+      </Pressable></Pressable>
     </Modal>
 
     <Modal visible={!!day} transparent animationType="slide" onRequestClose={() => setDay(null)}>
@@ -251,7 +316,7 @@ export default function CalendarTab() {
   </View>;
 }
 function Field({ k, v }: { k: string; v: string }) { return <View style={styles.field}><Text style={styles.fieldK}>{k}</Text><Text style={styles.fieldV}>{v}</Text></View>; }
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 9); const HOUR_H = 52; const GUTTER = 48;
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); const HOUR_H = 52; const GUTTER = 48;
 const PENDING = /pending|request|tentative|unconfirmed/i;
 function hourLabel(h: number, lang: string) { return new Date(2000, 0, 1, h).toLocaleTimeString(lang, { hour: 'numeric' }); }
 function GROUP_POSTED(s: string) { return s === 'published' || s === 'analyzed'; }
@@ -309,6 +374,14 @@ const styles = StyleSheet.create({
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, height: 44 },
   headTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, color: '#151515' },
   search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#F2F2F2', fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
+  input: { minHeight: 44, borderRadius: 10, paddingHorizontal: 12, marginTop: 8, backgroundColor: '#F2F2F2', fontFamily: tokens.font.ui, fontSize: 16, color: '#151515' },
+  inputTall: { minHeight: 72, textAlignVertical: 'top', paddingTop: 10 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 48 },
+  len: { minHeight: 72, justifyContent: 'center', gap: 2, marginTop: 8, padding: 12, borderRadius: 12, backgroundColor: '#F7F7F7' },
+  remindRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 12 },
+  chipBtn: { height: 32, paddingHorizontal: 12, borderRadius: 16, justifyContent: 'center', backgroundColor: '#F2F2F2' },
+  chipOn: { backgroundColor: '#151515' },
+  chipBtnText: { fontFamily: tokens.font.uiMedium, fontSize: 13, color: '#151515' },
   wkHead: { flexDirection: 'row', marginHorizontal: -8, marginBottom: -16, paddingBottom: 8 },
   wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: D.muted },
   postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED', backgroundColor: '#FFF' },
