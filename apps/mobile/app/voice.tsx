@@ -16,7 +16,8 @@ export default function VoiceScreen() {
   const { t } = useTranslation();
   const [ws, setWs] = useState<string | null>(null);
   const [facts, setFacts] = useState<string | undefined>(undefined);
-  useEffect(() => { void getActiveWorkspace().then(async (w) => { setWs(w.id); const b = await getBriefing(w.id).catch(() => null); setFacts(b?.facts?.join('\n')); }).catch(() => undefined); }, []);
+  const [noWs, setNoWs] = useState(false);
+  useEffect(() => { void getActiveWorkspace().then(async (w) => { setWs(w.id); const b = await getBriefing(w.id).catch(() => null); setFacts(b?.facts?.join('\n')); }).catch(() => setNoWs(true)); }, []);
   const voice = useLiveVoice(Platform.OS === 'web' ? ws : null, 'home', facts);
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function VoiceScreen() {
   const native = Platform.OS !== 'web';
   const off = !native && voice.status && !voice.status.available;
   const label = native ? t('voice.soon', 'Voice is coming in the next app update.')
+    : noWs ? t('voice.noStudio', 'Set up your studio first, then you can talk to your assistant.')
     : off ? (voice.status?.reason ?? t('voice.off', 'Voice is not available right now.'))
     : voice.state === 'live' ? t('voice.live', 'Listening… talk any time to interrupt.')
     : voice.state === 'connecting' ? t('voice.connecting', 'Connecting…')
@@ -37,8 +39,8 @@ export default function VoiceScreen() {
   return <View style={styles.page}>
     <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={styles.close}><X size={24} color="#262626" weight="bold" /></Pressable>
     <View style={styles.center}>
-      <Pressable accessibilityRole="button" accessibilityLabel={voice.state === 'live' ? t('voice.stop', 'Stop') : t('voice.start', 'Start talking')} disabled={native || !!off || voice.state === 'connecting'} onPress={() => (voice.state === 'live' ? voice.stop() : void voice.start())}>
-        <Animated.View style={[styles.halo, { transform: [{ scale }] }]}><View style={[styles.orb, (native || off) && { opacity: 0.45 }]}><Microphone size={40} color="#FFF" weight="fill" /></View></Animated.View>
+      <Pressable accessibilityRole="button" accessibilityLabel={voice.state === 'live' ? t('voice.stop', 'Stop') : t('voice.start', 'Start talking')} disabled={native || noWs || !!off || voice.state === 'connecting'} onPress={() => (voice.state === 'live' ? voice.stop() : void voice.start())}>
+        <Animated.View style={[styles.halo, { transform: [{ scale }] }]}><View style={[styles.orb, (native || off || noWs) && { opacity: 0.45 }]}><Microphone size={40} color="#FFF" weight="fill" /></View></Animated.View>
       </Pressable>
       <Text style={styles.title}>{voice.state === 'live' ? t('voice.titleLive', "I'm listening") : t('voice.title', 'Talk to your assistant')}</Text>
       <Text style={styles.sub}>{label}</Text>
