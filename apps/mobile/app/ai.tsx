@@ -1,3 +1,5 @@
+import { Waveform } from 'phosphor-react-native/src/icons/Waveform';
+import { ArrowUp } from 'phosphor-react-native/src/icons/ArrowUp';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -214,12 +216,14 @@ export default function AiScreen() {
           onChangeText={setComposer}
           style={styles.input}
         />
-        <Pressable disabled={busy || !composer.trim()} onPress={() => void send()} style={styles.sendButton}>
-          <PrimaryActionLabel>{busy ? 'Working...' : 'Send to AngelOS'}</PrimaryActionLabel>
-        </Pressable>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10 }}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('home.voice', 'Talk to your assistant')} hitSlop={6} onPress={() => router.push('/voice' as any)} style={styles.voiceBtn}><Waveform size={22} color="#FFFFFF" weight="bold" /></Pressable>
+          <Pressable disabled={busy || !composer.trim()} onPress={() => void send()} style={[styles.sendBtn, (busy || !composer.trim()) && { opacity: 0.35 }]} accessibilityRole="button" accessibilityLabel={busy ? 'Working' : 'Send'}>
+            <ArrowUp size={20} color="#FFFFFF" weight="bold" />
+          </Pressable>
+        </View>
       </Card>
 
-      <SupportText>Voice capture is still waiting on the device adapter; text uses the same assistant and approval system.</SupportText>
     </Screen>
   );
 }
@@ -274,5 +278,7 @@ const styles = StyleSheet.create({
     padding: ui.spacing.sm,
     textAlignVertical: 'top'
   },
-  sendButton: { opacity: 1 }
+  sendButton: { opacity: 1 },
+  voiceBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' }
 });

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { assertAiAllowed, recordAiUse } from '../ai-usage';
 import { BadGatewayException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { AccessToken, AgentDispatchClient } from 'livekit-server-sdk';
@@ -27,12 +28,21 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
 export class VoiceService {
   private readonly recent = new Map<string, number[]>();
 
+  /** LiveKit when its keys are set; otherwise the direct OpenAI Realtime (WebRTC) path with a short-lived key. */
+  provider(): 'livekit' | 'openai' | null {
+    if (process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) return 'livekit';
+    if (process.env.OPENAI_API_KEY && (process.env.AI_PROVIDER_MODE ?? 'openai') === 'openai') return 'openai';
+    return null;
+  }
+
   status() {
-    const live = Boolean(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
+    const provider = this.provider();
+    const live = provider !== null;
     return {
       available: live,
       mode: live ? 'live' as const : 'mock' as const,
-      reason: live ? null : 'Live voice is off until the LiveKit keys are set on the server.',
+      provider,
+      reason: live ? null : 'Live voice is off until the server has an OpenAI key or LiveKit keys.',
       stored: false as const
     };
   }
@@ -53,6 +63,8 @@ export class VoiceService {
       supabase.from('ai_assistant_profiles').select('display_name').eq('workspace_id', workspaceId).maybeSingle()
     ]);
     if (!ws) throw new HttpException('Workspace not found', HttpStatus.NOT_FOUND);
+
+    if (status.provider === 'openai') return this.openaiSession(user, workspaceId, status, voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context }));
 
     const url = process.env.LIVEKIT_URL as string;
     const apiKey = process.env.LIVEKIT_API_KEY as string;
@@ -77,5 +89,20 @@ export class VoiceService {
     }
     void recordAiUse('voice', { userId: user.id, workspaceId });
     return { ...status, clientSecret: null, token, url, room, expiresAt: null, model: 'gpt-4o-mini' };
+  }
+
+  /** Mints a 2-minute OpenAI Realtime client secret. The main key never leaves the server; audio goes phone/browser <-> OpenAI directly. */
+  private async openaiSession(user: AuthUser, workspaceId: string, status: ReturnType<VoiceService['status']>, instructions: string) {
+    const model = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime';
+    const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'OpenAI-Safety-Identifier': createHash('sha256').update(user.id).digest('hex') },
+      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 120 }, session: { type: 'realtime', model, instructions, audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
+    });
+    if (!response.ok) throw new BadGatewayException(`Voice could not start (${response.status}).`);
+    const payload = (await response.json()) as any;
+    if (!payload?.value) throw new BadGatewayException('Voice could not start.');
+    void recordAiUse('voice', { userId: user.id, workspaceId });
+    return { ...status, clientSecret: String(payload.value), token: null, url: null, room: null, expiresAt: payload.expires_at ?? null, model };
   }
 }

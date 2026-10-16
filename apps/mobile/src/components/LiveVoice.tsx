@@ -10,7 +10,8 @@ import { startVoiceAudio, stopVoiceAudio } from '../lib/livekit-globals';
 type State = 'idle' | 'connecting' | 'live' | 'error';
 
 /**
- * Live voice. The server opens a LiveKit room. Deepgram listens, OpenAI answers, Cartesia speaks.
+ * Live voice. With LiveKit keys the server opens a LiveKit room; otherwise it mints a 2-minute OpenAI Realtime key and
+ * the device talks to OpenAI directly over WebRTC.
  * Nothing is recorded or saved by AngelOS.
  */
 export function useLiveVoice(workspaceId: string | null, screen?: string, context?: string) {
@@ -18,6 +19,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
+  const pcRef = useRef<any>(null); const micRef = useRef<any>(null); const outRef = useRef<any>(null);
   const audioRef = useRef<HTMLMediaElement[]>([]);
 
   function stop() {
@@ -26,6 +28,10 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     audioRef.current.forEach((el) => { el.srcObject = null; el.remove(); });
     audioRef.current = [];
     void room?.disconnect();
+    try { micRef.current?.getTracks?.().forEach((t: any) => t.stop()); } catch { /* ignore */ }
+    try { pcRef.current?.close?.(); } catch { /* ignore */ }
+    if (outRef.current) { outRef.current.srcObject = null; outRef.current.remove?.(); }
+    pcRef.current = null; micRef.current = null; outRef.current = null;
     void stopVoiceAudio();
     setState('idle');
   }
@@ -38,6 +44,29 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     return () => stop();
   }, [workspaceId]);
 
+  /** OpenAI Realtime over WebRTC: the browser's WebRTC on web, LiveKit's native react-native-webrtc on iPhone (globals registered). */
+  async function startOpenAI(secret: string) {
+    const g: any = globalThis as any;
+    if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
+    await startVoiceAudio();
+    const peer = new g.RTCPeerConnection();
+    pcRef.current = peer;
+    if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }
+    // On iPhone the remote audio track plays through the audio session automatically.
+    const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    micRef.current = stream;
+    stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
+    peer.createDataChannel('oai-events'); // events are not saved anywhere
+    const offer = await peer.createOffer({ offerToReceiveAudio: true });
+    await peer.setLocalDescription(offer);
+    const res = await fetch('https://api.openai.com/v1/realtime/calls', { method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/sdp' } });
+    if (!res.ok) throw new Error(`Voice could not connect (${res.status}).`);
+    const answer = await res.text();
+    await peer.setRemoteDescription(Platform.OS === 'web' ? { type: 'answer', sdp: answer } : new g.RTCSessionDescription({ type: 'answer', sdp: answer }));
+    peer.addEventListener?.('connectionstatechange', () => { if (['failed', 'closed'].includes(peer.connectionState)) stop(); });
+    setState('live');
+  }
+
   async function start() {
     setError(null);
     setState('connecting');
@@ -45,7 +74,9 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       if (!workspaceId) throw new Error('No studio selected.');
       const session = await createVoiceSession(workspaceId, screen, context);
       setStatus({ available: session.available, reason: session.reason });
-      if (!session.available || !session.url || !session.token) throw new Error(session.reason ?? 'Live voice is off.');
+      if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
+      if (session.clientSecret) { await startOpenAI(session.clientSecret); return; }
+      if (!session.url || !session.token) throw new Error(session.reason ?? 'Live voice is off.');
       await startVoiceAudio();
       const room = new Room();
       roomRef.current = room;

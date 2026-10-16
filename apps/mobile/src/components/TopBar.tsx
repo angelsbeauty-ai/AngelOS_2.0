@@ -1,3 +1,4 @@
+import { Waveform } from 'phosphor-react-native/src/icons/Waveform';
 import { useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
@@ -34,6 +35,7 @@ export function TopBar() {
   return <View style={styles.bar} {...swipe}>
     <Pressable accessibilityRole="button" accessibilityLabel={t('top.create', { defaultValue: 'Create' })} hitSlop={8} style={styles.btn} onPress={() => setOpen('create')}><Plus size={22} color={ink} weight="bold" /></Pressable>
     <View style={styles.right}>
+      {pathname === '/' ? <Pressable accessibilityRole="button" accessibilityLabel={t('home.voice', { defaultValue: 'Talk to your assistant' })} hitSlop={8} style={styles.btn} onPress={() => router.push('/voice' as any)}><Waveform size={22} color={ink} weight="bold" /></Pressable> : null}
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={8} style={styles.btn} onPress={() => router.push('/notifications' as any)}><Heart size={22} color={ink} weight="regular" /></Pressable>
       {pathname !== '/' ? <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={8} style={styles.btn} onPress={() => setOpen('menu')}><List size={22} color={ink} weight="bold" /></Pressable> : null}
     </View>

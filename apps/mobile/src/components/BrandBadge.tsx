@@ -36,7 +36,7 @@ export function ContactAvatar({ name, uri, platform, size = 64 }: { name: string
   return <View style={{ width: size, height: size }} accessibilityElementsHidden>
     {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#EFEFEF' }} />
       : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#EFEFEF' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}
-    {platform ? <View style={{ position: 'absolute', right: -4, bottom: -4 }}><BrandBadge platform={platform} /></View> : null}
+    {platform ? <View style={{ position: 'absolute', right: -3, bottom: -3 }}><BrandBadge platform={platform} size={Math.round(size * 0.34)} /></View> : null}
   </View>;
 }
 

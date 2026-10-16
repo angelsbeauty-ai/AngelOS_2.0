@@ -143,7 +143,7 @@ export default function MessagesScreen() {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
         return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: '#FAFAFA' }]}>
-          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={44} />
+          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={58} />
           <View style={styles.rowBody}>
             <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.name}>{name}</Text>
             <View style={styles.rowTop}>
@@ -209,14 +209,14 @@ const styles = StyleSheet.create({
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   note: { fontSize: 13, color: '#737373', paddingHorizontal: 4 },
   list: { marginHorizontal: -16, marginTop: -8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 6, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
-  rowBody: { flex: 1, gap: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 82, paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
+  rowBody: { flex: 1, gap: 3 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rowMid: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#000000' },
+  name: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 21, color: '#000000' },
   nameUnread: { fontFamily: tokens.font.uiBold },
-  time: { fontFamily: tokens.font.ui, fontSize: 12, color: '#8E8E8E' },
-  preview: { flexShrink: 1, fontFamily: tokens.font.ui, fontSize: 13, color: '#000000' },
+  time: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373' },
+  preview: { flexShrink: 1, fontFamily: tokens.font.uiSemibold, fontSize: 14.5, lineHeight: 19, color: '#000000' },
   flag: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.warning },
   done: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.success }
 });
