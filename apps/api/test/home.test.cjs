@@ -48,6 +48,9 @@ test('OpenAI cost payload sums to dollars and a missing payload is not zero', ()
   assert.equal(bill.sumCostUsd({}), null);
   assert.equal(bill.sumCostUsd({ data: [{ results: [{ amount: { value: '10.00' } }, { amount: { value: 2.5 } }] }] }), 12.5);
   assert.equal(bill.sumCostUsd({ data: [] }), 0);
+  assert.deepEqual(bill.readCredit({ total_granted: 9, total_used: 1.2, total_available: 7.8 }), { grantedUsd: 9, usedUsd: 1.2, availableUsd: 7.8 });
+  assert.equal(bill.readCredit({ total_granted: 9 }), null);
+  assert.equal(bill.readCredit(null), null);
 });
 test('a real bill is split by use counts and still adds up', () => {
   assert.deepEqual(bill.shareBill(50, [30, 20]), [30, 20]);

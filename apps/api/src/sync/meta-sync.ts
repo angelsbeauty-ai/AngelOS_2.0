@@ -121,7 +121,7 @@ export function toConversation(row: any, ownId: string, pageId: string): SyncedC
 export async function fetchFacebookPosts(input: { graphBase: string; pageId: string; token: string; days: number }, fetchImpl: Fetch = fetch, now = Date.now()): Promise<SyncedPost[]> {
   const since = Math.floor((now - input.days * 86400000) / 1000);
   const params = new URLSearchParams({ fields: 'id,message,created_time,permalink_url', since: String(since), limit: '25', access_token: input.token });
-  const rows = await graphPaged(`${input.graphBase}/${input.pageId}/published_posts?${params}`, fetchImpl, 4);
+  const rows = await graphPaged(`${input.graphBase}/${input.pageId}/published_posts?${params}`, fetchImpl, 20, undefined, 500);
   return rows.filter((p) => p?.id && p?.created_time).map((p) => ({ id: String(p.id), caption: String(p.message ?? ''), createdAt: new Date(p.created_time).toISOString(), permalink: p.permalink_url ?? null, format: 'photo' as const }));
 }
 
@@ -129,7 +129,7 @@ export async function fetchFacebookPosts(input: { graphBase: string; pageId: str
 export async function fetchInstagramPosts(input: { graphBase: string; igUserId: string; token: string; days: number }, fetchImpl: Fetch = fetch, now = Date.now()): Promise<SyncedPost[]> {
   const cutoff = now - input.days * 86400000;
   const params = new URLSearchParams({ fields: 'id,caption,media_type,media_product_type,timestamp,permalink', limit: '25', access_token: input.token });
-  const rows = await graphPaged(`${input.graphBase}/${input.igUserId}/media?${params}`, fetchImpl, 4, (m) => Date.parse(m?.timestamp) < cutoff);
+  const rows = await graphPaged(`${input.graphBase}/${input.igUserId}/media?${params}`, fetchImpl, 20, (m) => Date.parse(m?.timestamp) < cutoff, 500);
   return rows.filter((m) => m?.id && m?.timestamp).map((m) => ({
     id: String(m.id), caption: String(m.caption ?? ''), createdAt: new Date(m.timestamp).toISOString(), permalink: m.permalink ?? null,
     format: m.media_product_type === 'REELS' || m.media_type === 'VIDEO' ? 'reel' as const : m.media_product_type === 'STORY' ? 'story' as const : m.media_type === 'CAROUSEL_ALBUM' ? 'carousel' as const : 'photo' as const

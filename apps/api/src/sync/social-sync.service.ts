@@ -17,7 +17,7 @@ type Provider = 'facebook' | 'instagram' | 'line';
 export interface PlatformSync { platform: Provider; connected: boolean; messages: { ok: boolean; imported: number; note: string | null }; posts: { ok: boolean; imported: number; note: string | null } | null; at: string }
 
 export const LINE_FROM_NOW_NOTE = 'New LINE messages appear here from now on';
-const POST_DAYS = 90;
+const POST_DAYS = 183;
 
 let instance: SocialSyncService | null = null;
 /** Fire-and-forget sync after a connect (Meta OAuth / LINE setup). Never throws. */
@@ -38,7 +38,7 @@ export function publicApiBase(env: NodeJS.ProcessEnv = process.env): string | nu
 /**
  * Pulls what already exists on the studio's connected accounts into AngelOS (read only, never sends):
  *  - Facebook Page + Instagram conversations → inbox threads (per studio, works with META_MESSAGING_ENABLED off)
- *  - last 90 days of Page posts + IG media → posts list as Posted (keyed by platform post id)
+ *  - last 6 months of Page posts + IG media → posts list as Posted (keyed by platform post id)
  *  - LINE has no history API: makes sure the channel webhook points here so new messages arrive.
  * Runs on connect, every 5 minutes, and on pull-to-refresh. Status per platform is kept on messaging_channels.capabilities.sync.
  */

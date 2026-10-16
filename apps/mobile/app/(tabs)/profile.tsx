@@ -89,7 +89,7 @@ export default function ProfileScreen() {
   return <Screen onRefresh={load}>
     <View style={{ gap: 2 }}><Overline>{t('pf.eyebrow')}</Overline><ScreenTitle>{t('pf.title')}</ScreenTitle></View>
 
-    {me && ws ? <AiMeter workspaceId={ws.id} /> : null}
+    {me && ws ? <AiMeter workspaceId={ws.id} founder={Boolean(me.founder)} /> : null}
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
     {me ? <View style={styles.card}>

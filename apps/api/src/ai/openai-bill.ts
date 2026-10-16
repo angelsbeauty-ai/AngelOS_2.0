@@ -55,3 +55,40 @@ export async function fetchOpenAiMonthUsd(startIso: string, end = new Date()): P
   }
   return { usd: Math.round(usd * 100) / 100 };
 }
+
+/** Prepaid credit summary, only when OpenAI returns all three numbers. */
+export function readCredit(body: any): { grantedUsd: number; usedUsd: number; availableUsd: number } | null {
+  const granted = money(body?.total_granted);
+  const used = money(body?.total_used);
+  const available = money(body?.total_available);
+  if (granted == null || used == null || available == null) return null;
+  return { grantedUsd: granted, usedUsd: used, availableUsd: available };
+}
+
+function money(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.round(n * 100) / 100 : null;
+}
+
+const CREDIT_URLS = [
+  'https://api.openai.com/v1/dashboard/billing/credit_grants',
+  'https://api.openai.com/v1/organization/billing/credit_grants'
+];
+
+/** Remaining prepaid credit. OpenAI does not document this, so a refusal is reported, never guessed. */
+export async function fetchOpenAiCredit(): Promise<{ credit: { grantedUsd: number; usedUsd: number; availableUsd: number } } | { error: string }> {
+  const key = process.env.OPENAI_ADMIN_KEY?.trim() || process.env.OPENAI_API_KEY?.trim();
+  if (!key) return { error: 'OpenAI is not connected, so the credit left cannot be read.' };
+  let denied = false;
+  for (const url of CREDIT_URLS) {
+    let res: Response;
+    try { res = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) }); }
+    catch { continue; }
+    if (res.status === 401 || res.status === 403) { denied = true; continue; }
+    if (!res.ok) continue;
+    const credit = readCredit(await res.json().catch(() => null));
+    if (credit) return { credit };
+  }
+  if (denied) return { error: 'OpenAI did not share the credit left. A project key cannot read it. An admin key is required. AngelOS will not guess it.' };
+  return { error: 'OpenAI does not share how much credit is left.' };
+}

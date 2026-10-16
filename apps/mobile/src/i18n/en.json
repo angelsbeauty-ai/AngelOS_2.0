@@ -1728,6 +1728,12 @@
  },
  "founderBill": {
   "title": "OpenAI this month",
+  "profileTitle": "OpenAI",
+  "spent": "Spent this month",
+  "left": "Credit left",
+  "of": "{{used}} used of {{granted}} added",
+  "noCredit": "OpenAI did not share how much credit is left.",
+  "usdNote": "OpenAI charges in US dollars. AngelOS does not convert this into yen.",
   "total": "Your OpenAI bill",
   "you": "You",
   "others": "People you invited",

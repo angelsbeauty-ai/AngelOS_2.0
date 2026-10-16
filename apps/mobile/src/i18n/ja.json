@@ -1728,6 +1728,12 @@
  },
  "founderBill": {
   "title": "今月のOpenAI",
+  "profileTitle": "OpenAI",
+  "spent": "今月の使用額",
+  "left": "残りのクレジット",
+  "of": "追加した {{granted}} のうち {{used}} を使用",
+  "noCredit": "OpenAIは残りのクレジットを共有しませんでした。",
+  "usdNote": "OpenAIの請求は米ドルです。AngelOSはこれを円に換算しません。",
   "total": "あなたのOpenAIの請求",
   "you": "あなた",
   "others": "招待した人",

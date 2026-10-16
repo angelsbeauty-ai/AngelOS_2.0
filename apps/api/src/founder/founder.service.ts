@@ -1,5 +1,5 @@
 import { jstBounds, limits } from '../ai/ai-usage';
-import { fetchOpenAiMonthUsd, shareBill } from '../ai/openai-bill';
+import { fetchOpenAiMonthUsd, fetchOpenAiCredit, shareBill } from '../ai/openai-bill';
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { randomBytes, createHash } from 'crypto';
 import type { AuthUser } from '../auth/auth-user';
@@ -20,10 +20,11 @@ export class FounderService {
   async aiUsage() {
     const service = createServiceSupabaseClient();
     const b = jstBounds();
-    const [{ data, error }, founders, bill] = await Promise.all([
+    const [{ data, error }, founders, bill, credit] = await Promise.all([
       service.from('product_usage_events').select('user_id,workspace_id,created_at').eq('feature', 'ai').eq('action_key', 'ai_call').gte('created_at', b.month).limit(50000),
       service.from('platform_founders').select('user_id'),
-      fetchOpenAiMonthUsd(b.month)
+      fetchOpenAiMonthUsd(b.month),
+      fetchOpenAiCredit()
     ]);
     if (error) return { available: false, reason: 'AI usage could not be read right now.', bill: null, youUsd: null, othersUsd: null, users: [] };
     const founderIds = new Set((founders.data ?? []).map((r: { user_id: string }) => r.user_id));
@@ -44,6 +45,8 @@ export class FounderService {
     return {
       available: true, month: b.month, users,
       bill: { usd: billUsd, currency: 'usd', source: billUsd == null ? null : 'openai', reason: 'error' in bill ? bill.error : null },
+      credit: 'credit' in credit ? credit.credit : null,
+      creditReason: 'error' in credit ? credit.error : null,
       youUsd, othersUsd
     };
   }
