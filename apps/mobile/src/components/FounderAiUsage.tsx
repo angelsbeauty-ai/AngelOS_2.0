@@ -39,7 +39,7 @@ export function FounderAiUsage() {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 8, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
+  box: { gap: 8, padding: 16, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#151515' },
   totals: { flexDirection: 'row', marginTop: 4 },
   t: { flex: 1, gap: 2 },
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   nSm: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#151515', fontVariant: ['tabular-nums'] },
   l: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
   note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6B645B' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EFECE6' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F2F2F2' },
   email: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
   meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6B645B' },
   cell: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515', fontVariant: ['tabular-nums'] },

@@ -99,8 +99,8 @@ function pos(start: string, end: string, day: string) {
 
 const styles = StyleSheet.create({
   navRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'nowrap' },
-  navBtn: { flexShrink: 0, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
-  navPill: { flexShrink: 0, height: 40, minWidth: 64, paddingHorizontal: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
+  navBtn: { flexShrink: 0, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
+  navPill: { flexShrink: 0, height: 40, minWidth: 64, paddingHorizontal: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   navToday: { fontFamily: 'Manrope_600SemiBold', fontSize: 14, color: '#151515' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: ui.spacing.sm },
   grid: { flexDirection: 'row', flex: 1, paddingTop: 4 },

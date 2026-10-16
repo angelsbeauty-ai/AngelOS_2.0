@@ -9,7 +9,7 @@ export const ROSE = '#151515';
 export function SettingsGroup({ title, badge, icon, children, highlight }: { title: string; badge?: string; icon?: ReactNode; children: ReactNode; highlight?: boolean }) {
   return <View style={{ gap: 8 }}>
     <View style={styles.groupHead}>{icon}<Text style={[styles.groupTitle, highlight && { color: ROSE }]}>{title.toUpperCase()}</Text>{badge ? <Text style={styles.onlyYou}>{badge.toUpperCase()}</Text> : null}</View>
-    <View style={[styles.group, highlight && { borderColor: 'rgba(60,48,32,0.17)' }]}>{children}</View>
+    <View style={[styles.group, highlight && { borderColor: '#EDEDED' }]}>{children}</View>
   </View>;
 }
 
@@ -27,17 +27,17 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'rose' | 'success' | 'danger' }) {
-  const c = { neutral: ['#EFECE6', '#4F4A44'], rose: ['#151515', '#FFFFFF'], success: ['#EFECE6', '#4F4A44'], danger: ['#EFECE6', '#151515'] }[tone];
+  const c = { neutral: ['#F2F2F2', '#4F4A44'], rose: ['#151515', '#FFFFFF'], success: ['#F2F2F2', '#4F4A44'], danger: ['#F2F2F2', '#151515'] }[tone];
   return <View style={[styles.chip, { backgroundColor: c[0] }]}><Text style={[styles.chipText, { color: c[1] }]}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
   groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#6B645B' },
-  onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#4F4A44', backgroundColor: '#EFECE6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
-  group: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', overflow: 'hidden', ...(webGlass as object) },
+  onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#4F4A44', backgroundColor: '#F2F2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
+  group: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', overflow: 'hidden', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
-  sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(60,48,32,0.17)' },
+  sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EDEDED' },
   icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   title: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },
   sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6B645B' },

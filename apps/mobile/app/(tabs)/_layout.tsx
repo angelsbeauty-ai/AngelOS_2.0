@@ -48,5 +48,5 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 84, paddingTop: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(60,48,32,0.17)', backgroundColor: D.bgTab, elevation: 0, shadowOpacity: 0 },
+  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 84, paddingTop: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEDED', backgroundColor: D.bgTab, elevation: 0, shadowOpacity: 0 },
 });

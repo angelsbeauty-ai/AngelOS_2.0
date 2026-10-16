@@ -10,7 +10,7 @@ export const tokens = {
     ivory: '#FFFFFF',
     ivorySolid: '#FFFFFF',
     raised: '#FFFFFF',
-    pearl: '#F7F5F1',
+    pearl: '#FFFFFF',
     tide: '#151515',
     accentPressed: '#4F4A44',
     coral: '#B3261E',
@@ -19,7 +19,7 @@ export const tokens = {
     error: '#B3261E',
     glassTint: '#FFFFFF',
     seaGlass: '#6B645B',
-    hairline: 'rgba(60,48,32,0.17)',
+    hairline: '#EDEDED',
     onCharcoal: '#FFFFFF'
   },
   type: {
@@ -75,7 +75,7 @@ const lightCompat = {
   secondaryText: tokens.color.charcoal2,
   border: tokens.color.hairline,
   gold: tokens.color.tide,
-  softGold: '#EFECE6',
+  softGold: '#F2F2F2',
   success: tokens.color.success,
   warning: tokens.color.warning,
   critical: tokens.color.error
@@ -97,8 +97,8 @@ void _P;
 
 /** final-D2 tokens (TOKENS.md). */
 export const D = {
-  bg: '#F7F5F1', surface: '#FFFFFF', bgTab: '#FBFAF7', fill: '#EFECE6', fill2: '#E9E5DE',
+  bg: '#FFFFFF', surface: '#FFFFFF', bgTab: '#FFFFFF', fill: '#F2F2F2', fill2: '#EDEDED',
   text: '#151515', text2: '#4F4A44', muted: '#6B645B', faint: '#766E64', disabled: '#BDB6AC',
-  hairline: 'rgba(60,48,32,0.17)', accent: '#B8A48A', accentDeep: '#8C7A64', accentTint: 'rgba(184,164,138,0.20)',
+  hairline: '#EDEDED', accent: '#B8A48A', accentDeep: '#8C7A64', accentTint: '#F5F5F5',
   pendingRule: '#8A8379', danger: '#B3261E', listening: '#75654F',
 } as const;

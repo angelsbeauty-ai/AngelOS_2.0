@@ -166,15 +166,15 @@ function checkedLabel(t: (k: string, o?: Record<string, unknown>) => string, min
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', ...(webGlass as object) },
-  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9E5DE' },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED', ...(webGlass as object) },
+  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDEDED' },
   avatarText: { color: '#151515', fontFamily: tokens.font.display, fontSize: 26 },
   name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
   studio: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
   edit: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: ROSE },
   version: { textAlign: 'center', fontFamily: tokens.font.ui, fontSize: 12, color: '#766E64', marginTop: 4 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
-  sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FBFAF7' },
+  sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFFFFF' },
   sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#151515', textAlign: 'center', marginBottom: 4 },
   option: { minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)' },
   optionOn: { backgroundColor: '#151515', borderColor: '#151515' },

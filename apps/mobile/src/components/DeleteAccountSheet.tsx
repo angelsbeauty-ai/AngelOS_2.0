@@ -55,7 +55,7 @@ export function DeleteAccountSheet({ visible, onClose, workspaceId, email }: { v
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
-  sheet: { gap: 12, padding: 22, paddingBottom: 40, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: '#FBFAF7' },
+  sheet: { gap: 12, padding: 22, paddingBottom: 40, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: '#FFFFFF' },
   warn: { alignSelf: 'center', width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(168,67,44,0.12)' },
   title: { fontFamily: tokens.font.display, fontSize: 28, color: '#151515', textAlign: 'center' },
   body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B', textAlign: 'center' },

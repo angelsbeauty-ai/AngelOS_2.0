@@ -41,7 +41,7 @@ function AskButton({ pathname }: { pathname: string }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#F7F5F1' },
+  bg: { flex: 1, backgroundColor: '#FFFFFF' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: tokens.space.screen, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   stack: { gap: spacing.md },

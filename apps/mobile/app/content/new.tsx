@@ -294,7 +294,7 @@ export default function NewPostScreen() {
       <Text style={styles.label}>{t('cnew.presets')}</Text>
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>{t('cnew.comments')}</Text>
-        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#EFECE6', true: '#151515' }} thumbColor="#FFF" />
+        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#F2F2F2', true: '#151515' }} thumbColor="#FFF" />
       </View>
       {!commentsOn ? <SupportText>{t('cnew.commentsOff')}</SupportText> : null}
       <TextInput value={tags} onChangeText={setTags} placeholder={t('cnew.tagPeople')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" style={styles.input} />
@@ -370,12 +370,12 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 },
   chip: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
-  chipSelected: { backgroundColor: '#EFECE6', borderColor: '#EFECE6' },
+  chipSelected: { backgroundColor: '#F2F2F2', borderColor: '#F2F2F2' },
   chipText: { color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
   chipTextSelected: { color: '#151515' },
   label: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#151515', marginTop: 8 },
   plat: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
-  platOn: { backgroundColor: '#EFECE6', borderColor: '#EFECE6' },
+  platOn: { backgroundColor: '#F2F2F2', borderColor: '#F2F2F2' },
   platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
   switchLabel: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },

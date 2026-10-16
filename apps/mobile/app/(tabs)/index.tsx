@@ -99,7 +99,7 @@ export default function HomeScreen() {
 }
 
 function Box({ icon, title, value, unit, lines, onPress }: { icon: ReactNode; title: string; value: string; unit?: string; lines: string[]; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, pressed && { backgroundColor: '#FBFAF7' }]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, pressed && { backgroundColor: '#FFFFFF' }]}>
     <View style={styles.titleRow}>{icon}<Text style={styles.boxTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text></View>
     <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>{value}{unit ? <Text style={styles.unit}> {unit}</Text> : null}</Text>
     <View style={{ gap: 4, flex: 1 }}>{lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={styles.line} numberOfLines={1}>{l}</Text>)}</View>
@@ -133,22 +133,22 @@ const styles = StyleSheet.create({
   big: { fontFamily: tokens.font.uiBold, fontSize: 32, lineHeight: 38, color: '#151515', letterSpacing: -0.5 },
   sub: { fontFamily: tokens.font.uiMedium, fontSize: 20, lineHeight: 26, color: '#151515' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  box: { width: '48.4%', minHeight: 196, padding: 16, gap: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(60,48,32,0.17)', shadowColor: '#151515', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
+  box: { width: '48.4%', minHeight: 196, padding: 16, gap: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EDEDED', shadowColor: '#151515', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   boxTitle: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
   value: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, color: '#151515' },
   unit: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#6B645B' },
   line: { fontFamily: tokens.font.ui, fontSize: 13.5, lineHeight: 18, color: '#151515' },
-  arrow: { alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFECE6' },
-  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFECE6' },
+  arrow: { alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F2F2' },
+  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F2F2F2' },
   cardTitle: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
   goalLabel: { flex: 1, fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
   goalOf: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515', fontVariant: ['tabular-nums'] },
-  track: { height: 3, borderRadius: 2, backgroundColor: '#EFECE6', overflow: 'hidden' },
+  track: { height: 3, borderRadius: 2, backgroundColor: '#F2F2F2', overflow: 'hidden' },
   fill: { height: 3, backgroundColor: '#151515' },
   inspire: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 22, color: '#151515' },
   practice: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
-  practiceLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFECE6' },
+  practiceLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F2F2F2' },
   practiceTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
   note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6B645B' },
   muted: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B' }

@@ -256,7 +256,7 @@ const PENDING = /pending|request|tentative|unconfirmed/i;
 function hourLabel(h: number, lang: string) { return new Date(2000, 0, 1, h).toLocaleTimeString(lang, { hour: 'numeric' }); }
 function GROUP_POSTED(s: string) { return s === 'published' || s === 'analyzed'; }
 
-const LINE = 'rgba(60,48,32,0.17)'; const HOUR_H_STYLE = 52;
+const LINE = '#EDEDED'; const HOUR_H_STYLE = 52;
 const styles = StyleSheet.create({
   months: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 },
   monthWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -308,13 +308,13 @@ const styles = StyleSheet.create({
   arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, height: 44 },
   headTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, color: '#151515' },
-  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFECE6', fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
+  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#F2F2F2', fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
   wkHead: { flexDirection: 'row', marginHorizontal: -8, marginBottom: -16, paddingBottom: 8 },
   wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: D.muted },
-  postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', backgroundColor: '#FFF' },
+  postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED', backgroundColor: '#FFF' },
   postN: { fontFamily: tokens.font.uiSemibold, fontSize: 9, color: '#151515', marginLeft: 1 },
   dropBack: { flex: 1, paddingTop: 100, paddingHorizontal: 16, backgroundColor: 'rgba(0,0,0,0.15)' },
-  drop: { minWidth: 220, alignSelf: 'flex-start', borderRadius: 14, backgroundColor: '#FFF', paddingVertical: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', shadowColor: '#151515', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  drop: { minWidth: 220, alignSelf: 'flex-start', borderRadius: 14, backgroundColor: '#FFF', paddingVertical: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED', shadowColor: '#151515', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   dropItem: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16 },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', ...(webGlass as object) },

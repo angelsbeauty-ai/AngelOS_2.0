@@ -35,7 +35,7 @@ export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6' },
+  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' },
   row: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },

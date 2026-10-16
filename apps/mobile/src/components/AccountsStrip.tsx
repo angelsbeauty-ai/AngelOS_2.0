@@ -40,7 +40,7 @@ export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: s
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 12, padding: 14, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
+  card: { gap: 12, padding: 14, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 40, height: 40, borderRadius: 20 },
   avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.12)' },

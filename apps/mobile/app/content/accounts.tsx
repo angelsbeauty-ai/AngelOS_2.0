@@ -130,14 +130,14 @@ export default function SocialAccounts() {
 
 const styles = StyleSheet.create({
   warn: { fontFamily: tokens.font.uiMedium, fontSize: 14, lineHeight: 20, color: tokens.color.warning },
-  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6' },
+  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.12)' },
   avatarText: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#151515' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
   body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' },
-  choice: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 18, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 18, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   chev: { fontSize: 24, color: '#151515' },
   dot: { width: 10, height: 10, borderRadius: 5 },
   ok: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: tokens.color.success },

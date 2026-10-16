@@ -35,14 +35,14 @@ export function ContactAvatar({ name, uri, platform, size = 64 }: { name: string
   const parts = name.replace(/^[^\p{L}]+/u, '').trim().split(/\s+/).filter(Boolean);
   const initial = (parts.length > 1 ? (parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '') : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
   return <View style={{ width: size, height: size }} accessibilityElementsHidden>
-    {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#EFECE6' }} />
-      : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#E9E5DE' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}
+    {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#F2F2F2' }} />
+      : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#EDEDED' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}
     {platform ? <View style={{ position: 'absolute', right: -3, bottom: -3 }}><BrandBadge platform={platform} size={Math.round(size * 0.32)} /></View> : null}
   </View>;
 }
 
 const styles = StyleSheet.create({
-  ring: { backgroundColor: '#F7F5F1', alignItems: 'center', justifyContent: 'center' },
+  ring: { backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   line: { color: '#FFF', fontFamily: tokens.font.uiBold, letterSpacing: -0.3 },

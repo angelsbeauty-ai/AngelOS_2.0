@@ -8,7 +8,7 @@ import { Skeleton } from '../src/components/ui';
 import { PLATFORM_NAME } from '../src/lib/social';
 import { tokens } from '../src/design/theme';
 
-const GREEN = '#151515'; const GREY = '#6B645B'; const LINE = '#EFECE6';
+const GREEN = '#151515'; const GREY = '#6B645B'; const LINE = '#F2F2F2';
 
 /** Full report of the four Home sections, for today / this week / this month. Real data only. */
 export default function Reports() {
@@ -88,7 +88,7 @@ function Stats({ items }: { items: Array<[number, string]> }) {
 const styles = StyleSheet.create({
   brief: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 22, color: '#151515' },
   page: { padding: 16, gap: 24, paddingBottom: 120, maxWidth: 520, width: '100%', alignSelf: 'center' },
-  seg: { flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: '#EFECE6' },
+  seg: { flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: '#F2F2F2' },
   segItem: { flex: 1, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: GREEN },
   segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },

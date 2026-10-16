@@ -35,12 +35,12 @@ function Bar({ label, n, max }: { label: string; n: number; max: number }) {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 12, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
+  box: { gap: 12, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
   label: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
   count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515', fontVariant: ['tabular-nums'] },
-  track: { height: 8, borderRadius: 4, backgroundColor: '#EFECE6', overflow: 'hidden' },
+  track: { height: 8, borderRadius: 4, backgroundColor: '#F2F2F2', overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   limit: { fontFamily: tokens.font.uiSemibold, fontSize: 14, lineHeight: 20, color: '#B3261E' },
   muted: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' }

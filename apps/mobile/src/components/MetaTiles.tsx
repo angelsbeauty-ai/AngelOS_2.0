@@ -33,11 +33,11 @@ export function MetaTiles({ workspaceId, platform }: { workspaceId: string; plat
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
+  card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
   title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' },
   grid: { flexDirection: 'row', gap: 8 },
-  tile: { flex: 1, minWidth: 0, gap: 4, padding: 14, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
+  tile: { flex: 1, minWidth: 0, gap: 4, padding: 14, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
   label: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#6B645B' },
   value: { fontFamily: tokens.font.uiBold, fontSize: 26, fontVariant: ['tabular-nums'], color: '#151515' },
   muted: { fontSize: 15, fontFamily: tokens.font.ui, color: '#766E64' }
