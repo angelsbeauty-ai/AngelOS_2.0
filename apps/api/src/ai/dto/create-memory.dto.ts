@@ -8,3 +8,9 @@ export class CreateMemoryDto {
   @MaxLength(1000)
   content!: string;
 }
+
+export class AddSkillDto {
+  @IsString()
+  @MaxLength(240)
+  content!: string;
+}

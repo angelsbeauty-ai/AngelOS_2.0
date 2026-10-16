@@ -22,6 +22,9 @@ export interface AutomationJob {
 export function seedAutomationDefaults(workspaceId: string) {
   return apiFetch<AutomationRule[]>(`/workspaces/${workspaceId}/automations/seed-defaults`, { method: 'POST' });
 }
+export function createAutomationFromTask(workspaceId: string, task: string) {
+  return apiFetch<AutomationRule>(`/workspaces/${workspaceId}/automations/rules`, { method: 'POST', body: JSON.stringify({ task }) });
+}
 export function listAutomationRules(workspaceId: string) {
   return apiFetch<AutomationRule[]>(`/workspaces/${workspaceId}/automations/rules`);
 }

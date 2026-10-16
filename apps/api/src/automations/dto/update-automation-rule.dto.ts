@@ -5,6 +5,10 @@ export class UpdateAutomationRuleDto {
   @IsOptional() @IsString() messageTemplate?: string;
 }
 
+export class CreateAutomationDto {
+  @IsString() @MaxLength(240) task!: string;
+}
+
 export class UpdateReminderDto {
   @IsOptional() @IsBoolean() enabled?: boolean;
   @IsOptional() @IsString() @MaxLength(600) templateEn?: string;

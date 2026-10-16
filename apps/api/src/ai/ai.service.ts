@@ -363,6 +363,32 @@ export class AiService {
     return data ?? [];
   }
 
+  /** A skill the owner added in the assistant workspace. Saved as approved memory so she can use it. */
+  async addSkill(user: AuthUser, workspaceId: string, content: string) {
+    const text = content.trim();
+    if (text.length < 2) throw new BadRequestException('Write the skill first.');
+    const supabase = createUserSupabaseClient(user.accessToken);
+    await this.assertWorkspaceAccess(supabase, workspaceId);
+    const service = createServiceSupabaseClient();
+    const { data, error } = await service.from('ai_memory_items').insert({
+      workspace_id: workspaceId, category: 'workflow', content: text, status: 'approved',
+      source: 'owner_workspace', created_by: user.id, approved_by: user.id, approved_at: new Date().toISOString()
+    }).select('id,category,content,status,created_at').single();
+    if (error) throw new InternalServerErrorException(error.message);
+    return data;
+  }
+
+  async retireSkill(user: AuthUser, workspaceId: string, skillId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    await this.assertWorkspaceAccess(supabase, workspaceId);
+    const service = createServiceSupabaseClient();
+    const { data, error } = await service.from('ai_memory_items').update({ status: 'retired', updated_at: new Date().toISOString() })
+      .eq('workspace_id', workspaceId).eq('id', skillId).eq('category', 'workflow').select('id,status').maybeSingle();
+    if (error) throw new InternalServerErrorException(error.message);
+    if (!data) throw new NotFoundException('Skill not found');
+    return data;
+  }
+
   private async loadAuthorizedContextFacts(
     user: AuthUser,
     supabase: ReturnType<typeof createUserSupabaseClient>,
@@ -474,6 +500,7 @@ export class AiService {
     if (actionKey === 'record_expense') return { verified: result.duplicatePrevented === true || await check('business_expenses', result.expenseId) };
     if (actionKey === 'create_post_draft') return { verified: await check('content_posts', result.contentPostId) };
     if (actionKey === 'draft_client_message') return { verified: await check('client_messages', result.messageId), sent: false };
+    if (actionKey === 'create_automation') return { verified: await check('automation_rules', result.ruleId), enabled: false };
     return { verified: false, reason: 'No verifier registered' };
   }
 }

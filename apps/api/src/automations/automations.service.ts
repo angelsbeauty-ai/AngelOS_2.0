@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import type { UpdateAutomationRuleDto, UpdateReminderDto } from './dto/update-automation-rule.dto';
@@ -44,6 +44,22 @@ export class AutomationsService {
     if (dto.messageTemplate !== undefined) updates.action_config = { messageTemplate: dto.messageTemplate.trim() };
     const { data, error } = await supabase.from('automation_rules').update(updates).eq('workspace_id', workspaceId).eq('id', ruleId).select('*').single();
     if (error || !data) throw new NotFoundException('Automation rule not found');
+    return data;
+  }
+
+  /** A repeating task the owner asked for. Saved off, so nothing runs until she turns it on. */
+  async createFromTask(user: AuthUser, workspaceId: string, task: string) {
+    const text = task.trim();
+    if (text.length < 4) throw new BadRequestException('Say what should repeat.');
+    const lower = text.toLowerCase();
+    const category = /aftercare|heal/.test(lower) ? 'aftercare' : /follow/.test(lower) ? 'followup' : /book|appointment|confirm/.test(lower) ? 'appointment' : /message|reply|remind/.test(lower) ? 'messaging' : /post|reel|story|content/.test(lower) ? 'content' : /money|expense|invoice|pay/.test(lower) ? 'finance' : 'system';
+    const trigger_type = category === 'aftercare' || category === 'followup' ? 'appointment_completed' : category === 'appointment' ? 'appointment_confirmed' : 'manual';
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase.from('automation_rules').insert({
+      workspace_id: workspaceId, name: text.slice(0, 80), category, trigger_type, action_type: 'owner_prompt',
+      enabled: false, delay_minutes: 0, action_config: { task: text, messageTemplate: text }, created_by: user.id
+    }).select('*').single();
+    if (error) throw new InternalServerErrorException(error.message);
     return data;
   }
 

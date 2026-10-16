@@ -24,7 +24,8 @@ export class AssistantToolsService {
       finance: () => require('../../finance/finance.service').FinanceService,
       bookings: () => require('../../bookings/bookings.service').BookingsService,
       content: () => require('../../content/content.service').ContentService,
-      messaging: () => require('../../messaging/messaging.service').MessagingService
+      messaging: () => require('../../messaging/messaging.service').MessagingService,
+      automations: () => require('../../automations/automations.service').AutomationsService
     };
     return this.moduleRef.get(map[name](), { strict: false });
   }
@@ -94,6 +95,11 @@ export class AssistantToolsService {
       const messaging: any = this.svc('messaging');
       const draft = await messaging.draftOutreach(user, workspaceId, { clientId: pick.id, body, language, meaningEn, reason: 'assistant' });
       return { threadId: draft.threadId, messageId: draft.message?.id ?? null, sent: false };
+    }
+    if (action.action_key === 'create_automation') {
+      const automations: any = this.svc('automations');
+      const rule = await automations.createFromTask(user, workspaceId, String(input.task ?? ''));
+      return { ruleId: rule.id, name: rule.name, enabled: false };
     }
     throw new BadRequestException(`Unsupported action: ${action.action_key}`);
   }

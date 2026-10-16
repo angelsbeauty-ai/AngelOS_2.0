@@ -123,7 +123,7 @@ export default function ProfileScreen() {
     {owner ? <SettingsGroup title={t('pf.business')}>
       <SettingsRow icon={<Users {...I} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
       <SettingsRow icon={<CurrencyJpy {...I} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
-      <SettingsRow last icon={<Robot {...I} />} title={t('pf.aiAssistant')} onPress={() => router.push('/ai-settings')} />
+      <SettingsRow last icon={<Robot {...I} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
     </SettingsGroup> : null}
 
     {owner ? <SettingsGroup title={t('pf.app')}>

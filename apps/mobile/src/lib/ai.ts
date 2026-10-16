@@ -106,6 +106,18 @@ export async function cancelAiAction(workspaceId: string, actionId: string) {
   return apiFetch(`/workspaces/${workspaceId}/ai/actions/${actionId}/cancel`, { method: 'POST' });
 }
 
+export async function addAssistantSkill(workspaceId: string, content: string) {
+  return apiFetch<{ id: string; content: string }>(`/workspaces/${workspaceId}/ai/skills`, { method: 'POST', body: JSON.stringify({ content }) });
+}
+
+export async function retireAssistantSkill(workspaceId: string, skillId: string) {
+  return apiFetch<{ id: string }>(`/workspaces/${workspaceId}/ai/skills/${skillId}/retire`, { method: 'POST' });
+}
+
+export async function listAssistantMemory(workspaceId: string) {
+  return apiFetch<Array<{ id: string; category: string; content: string; status: string }>>(`/workspaces/${workspaceId}/ai/memory`);
+}
+
 export interface LearnedStyle {
   sampleCount: number;
   languageMix: { en: number; ja: number };

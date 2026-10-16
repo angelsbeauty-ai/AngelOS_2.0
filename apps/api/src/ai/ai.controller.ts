@@ -10,7 +10,7 @@ import { AiService } from './ai.service';
 import { TOOLS } from './tools/registry';
 import { VoiceService } from './voice/voice.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
-import { CreateMemoryDto } from './dto/create-memory.dto';
+import { CreateMemoryDto, AddSkillDto } from './dto/create-memory.dto';
 import { SendAiMessageDto } from './dto/send-ai-message.dto';
 import { UpdateAssistantProfileDto } from './dto/update-assistant-profile.dto';
 import { UpdateAssistantRolesDto } from './dto/update-assistant-roles.dto';
@@ -119,5 +119,15 @@ export class AiController {
     @Body() dto: CreateMemoryDto
   ) {
     return this.ai.proposeMemory(user, workspaceId, dto);
+  }
+
+  @Post('skills')
+  addSkill(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: AddSkillDto) {
+    return this.ai.addSkill(user, workspaceId, dto.content);
+  }
+
+  @Post('skills/:skillId/retire')
+  retireSkill(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('skillId') skillId: string) {
+    return this.ai.retireSkill(user, workspaceId, skillId);
   }
 }

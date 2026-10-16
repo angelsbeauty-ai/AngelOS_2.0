@@ -18,7 +18,8 @@ export const TOOLS: ToolDef[] = [
   { key: 'create_post_draft', kind: 'draft', risk: 'low', label: 'Make a social post draft', example: 'Make a post about lip blush healing', touchesClients: false },
   { key: 'draft_client_message', kind: 'draft', risk: 'medium', label: 'Write a client message draft (you approve before it is sent)', example: 'Message Yuki that her touch-up is due', touchesClients: true },
   { key: 'propose_memory', kind: 'change', risk: 'medium', label: 'Remember a preference', example: 'Remember that I close at 6 on Fridays', touchesClients: false },
-  { key: 'update_assistant_name', kind: 'change', risk: 'low', label: 'Change my name', example: 'Call yourself Mika', touchesClients: false }
+  { key: 'update_assistant_name', kind: 'change', risk: 'low', label: 'Change my name', example: 'Call yourself Mika', touchesClients: false },
+  { key: 'create_automation', kind: 'change', risk: 'low', label: 'Save a repeating task as an automation (off until you turn it on)', example: 'Make an automation that reminds clients the day before', touchesClients: false }
 ];
 
 export interface PlannedTool { key: string; kind: ToolKind; risk: 'low' | 'medium' | 'high'; input: Record<string, any>; summary: string }
@@ -111,5 +112,9 @@ export function planTool(message: string, now: Date, timeZone: string): PlannedT
 
   const msg = /(?:[Mm]essage|[Tt]ext|[Ww]rite to|[Rr]emind|[Tt]ell)\s+([A-Z][\p{L}'-]+(?:\s+[A-Z][\p{L}'-]+)?)\s+(?:that|about|to|:)\s*(.{3,300})/u.exec(text);
   if (msg) return make('draft_client_message', { clientName: msg[1].trim(), about: msg[2].trim().replace(/[.!]$/, '') }, `Write a message draft to ${msg[1].trim()}: “${msg[2].trim().replace(/[.!]$/, '')}”. You approve it again before it is sent.`);
+  if (/\b(automation|automate|workflow)\b/.test(t)) {
+    const task = text.replace(/^(please\s+)?(can you\s+)?(make|create|add|set up|setup)\s+(an?\s+)?(automation|workflow)\s+(that|to|for)?\s*/i, '').trim() || text;
+    return make('create_automation', { task }, `Save an automation, off until you turn it on: “${task.slice(0, 160)}”`);
+  }
   return null;
 }
