@@ -6,11 +6,7 @@ import { Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleShe
 import { router, usePathname } from 'expo-router';
 import { X } from 'phosphor-react-native/src/icons/X';
 import { colors, spacing, tokens } from '../design/theme';
-import { showsAppTabBar } from './AppTabBar';
 import { useAppearance } from '../design/appearance';
-
-// A1 silk backdrop: gives the glass cards something to blur (mockup .A .screen).
-const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
 export function Screen({ children, hideAsk, askBottom, onRefresh, onSwipeUpAtEnd }: PropsWithChildren<{ hideAsk?: boolean; /** Lift the assistant button above a screen's own floating button. */ askBottom?: number; onRefresh?: () => Promise<unknown> | void; /** Deliberate upward swipe once the list is already at the bottom. */ onSwipeUpAtEnd?: () => void }>) {
@@ -22,7 +18,7 @@ export function Screen({ children, hideAsk, askBottom, onRefresh, onSwipeUpAtEnd
   const role = useRole();
   // B9 route guard: students only reach the Academy and their own settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
-  const showAsk = false;
+  const showAsk = pathname === '/calendar';
   const { palette } = useAppearance();
   return <View style={[styles.bg, { backgroundColor: palette.bg }]}>
     <View pointerEvents="none" style={styles.orbs}>
@@ -39,11 +35,12 @@ export function Screen({ children, hideAsk, askBottom, onRefresh, onSwipeUpAtEnd
 /** Opens the assistant. A plain cross, no circle and no logo. */
 function AskButton({ pathname, bottom }: { pathname: string; bottom?: number }) {
   const { t } = useTranslation();
+  const { palette } = useAppearance();
   const parts = pathname.split('/').filter(Boolean);
   const entityType = parts[0] === 'clients' && parts[1] && parts[1] !== 'new' ? 'client' : undefined;
-  const lift = bottom ?? (TAB_PATHS.has(pathname) ? 72 : showsAppTabBar(pathname) ? 56 : undefined);
-  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} hitSlop={12} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, lift != null && { bottom: lift }]}>
-    <X size={22} color="#151515" weight="bold" />
+  const lift = bottom ?? 168;
+  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} hitSlop={12} onPress={() => router.push({ pathname: '/ai', params: { screen: 'calendar', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, { bottom: lift }]}>
+    <X size={22} color={palette.icon} weight="bold" />
   </Pressable>;
 }
 

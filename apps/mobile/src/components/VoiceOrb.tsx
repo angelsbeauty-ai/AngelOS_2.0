@@ -3,62 +3,57 @@ import { Animated, Easing, StyleSheet, View } from 'react-native';
 import { useAppearance } from '../design/appearance';
 
 /**
- * Acrylic voice orb. Layered glass slices turn like the 3D sphere in the reference,
- * slow when idle and quicker while the assistant is listening.
+ * Living voice orb. A soft light that drifts and swells, like ChatGPT voice mode.
+ * It stays quiet while waiting and moves more when the assistant is listening.
  */
 export function VoiceOrb({ size = 240, state = 'idle', dimmed }: { size?: number; state?: 'idle' | 'connecting' | 'live' | 'error'; dimmed?: boolean }) {
   const { mode } = useAppearance();
   const night = mode === 'night';
-  const spin = useRef(new Animated.Value(0)).current;
-  const breathe = useRef(new Animated.Value(0)).current;
+  const live = state === 'live';
+  const a = useRef(new Animated.Value(0)).current;
+  const b = useRef(new Animated.Value(0)).current;
+  const c = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    spin.setValue(0);
-    const turn = Animated.loop(Animated.timing(spin, {
-      toValue: 1,
-      duration: state === 'live' ? 6400 : state === 'connecting' ? 2800 : 15000,
-      easing: Easing.linear,
-      useNativeDriver: true
-    }));
-    turn.start();
-    return () => turn.stop();
-  }, [state, spin]);
-
-  useEffect(() => {
-    const pulse = Animated.loop(Animated.sequence([
-      Animated.timing(breathe, { toValue: 1, duration: state === 'live' ? 650 : 2100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(breathe, { toValue: 0, duration: state === 'live' ? 650 : 2100, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
+    const pace = live ? 900 : state === 'connecting' ? 1400 : 2600;
+    const loop = (v: Animated.Value, duration: number) => Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration, easing: Easing.inOut(Easing.sin), useNativeDriver: true })
     ]));
-    pulse.start();
-    return () => pulse.stop();
-  }, [state, breathe]);
+    const one = loop(a, pace);
+    const two = loop(b, pace * 1.35);
+    const three = loop(c, pace * 0.8);
+    one.start(); two.start(); three.start();
+    return () => { one.stop(); two.stop(); three.stop(); };
+  }, [a, b, c, live, state]);
 
-  const turn = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const back = spin.interpolate({ inputRange: [0, 1], outputRange: ['360deg', '0deg'] });
-  const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: state === 'live' ? [0.94, 1.06] : [0.98, 1.02] });
-  const edge = night ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.92)';
-  const wash = night ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.42)';
-  const cool = night ? 'rgba(170,190,220,0.16)' : 'rgba(186,206,224,0.40)';
-  const body = night ? 'rgba(28,28,32,0.72)' : 'rgba(255,255,255,0.62)';
-  const angles = [8, 36, 72, 108, 144, 176];
+  const travel = live ? size * 0.16 : size * 0.07;
+  const swell = live ? [0.86, 1.16] : [0.94, 1.06];
+  const move = (v: Animated.Value, dx: number, dy: number) => ({
+    transform: [
+      { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [dx, -dx] }) },
+      { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [-dy, dy] }) },
+      { scale: v.interpolate({ inputRange: [0, 1], outputRange: swell }) }
+    ]
+  });
+  const colors = night
+    ? ['rgba(120,170,255,0.85)', 'rgba(210,225,255,0.55)', 'rgba(170,140,255,0.55)', 'rgba(80,210,255,0.40)']
+    : ['rgba(120,176,255,0.90)', 'rgba(255,255,255,0.80)', 'rgba(186,170,255,0.62)', 'rgba(150,220,255,0.50)'];
 
-  return <Animated.View accessibilityElementsHidden style={[{ width: size, height: size, opacity: dimmed ? 0.45 : 1, transform: [{ scale }] }]}>
-    <View style={[styles.core, { width: size, height: size, borderRadius: size / 2, backgroundColor: body, borderColor: edge }]} />
-    <View pointerEvents="none" style={[styles.shade, { width: size * 0.72, height: size * 0.72, borderRadius: size, backgroundColor: cool, top: size * 0.16, left: size * 0.08 }]} />
-    <Animated.View pointerEvents="none" style={[styles.layer, { transform: [{ rotate: turn }] }]}>
-      {angles.map((deg, i) => <View key={deg} style={[styles.slice, { width: size * (0.9 - (i % 3) * 0.06), height: size * 0.28, borderColor: i % 2 ? cool : edge, backgroundColor: wash, transform: [{ rotate: `${deg}deg` }] }]} />)}
-    </Animated.View>
-    <Animated.View pointerEvents="none" style={[styles.layer, { transform: [{ rotate: back }] }]}>
-      {angles.slice(0, 3).map((deg) => <View key={deg} style={[styles.slice, { width: size * 0.55, height: size * 0.16, borderColor: edge, backgroundColor: 'transparent', transform: [{ rotate: `${deg + 18}deg` }] }]} />)}
-    </Animated.View>
-    <View pointerEvents="none" style={[styles.glint, { width: size * 0.34, height: size * 0.18, borderRadius: size, top: size * 0.14, left: size * 0.22, backgroundColor: night ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.75)' }]} />
-  </Animated.View>;
+  return <View accessibilityElementsHidden style={[styles.hold, { width: size, height: size, opacity: dimmed ? 0.4 : 1 }]}>
+    <View pointerEvents="none" style={[styles.glow, { width: size * 0.92, height: size * 0.92, borderRadius: size, backgroundColor: night ? 'rgba(90,140,255,0.22)' : 'rgba(150,190,255,0.28)' }]} />
+    <View style={[styles.clip, { width: size * 0.72, height: size * 0.72, borderRadius: size }]}>
+      <Animated.View style={[styles.blob, { width: size * 0.62, height: size * 0.62, backgroundColor: colors[0], left: size * 0.04, top: size * 0.06 }, move(a, travel, travel * 0.7)]} />
+      <Animated.View style={[styles.blob, { width: size * 0.5, height: size * 0.5, backgroundColor: colors[1], right: size * 0.02, top: size * 0.08 }, move(b, travel * 0.8, travel)]} />
+      <Animated.View style={[styles.blob, { width: size * 0.46, height: size * 0.46, backgroundColor: colors[2], left: size * 0.12, bottom: size * 0.02 }, move(c, travel * 0.6, travel * 0.9)]} />
+      <Animated.View style={[styles.blob, { width: size * 0.28, height: size * 0.28, backgroundColor: colors[3], right: size * 0.12, bottom: size * 0.1 }, move(a, travel * 0.4, travel * 0.5)]} />
+    </View>
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  core: { borderWidth: 1 },
-  shade: { position: 'absolute' },
-  layer: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
-  slice: { position: 'absolute', borderRadius: 999, borderWidth: 1 },
-  glint: { position: 'absolute' }
+  hold: { alignItems: 'center', justifyContent: 'center' },
+  glow: { position: 'absolute' },
+  clip: { overflow: 'hidden' },
+  blob: { position: 'absolute', borderRadius: 999 }
 });
