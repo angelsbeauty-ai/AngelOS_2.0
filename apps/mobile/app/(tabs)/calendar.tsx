@@ -93,6 +93,10 @@ export default function CalendarTab() {
     return m;
   }, [appts, posts, show, query]);
 
+  const addAt = (d: Date, hour: number, y = 0) => {
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hour, y > HOUR_H / 2 ? 30 : 0, 0, 0);
+    router.push({ pathname: '/bookings/new', params: { start: start.toISOString() } } as any);
+  };
   const time = (d: Date) => d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
   const label = (it: Item) => it.kind === 'booking' ? `${it.a.client?.display_name ?? ''} ${it.a.service_name}`.trim() : (it.p.variants?.[0]?.caption || it.p.title || t('tabs.calendar'));
   const dayItems = day ? byDay.get(key(day)) ?? [] : [];
@@ -129,7 +133,7 @@ export default function CalendarTab() {
           {tlDays.map((d) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
             const dayBlocks = (show === 'all' || show === 'tasks') ? blocks.filter((bl) => key(new Date(bl.start_at)) === key(d)) : [];
             return <View key={key(d)} style={[styles.col, mode === 'day' && { borderLeftWidth: 0 }]}>
-            {HOURS.map((h) => <View key={h} style={styles.hourLine} />)}
+            {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAt', { defaultValue: 'Add an appointment' })} onPress={(e) => addAt(d, h, e.nativeEvent.locationY)} onLongPress={(e) => addAt(d, h, e.nativeEvent.locationY)} style={styles.hourLine} />)}
             {dayBlocks.map((bl) => { const st = new Date(bl.start_at); const en = new Date(bl.end_at); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
               return <View key={bl.id} style={[styles.block, styles.blocked, { top, height: h }]}><Text numberOfLines={2} style={[styles.chipText, { color: D.text2 }]}>{bl.title}</Text>{mode === 'day' ? <Text style={styles.blockSub}>{t('cal.blocked', 'Blocked')}</Text> : null}</View>; })}
             {(byDay.get(key(d)) ?? []).map((it, i) => { const startH = it.at.getHours() + it.at.getMinutes() / 60; const endAt = it.kind === 'booking' ? new Date(it.a.end_at) : new Date(it.at.getTime() + 30 * 60000);
