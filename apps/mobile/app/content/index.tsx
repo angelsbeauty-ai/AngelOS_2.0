@@ -85,7 +85,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
 
   const empty = state === 'ready' && posts.length === 0;
   return <View style={{ flex: 1 }}>
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} askBottom={!empty && state !== 'nostudio' ? 160 : undefined}>
       <View style={styles.head}>
         <View style={{ flex: 1 }}>{!asCalendar ? <Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline> : null}<ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
         

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router, usePathname } from 'expo-router';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Heart } from 'phosphor-react-native/src/icons/Heart';
@@ -44,11 +44,7 @@ export function TopBar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState<null | 'create' | 'menu'>(null);
   const ink = colors.light.primaryText as string;
-  const startY = useRef<number | null>(null);
-  const pathname = usePathname();
-  // Home only: a deliberate swipe down on the top bar opens voice. Pull-to-refresh on the list below is untouched.
-  const swipe = pathname === '/' ? { onTouchStart: (e: any) => { startY.current = e.nativeEvent.pageY; }, onTouchEnd: (e: any) => { const s = startY.current; startY.current = null; if (s != null && e.nativeEvent.pageY - s > 70) router.push('/voice' as any); } } : {};
-  return <View style={styles.bar} {...swipe}>
+  return <View style={styles.bar}>
     <Pressable accessibilityRole="button" accessibilityLabel={t('top.create', { defaultValue: 'Create' })} hitSlop={8} style={styles.plusRing} onPress={() => setOpen('create')}><View style={styles.plus}><Plus size={22} color="#FFFFFF" weight="bold" /></View></Pressable>
     <View style={styles.right}>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={8} style={styles.btn} onPress={() => router.push('/notifications' as any)}><Heart size={22} color={ink} weight="regular" /></Pressable>

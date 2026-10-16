@@ -102,7 +102,7 @@ export default function CalendarTab() {
   const dayItems = day ? byDay.get(key(day)) ?? [] : [];
 
   return <View style={{ flex: 1 }}>
-    <Screen onRefresh={load}>
+    <Screen onRefresh={load} askBottom={mode !== 'month' ? 176 : undefined}>
       <View style={styles.head}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><List size={24} color={D.text} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.today', 'Today')} onPress={() => { setOffset(0); setAnchor(new Date(now.getFullYear(), now.getMonth(), now.getDate())); }} style={styles.titleBtn}>
