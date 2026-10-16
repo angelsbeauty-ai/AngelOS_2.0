@@ -10,6 +10,7 @@ import { GlassSurface } from './Glass';
 import { colors, D } from '../design/theme';
 import { TabIcon } from './TabIcon';
 import { useUnreadCount } from '../lib/unread';
+import { useAppearance } from '../design/appearance';
 
 /** Paths that render the real Tabs bar themselves. */
 export const TAB_ROOTS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
@@ -30,6 +31,7 @@ export function AppTabBar() {
   const { t } = useTranslation();
   const pathname = usePathname() ?? '/';
   const unread = useUnreadCount();
+  const { palette } = useAppearance();
   if (!showsAppTabBar(pathname)) return null;
   const on = activeTab(pathname);
   const items = [
@@ -39,10 +41,10 @@ export function AppTabBar() {
     { href: '/analytics', label: t('tabs.analytics'), Icon: ChartBar },
     { href: '/profile', label: t('tabs.profile'), Icon: UserCircle },
   ];
-  return <View style={styles.bar} accessibilityRole="tablist">
-    <GlassSurface kind="toast" style={[StyleSheet.absoluteFill, { backgroundColor: D.bgTab }]} />
+  return <View style={[styles.bar, { borderTopColor: palette.border, backgroundColor: 'transparent' }]} accessibilityRole="tablist">
+    <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />
     {items.map(({ href, label, Icon }) => {
-      const active = on === href; const color = (active ? colors.light.gold : colors.light.secondaryText) as string;
+      const active = on === href; const color = active ? palette.text : palette.muted;
       return <Pressable key={href} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={label} onPress={() => router.navigate(href as any)} style={[styles.item, active && styles.itemOn]}>
         <TabIcon active={active} badge={href === '/messages' ? unread : 0}><Icon size={24} color={color} weight="duotone" /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
       </Pressable>;
@@ -51,7 +53,7 @@ export function AppTabBar() {
 }
 
 const styles = StyleSheet.create({
-  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 58, flexDirection: 'row', backgroundColor: D.bgTab, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEDED' },
+  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 58, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   itemOn: {},
   label: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14 },

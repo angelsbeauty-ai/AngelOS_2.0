@@ -12,19 +12,21 @@ import { GlassSurface } from '../../src/components/Glass';
 import { colors, D } from '../../src/design/theme';
 import { TabIcon } from '../../src/components/TabIcon';
 import { useUnreadCount } from '../../src/lib/unread';
+import { useAppearance } from '../../src/design/appearance';
 
 export default function TabsLayout() {
   // B9: students only get Academy + Settings. Studio tabs are hidden (and Screen redirects studio routes).
   const student = useRole() === 'student';
   const { t } = useTranslation();
   const unread = useUnreadCount();
+  const { palette } = useAppearance();
   const studio = student ? { href: null } : {};
   const tabBarOptions = {
     headerShown: false,
-    tabBarActiveTintColor: colors.light.gold as string,
-    tabBarInactiveTintColor: colors.light.secondaryText as string,
-    tabBarStyle: styles.tabBar,
-    tabBarBackground: () => <GlassSurface kind="toast" style={[StyleSheet.absoluteFill, { backgroundColor: D.bgTab }]} />,
+    tabBarActiveTintColor: palette.text,
+    tabBarInactiveTintColor: palette.muted,
+    tabBarStyle: [styles.tabBar, { borderTopColor: palette.border, backgroundColor: 'transparent' }],
+    tabBarBackground: () => <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />,
     tabBarShowLabel: true,
     tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14, paddingBottom: 0 },
     tabBarItemStyle: { paddingTop: 3, paddingBottom: 3 },
@@ -48,5 +50,5 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 58, paddingTop: 0, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEDED', backgroundColor: D.bgTab, elevation: 0, shadowOpacity: 0 },
+  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 58, paddingTop: 0, borderTopWidth: StyleSheet.hairlineWidth, elevation: 0, shadowOpacity: 0 },
 });

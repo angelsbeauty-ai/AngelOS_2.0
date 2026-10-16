@@ -1,28 +1,31 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
-import { tokens, webGlass } from '../design/theme';
+import { tokens } from '../design/theme';
+import { useAppearance } from '../design/appearance';
 
 export const ROSE = '#151515';
 
 /** Grouped settings list (final-A1 P1): small caps group title, solid rounded surface, 56pt rows. */
 export function SettingsGroup({ title, badge, icon, children, highlight }: { title: string; badge?: string; icon?: ReactNode; children: ReactNode; highlight?: boolean }) {
+  const { palette } = useAppearance();
   return <View style={{ gap: 8 }}>
-    <View style={styles.groupHead}>{icon}<Text style={[styles.groupTitle, highlight && { color: ROSE }]}>{title.toUpperCase()}</Text>{badge ? <Text style={styles.onlyYou}>{badge.toUpperCase()}</Text> : null}</View>
-    <View style={[styles.group, highlight && { borderColor: '#EDEDED' }]}>{children}</View>
+    <View style={styles.groupHead}>{icon}<Text style={[styles.groupTitle, { color: palette.muted }, highlight && { color: palette.text }]}>{title.toUpperCase()}</Text>{badge ? <Text style={[styles.onlyYou, { color: palette.text, backgroundColor: palette.fill }]}>{badge.toUpperCase()}</Text> : null}</View>
+    <View style={[styles.group, { backgroundColor: palette.glass, borderColor: palette.border }]}>{children}</View>
   </View>;
 }
 
 export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger, last }: { icon?: ReactNode; title: string; sub?: string; value?: string | number | null; trailing?: ReactNode; onPress?: () => void; danger?: boolean; last?: boolean }) {
-  return <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={title} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.row, !last && styles.sep, pressed && { backgroundColor: 'rgba(42,39,37,0.04)' }]}>
-    {icon ? <View style={styles.icon}>{icon}</View> : null}
+  const { palette } = useAppearance();
+  return <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={title} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
+    {icon ? <View style={[styles.icon, { backgroundColor: palette.fill }]}>{icon}</View> : null}
     <View style={{ flex: 1, gap: 2 }}>
-      <Text numberOfLines={1} style={[styles.title, danger && { color: '#151515' }]}>{title}</Text>
-      {sub ? <Text numberOfLines={1} style={styles.sub}>{sub}</Text> : null}
+      <Text numberOfLines={1} style={[styles.title, { color: danger ? '#B3261E' : palette.text }]}>{title}</Text>
+      {sub ? <Text numberOfLines={1} style={[styles.sub, { color: palette.muted }]}>{sub}</Text> : null}
     </View>
     {trailing}
-    {value != null && value !== '' ? <Text numberOfLines={1} style={styles.value}>{value}</Text> : null}
-    {onPress && !danger ? <CaretRight size={16} color="#8E8E8E" /> : null}
+    {value != null && value !== '' ? <Text numberOfLines={1} style={[styles.value, { color: palette.muted }]}>{value}</Text> : null}
+    {onPress && !danger ? <CaretRight size={16} color={palette.muted} /> : null}
   </Pressable>;
 }
 
@@ -35,7 +38,7 @@ const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
   groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#6B645B' },
   onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#4F4A44', backgroundColor: '#F2F2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
-  group: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', overflow: 'hidden', ...(webGlass as object) },
+  group: { borderRadius: 24, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
   sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EDEDED' },
   icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },

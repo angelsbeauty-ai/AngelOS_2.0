@@ -16,14 +16,15 @@ import { supabase } from '../../src/lib/supabase';
 import { getHomeSummary, type HomeSummary } from '../../src/lib/home';
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { tokens } from '../../src/design/theme';
+import { useAppearance } from '../../src/design/appearance';
 
 export const GREEN = '#151515';
-
-const ICON = { size: 16, color: '#151515', weight: 'regular' as const };
 
 /** Home Command Center: date, greeting + voice, AI briefing (numbers only), and four boxes. Real data only. */
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
+  const { palette } = useAppearance();
+  const icon = { size: 16, color: palette.icon, weight: 'regular' as const };
   const [sessionReady, setSessionReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [ws, setWs] = useState<string | null>(null);
@@ -70,13 +71,13 @@ export default function HomeScreen() {
     <View style={styles.hello}>
       <View style={{ flex: 1, gap: 14 }}>
         <View style={{ gap: 2 }}>
-          <Text style={styles.hi} numberOfLines={1}>{name ? t('home.hiName', { defaultValue: 'Hi, {{name}}', name }) : t('home.hi', 'Hi')}</Text>
-          <Text style={styles.welcome}>{t('home.welcome', 'Welcome back')}</Text>
-          <View style={styles.rule} />
+          <Text style={[styles.hi, { color: palette.muted }]} numberOfLines={1}>{name ? t('home.hiName', { defaultValue: 'Hi, {{name}}', name }) : t('home.hi', 'Hi')}</Text>
+          <Text style={[styles.welcome, { color: palette.text }]}>{t('home.welcome', 'Welcome back')}</Text>
+          <View style={[styles.rule, { backgroundColor: palette.border }]} />
         </View>
         <View style={{ gap: 4 }}>
-          <Text style={styles.big}>{hello}</Text>
-          <Text style={styles.sub}>{t('home.todaysReport', "Here's today's report.")}</Text>
+          <Text style={[styles.big, { color: palette.text }]}>{hello}</Text>
+          <Text style={[styles.sub, { color: palette.muted }]}>{t('home.todaysReport', "Here's today's report.")}</Text>
         </View>
       </View>
     </View>
@@ -84,13 +85,13 @@ export default function HomeScreen() {
     {noStudio ? <NoStudio /> : <>
       {sumErr && !sum ? <Text style={styles.muted}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
       <View style={styles.grid}>
-        <Box icon={<CalendarBlank {...ICON} />} title={t('home.schedule', "Today's schedule")} value={s ? n(s.total, t('home.booking1', 'booking'), t('home.bookings', 'bookings')) : '–'} onPress={() => openReport('schedule')}
+        <Box icon={<CalendarBlank {...icon} />} title={t('home.schedule', "Today's schedule")} value={s ? n(s.total, t('home.booking1', 'booking'), t('home.bookings', 'bookings')) : '–'} onPress={() => openReport('schedule')}
           lines={s ? [s.next ? `${t('home.next', 'Next')} ${time(s.next.start_at)}${s.next.service ? ` · ${s.next.service}` : ''}` : t('home.noMore', 'Nothing else booked today'), s.pending ? `${s.pending} ${t('home.pending', 'waiting to confirm')}` : '', s.cancelled ? `${s.cancelled} ${t('home.cancelled', 'cancelled')}` : '', s.total ? `${s.newClients} ${t('home.new', 'new')} · ${s.returningClients} ${t('home.returning', 'returning')}` : ''] : []} />
-        <Box icon={<ChatCircleDots {...ICON} />} title={t('home.messages', 'Messages')} value={m ? `${m.unread} ${t('home.unread', 'unread')}` : '–'} onPress={() => router.push('/messages' as any)}
+        <Box icon={<ChatCircleDots {...icon} />} title={t('home.messages', 'Messages')} value={m ? `${m.unread} ${t('home.unread', 'unread')}` : '–'} onPress={() => router.push('/messages' as any)}
           lines={m ? [`${m.needsReply} ${t('home.needReply', 'need a reply')}`, m.important ? `${m.important} ${t('home.important', 'important')}` : '', m.booking.inProgress ? `${m.booking.inProgress} ${t('home.bookingInProgress', 'booking in progress')}` : ''] : []} />
-        <Box icon={<ListChecks {...ICON} />} title={t('home.importantTitle', 'Important')} value={tasks != null ? n(tasks, t('home.task1', 'task'), t('home.tasks', 'tasks')) : '–'} onPress={() => openReport('assistant')}
+        <Box icon={<ListChecks {...icon} />} title={t('home.importantTitle', 'Important')} value={tasks != null ? n(tasks, t('home.task1', 'task'), t('home.tasks', 'tasks')) : '–'} onPress={() => openReport('assistant')}
           lines={[imp?.scheduledPosts != null ? n(imp.scheduledPosts, t('home.schedPost1', 'scheduled post'), t('home.schedPosts', 'scheduled posts')) : '', a?.pendingApprovals ? `${a.pendingApprovals} ${t('home.approvals', 'waiting for approval')}` : '', s?.touchUpsDue ? `${s.touchUpsDue} ${t('home.touchUps', 'touch-ups due')}` : '']} />
-        <Box icon={<ShareNetwork {...ICON} />} title={t('home.social', 'Social media')} value={so?.followers != null ? `${so.followers.toLocaleString(locale)}` : '–'} unit={so?.followers != null ? t('home.followers', 'followers') : ''} onPress={() => openReport('social')}
+        <Box icon={<ShareNetwork {...icon} />} title={t('home.social', 'Social media')} value={so?.followers != null ? `${so.followers.toLocaleString(locale)}` : '–'} unit={so?.followers != null ? t('home.followers', 'followers') : ''} onPress={() => openReport('social')}
           lines={so ? (so.connected.length ? [so.followersChange7d != null ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'this week')}` : '', so.engagement != null ? `${so.engagement.toLocaleString(locale)} ${t('home.interactions', 'recent interactions')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
       </View>
 
@@ -99,11 +100,12 @@ export default function HomeScreen() {
 }
 
 function Box({ icon, title, value, unit, lines, onPress }: { icon: ReactNode; title: string; value: string; unit?: string; lines: string[]; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, pressed && { backgroundColor: '#FFFFFF' }]}>
-    <View style={styles.titleRow}>{icon}<Text style={styles.boxTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text></View>
-    <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>{value}{unit ? <Text style={styles.unit}> {unit}</Text> : null}</Text>
-    <View style={{ gap: 4, flex: 1 }}>{lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={styles.line} numberOfLines={1}>{l}</Text>)}</View>
-    <View style={styles.arrow}><ArrowUpRight size={18} color="#000" weight="bold" /></View>
+  const { palette } = useAppearance();
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
+    <View style={styles.titleRow}>{icon}<Text style={[styles.boxTitle, { color: palette.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text></View>
+    <Text style={[styles.value, { color: palette.text }]} numberOfLines={1} adjustsFontSizeToFit>{value}{unit ? <Text style={[styles.unit, { color: palette.muted }]}> {unit}</Text> : null}</Text>
+    <View style={{ gap: 4, flex: 1 }}>{lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={[styles.line, { color: palette.muted }]} numberOfLines={1}>{l}</Text>)}</View>
+    <View style={[styles.arrow, { backgroundColor: palette.fill }]}><ArrowUpRight size={18} color={palette.icon} weight="bold" /></View>
   </Pressable>;
 }
 

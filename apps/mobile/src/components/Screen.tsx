@@ -7,6 +7,7 @@ import { router, usePathname } from 'expo-router';
 import { X } from 'phosphor-react-native/src/icons/X';
 import { colors, spacing, tokens } from '../design/theme';
 import { showsAppTabBar } from './AppTabBar';
+import { useAppearance } from '../design/appearance';
 
 // A1 silk backdrop: gives the glass cards something to blur (mockup .A .screen).
 const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
@@ -22,7 +23,14 @@ export function Screen({ children, hideAsk, askBottom, onRefresh, onSwipeUpAtEnd
   // B9 route guard: students only reach the Academy and their own settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
   const showAsk = false;
-  return <View style={styles.bg}><SafeAreaView style={styles.safe}>
+  const { palette } = useAppearance();
+  return <View style={[styles.bg, { backgroundColor: palette.bg }]}>
+    <View pointerEvents="none" style={styles.orbs}>
+      <View style={[styles.orb, { backgroundColor: palette.orb, width: 280, height: 280, top: -40, left: -60 }]} />
+      <View style={[styles.orb, { backgroundColor: palette.orb2, width: 220, height: 220, top: 180, right: -70 }]} />
+      <View style={[styles.orb, { backgroundColor: palette.orb, width: 160, height: 160, bottom: 80, left: 30 }]} />
+    </View>
+    <SafeAreaView style={styles.safe}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} bottom={askBottom} /> : null}
   </SafeAreaView></View>;
@@ -40,7 +48,9 @@ function AskButton({ pathname, bottom }: { pathname: string; bottom?: number }) 
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#FFFFFF' },
+  bg: { flex: 1, backgroundColor: '#F3F4F6' },
+  orbs: { ...StyleSheet.absoluteFill, overflow: 'hidden' },
+  orb: { position: 'absolute', borderRadius: 999 },
   safe: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: tokens.space.screen, paddingTop: 4, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   stack: { gap: spacing.md },
