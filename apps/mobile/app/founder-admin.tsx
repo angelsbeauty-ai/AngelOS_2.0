@@ -3,6 +3,7 @@ import { Tabs } from '../src/components/Field';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { inviteLink } from '../src/lib/academy';
 import { useEffect, useState } from 'react';
+import { FounderAiUsage } from '../src/components/FounderAiUsage';
 import { Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
@@ -53,6 +54,7 @@ export default function FounderAdminScreen() {
   const SECTIONS = [{id:'overview' as const,label:'Overview'},{id:'invites' as const,label:'Invites & testers'},{id:'feedback' as const,label:'Feedback'},{id:'flags' as const,label:'Feature flags'},{id:'discounts' as const,label:'Discount codes'}];
   return <Screen onRefresh={load}><View style={styles.stack}>
     <Header eyebrow="Founder only" title={t('fadm.s22')} subtitle={t('fadm.s23')} />
+    <FounderAiUsage />
     <Tabs value={section} options={SECTIONS} onChange={setSection} />
 
     {section==='overview' ? <>

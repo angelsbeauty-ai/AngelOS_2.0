@@ -64,14 +64,14 @@ export default function NewPostScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
-  const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string }>();
+  const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string; format?: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [goalIndex, setGoalIndex] = useState<number | null>(null);
   const [language, setLanguage] = useState<Language>('ja');
   const [caption, setCaption] = useState('');
   const [hashtagText, setHashtagText] = useState('');
-  const [format, setFormat] = useState<ContentFormat>('photo');
+  const [format, setFormat] = useState<ContentFormat>(params.format === 'story' || params.format === 'reel' || params.format === 'carousel' ? params.format : 'photo');
   const [platforms, setPlatforms] = useState<ContentPlatform[]>(['instagram']);
   const [day, setDay] = useState<Date>(() => parseDayParam(params.date));
   const [time, setTime] = useState('19:00');

@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
 import { Link, router, useLocalSearchParams } from 'expo-router';
 import { LiveVoice } from '../src/components/LiveVoice';
+import { AiMeter } from '../src/components/AiMeter';
 import { Chip } from '../src/components/MessagingBits';
 import { Screen } from '../src/components/Screen';
 import {
@@ -154,6 +155,7 @@ export default function AiScreen() {
         </View>
       </Card>
 
+      {workspaceId ? <AiMeter workspaceId={workspaceId} /> : null}
       {workspaceId ? <LiveVoice workspaceId={workspaceId} screen={screenContext.screen} /> : null}
 
       <View style={styles.shortcuts}>

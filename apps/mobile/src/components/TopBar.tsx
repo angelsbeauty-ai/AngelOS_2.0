@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Heart } from 'phosphor-react-native/src/icons/Heart';
@@ -27,7 +27,11 @@ export function TopBar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState<null | 'create' | 'menu'>(null);
   const ink = colors.light.primaryText as string;
-  return <View style={styles.bar}>
+  const startY = useRef<number | null>(null);
+  const pathname = usePathname();
+  // Home only: a deliberate swipe down on the top bar opens voice. Pull-to-refresh on the list below is untouched.
+  const swipe = pathname === '/' ? { onTouchStart: (e: any) => { startY.current = e.nativeEvent.pageY; }, onTouchEnd: (e: any) => { const s = startY.current; startY.current = null; if (s != null && e.nativeEvent.pageY - s > 70) router.push('/voice' as any); } } : {};
+  return <View style={styles.bar} {...swipe}>
     <Pressable accessibilityRole="button" accessibilityLabel={t('top.create', { defaultValue: 'Create' })} hitSlop={8} style={styles.btn} onPress={() => setOpen('create')}><Plus size={22} color={ink} weight="bold" /></Pressable>
     <View style={styles.right}>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={8} style={styles.btn} onPress={() => router.push('/notifications' as any)}><Heart size={22} color={ink} weight="regular" /></Pressable>
@@ -37,6 +41,7 @@ export function TopBar() {
       { label: t('top.newMessage', { defaultValue: 'New message' }), href: '/messages/new' },
       { label: t('top.newBooking', { defaultValue: 'New booking' }), href: '/bookings/new' },
       { label: t('top.newPost', { defaultValue: 'New post' }), href: '/content/new' },
+      { label: t('top.newStory', { defaultValue: 'New story' }), href: '/content/new?format=story' },
     ]} /> : null}
     {open === 'menu' ? <Sheet title={t('top.quick', { defaultValue: 'Quick settings' })} onClose={() => setOpen(null)} items={[
       { label: t('nav3.accounts'), href: '/social/accounts' },

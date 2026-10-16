@@ -1,17 +1,19 @@
+import { assertAiAllowed, recordAiUse } from '../ai-usage';
 import { BadGatewayException, HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import type { AuthUser } from '../../auth/auth-user';
 import { createUserSupabaseClient } from '../../config/supabase';
 
 /** Live voice instructions. Voice is never recorded or stored and no transcript is kept, by AngelOS or in this session config. */
-export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null }) {
+export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null; context?: string | null }) {
   return [
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
     'You are talking with the owner by live voice. Speak English, short and warm. Ask one question at a time.',
     'You can explain, plan and give advice. You cannot change bookings, money, posts or send client messages in voice:',
     'for any change, tell her to type it in the AngelOS chat, where an approval card appears.',
     'Never invent business facts (prices, hours, client details). Say you do not know instead.',
-    input.screen ? `She opened voice from the "${input.screen}" screen.` : ''
+    input.screen ? `She opened voice from the "${input.screen}" screen.` : '',
+    input.context ? `Start by greeting her and summarising today in 2-3 short sentences using ONLY these facts from AngelOS (do not add anything):\n${input.context}\nThen ask what she would like to do. If she interrupts, stop and listen.` : ''
   ].filter(Boolean).join('\n');
 }
 
@@ -28,9 +30,10 @@ export class VoiceService {
     return { available: live, mode: live ? 'live' : 'mock', reason: live ? null : 'Live voice is off: the server needs AI_PROVIDER_MODE=openai and OPENAI_API_KEY (Angel sets these).', stored: false };
   }
 
-  async createSession(user: AuthUser, workspaceId: string, screen?: string | null) {
+  async createSession(user: AuthUser, workspaceId: string, screen?: string | null, context?: string | null) {
     const status = this.status();
     if (!status.available) return { ...status, clientSecret: null, expiresAt: null, model: null };
+    await assertAiAllowed(user.id);
     const now = Date.now();
     const recent = (this.recent.get(user.id) ?? []).filter((t) => now - t < 3600000);
     if (recent.length >= 20) throw new HttpException('Too many voice sessions this hour. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
@@ -42,13 +45,14 @@ export class VoiceService {
       supabase.from('ai_assistant_profiles').select('display_name').eq('workspace_id', workspaceId).maybeSingle()
     ]);
     if (!ws) throw new HttpException('Workspace not found', HttpStatus.NOT_FOUND);
+    void recordAiUse('voice', { userId: user.id, workspaceId });
     const model = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime';
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'OpenAI-Safety-Identifier': createHash('sha256').update(user.id).digest('hex') },
       body: JSON.stringify({
         expires_after: { anchor: 'created_at', seconds: 120 },
-        session: { type: 'realtime', model, instructions: voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen }), audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } }
+        session: { type: 'realtime', model, instructions: voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context }), audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } }
       })
     });
     if (!response.ok) throw new BadGatewayException(`Voice could not start (${response.status}).`);

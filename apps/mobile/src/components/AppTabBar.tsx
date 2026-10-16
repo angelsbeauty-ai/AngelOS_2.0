@@ -11,7 +11,7 @@ import { colors } from '../design/theme';
 
 /** Paths that render the real Tabs bar themselves. */
 export const TAB_ROOTS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
-const NO_BAR = /^\/(login|signup|sign-up|sign_up|register|onboarding|forgot-password|reset-password)(\/|$)/;
+const NO_BAR = /^\/(login|signup|sign-up|sign_up|register|onboarding|forgot-password|reset-password|voice)(\/|$)/;
 
 /** Inner (pushed) screens get the same 5-tab bar so Angel is never stuck. */
 export function showsAppTabBar(pathname: string) { return !TAB_ROOTS.has(pathname) && !NO_BAR.test(pathname); }

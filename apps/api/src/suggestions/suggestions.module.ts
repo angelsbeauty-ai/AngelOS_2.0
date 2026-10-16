@@ -10,6 +10,7 @@ import { SuggestionsService } from './suggestions.service';
 @Module({
   imports: [AiModule, MessagingModule, ContentModule, AutomationsModule],
   controllers: [SuggestionsController],
-  providers: [SuggestionsService, SupabaseAuthGuard]
+  providers: [SuggestionsService, SupabaseAuthGuard],
+  exports: [SuggestionsService]
 })
 export class SuggestionsModule {}

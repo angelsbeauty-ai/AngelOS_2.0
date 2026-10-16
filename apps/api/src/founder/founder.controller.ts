@@ -17,6 +17,7 @@ export class FounderController {
   constructor(private readonly founder: FounderService, private readonly beta: BetaService, private readonly brain: BrainService) {}
   @Get('me') me(@CurrentUser() user: AuthUser) { return this.founder.me(user); }
   @Get('overview') overview() { return this.founder.overview(); }
+  @Get('ai-usage') aiUsage() { return this.founder.aiUsage(); }
   @Get('workspaces') workspaces() { return this.founder.workspaces(); }
   @Get('feature-flags') flags() { return this.founder.featureFlags(); }
   @Patch('feature-flags/:key') updateFlag(@CurrentUser() user: AuthUser, @Param('key') key: string, @Body() dto: UpdateFeatureFlagDto) { return this.founder.updateFeatureFlag(user, key, dto); }

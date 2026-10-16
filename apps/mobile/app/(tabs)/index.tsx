@@ -1,269 +1,128 @@
-import { NoStudio } from '../../src/components/NoStudio';
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Users } from 'phosphor-react-native/src/icons/Users';
-import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
+import { Microphone } from 'phosphor-react-native/src/icons/Microphone';
+import { CalendarCheck } from 'phosphor-react-native/src/icons/CalendarCheck';
+import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
+import { ChartLineUp } from 'phosphor-react-native/src/icons/ChartLineUp';
 import { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
-import { Image as ImageIcon } from 'phosphor-react-native/src/icons/Image';
-import { ChartLine } from 'phosphor-react-native/src/icons/ChartLine';
-import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
-import { BellRinging } from 'phosphor-react-native/src/icons/BellRinging';
-import { Robot } from 'phosphor-react-native/src/icons/Robot';
-import { WarningCircle } from 'phosphor-react-native/src/icons/WarningCircle';
+import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { Screen } from '../../src/components/Screen';
-import { Badge, BodyText, Button, Card, ListRow, Overline, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
-import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system-health';
+import { NoStudio } from '../../src/components/NoStudio';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
-import { confirmAppointment, getCalendar, type CalendarAppointment } from '../../src/lib/bookings';
-import { listMessageThreads } from '../../src/lib/messaging';
-import { getFinanceOverview } from '../../src/lib/finance';
-import { isDemoSeed, listClients, type ClientSummary } from '../../src/lib/clients';
 import { getMe } from '../../src/lib/me';
-import { dialog } from '../../src/lib/dialog';
-import { label } from '../../src/lib/labels';
-import { toFriendly } from '../../src/lib/friendly-error';
 import { supabase } from '../../src/lib/supabase';
-import { SuggestionsCard } from '../../src/components/SuggestionsCard';
-import { AccountsStrip } from '../../src/components/AccountsStrip';
+import { getBriefing, getHomeSummary, type Briefing, type HomeSummary } from '../../src/lib/home';
+import { tokens } from '../../src/design/theme';
 
-export default function TodayScreen() {
-  const [health, setHealth] = useState<SystemHealthOverview | null>(null);
-  const [noStudio, setNoStudio] = useState(false);
-  const [appointments, setAppointments] = useState<CalendarAppointment[]>([]);
-  const [nextAppointment, setNextAppointment] = useState<CalendarAppointment | null>(null);
-  const [sessionReady, setSessionReady] = useState(false);
-  const [isSignedIn, setIsSignedIn] = useState(false);
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+export const GREEN = '#1F7A4D';
+const INK = '#000000'; const GREY = '#737373'; const LINE = '#DBDBDB';
+
+/** Home Command Center: date, greeting + voice, AI briefing (numbers only), and four boxes. Real data only. */
+export default function HomeScreen() {
   const { t, i18n } = useTranslation();
-  const [unread, setUnread] = useState<number | null>(null);
-  const [weekIncome, setWeekIncome] = useState<{ amount: number; currency: string } | null>(null);
-  const [touchUpCount, setTouchUpCount] = useState<number | null>(null);
-  const [touchUps, setTouchUps] = useState<ClientSummary[]>([]);
-  const [firstName, setFirstName] = useState<string | null>(null);
-  const [me2Name, setMe2Name] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [ws, setWs] = useState<string | null>(null);
+  const [noStudio, setNoStudio] = useState(false);
+  const [name, setName] = useState<string | null>(null);
+  const [sum, setSum] = useState<HomeSummary | null>(null);
+  const [sumErr, setSumErr] = useState(false);
+  const [brief, setBrief] = useState<Briefing | null>(null);
+  const [briefState, setBriefState] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  const load = useCallback(async () => {
+    try {
+      const w = await getActiveWorkspace(); setWs(w.id); setNoStudio(false);
+      void getMe().then((m: any) => setName(((m?.displayName ?? '') as string).trim().split(/\s+/)[0] || null)).catch(() => undefined);
+      setSumErr(false);
+      await Promise.all([
+        getHomeSummary(w.id, 'day').then(setSum).catch(() => setSumErr(true)),
+        getBriefing(w.id).then((b) => { setBrief(b); setBriefState('ready'); }).catch(() => setBriefState('error'))
+      ]);
+    } catch (e) { if (isNoWorkspace(e)) setNoStudio(true); else setSumErr(true); }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      const signedIn = Boolean(data.session);
-      setIsSignedIn(signedIn);
-      setSessionReady(true);
-      if (signedIn) {
-        void load();
-      }
-    });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      const signedIn = Boolean(session);
-      setIsSignedIn(signedIn);
-      setSessionReady(true);
-      if (signedIn) {
-        void load();
-      }
-    });
-    return () => {
-      mounted = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
+    supabase.auth.getSession().then(({ data }) => { if (!mounted) return; setSignedIn(Boolean(data.session)); setSessionReady(true); if (data.session) void load(); });
+    const { data: l } = supabase.auth.onAuthStateChange((_e, s) => { if (!mounted) return; setSignedIn(Boolean(s)); setSessionReady(true); });
+    return () => { mounted = false; l.subscription.unsubscribe(); };
+  }, [load]);
 
-  async function load() {
-    try {
-      const workspace = await getActiveWorkspace();
-      setWorkspaceId(workspace.id);
-      const [healthData, calendarData, threads, week, touchUps, me] = await Promise.all([
-        getSystemHealth(workspace.id).catch(() => null),
-        getCalendar(workspace.id, startOfToday().toISOString(), endOfToday().toISOString()),
-        listMessageThreads(workspace.id).catch(() => null),
-        getFinanceOverview(workspace.id, 7).catch(() => null),
-        listClients(workspace.id, '', 'touch_up').catch(() => null),
-        getMe().catch(() => null),
-      ]);
-      setHealth(healthData);
-      setAppointments(calendarData.appointments);
-      setUnread(threads ? threads.filter((th) => th.needs_owner || th.needs_reply).length : null);
-      setWeekIncome(week ? { amount: week.actualIncome, currency: week.entries[0]?.currency ?? 'JPY' } : null);
-      const realTouchUps = (touchUps ?? []).filter((c) => !isDemoSeed(c));
-      setTouchUps(realTouchUps);
-      setTouchUpCount(touchUps ? realTouchUps.length : null);
-      setMe2Name(me?.displayName ?? null);
-      setFirstName((me?.displayName ?? '').trim().split(/\s+/)[0] || null);
-      const next = calendarData.appointments
-        .filter((a) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'no_show')
-        .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())[0];
-      setNextAppointment(next || null);
-    } catch (e) {
-      setHealth(null);
-      if (isNoWorkspace(e)) setNoStudio(true);
-    }
-  }
-
-  async function confirmNext() {
-    if (!workspaceId || !nextAppointment) return;
-    setConfirming(true);
-    try { await confirmAppointment(workspaceId, nextAppointment.id); await load(); }
-    catch (e) { const f = toFriendly(e, { action: 'save', thing: 'booking' }); void dialog.notify(t('today.confirmFail'), f.message); }
-    finally { setConfirming(false); }
-  }
-
-  if (!sessionReady) {
-    return <Screen><SupportText>{t('today.loading')}</SupportText></Screen>;
-  }
-  if (!isSignedIn) {
-    return <Redirect href="/login" />;
-  }
+  if (!sessionReady) return <Screen><Text style={styles.muted}>{t('today.loading')}</Text></Screen>;
+  if (!signedIn) return <Redirect href="/login" />;
 
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
   const now = new Date();
-  const dateStr = now.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
-  const hour = now.getHours();
-  const greetKey = hour < 12 ? 'today.greeting' : hour < 18 ? 'today.greetingAfternoon' : 'today.greetingEvening';
-  const greeting = firstName ? t(greetKey, { name: firstName }) : t('today.greetingNoName');
-  const active = appointments.filter((a) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'no_show');
-  const laterAppointments = active.filter((a) => a.id !== nextAppointment?.id);
-  const attention = health ? health.counts.urgent + health.counts.today + health.counts.later : 0;
-  const money = weekIncome ? formatYen(weekIncome.amount, weekIncome.currency, locale) : formatYen(0, 'JPY', locale);
-  const links: Array<[string, string, any]> = [['clients', '/clients', Users], ['messages', '/messages', ChatCircle], ['content', '/social', Sparkle], ['media', '/media', ImageIcon], ['analytics', '/analytics', ChartLine], ['finance', '/finance', CurrencyJpy], ['automations', '/automations', BellRinging], ['ai', '/ai', Robot]];
-  const minsAway = nextAppointment ? Math.round((new Date(nextAppointment.start_at).getTime() - Date.now()) / 60000) : 0;
-  const initials = (me2Name ?? '').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'A';
-  const openItems = (health?.attention ?? []).filter((x) => x.status === 'open').slice(0, 4);
-  const subtitle = (active.length ? t('today.sub', { count: active.length }) : t('today.subNone')) + (unread ? t('today.subMsgs', { count: unread }) : '');
+  const h = now.getHours();
+  const hello = h < 12 ? t('home.morning', 'Good morning') : h < 18 ? t('home.afternoon', 'Good afternoon') : t('home.evening', 'Good evening');
+  const time = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const s = sum?.schedule; const m = sum?.messages; const so = sum?.social; const a = sum?.assistant;
+  const openReport = (section?: string) => router.push({ pathname: '/reports', params: section ? { section } : {} } as any);
 
-  return (
-    <Screen onRefresh={load}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Overline>{dateStr}</Overline>
-          <ScreenTitle>{t('today.title')}</ScreenTitle>
-          <SupportText>{greeting}. {subtitle}</SupportText>
-        </View>
-        <Pressable onPress={() => router.push('/profile' as any)} style={styles.settingsButton} accessibilityRole="button" accessibilityLabel={t('today.settings')}>
-          <Text style={styles.initials}>{initials}</Text>
-        </Pressable>
+  return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()}>
+    <View style={styles.hello}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={styles.date}>{now.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
+        <Text style={styles.greet} numberOfLines={1}>{name ? `${hello}, ${name}` : hello}</Text>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('home.voice', 'Talk to your assistant')} onPress={() => router.push('/voice' as any)} style={styles.mic}><Microphone size={22} color={GREEN} weight="fill" /></Pressable>
+    </View>
+
+    {noStudio ? <NoStudio /> : <>
+      <View style={styles.brief}>
+        <View style={styles.briefHead}><Sparkle size={16} color={GREEN} weight="fill" /><Text style={styles.briefTitle}>{t('home.briefing', 'Daily briefing')}</Text></View>
+        <Text style={styles.briefText}>{briefState === 'loading' ? t('home.briefLoading', 'Getting today ready…') : briefState === 'error' ? t('home.briefError', 'The briefing could not load. Pull down to try again.') : brief?.text}</Text>
       </View>
 
-      {noStudio ? <NoStudio /> : nextAppointment ? (
-        <Card premium>
-          <View style={styles.heroTop}>
-            <Overline>{minsAway > 0 && minsAway < 600 ? t('today.nextIn', { min: minsAway }) : t('today.nextNow')}</Overline>
-            <Badge status={nextAppointment.status} label={label(t, 'st', nextAppointment.status)} />
-          </View>
-          <View style={styles.heroTimeRow}>
-            <Text numberOfLines={1} style={styles.heroTime}>{formatTime(nextAppointment.start_at, locale)}</Text>
-            <SupportText>{t('today.until', { time: formatTime(nextAppointment.end_at, locale) })}</SupportText>
-          </View>
-          <Text style={styles.bookingClient}>{nextAppointment.client?.display_name ?? t('today.client')}</Text>
-          <SupportText>{nextAppointment.service_name}</SupportText>
-          <View style={styles.actions}>
-            <Button small label={t('today.open')} onPress={() => router.push(`/bookings/${nextAppointment.id}` as any)} />
-            {nextAppointment.status !== 'confirmed' ? <Button small variant="secondary" label={t('today.confirm')} loading={confirming} onPress={() => void confirmNext()} /> : null}
-            {nextAppointment.client ? <Button small variant="ghost" label={t('today.message')} onPress={() => router.push({ pathname: '/messages/new', params: { clientId: nextAppointment.client!.id } } as any)} /> : null}
-          </View>
-        </Card>
-      ) : (
-        <Card premium>
-          <Overline>{t('today.next')}</Overline>
-          <Text style={styles.bookingClient}>{t('today.empty')}</Text>
-          <SupportText>{t('today.emptyMsg')}</SupportText>
-          <View style={styles.actions}><Button small label={t('today.newBooking')} onPress={() => router.push('/bookings/new')} /></View>
-        </Card>
-      )}
+      {sumErr && !sum ? <Text style={styles.muted}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
 
-      {noStudio ? null : <>
-      <Card>
-        <View style={styles.strip}>
-          <Pressable style={styles.stripCell} onPress={() => router.push('/bookings/week' as any)}><Text style={[styles.stripValue, !active.length && styles.stripZero]}>{active.length}</Text><SupportText>{t('today.bookings')}</SupportText></Pressable>
-          <View style={styles.stripDivider} />
-          <Pressable style={styles.stripCell} onPress={() => router.push('/messages')}><Text style={[styles.stripValue, !unread && styles.stripZero]}>{unread ?? 0}</Text><SupportText>{t('today.toReply')}</SupportText></Pressable>
-          <View style={styles.stripDivider} />
-          <Pressable style={styles.stripCell} onPress={() => router.push('/finance')}><Text style={[styles.stripValue, money.length > 6 && { fontSize: 26 }, !weekIncome?.amount && styles.stripZero]} numberOfLines={1} adjustsFontSizeToFit>{money}</Text><SupportText>{t('today.thisWeek')}</SupportText></Pressable>
-        </View>
-        {touchUpCount ? <Pressable onPress={() => router.push('/clients')}><SupportText tone="warning">{t('today.touchUps')}: {touchUpCount}</SupportText></Pressable> : null}
-      </Card>
-      </>}
-
-      {laterAppointments.length > 0 ? (
-        <View style={{ gap: ui.spacing.xs }}>
-          <SectionTitle>{t('today.laterTitle')}</SectionTitle>
-          {laterAppointments.map((a) => <ListRow key={a.id} leading={<Text style={styles.laterTime}>{formatTime(a.start_at, locale)}</Text>} title={a.client?.display_name ?? t('today.client')} subtitle={a.service_name} trailing={<Badge status={a.status} label={label(t, 'st', a.status)} />} onPress={() => router.push(`/bookings/${a.id}` as any)} />)}
-        </View>
-      ) : null}
-
-      {openItems.length ? <View style={{ gap: ui.spacing.xs }}>
-        <SectionTitle>{t('today.needs')}</SectionTitle>
-        {openItems.map((it) => (
-          <ListRow key={it.id} leading={<WarningCircle size={28} color={it.severity === 'urgent' ? ui.colors.critical : ui.colors.warning} weight="duotone" />} title={it.title} subtitle={it.summary} trailing={<Badge status={it.severity === 'urgent' ? 'cancelled' : 'request'} label={t(`today.sev.${it.severity}`)} />} onPress={() => router.push((it.action_path && it.action_path.startsWith('/') ? it.action_path : '/system-health') as any)} />
-        ))}
-      </View> : null}
-
-      {!noStudio && workspaceId ? <Card premium>
-        <View style={styles.heroTop}><SectionTitle>{t('home.aiTitle')}</SectionTitle><Sparkle size={20} color={ui.colors.gold} weight="duotone" /></View>
-        {touchUps.length ? touchUps.slice(0, 3).map((c) => <View key={c.id} style={styles.aiRow}>
-          <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={styles.aiName}>{c.display_name}</Text><SupportText>{t('home.touchUpDue')}</SupportText></View>
-          <Button small variant="secondary" label={t('home.draftFollow')} accessibilityLabel={t('home.draftFollowFor', { name: c.display_name })} onPress={() => router.push({ pathname: '/messages/new', params: { clientId: c.id } } as any)} />
-        </View>) : <SupportText>{t('home.aiEmpty')}</SupportText>}
-        {touchUps.length ? <SupportText>{t('home.draftNote')}</SupportText> : null}
-      </Card> : null}
-
-      {workspaceId && !noStudio ? <AccountsStrip workspaceId={workspaceId} /> : null}
-      <SuggestionsCard workspaceId={workspaceId} limit={4} />
-
-      <SectionTitle>{t('today.quick')}</SectionTitle>
-      <View style={styles.quickLinksGrid}>
-        {links.map(([key, href, Icon]) => (
-          <Pressable key={key} accessibilityRole="button" accessibilityLabel={t(`links2.${key}`)} onPress={() => router.push(href as any)} style={({ pressed }) => [styles.quickLink, pressed && { opacity: 0.7 }]}>
-            <View style={styles.quickIcon}><Icon size={26} color={ui.colors.primaryText} weight="duotone" /></View>
-            <Text style={styles.quickLinkText} numberOfLines={2}>{t(`links2.${key}`)}</Text>
-          </Pressable>
-        ))}
+      <View style={styles.grid}>
+        <Box icon={<CalendarCheck size={20} color={GREEN} weight="duotone" />} title={t('home.schedule', "Today's schedule")} value={s ? String(s.total) : '–'} unit={t('home.bookings', 'bookings')} onPress={() => openReport('schedule')}
+          lines={s ? [s.next ? `${t('home.next', 'Next')} ${time(s.next.start_at)} · ${s.next.service ?? ''}` : t('home.noMore', 'Nothing else booked today'), s.total ? `${s.newClients} ${t('home.new', 'new')} · ${s.returningClients} ${t('home.returning', 'returning')}` : '', s.pending ? `${s.pending} ${t('home.pending', 'waiting to confirm')}` : '', s.cancelled ? `${s.cancelled} ${t('home.cancelled', 'cancelled')}` : '', s.touchUpsDue ? `${s.touchUpsDue} ${t('home.touchUps', 'touch-ups due')}` : ''] : []} />
+        <Box icon={<ChatCircleDots size={20} color={GREEN} weight="duotone" />} title={t('home.messages', 'Messages')} value={m ? String(m.needsReply) : '–'} unit={t('home.toReply', 'to reply')} onPress={() => openReport('messages')}
+          lines={m ? [`${m.unread} ${t('home.unread', 'unread')}`, m.important ? `${m.important} ${t('home.important', 'important')}` : '', m.booking.inProgress ? `${m.booking.inProgress} ${t('home.bookingInProgress', 'booking in progress')}` : '', m.booking.reschedule ? `${m.booking.reschedule} ${t('home.reschedule', 'want to reschedule')}` : ''] : []} />
+        <Box icon={<ChartLineUp size={20} color={GREEN} weight="duotone" />} title={t('home.social', 'Social media')} value={so?.followers != null ? so.followers.toLocaleString(locale) : '–'} unit={so?.followers != null ? t('home.followers', 'followers') : ''} onPress={() => openReport('social')}
+          lines={so ? (so.connected.length ? [so.followersChange7d ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'in 7 days')}` : '', so.reach != null ? `${so.reach.toLocaleString(locale)} ${t('home.reach', 'reach')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
+        <Box icon={<Sparkle size={20} color={GREEN} weight="duotone" />} title={t('home.assistant', 'AI assistant report')} value={a ? String(a.suggestions.length) : '–'} unit={t('home.ideas', 'suggestions')} onPress={() => openReport('assistant')}
+          lines={a ? [a.pendingApprovals ? `${a.pendingApprovals} ${t('home.approvals', 'waiting for your approval')}` : t('home.noApprovals', 'Nothing waiting for approval'), a.suggestions[0]?.title ?? ''] : []} />
       </View>
-    </Screen>
-  );
+
+      <Pressable accessibilityRole="button" onPress={() => openReport()} style={styles.full}><Text style={styles.fullText}>{t('home.fullReport', 'See full report')}</Text><CaretRight size={16} color={GREEN} weight="bold" /></Pressable>
+      <Text style={styles.hint}>{t('home.hint', 'Swipe up for the full report · swipe down on the top bar to talk')}</Text>
+    </>}
+  </Screen>;
 }
 
-function startOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function endOfToday() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-}
-
-function formatTime(value: string, locale: string) {
-  return new Date(value).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatYen(value: number, currency: string, locale: string) {
-  try { return new Intl.NumberFormat(locale, { style: 'currency', currency, maximumFractionDigits: currency === 'JPY' ? 0 : 2 }).format(value); } catch { return `${currency} ${Math.round(value)}`; }
+function Box({ icon, title, value, unit, lines, onPress }: { icon: React.ReactNode; title: string; value: string; unit: string; lines: string[]; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit}`} onPress={onPress} style={({ pressed }) => [styles.box, pressed && { backgroundColor: '#F2F2F2' }]}>
+    <View style={styles.boxHead}>{icon}<Text style={styles.boxTitle} numberOfLines={1}>{title}</Text></View>
+    <View style={styles.valueRow}><Text style={styles.value}>{value}</Text>{unit ? <Text style={styles.unit} numberOfLines={1}>{unit}</Text> : null}</View>
+    {lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={styles.line} numberOfLines={1}>{l}</Text>)}
+  </Pressable>;
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: ui.spacing.sm },
-  headerContent: { flex: 1, gap: 4 },
-  settingsButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: ui.colors.softGold },
-  initials: { color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 15 },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroTimeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-end', gap: ui.spacing.xs },
-  heroTime: { color: ui.colors.primaryText, fontFamily: 'CormorantGaramond_500Medium', fontSize: 46, lineHeight: 52, fontVariant: ['lining-nums', 'tabular-nums'] },
-  bookingClient: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 20 },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: ui.spacing.xs, marginTop: ui.spacing.xs },
-  strip: { flexDirection: 'row', alignItems: 'center' },
-  stripCell: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 4 },
-  stripValue: { color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 28, lineHeight: 34, fontVariant: ['lining-nums', 'tabular-nums'] },
-  stripZero: { color: '#A69C94' },
-  stripDivider: { width: 1, alignSelf: 'stretch', backgroundColor: ui.colors.border },
-  laterTime: { width: 56, color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 15 },
-  aiRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm, paddingVertical: 6, borderTopWidth: 1, borderTopColor: ui.colors.border },
-  aiName: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 16 },
-  okRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm },
-  quickLinksGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: ui.spacing.sm, marginHorizontal: -4 },
-  quickLink: { width: '25%', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
-  quickIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: ui.colors.elevated, borderWidth: 1, borderColor: ui.colors.border },
-  quickLinkText: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 12, textAlign: 'center' },
+  hello: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: -4 },
+  date: { fontFamily: tokens.font.uiSemibold, fontSize: 13, letterSpacing: 0.4, color: GREY, textTransform: 'uppercase' },
+  greet: { fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: INK },
+  mic: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F3EC' },
+  brief: { gap: 8, padding: 16, borderRadius: 16, backgroundColor: '#FAFAFA', borderWidth: StyleSheet.hairlineWidth, borderColor: LINE },
+  briefHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  briefTitle: { fontFamily: tokens.font.uiBold, fontSize: 13, letterSpacing: 0.4, color: GREEN, textTransform: 'uppercase' },
+  briefText: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 22, color: '#262626' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
+  box: { width: '48.5%', minHeight: 168, padding: 14, gap: 6, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D5E9DC' },
+  boxHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  boxTitle: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#262626' },
+  valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: 2 },
+  value: { fontFamily: tokens.font.uiBold, fontSize: 30, lineHeight: 36, color: INK, fontVariant: ['tabular-nums'] },
+  unit: { flexShrink: 1, fontFamily: tokens.font.uiMedium, fontSize: 13, color: GREY },
+  line: { fontFamily: tokens.font.ui, fontSize: 12.5, lineHeight: 17, color: '#262626' },
+  full: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: '#D5E9DC' },
+  fullText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: GREEN },
+  hint: { fontFamily: tokens.font.ui, fontSize: 12, color: '#8E8E8E', textAlign: 'center', marginTop: -12 },
+  muted: { fontFamily: tokens.font.ui, fontSize: 15, color: GREY }
 });

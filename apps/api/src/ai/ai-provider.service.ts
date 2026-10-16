@@ -2,10 +2,19 @@ import { BadGatewayException, Injectable } from '@nestjs/common';
 import type { AiProviderRequest, AiProviderResponse } from './ai.types';
 import { mockTaskResponse } from './mock-provider';
 import { chooseModel } from './model-policy';
+import { assertAiAllowed, recordAiUse } from './ai-usage';
+import { currentRequest } from '../common/request-context';
 
 @Injectable()
 export class AiProviderService {
   async generate(request: AiProviderRequest): Promise<AiProviderResponse> {
+    await assertAiAllowed(request.userId ?? currentRequest().userId);
+    const result = await this.generateInner(request);
+    void recordAiUse(result.model);
+    return result;
+  }
+
+  private async generateInner(request: AiProviderRequest): Promise<AiProviderResponse> {
     const mode = process.env.AI_PROVIDER_MODE ?? 'mock';
     if (mode !== 'openai') {
       // Deterministic, free mock for dev and tests. Task-specific mocks first (reply drafts, translation, captions).

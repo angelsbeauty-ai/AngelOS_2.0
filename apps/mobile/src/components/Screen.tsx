@@ -1,4 +1,4 @@
-import { useEffect, type PropsWithChildren } from 'react';
+import { useEffect, useRef, type PropsWithChildren } from 'react';
 import { STUDENT_ALLOWED, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,8 @@ const OWN_HEADER = new Set(['/messages', '/calendar']);
 const NO_ASK = /^\/(ai|login|onboarding|forgot-password|reset-password)(\/|$)/;
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
-export function Screen({ children, hideAsk, onRefresh }: PropsWithChildren<{ hideAsk?: boolean; onRefresh?: () => Promise<unknown> | void }>) {
+export function Screen({ children, hideAsk, onRefresh, onSwipeUpAtEnd }: PropsWithChildren<{ hideAsk?: boolean; onRefresh?: () => Promise<unknown> | void; /** Deliberate upward swipe once the list is already at the bottom. */ onSwipeUpAtEnd?: () => void }>) {
+  const atEnd = useRef(false); const touchY = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { t } = useTranslation();
   async function refresh() { setRefreshing(true); try { await onRefresh?.(); } finally { setRefreshing(false); } }
@@ -24,7 +25,7 @@ export function Screen({ children, hideAsk, onRefresh }: PropsWithChildren<{ hid
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
   const showAsk = !TAB_PATHS.has(pathname) && !hideAsk && role !== 'student' && !NO_ASK.test(pathname);
   return <View style={styles.bg}><SafeAreaView style={styles.safe}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{TAB_PATHS.has(pathname) && role !== 'student' && !OWN_HEADER.has(pathname) ? <TopBar /> : null}{children}</View></ScrollView>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{TAB_PATHS.has(pathname) && role !== 'student' && !OWN_HEADER.has(pathname) ? <TopBar /> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} /> : null}
   </SafeAreaView></View>;
 }

@@ -5,6 +5,7 @@ import { ClientsService } from './clients.service';
 
 @Module({
   controllers: [ClientsController],
-  providers: [ClientsService, SupabaseAuthGuard]
+  providers: [ClientsService, SupabaseAuthGuard],
+  exports: [ClientsService]
 })
 export class ClientsModule {}

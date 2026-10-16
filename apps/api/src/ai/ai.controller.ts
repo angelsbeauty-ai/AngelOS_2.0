@@ -1,3 +1,4 @@
+import { limitState, usageFor } from './ai-usage';
 import { Body, Controller, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { StyleLearningService } from './style/style-learning.service';
 import { BrainService } from './brain/brain.service';
@@ -34,8 +35,9 @@ export class AiController {
   @Post('style/suggested-replies/:replyId/reject') rejectSuggested(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('replyId') replyId: string) { return this.style.decideSuggested(user, workspaceId, replyId, 'rejected'); }
 
   @Get('tools') listTools() { return { tools: TOOLS }; }
+  @Get('usage') usage(@CurrentUser() user: AuthUser) { return usageFor(user.id).then((u) => u ?? { ...limitState(0, 0), unavailable: true }); }
   @Get('voice/status') voiceStatus() { return this.voice.status(); }
-  @Post('voice/session') voiceSession(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() body: { screen?: string }) { return this.voice.createSession(user, workspaceId, typeof body?.screen === 'string' ? body.screen.slice(0, 60) : null); }
+  @Post('voice/session') voiceSession(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() body: { screen?: string; context?: string }) { return this.voice.createSession(user, workspaceId, typeof body?.screen === 'string' ? body.screen.slice(0, 60) : null, typeof body?.context === 'string' ? body.context.slice(0, 1500) : null); }
   @Get('profile')
   getProfile(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
     return this.ai.getProfile(user, workspaceId);

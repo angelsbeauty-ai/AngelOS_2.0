@@ -11,8 +11,7 @@ type State = 'idle' | 'connecting' | 'live' | 'error';
  * Live voice with AngelOS (web). The server mints a 2-minute key; the browser talks to OpenAI directly over WebRTC.
  * Nothing is recorded: no MediaRecorder, no transcript events kept, nothing saved by AngelOS.
  */
-export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {
-  const { t } = useTranslation();
+export function useLiveVoice(workspaceId: string | null, screen?: string, context?: string) {
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +19,7 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
   const mic = useRef<any>(null);
   const audio = useRef<any>(null);
 
-  useEffect(() => { void getVoiceStatus(workspaceId).then(setStatus).catch(() => setStatus({ available: false, reason: 'Voice status is not available right now.' })); return () => stop(); }, [workspaceId]);
+  useEffect(() => { if (!workspaceId) return; void getVoiceStatus(workspaceId).then(setStatus).catch(() => setStatus({ available: false, reason: 'Voice status is not available right now.' })); return () => stop(); }, [workspaceId]);
 
   function stop() {
     try { mic.current?.getTracks?.().forEach((t: any) => t.stop()); } catch { /* ignore */ }
@@ -35,7 +34,8 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
     try {
       const g: any = globalThis as any;
       if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This browser does not support live voice.');
-      const session = await createVoiceSession(workspaceId, screen);
+      if (!workspaceId) throw new Error('No studio selected.');
+      const session = await createVoiceSession(workspaceId, screen, context);
       if (!session.available || !session.clientSecret) throw new Error(session.reason ?? 'Live voice is off.');
       const peer = new g.RTCPeerConnection();
       pc.current = peer;
@@ -58,6 +58,12 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
     }
   }
 
+  return { status, state, error, start, stop };
+}
+
+export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {
+  const { t } = useTranslation();
+  const { status, state, error, start, stop } = useLiveVoice(workspaceId, screen);
   return <Card>
     <SectionTitle>{t('lv.s0')}</SectionTitle>
     {Platform.OS !== 'web' ? <SupportText>Live voice works in the web app for now (the phone app needs a native audio module first).</SupportText> : null}

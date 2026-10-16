@@ -3,7 +3,8 @@ import { SocialModule } from './social/social.module';
 import { AccountModule } from './account/account.module';
 import { AcademyModule } from './academy/academy.module';
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { RequestContextInterceptor } from './common/request-context';
 import { HealthModule } from './health/health.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { AiModule } from './ai/ai.module';
@@ -25,14 +26,16 @@ import { ProductAnalyticsModule } from './product-analytics/product-analytics.mo
 import { BetaModule } from './beta/beta.module';
 import { BetaAccessGuard } from './common/guards/beta-access.guard';
 import { SuggestionsModule } from './suggestions/suggestions.module';
+import { HomeModule } from './home/home.module';
 
 @Module({
-  imports: [ScheduleModule.forRoot(), AccountModule, AcademyModule, HealthModule, WorkspacesModule, AiModule, ClientsModule, BookingsModule, MessagingModule, MediaModule, ContentModule, AnalyticsModule, FinanceModule, AutomationsModule, SystemHealthModule, SubscriptionsModule, FounderModule, ProductAnalyticsModule, BetaModule, SuggestionsModule, SocialModule],
+  imports: [ScheduleModule.forRoot(), AccountModule, AcademyModule, HealthModule, WorkspacesModule, AiModule, ClientsModule, BookingsModule, MessagingModule, MediaModule, ContentModule, AnalyticsModule, FinanceModule, AutomationsModule, SystemHealthModule, SubscriptionsModule, FounderModule, ProductAnalyticsModule, BetaModule, SuggestionsModule, SocialModule, HomeModule],
   providers: [
     { provide: APP_GUARD, useClass: EmergencyReadOnlyGuard },
     { provide: APP_GUARD, useClass: SubscriptionAccessGuard },
     { provide: APP_GUARD, useClass: PlatformFeatureGuard },
-    { provide: APP_GUARD, useClass: BetaAccessGuard }
+    { provide: APP_GUARD, useClass: BetaAccessGuard },
+    { provide: APP_INTERCEPTOR, useClass: RequestContextInterceptor }
   ]
 })
 export class AppModule {}
