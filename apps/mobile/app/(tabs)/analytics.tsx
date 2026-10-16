@@ -43,7 +43,7 @@ export default function AnalyticsScreen() {
   return <Screen onRefresh={() => load()}>
     <Text accessibilityRole="header" style={styles.title}>{t('tabs.analytics')}</Text>
     <View style={styles.seg}>{PLATS.map((p) => <Pressable key={p} accessibilityRole="tab" accessibilityState={{ selected: plat === p }} onPress={() => pick(p)} style={[styles.segItem, plat === p && styles.segOn]}>
-      {p !== 'all' ? <BrandLogo platform={p} size={16} /> : null}<Text numberOfLines={1} style={[styles.segText, plat === p && { color: '#FFF' }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text></Pressable>)}</View>
+      {p !== "all" ? <BrandLogo platform={p} size={14} /> : null}<Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={[styles.segText, plat === p && { color: '#FFF' }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text></Pressable>)}</View>
 
     {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'loading' ? <Skeleton rows={3} height={110} /> : null}
@@ -99,9 +99,9 @@ function Spark({ lines }: { lines: InsightCard['lines'] }) {
 const styles = StyleSheet.create({
   title: { fontFamily: tokens.font.uiBold, fontSize: 24, color: '#000', marginTop: -4 },
   seg: { flexDirection: 'row', padding: 3, borderRadius: 10, backgroundColor: '#EFEFEF' },
-  segItem: { flex: 1, flexDirection: 'row', gap: 5, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  segItem: { flex: 1, flexDirection: "row", gap: 4, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   segOn: { backgroundColor: '#262626' },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 13.5, color: '#262626' },
+  segText: { flexShrink: 1, fontFamily: tokens.font.uiSemibold, fontSize: 12.5, color: '#262626' },
   headline: { fontFamily: tokens.font.uiBold, fontSize: 21, lineHeight: 28, color: '#262626', textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   card: { width: '48.5%', minHeight: 150, padding: 14, gap: 8, borderRadius: 10, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
