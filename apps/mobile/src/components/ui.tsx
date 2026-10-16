@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   chevron: { color: tokens.color.charcoal3, fontSize: 24 },
   tile: { flex: 1, minWidth: 140 },
   tileLabel: { color: palette.secondaryText, fontFamily: tokens.font.uiMedium, fontSize: 13 },
-  tileValue: { color: palette.primaryText, fontFamily: tokens.font.displayMedium, fontSize: 40, lineHeight: 44, fontVariant: ['lining-nums', 'tabular-nums'] },
+  tileValue: { color: palette.primaryText, fontFamily: tokens.font.uiBold, fontSize: 32, lineHeight: 38, fontVariant: ['lining-nums', 'tabular-nums'] },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
   overline: { color: palette.gold, fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
 });

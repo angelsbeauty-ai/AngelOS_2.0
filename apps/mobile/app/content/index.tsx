@@ -14,6 +14,7 @@ import { TiktokLogo } from 'phosphor-react-native/src/icons/TiktokLogo';
 import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
 import { Lightbulb } from 'phosphor-react-native/src/icons/Lightbulb';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
+import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
 import { Scissors } from 'phosphor-react-native/src/icons/Scissors';
 import { Screen } from '../../src/components/Screen';
@@ -22,7 +23,6 @@ import { Chip, ROSE } from '../../src/components/SettingsList';
 import { contentPostDate, listContent, listIdeas, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
 import { getSocialAccounts } from '../../src/lib/social';
 import { SocialNumbersCard } from '../../src/components/SocialNumbersCard';
-import { AccountsStrip } from '../../src/components/AccountsStrip';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 import { tokens, webGlass } from '../../src/design/theme';
@@ -56,6 +56,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
   const [view, setView] = useState<View_ | null>(VIEWS.find((v) => v === params.view) ?? null);
   const [month, setMonth] = useState(asCalendar);
   const [day, setDay] = useState<string | null>(null);
+  const [offset, setOffset] = useState(0);
   const [menu, setMenu] = useState<ContentPost | null>(null);
 
   const load = useCallback(async () => {
@@ -75,8 +76,9 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
     .sort((a, b) => (contentPostDate(a)?.getTime() ?? 0) - (contentPostDate(b)?.getTime() ?? 0));
 
   const now = new Date(); const lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
-  const start = month ? new Date(now.getFullYear(), now.getMonth(), 1) : new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
-  const cellCount = month ? new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() : 7;
+  const base = new Date(now.getFullYear(), now.getMonth() + (month ? offset : 0), 1);
+  const start = month ? base : new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+  const cellCount = month ? new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate() : 7;
   const lead = month ? (start.getDay() + 6) % 7 : 0;
   const cells = Array.from({ length: cellCount }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
 
@@ -90,7 +92,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load}>
       <View style={styles.head}>
-        <View style={{ flex: 1 }}><Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline><ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
+        <View style={{ flex: 1 }}>{!asCalendar ? <Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline> : null}<ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
         {asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav2.bookingsCal')} onPress={() => router.push('/bookings/week' as any)} style={styles.round}><Scissors size={20} color="#2A2725" /></Pressable> : null}
         {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable> : null}
         {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable> : null}
@@ -102,7 +104,6 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       {state === 'nostudio' ? <NoStudio /> : null}
       {state === 'error' ? <View style={styles.calm}><Text style={styles.calmTitle}>{t('s3.errTitle')}</Text><Text style={styles.calmBody}>{t('s3.errBody')}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
 
-      {ws && asCalendar && state === 'ready' ? <AccountsStrip workspaceId={ws} /> : null}
       {empty ? <View style={styles.calm}>
         <View style={styles.emptyIcon}><ImageSquare size={30} color={ROSE} weight="duotone" /></View>
         <Text style={styles.calmTitle}>{t('s3.emptyTitle')}</Text><Text style={styles.calmBody}>{t('s3.emptyBody')}</Text>
@@ -112,11 +113,17 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
 
       {state === 'ready' && !empty ? <>
         {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
-        <View style={styles.strip}>
+        {month ? <View style={styles.monthNav}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color="#2A2725" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => { setOffset(0); setDay(null); }} style={{ flex: 1 }}><Text style={styles.monthLabel}>{base.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color="#2A2725" weight="bold" /></Pressable>
+        </View> : null}
+        <View style={[styles.strip, month && styles.stripBig]}>
+          {month ? Array.from({ length: 7 }, (_, i) => <View key={`w${i}`} style={styles.wd}><Text style={styles.dow}>{new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })}</Text></View>) : null}
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
             const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#366A49' : ps.length ? ROSE : 'transparent';
-            return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, today && styles.cellToday, sel && !today && styles.cellSel]}>
+            return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, month && styles.cellBig, today && styles.cellToday, sel && !today && styles.cellSel]}>
               {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
               <Text numberOfLines={1} style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
               {ps.length ? <View style={styles.marks}>{Array.from(new Set(ps.flatMap((p) => (p.variants ?? []).map((v) => v.platform.split('_')[0])))).slice(0, 3).map((pl) => <PlatformMark key={pl} p={pl} size={11} color={today ? '#FFF' : ring} />)}</View> : <View style={[styles.dot, { backgroundColor: ring }]} />}
@@ -163,9 +170,15 @@ const styles = StyleSheet.create({
   round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
+  stripBig: { paddingVertical: 12, paddingHorizontal: 6, marginHorizontal: -8 },
+  cellBig: { paddingVertical: 11, minHeight: 58 },
+  wd: { width: '14.28%', alignItems: 'center', paddingBottom: 6 },
+  monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#2A2725', textAlign: 'center' },
   cellToday: { backgroundColor: '#2A2725' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
   dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8C847D' },
-  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#2A2725', fontVariant: ['lining-nums'] },
+  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#2A2725', fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   marks: { flexDirection: 'row', gap: 1, minHeight: 11 },
   dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },

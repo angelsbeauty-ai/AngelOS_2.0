@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: ui.spacing.xs, marginTop: ui.spacing.xs },
   strip: { flexDirection: 'row', alignItems: 'center' },
   stripCell: { flex: 1, alignItems: 'center', gap: 2, paddingVertical: 4 },
-  stripValue: { color: ui.colors.primaryText, fontFamily: 'CormorantGaramond_500Medium', fontSize: 34, lineHeight: 38, fontVariant: ['lining-nums', 'tabular-nums'] },
+  stripValue: { color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 28, lineHeight: 34, fontVariant: ['lining-nums', 'tabular-nums'] },
   stripZero: { color: '#A69C94' },
   stripDivider: { width: 1, alignSelf: 'stretch', backgroundColor: ui.colors.border },
   laterTime: { width: 56, color: ui.colors.primaryText, fontFamily: 'Manrope_700Bold', fontSize: 15 },

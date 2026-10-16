@@ -95,9 +95,9 @@ export default function MessagesScreen() {
 
   return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
     <View style={styles.header}>
-      <View style={{ flex: 1, gap: 2 }}><ScreenTitle>{t('messages.title')}</ScreenTitle></View>
+      <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{t('messages.title')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} onPress={() => setMenuOpen(true)} style={[styles.round, filter && styles.roundOn]}>
-        {filter ? <Funnel size={20} color="#FFF" weight="fill" /> : <SlidersHorizontal size={22} color="#2A2725" weight="bold" />}
+        {filter ? <Funnel size={18} color="#FFF" weight="fill" /> : <SlidersHorizontal size={20} color="#2A2725" weight="bold" />}
       </Pressable>
     </View>
 
@@ -170,8 +170,9 @@ export default function MessagesScreen() {
 
 const ROSE = '#8C5547';
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: -4 },
+  title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#2A2725' },
+  round: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   roundOn: { backgroundColor: ROSE },
   seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, color: tokens.color.tide, paddingVertical: 6 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   note: { fontSize: 13, color: '#6B6460', paddingHorizontal: 4 },
-  list: { gap: 2, borderRadius: 28, backgroundColor: tokens.color.raised, paddingVertical: 4, paddingHorizontal: 4, ...(webGlass as object) },
+  list: { gap: 2, marginHorizontal: -14, borderRadius: 24, backgroundColor: tokens.color.raised, paddingVertical: 4, paddingHorizontal: 4, ...(webGlass as object) },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ui.colors.border },
   rowBody: { flex: 1, gap: 4 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },

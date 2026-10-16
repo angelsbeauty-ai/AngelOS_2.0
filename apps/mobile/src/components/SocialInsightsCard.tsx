@@ -38,6 +38,6 @@ function Tile({ label, value }: { label: string; value: number }) {
 const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tile: { minWidth: 130, flexGrow: 1, padding: 12, borderRadius: 16, backgroundColor: tokens.color.glassTint },
-  value: { fontFamily: tokens.font.display, fontSize: 30, color: ui.colors.primaryText, fontVariant: ['tabular-nums'] },
+  value: { fontFamily: tokens.font.uiBold, fontSize: 26, color: ui.colors.primaryText, fontVariant: ['tabular-nums'] },
   sub: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: ui.colors.secondaryText, marginTop: 6 }
 });

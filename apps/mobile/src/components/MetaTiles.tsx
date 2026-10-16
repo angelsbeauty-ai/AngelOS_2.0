@@ -39,6 +39,6 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', gap: 8 },
   tile: { flex: 1, minWidth: 0, gap: 4, padding: 14, borderRadius: 20, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   label: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#625B56' },
-  value: { fontFamily: tokens.font.display, fontSize: 30, color: '#2A2725' },
+  value: { fontFamily: tokens.font.uiBold, fontSize: 26, fontVariant: ['tabular-nums'], color: '#2A2725' },
   muted: { fontSize: 15, fontFamily: tokens.font.ui, color: '#8C847D' }
 });
