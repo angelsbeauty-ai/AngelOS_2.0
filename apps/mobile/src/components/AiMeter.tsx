@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getAiUsage, type AiUsage } from '../lib/home';
 import { tokens } from '../design/theme';
 
-const GREEN = '#000000';
+const GREEN = '#8C7A64';
 
 /** AI credit meter: today's uses / daily limit and this month's / monthly limit (counted and enforced by the API). */
 export function AiMeter({ workspaceId }: { workspaceId: string | null }) {
@@ -27,7 +27,7 @@ export function AiMeter({ workspaceId }: { workspaceId: string | null }) {
 
 function Bar({ label, n, max }: { label: string; n: number; max: number }) {
   const pct = max ? Math.min(1, n / max) : 0;
-  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#262626' : GREEN;
+  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#4F4A44' : GREEN;
   return <View style={{ gap: 6 }}>
     <View style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.count}>{n} / {max}</Text></View>
     <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: color }]} /></View>
@@ -35,13 +35,13 @@ function Bar({ label, n, max }: { label: string; n: number; max: number }) {
 }
 
 const styles = StyleSheet.create({
-  box: { gap: 12, padding: 16, borderRadius: 16, backgroundColor: '#FAFAFA', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB' },
-  title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#000' },
+  box: { gap: 12, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
+  title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#262626' },
-  count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#262626', fontVariant: ['tabular-nums'] },
-  track: { height: 8, borderRadius: 4, backgroundColor: '#EFEFEF', overflow: 'hidden' },
+  label: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
+  count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515', fontVariant: ['tabular-nums'] },
+  track: { height: 8, borderRadius: 4, backgroundColor: '#EFECE6', overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   limit: { fontFamily: tokens.font.uiSemibold, fontSize: 14, lineHeight: 20, color: '#B3261E' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373' }
+  muted: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' }
 });

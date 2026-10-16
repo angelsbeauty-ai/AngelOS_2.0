@@ -11,7 +11,7 @@ import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton } from '../../src/components/ui';
-import { getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment } from '../../src/lib/bookings';
+import { getAppointment, getCalendar, type AppointmentDetail, type CalendarAppointment, type CalendarBlock } from '../../src/lib/bookings';
 import { PostThumb } from '../../src/components/PostThumb';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
@@ -21,10 +21,13 @@ import { DotsThreeVertical } from 'phosphor-react-native/src/icons/DotsThreeVert
 import { contentPostDate, listContent, type ContentPost } from '../../src/lib/content';
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
-import { tokens, webGlass } from '../../src/design/theme';
+import { tokens, webGlass, D } from '../../src/design/theme';
+import { List } from 'phosphor-react-native/src/icons/List';
+import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
+import { FunnelSimple } from 'phosphor-react-native/src/icons/FunnelSimple';
 
-const ROSE = '#000000'; const BOOK = '#000000';
-const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#000000', line: '#06C755' }; const POSTED = '#000000';
+const ROSE = '#151515'; const BOOK = '#151515';
+const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', tiktok: '#151515', line: '#06C755' }; const POSTED = '#151515';
 const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date } | { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
 
@@ -44,7 +47,8 @@ export default function CalendarTab() {
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [day, setDay] = useState<Date | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [mode, setMode] = useState<'day' | 'week' | 'month'>('month');
+  const [mode, setMode] = useState<'day' | 'week' | 'month'>('week');
+  const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [moreOpen, setMoreOpen] = useState(false); const [filterOpen, setFilterOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts'>('all');
   function setView(m: 'day' | 'week' | 'month') { setMode(m); if (m !== 'month') setAnchor(offset === 0 ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : base); }
@@ -77,7 +81,7 @@ export default function CalendarTab() {
         listContent(w.id).catch(() => [] as ContentPost[])
       ]);
       if (id !== reqId.current) return;
-      setAppts(cal.appointments.filter((a) => a.status !== 'cancelled')); setPosts(list.filter((p) => p.status !== 'archived')); setState('ready');
+      setAppts(cal.appointments.filter((a) => a.status !== 'cancelled')); setBlocks(cal.blocks ?? []); setPosts(list.filter((p) => p.status !== 'archived')); setState('ready');
     } catch (err) { if (id === reqId.current) setState(isNoWorkspace(err) ? 'nostudio' : 'error'); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset, mode, anchor.getTime()]);
@@ -100,56 +104,79 @@ export default function CalendarTab() {
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load}>
       <View style={styles.head}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color="#000" weight="bold" /></Pressable>
-        <Text numberOfLines={1} style={styles.headTitle}>{mode === 'month' ? base.toLocaleDateString(lang, { month: 'long', year: 'numeric' }) : mode === 'day' ? anchor.toLocaleDateString(lang, { month: 'long', day: 'numeric' }) : `${tlDays[0].toLocaleDateString(lang, { month: 'short', day: 'numeric' })} – ${tlDays[6].getDate()}`}</Text>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color="#000" weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('top.menu', { defaultValue: 'Menu' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><List size={24} color={D.text} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.today', 'Today')} onPress={() => { setOffset(0); setAnchor(new Date(now.getFullYear(), now.getMonth(), now.getDate())); }} style={styles.titleBtn}>
+          <Text numberOfLines={1} style={styles.headTitle}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'short', year: 'numeric' })}</Text><CaretDown size={14} color={D.text} weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prev', 'Previous')} hitSlop={6} onPress={() => step(-1)} style={styles.arrow}><CaretLeft size={18} color={D.text} weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.next', 'Next')} hitSlop={6} onPress={() => step(1)} style={styles.arrow}><CaretRight size={18} color={D.text} weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />
-        <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color="#000" /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setFilterOpen(true)} style={styles.icon}><Funnel size={24} color={show !== 'all' ? tokens.color.tide : '#000'} weight={show !== 'all' ? 'fill' : 'regular'} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color="#000" weight="bold" /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={D.text} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setFilterOpen(true)} style={styles.icon}><FunnelSimple size={24} color={D.text} weight={show !== 'all' ? 'fill' : 'regular'} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={D.text} weight="bold" /></Pressable>
       </View>
-      {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor="#8E8E8E" style={styles.search} /> : null}
-      {mode === 'month' ? <View style={styles.wkHead}>{cells.slice(0, 7).map((d, i) => <Text key={i} style={styles.wkH}>{d.toLocaleDateString(lang, { weekday: 'short' })}</Text>)}</View> : null}
+      <View style={styles.seg} accessibilityRole="tablist">
+        {(['day', 'week', 'month'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} onPress={() => setView(m)} style={[styles.segItem, mode === m && styles.segOn]}>
+          <Text style={[styles.segText, mode !== m && { color: D.text2 }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' })}</Text></Pressable>)}
+      </View>
+      {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor={D.faint} style={styles.search} /> : null}
 
       {state === 'nostudio' ? <NoStudio /> : null}
+      {mode === 'day' && state === 'ready' ? (() => { const its = (byDay.get(key(anchor)) ?? []).filter((x) => x.kind === 'booking'); const hrs = its.reduce((n, x) => n + (x.kind === 'booking' ? (new Date(x.a.end_at).getTime() - x.at.getTime()) / 3600000 : 0), 0);
+        return <View style={styles.dayHead}>
+          <View style={[styles.num, styles.numToday, styles.numBig]}><Text style={[styles.numText, { color: '#FFF' }]}>{anchor.getDate()}</Text></View>
+          <View style={{ gap: 2 }}><Text style={styles.rowTitle}>{anchor.toLocaleDateString(lang, { weekday: 'long' })}</Text>
+            <Text style={styles.rowSub}>{t('cal.dayCount', { defaultValue: '{{n}} bookings · {{h}} h booked', n: its.length, h: Math.round(hrs * 10) / 10 })}</Text></View>
+        </View>; })() : null}
       {mode !== 'month' && state === 'ready' ? <View style={styles.grid}>
-        <View style={styles.wkRow}><View style={{ width: 40 }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
-          <Text style={styles.wk}>{d.toLocaleDateString(lang, { weekday: mode === 'day' ? 'long' : 'narrow' })}</Text>
-          <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, today && { color: '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View>
-        <View style={{ flexDirection: 'row' }}>
-          <View style={{ width: 40 }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text style={styles.hour}>{`${h}:00`}</Text></View>)}</View>
-          {tlDays.map((d) => <View key={key(d)} style={styles.col}>
+        {mode === 'week' ? <View style={styles.wkRow}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+          <Text style={styles.wk}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text>
+          <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, today && { color: '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
+        <View style={{ flexDirection: 'row', paddingTop: 12 }}>
+          <View style={{ width: GUTTER }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text style={styles.hour}>{hourLabel(h, lang)}</Text></View>)}</View>
+          {tlDays.map((d) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
+            const dayBlocks = blocks.filter((bl) => key(new Date(bl.start_at)) === key(d));
+            return <View key={key(d)} style={[styles.col, mode === 'day' && { borderLeftWidth: 0 }]}>
             {HOURS.map((h) => <View key={h} style={styles.hourLine} />)}
+            {dayBlocks.map((bl) => { const st = new Date(bl.start_at); const en = new Date(bl.end_at); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
+              return <View key={bl.id} style={[styles.block, styles.blocked, { top, height: h }]}><Text numberOfLines={2} style={[styles.chipText, { color: D.text2 }]}>{bl.title}</Text>{mode === 'day' ? <Text style={styles.blockSub}>{t('cal.blocked', 'Blocked')}</Text> : null}</View>; })}
             {(byDay.get(key(d)) ?? []).map((it, i) => { const startH = it.at.getHours() + it.at.getMinutes() / 60; const endAt = it.kind === 'booking' ? new Date(it.a.end_at) : new Date(it.at.getTime() + 30 * 60000);
               const top = (Math.max(startH, HOURS[0]) - HOURS[0]) * HOUR_H; const h = Math.max(22, ((endAt.getTime() - it.at.getTime()) / 3600000) * HOUR_H - 2);
-              return <Pressable key={i} accessibilityRole="button" onPress={() => void openItem(it)} style={[styles.block, { top, height: h, backgroundColor: it.kind === 'booking' ? BOOK : ROSE }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>{it.kind === 'post' ? it.platforms.slice(0, 1).map((pl) => <Mark key={pl} p={pl} color="#FFF" />) : null}<Text numberOfLines={mode === 'day' ? 1 : 3} style={styles.chipText}>{label(it)}</Text></View>
-                {mode === 'day' ? <Text numberOfLines={1} style={[styles.chipText, { opacity: 0.85, fontFamily: tokens.font.ui }]}>{time(it.at)}{it.kind === 'booking' ? ` – ${time(endAt)}` : ''}</Text> : null}
+              const kind = it.kind === 'post' ? styles.blocked : PENDING.test(it.a.status) ? styles.pending : styles.confirmed;
+              const title = it.kind === 'booking' ? it.a.service_name : label(it); const sub = it.kind === 'booking' ? it.a.client?.display_name ?? '' : it.platforms.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ');
+              return <Pressable key={i} accessibilityRole="button" onPress={() => void openItem(it)} style={[styles.block, kind, { top, height: h }]}>
+                <Text numberOfLines={mode === 'day' ? 1 : 2} style={styles.chipText}>{title}</Text>
+                {sub ? <Text numberOfLines={1} style={styles.blockSub}>{sub}</Text> : null}
               </Pressable>; })}
-          </View>)}
+            {isToday && nowTop > 0 && nowTop < HOURS.length * HOUR_H ? <View pointerEvents="none" style={[styles.nowLine, { top: nowTop }]}><View style={styles.nowDot} /></View> : null}
+          </View>; })}
         </View>
       </View> : null}
       {state === 'loading' ? <Skeleton rows={5} height={80} /> : null}
 
-      {mode === 'month' && state !== 'nostudio' && state !== 'loading' ? <View style={styles.grid}>
-                {Array.from({ length: weeks }, (_, w) => <View key={w} style={styles.week}>
-          {cells.slice(w * 7, w * 7 + 7).map((d) => { const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
+      {mode === 'month' && state !== 'nostudio' && state !== 'loading' ? <>
+        <View style={styles.wkHead}>{cells.slice(0, 7).map((d, i) => <Text key={i} style={styles.wkH}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text>)}</View>
+        <View style={styles.mgrid}>
+        {Array.from({ length: weeks }, (_, w) => { const row = cells.slice(w * 7, w * 7 + 7); const thisWeek = row.some((d) => key(d) === key(now));
+          return <View key={w} style={styles.week}>
+          {row.map((d) => { const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={`${d.toDateString()}, ${items.length}`} onPress={() => setDay(d)} style={styles.cell}>
               <View style={[styles.num, today && styles.numToday]}><Text style={[styles.numText, !inMonth && styles.dim, today && { color: '#FFF' }]}>{d.getDate()}</Text></View>
-              {(() => { const ps = items.filter((x): x is Extract<Item, { kind: 'post' }> => x.kind === 'post'); const pls = Array.from(new Set(ps.flatMap((x) => x.platforms)));
-                return ps.length ? <Pressable onPress={() => ps.length === 1 ? void openItem(ps[0]) : setDay(d)} style={[styles.postChip, !inMonth && { opacity: 0.5 }]}>{pls.slice(0, 3).map((pl) => <Mark key={pl} p={pl} color={BRAND[pl] ?? '#262626'} />)}{ps.length > 1 ? <Text style={styles.postN}>{ps.length}</Text> : null}</Pressable> : null; })()}
-              {items.filter((x) => x.kind === 'booking').slice(0, 2).map((it, i) => { const color = BOOK;
-                return <Pressable key={i} onPress={() => void openItem(it)} style={[styles.chip, { backgroundColor: color }, !inMonth && { opacity: 0.5 }]}>
-                  
-                  <Text numberOfLines={1} style={styles.chipText}>{label(it)}</Text></Pressable>; })}
-              {items.filter((x) => x.kind === 'booking').length > 2 ? <Text style={styles.more}>+{items.filter((x) => x.kind === 'booking').length - 2}</Text> : null}
+              {thisWeek ? items.slice(0, 2).map((it, i) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
+                return <Pressable key={i} onPress={() => void openItem(it)} style={[styles.chip, pend ? styles.pending : it.kind === 'post' ? styles.blocked : styles.confirmed]}>
+                  <Text numberOfLines={1} style={styles.mChip}>{it.kind === 'booking' ? it.a.service_name : label(it)}</Text></Pressable>; })
+                : items.length ? <View style={styles.dots}>{items.slice(0, 3).map((_, i) => <View key={i} style={styles.dot} />)}</View> : null}
             </Pressable>; })}
-        </View>)}
-      </View> : null}
+        </View>; })}
+        </View>
+        <View style={styles.legend}>
+          <View style={[styles.legendKey, styles.confirmed]} /><Text style={styles.legendText}>{t('cal.confirmed', 'Confirmed')}</Text>
+          <View style={[styles.legendKey, styles.pending, { marginLeft: 16 }]} /><Text style={styles.legendText}>{t('cal.pending', 'Pending')}</Text>
+        </View>
+      </> : null}
       {state === 'error' ? <Text style={styles.err}>{t('s3.errBody')}</Text> : null}
     </Screen>
 
-    <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAddOpen(true)} style={styles.fab}><Plus size={26} color="#FFF" weight="bold" /></Pressable>
+    {mode !== 'month' ? <Pressable accessibilityRole="button" accessibilityLabel="Add" onPress={() => setAddOpen(true)} style={styles.fab}><Plus size={26} color="#FFF" weight="bold" /></Pressable> : null}
 
     <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
       <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}><View style={styles.sheet}>
@@ -224,74 +251,91 @@ export default function CalendarTab() {
   </View>;
 }
 function Field({ k, v }: { k: string; v: string }) { return <View style={styles.field}><Text style={styles.fieldK}>{k}</Text><Text style={styles.fieldV}>{v}</Text></View>; }
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 8); const HOUR_H = 56;
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 9); const HOUR_H = 52; const GUTTER = 48;
+const PENDING = /pending|request|tentative|unconfirmed/i;
+function hourLabel(h: number, lang: string) { return new Date(2000, 0, 1, h).toLocaleTimeString(lang, { hour: 'numeric' }); }
 function GROUP_POSTED(s: string) { return s === 'published' || s === 'analyzed'; }
 
-const LINE = '#DBDBDB'; const HOUR_H_STYLE = 56;
+const LINE = 'rgba(60,48,32,0.17)'; const HOUR_H_STYLE = 52;
 const styles = StyleSheet.create({
   months: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 },
   monthWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  year: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#262626' },
+  year: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   month: { height: 40, minWidth: 64, paddingHorizontal: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.25)', backgroundColor: '#FFFFFF' },
-  monthOn: { backgroundColor: '#262626', borderColor: '#262626' },
-  monthText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#262626' },
+  monthOn: { backgroundColor: '#151515', borderColor: '#151515' },
+  monthText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
   monthTextOn: { color: '#FFF' },
-  grid: { marginHorizontal: -16, backgroundColor: '#FFFFFF', borderTopWidth: StyleSheet.hairlineWidth, borderColor: LINE, ...(webGlass as object) },
-  wkRow: { flexDirection: 'row', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
-  wk: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#8E8E8E' },
-  week: { flexDirection: 'row', minHeight: 104, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
-  cell: { flex: 1, paddingTop: 6, paddingHorizontal: 2, gap: 3, borderRightWidth: StyleSheet.hairlineWidth, borderColor: LINE, overflow: 'hidden' },
+  grid: { marginHorizontal: -16, borderTopWidth: StyleSheet.hairlineWidth, borderColor: LINE },
+  mgrid: { marginHorizontal: -8, borderTopWidth: StyleSheet.hairlineWidth, borderColor: LINE },
+  dayHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  numBig: { width: 40, height: 40, borderRadius: 20, alignSelf: 'auto' },
+  confirmed: { backgroundColor: D.accentTint, borderLeftWidth: 2, borderLeftColor: D.accentDeep },
+  pending: { backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderStyle: 'dashed', borderColor: '#A8A096', borderLeftWidth: 2, borderLeftColor: D.pendingRule },
+  blocked: { backgroundColor: D.fill, borderWidth: StyleSheet.hairlineWidth, borderColor: LINE },
+  blockSub: { fontFamily: tokens.font.ui, fontSize: 10, lineHeight: 13, color: D.muted },
+  nowLine: { position: 'absolute', left: 0, right: 0, height: 1.5, backgroundColor: D.accentDeep },
+  nowDot: { position: 'absolute', left: -4, top: -3.25, width: 8, height: 8, borderRadius: 4, backgroundColor: D.accentDeep },
+  dots: { flexDirection: 'row', alignSelf: 'center', gap: 3 },
+  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: D.text },
+  mChip: { fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: D.text },
+  legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -8 },
+  legendKey: { width: 10, height: 12, borderRadius: 2 },
+  legendText: { fontFamily: tokens.font.ui, fontSize: 13, color: D.muted },
+  wkRow: { flexDirection: 'row', paddingVertical: 8, marginTop: -8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE, backgroundColor: D.bg },
+  wk: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#766E64' },
+  week: { flexDirection: 'row', minHeight: 88, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
+  cell: { flex: 1, paddingTop: 6, paddingHorizontal: 2, gap: 3, overflow: 'hidden' },
   num: { alignSelf: 'center', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   numToday: { backgroundColor: tokens.color.tide },
-  numText: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#262626' },
-  dim: { color: '#8E8E8E' },
+  numText: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
+  dim: { color: '#766E64' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 4, paddingHorizontal: 3, paddingVertical: 2 },
-  chipText: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: '#FFF' },
-  more: { fontFamily: tokens.font.uiSemibold, fontSize: 10, color: '#737373', paddingHorizontal: 3 },
-  err: { fontFamily: tokens.font.ui, fontSize: 15, color: '#737373', textAlign: 'center' },
-  fab: { position: 'absolute', right: 16, bottom: 104, width: 60, height: 60, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: ROSE, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: D.text },
+  more: { fontFamily: tokens.font.uiSemibold, fontSize: 10, color: '#6B645B', paddingHorizontal: 3 },
+  err: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B', textAlign: 'center' },
+  fab: { position: 'absolute', right: 16, bottom: 104, width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: ROSE, shadowColor: '#151515', shadowOpacity: 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#FFFFFF', padding: 16, paddingBottom: 32, gap: 8 },
-  sheetTitle: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#262626' },
-  sheetSub: { fontFamily: tokens.font.ui, fontSize: 15, color: '#737373', marginBottom: 4 },
-  empty: { fontFamily: tokens.font.ui, fontSize: 15, color: '#8E8E8E', paddingVertical: 16 },
+  sheetTitle: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#151515' },
+  sheetSub: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B', marginBottom: 4 },
+  empty: { fontFamily: tokens.font.ui, fontSize: 15, color: '#766E64', paddingVertical: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   bar: { width: 4, alignSelf: 'stretch', borderRadius: 2 },
-  rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626' },
-  rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4 },
+  rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4, marginLeft: -6 },
   icon: { width: 36, height: 44, alignItems: 'center', justifyContent: 'center' },
   arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
-  titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6, height: 44 },
-  headTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, color: '#000' },
-  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFEFEF', fontFamily: tokens.font.ui, fontSize: 15, color: '#000' },
-  wkHead: { flexDirection: 'row', marginHorizontal: -16, marginBottom: -24, paddingBottom: 8 },
-  wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#262626' },
-  postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB', backgroundColor: '#FFF' },
-  postN: { fontFamily: tokens.font.uiSemibold, fontSize: 9, color: '#262626', marginLeft: 1 },
+  titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, height: 44 },
+  headTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, color: '#151515' },
+  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFECE6', fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
+  wkHead: { flexDirection: 'row', marginHorizontal: -8, marginBottom: -16, paddingBottom: 8 },
+  wkH: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiMedium, fontSize: 14, color: D.muted },
+  postChip: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: 4, paddingVertical: 2, borderRadius: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', backgroundColor: '#FFF' },
+  postN: { fontFamily: tokens.font.uiSemibold, fontSize: 9, color: '#151515', marginLeft: 1 },
   dropBack: { flex: 1, paddingTop: 100, paddingHorizontal: 16, backgroundColor: 'rgba(0,0,0,0.15)' },
-  drop: { minWidth: 220, alignSelf: 'flex-start', borderRadius: 14, backgroundColor: '#FFF', paddingVertical: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  drop: { minWidth: 220, alignSelf: 'flex-start', borderRadius: 14, backgroundColor: '#FFF', paddingVertical: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', shadowColor: '#151515', shadowOpacity: 0.12, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   dropItem: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16 },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', ...(webGlass as object) },
-  seg: { flex: 1, flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
-  segItem: { flex: 1, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  segOn: { backgroundColor: '#262626' },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' },
-  rangeLabel: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#262626', textAlign: 'center' },
-  hour: { fontFamily: tokens.font.ui, fontSize: 10, color: '#8E8E8E', textAlign: 'right', paddingRight: 4, marginTop: -6 },
+  seg: { flexDirection: 'row', padding: 3, borderRadius: 18, backgroundColor: D.fill, marginTop: -8 },
+  segItem: { flex: 1, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  segOn: { backgroundColor: '#FFFFFF', shadowColor: '#28201A', shadowOpacity: 0.06, shadowRadius: 24, shadowOffset: { width: 0, height: 8 } },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
+  rangeLabel: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#151515', textAlign: 'center' },
+  hour: { fontFamily: tokens.font.ui, fontSize: 10, color: D.muted, textAlign: 'right', paddingRight: 8, marginTop: -6 },
   col: { flex: 1, borderLeftWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   hourLine: { height: HOUR_H_STYLE, borderTopWidth: StyleSheet.hairlineWidth, borderColor: LINE },
-  block: { position: 'absolute', left: 2, right: 2, borderRadius: 6, padding: 4, overflow: 'hidden' },
+  block: { position: 'absolute', left: 2, right: 2, borderRadius: 6, padding: 4, gap: 2, overflow: 'hidden' },
   avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.14)' },
-  avatarText: { fontFamily: tokens.font.uiSemibold, fontSize: 22, color: '#262626' },
+  avatarText: { fontFamily: tokens.font.uiSemibold, fontSize: 22, color: '#151515' },
   field: { flexDirection: 'row', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
-  fieldK: { width: 90, fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#8E8E8E' },
-  fieldV: { flex: 1, fontFamily: tokens.font.ui, fontSize: 15, color: '#262626' },
+  fieldK: { width: 90, fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#766E64' },
+  fieldV: { flex: 1, fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   btn: { flex: 1, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.2)' },
   btnPrimary: { backgroundColor: ROSE, borderColor: ROSE },
-  btnText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#262626' },
+  btnText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
   mi: { minHeight: 52, justifyContent: 'center', paddingHorizontal: 4 },
-  miText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626' }
+  miText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' }
 });

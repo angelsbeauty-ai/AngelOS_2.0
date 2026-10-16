@@ -78,7 +78,7 @@ export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
 
 const BADGE: Record<string, { bg: string; fg: string }> = {
   confirmed: { bg: 'rgba(0,0,0,0.14)', fg: palette.success }, request: { bg: 'rgba(138,90,0,0.14)', fg: palette.warning }, requested: { bg: 'rgba(138,90,0,0.14)', fg: palette.warning },
-  cancelled: { bg: '#DBDBDB', fg: tokens.color.charcoal3 }, no_show: { bg: 'rgba(179,38,30,0.12)', fg: palette.critical }, completed: { bg: 'rgba(0,0,0,0.14)', fg: tokens.color.tide }, done: { bg: 'rgba(0,0,0,0.14)', fg: tokens.color.tide },
+  cancelled: { bg: 'rgba(60,48,32,0.17)', fg: tokens.color.charcoal3 }, no_show: { bg: 'rgba(179,38,30,0.12)', fg: palette.critical }, completed: { bg: 'rgba(0,0,0,0.14)', fg: tokens.color.tide }, done: { bg: 'rgba(0,0,0,0.14)', fg: tokens.color.tide },
 };
 /** Status badge: confirmed=success, request=warning, cancelled=muted, no_show=error, done=tide. */
 export function Badge({ status, label }: { status: string; label?: string }) {
@@ -134,7 +134,7 @@ export function Skeleton({ rows = 3, height = 64 }: { rows?: number; height?: nu
     }).catch(() => undefined);
     return () => { live = false; loop?.stop(); };
   }, [v]);
-  return <View accessibilityRole="progressbar" accessibilityLabel={t('ui.loading')} style={{ gap: spacing.xs }}>{Array.from({ length: rows }, (_, i) => <Animated.View key={i} style={{ height, borderRadius: radius.card, backgroundColor: '#EFEFEF', opacity: v }} />)}</View>;
+  return <View accessibilityRole="progressbar" accessibilityLabel={t('ui.loading')} style={{ gap: spacing.xs }}>{Array.from({ length: rows }, (_, i) => <Animated.View key={i} style={{ height, borderRadius: radius.card, backgroundColor: '#EFECE6', opacity: v }} />)}</View>;
 }
 
 export const ui = { colors: palette, spacing, radius, typography };

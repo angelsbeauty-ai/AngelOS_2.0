@@ -9,19 +9,22 @@ import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
 import { ChartBar } from 'phosphor-react-native/src/icons/ChartBar';
 import { useRole } from '../../src/lib/me';
 import { GlassSurface } from '../../src/components/Glass';
-import { colors } from '../../src/design/theme';
+import { colors, D } from '../../src/design/theme';
+import { TabIcon } from '../../src/components/TabIcon';
+import { useUnreadCount } from '../../src/lib/unread';
 
 export default function TabsLayout() {
   // B9: students only get Academy + Settings. Studio tabs are hidden (and Screen redirects studio routes).
   const student = useRole() === 'student';
   const { t } = useTranslation();
+  const unread = useUnreadCount();
   const studio = student ? { href: null } : {};
   const tabBarOptions = {
     headerShown: false,
     tabBarActiveTintColor: colors.light.gold as string,
     tabBarInactiveTintColor: colors.light.secondaryText as string,
     tabBarStyle: styles.tabBar,
-    tabBarBackground: () => <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />,
+    tabBarBackground: () => <GlassSurface kind="toast" style={[StyleSheet.absoluteFill, { backgroundColor: D.bgTab }]} />,
     tabBarShowLabel: true,
     tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14, paddingBottom: 0 },
     tabBarItemStyle: { paddingTop: 3, paddingBottom: 3 },
@@ -31,12 +34,12 @@ export default function TabsLayout() {
 
   return (
     <Tabs screenOptions={tabBarOptions}>
-      <Tabs.Screen name="index" options={{ ...studio, title: t('tabs.home'), tabBarIcon: ({ color }) => <House size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="messages" options={{ ...studio, title: t('tabs.messages'), tabBarIcon: ({ color }) => <ChatCircleDots size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="calendar" options={{ ...studio, title: t('tabs.calendar'), tabBarIcon: ({ color }) => <CalendarBlank size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="analytics" options={{ ...studio, title: t('tabs.analytics'), tabBarIcon: ({ color }) => <ChartBar size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="academy" options={{ href: student ? undefined : null, title: t('tabs.academy'), tabBarIcon: ({ color }) => <GraduationCap size={24} color={color as string} weight="duotone" /> }} />
-      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color }) => <UserCircle size={24} color={color as string} weight="duotone" /> }} />
+      <Tabs.Screen name="index" options={{ ...studio, title: t('tabs.home'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><House size={24} color={color as string} weight="duotone" /></TabIcon> }} />
+      <Tabs.Screen name="messages" options={{ ...studio, title: t('tabs.messages'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused} badge={unread}><ChatCircleDots size={24} color={color as string} weight="duotone" /></TabIcon> }} />
+      <Tabs.Screen name="calendar" options={{ ...studio, title: t('tabs.calendar'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><CalendarBlank size={24} color={color as string} weight="duotone" /></TabIcon> }} />
+      <Tabs.Screen name="analytics" options={{ ...studio, title: t('tabs.analytics'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><ChartBar size={24} color={color as string} weight="duotone" /></TabIcon> }} />
+      <Tabs.Screen name="academy" options={{ href: student ? undefined : null, title: t('tabs.academy'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><GraduationCap size={24} color={color as string} weight="duotone" /></TabIcon> }} />
+      <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><UserCircle size={24} color={color as string} weight="duotone" /></TabIcon> }} />
       {/* Moved out of the tab bar (NAV V1): Clients lives under Profile, Social posts under Calendar. Routes stay reachable. */}
       <Tabs.Screen name="clients" options={{ href: null, title: t('tabs.clients') }} />
       <Tabs.Screen name="social" options={{ href: null, title: t('tabs.social') }} />
@@ -45,5 +48,5 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 84, paddingTop: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB', backgroundColor: '#FFFFFF', elevation: 0, shadowOpacity: 0 },
+  tabBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 84, paddingTop: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(60,48,32,0.17)', backgroundColor: D.bgTab, elevation: 0, shadowOpacity: 0 },
 });

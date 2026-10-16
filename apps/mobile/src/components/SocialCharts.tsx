@@ -3,7 +3,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react
 import { tokens } from '../design/theme';
 
 /** Hand-rolled react-native-svg charts (no extra native deps). Style: 2.2 pt round lines, rose 22%→0% area, two hairlines, end dot. */
-export const ROSE = '#000000';
+export const ROSE = '#151515';
 const INK50 = 'rgba(42,39,37,0.5)';
 
 function points(values: number[], w: number, h: number, pad = 4) {
@@ -58,7 +58,7 @@ export function Heatmap({ grid, best, dayLabels, slotLabels, width }: { grid: nu
     {grid.map((row, d) => <View key={d} style={{ flexDirection: 'row', alignItems: 'center', marginTop: gap }}>
       <Text style={{ width: left, fontFamily: tokens.font.ui, fontSize: 11, color: INK50 }}>{dayLabels[d]}</Text>
       {row.map((v, s) => { const isBest = best && best.day === d && best.slot === s;
-        return <View key={s} style={{ width: cell - gap, height: cell * 0.62, marginRight: gap, borderRadius: 6, backgroundColor: `rgba(0,0,0,${(0.06 + 0.88 * (v / max)).toFixed(2)})`, borderWidth: isBest ? 2 : 0, borderColor: '#262626' }} />; })}
+        return <View key={s} style={{ width: cell - gap, height: cell * 0.62, marginRight: gap, borderRadius: 6, backgroundColor: `rgba(0,0,0,${(0.06 + 0.88 * (v / max)).toFixed(2)})`, borderWidth: isBest ? 2 : 0, borderColor: '#151515' }} />; })}
     </View>)}
   </View>;
 }

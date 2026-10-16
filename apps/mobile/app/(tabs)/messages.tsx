@@ -104,7 +104,7 @@ export default function MessagesScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}>
         <Bell size={24} color="#262626" />{threads.some((x) => x.unread) ? <View style={styles.bellDot} /> : null}</Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
-        <SlidersHorizontal size={24} color={filter || plat !== 'all' ? ROSE : '#262626'} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
+        <SlidersHorizontal size={24} color={filter || plat !== 'all' ? ROSE : '#151515'} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color="#262626" /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color="#262626" weight="bold" /></Pressable>
     </View>
@@ -139,18 +139,18 @@ export default function MessagesScreen() {
     {seg === 'messages' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <Card><EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /></Card> : null}
 
     {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
-      {visible.map((thread) => {
+      {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
-        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, pressed && { backgroundColor: '#FAFAFA' }]}>
-          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={58} />
+        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: '#FBFAF7' }]}>
+          <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
             <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.name}>{name}</Text>
             <View style={styles.rowTop}>
               <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.preview, !thread.unread && !thread.needs_reply && styles.previewRead]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.time}>{rel(thread.last_message_at)}</Text>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={styles.time}>· {rel(thread.last_message_at)}</Text>
             </View>
-            {thread.status === 'done' ? <Text style={styles.done}>{t('messages.done')}</Text> : null}
+            {thread.status === 'done' ? <View style={styles.donePill}><Text style={styles.done}>{t('messages.done')}</Text></View> : null}
           </View>
           {thread.unread || thread.needs_reply ? <View accessibilityLabel="Unread" style={styles.unread} /> : <View style={{ width: 8 }} />}
         </Pressable>;
@@ -177,48 +177,49 @@ export default function MessagesScreen() {
   </Modal></View>;
 }
 
-const ROSE = '#000000';
+const ROSE = '#151515';
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48 },
-  title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#000000' },
+  title: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30, color: '#151515' },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3040', borderWidth: 1.5, borderColor: '#FFF' },
-  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFEFEF', fontFamily: tokens.font.ui, fontSize: 15, color: '#000' },
-  unread: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3040' },
-  previewRead: { fontFamily: tokens.font.ui, color: '#737373' },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
+  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8C7A64', borderWidth: 1.5, borderColor: '#FFF' },
+  search: { height: 40, borderRadius: 10, paddingHorizontal: 12, backgroundColor: '#EFECE6', fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
+  unread: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#151515' },
+  previewRead: { fontFamily: tokens.font.ui, color: '#6B645B' },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
   roundOn: { backgroundColor: ROSE },
   seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: ROSE },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#262626' },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
   chips: { flexDirection: 'row', gap: 8 },
-  chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DBDBDB' },
-  chipOn: { backgroundColor: '#262626', borderColor: '#262626' },
-  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#262626' },
+  chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)' },
+  chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
+  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
-  errBody: { fontFamily: tokens.font.ui, fontSize: 15, color: '#262626', lineHeight: 21 },
-  errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626', lineHeight: 22 },
+  errBody: { fontFamily: tokens.font.ui, fontSize: 15, color: '#151515', lineHeight: 21 },
+  errText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515', lineHeight: 22 },
   menu: { width: 240, borderRadius: 22, backgroundColor: '#FFFFFF', overflow: 'hidden', ...(webGlass as object) },
-  menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#737373', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
-  mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
+  menuHead: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#6B645B', padding: 14, paddingBottom: 6, textTransform: 'uppercase' },
+  mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(60,48,32,0.17)' },
   miSep: { borderTopWidth: 6, borderTopColor: 'rgba(42,39,37,0.06)' },
-  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#262626' },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },
   bannerTitle: { fontFamily: tokens.font.uiBold, fontSize: 15, color: ui.colors.primaryText },
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, color: tokens.color.tide, paddingVertical: 6 },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  note: { fontSize: 13, color: '#737373', paddingHorizontal: 4 },
-  list: { marginHorizontal: -16, marginTop: -8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 82, paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
+  note: { fontSize: 13, color: '#6B645B', paddingHorizontal: 4 },
+  list: { backgroundColor: '#FFFFFF', borderRadius: 22, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', shadowColor: '#28201A', shadowOpacity: 0.06, shadowRadius: 24, shadowOffset: { width: 0, height: 8 } },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 88, paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFECE6' },
   rowBody: { flex: 1, gap: 3 },
-  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rowMid: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 21, color: '#000000' },
+  name: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 21, color: '#151515' },
   nameUnread: { fontFamily: tokens.font.uiBold },
-  time: { fontFamily: tokens.font.ui, fontSize: 14, color: '#737373' },
-  preview: { flexShrink: 1, fontFamily: tokens.font.uiSemibold, fontSize: 14.5, lineHeight: 19, color: '#000000' },
+  time: { flexShrink: 0, fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' },
+  preview: { flexShrink: 1, fontFamily: tokens.font.uiSemibold, fontSize: 14.5, lineHeight: 19, color: '#151515' },
   flag: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.warning },
-  done: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: tokens.color.success }
+  donePill: { alignSelf: 'flex-start', height: 20, paddingHorizontal: 8, borderRadius: 999, backgroundColor: '#EFECE6', justifyContent: 'center', marginTop: 2 },
+  done: { fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#4F4A44' }
 });
 
 /** Relative time like Meta Inbox: now, 5m, 1h, 13h, 1d, 3w. */

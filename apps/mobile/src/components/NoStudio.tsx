@@ -17,8 +17,8 @@ export function NoStudio() {
 }
 
 const styles = StyleSheet.create({
-  box: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF' },
+  box: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6' },
   icon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
-  title: { fontFamily: tokens.font.display, fontSize: 26, color: '#262626', textAlign: 'center' },
-  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373', textAlign: 'center' }
+  title: { fontFamily: tokens.font.display, fontSize: 26, color: '#151515', textAlign: 'center' },
+  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B', textAlign: 'center' }
 });

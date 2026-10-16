@@ -7,7 +7,9 @@ import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';
 import { ChartBar } from 'phosphor-react-native/src/icons/ChartBar';
 import { UserCircle } from 'phosphor-react-native/src/icons/UserCircle';
 import { GlassSurface } from './Glass';
-import { colors } from '../design/theme';
+import { colors, D } from '../design/theme';
+import { TabIcon } from './TabIcon';
+import { useUnreadCount } from '../lib/unread';
 
 /** Paths that render the real Tabs bar themselves. */
 export const TAB_ROOTS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
@@ -27,6 +29,7 @@ function activeTab(p: string) {
 export function AppTabBar() {
   const { t } = useTranslation();
   const pathname = usePathname() ?? '/';
+  const unread = useUnreadCount();
   if (!showsAppTabBar(pathname)) return null;
   const on = activeTab(pathname);
   const items = [
@@ -37,18 +40,18 @@ export function AppTabBar() {
     { href: '/profile', label: t('tabs.profile'), Icon: UserCircle },
   ];
   return <View style={styles.bar} accessibilityRole="tablist">
-    <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />
+    <GlassSurface kind="toast" style={[StyleSheet.absoluteFill, { backgroundColor: D.bgTab }]} />
     {items.map(({ href, label, Icon }) => {
       const active = on === href; const color = (active ? colors.light.gold : colors.light.secondaryText) as string;
       return <Pressable key={href} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={label} onPress={() => router.navigate(href as any)} style={[styles.item, active && styles.itemOn]}>
-        <Icon size={24} color={color} weight="duotone" /><Text style={[styles.label, { color }]}>{label}</Text>
+        <TabIcon active={active} badge={href === '/messages' ? unread : 0}><Icon size={24} color={color} weight="duotone" /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
       </Pressable>;
     })}
   </View>;
 }
 
 const styles = StyleSheet.create({
-  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 64, flexDirection: 'row', backgroundColor: '#FFFFFF', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
+  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 64, flexDirection: 'row', backgroundColor: D.bgTab, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(60,48,32,0.17)' },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   itemOn: {},
   label: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14 },

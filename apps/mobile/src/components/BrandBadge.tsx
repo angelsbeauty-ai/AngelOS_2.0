@@ -22,7 +22,7 @@ export function BrandLogo({ platform, size = 20 }: { platform: string; size?: nu
     <SvgText x="12" y="13.6" fontSize="6.6" fontWeight="bold" fill="#FFF" textAnchor="middle" fontFamily="Arial">LINE</SvgText></Svg>;
   if (platform === 'tiktok') return <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx="12" cy="12" r="12" fill="#000" />
     <Path d="M15.6 5.5c.4 1.6 1.5 2.7 3.1 2.9v2.4c-1.1 0-2.2-.3-3.1-.9v4.7c0 2.6-2.1 4.6-4.7 4.6s-4.6-2-4.6-4.6 2.3-4.8 5-4.5v2.5c-1.2-.4-2.6.5-2.6 2 0 1.2.9 2.1 2.2 2.1 1.2 0 2.2-.9 2.2-2.2V5.5z" fill="#FFF" /></Svg>;
-  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#8E8E8E' }} />;
+  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#766E64' }} />;
 }
 
 /** Brand logo with a thin white ring, for the bottom-right of avatars. Facebook threads are Messenger conversations. */
@@ -32,18 +32,19 @@ export function BrandBadge({ platform, size = 20 }: { platform: string; size?: n
 
 /** Round profile photo with an initial fallback and the platform badge bottom-right. */
 export function ContactAvatar({ name, uri, platform, size = 64 }: { name: string; uri?: string | null; platform?: string; size?: number }) {
-  const initial = (name.trim()[0] ?? '?').toUpperCase();
+  const parts = name.replace(/^[^\p{L}]+/u, '').trim().split(/\s+/).filter(Boolean);
+  const initial = (parts.length > 1 ? (parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '') : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
   return <View style={{ width: size, height: size }} accessibilityElementsHidden>
-    {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#EFEFEF' }} />
-      : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#EFEFEF' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}
-    {platform ? <View style={{ position: 'absolute', right: -3, bottom: -3 }}><BrandBadge platform={platform} size={Math.round(size * 0.34)} /></View> : null}
+    {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#EFECE6' }} />
+      : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#E9E5DE' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}
+    {platform ? <View style={{ position: 'absolute', right: -3, bottom: -3 }}><BrandBadge platform={platform} size={Math.round(size * 0.32)} /></View> : null}
   </View>;
 }
 
 const styles = StyleSheet.create({
-  ring: { backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  ring: { backgroundColor: '#F7F5F1', alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', justifyContent: 'center' },
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   line: { color: '#FFF', fontFamily: tokens.font.uiBold, letterSpacing: -0.3 },
-  initial: { fontFamily: tokens.font.uiSemibold, color: '#262626' }
+  initial: { fontFamily: tokens.font.uiSemibold, color: '#151515' }
 });

@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   title: { fontFamily: tokens.font.display, fontSize: 40, lineHeight: 46, color: ui.colors.primaryText, textAlign: 'center', marginTop: 8 },
   sub: { fontFamily: tokens.font.ui, fontSize: 15, color: ui.colors.secondaryText, marginBottom: 18 },
   form: { width: '100%', gap: 12 },
-  forgot: { alignSelf: 'flex-end', color: '#262626', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
+  forgot: { alignSelf: 'flex-end', color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
   signup: { paddingVertical: 14, minHeight: 44, justifyContent: 'center' },
   signupText: { color: ui.colors.primaryText, fontFamily: tokens.font.uiSemibold, fontSize: 14, textDecorationLine: 'underline' }
 });

@@ -41,13 +41,13 @@ function AskButton({ pathname }: { pathname: string }) {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1, backgroundColor: '#FFFFFF' },
+  bg: { flex: 1, backgroundColor: '#F7F5F1' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: tokens.space.screen, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   stack: { gap: spacing.md },
   webStack: { maxWidth: 480, width: '100%', paddingBottom: 120 },
   refresh: { alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.light.border },
   refreshText: { color: colors.light.secondaryText, fontSize: 13, fontWeight: '600' },
-  ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, paddingHorizontal: 16, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.light.primaryText, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
+  ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, paddingHorizontal: 16, paddingVertical: 11, borderRadius: 999, backgroundColor: colors.light.primaryText, shadowColor: '#151515', shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
   askText: { color: colors.light.background, fontWeight: '700', fontSize: 15 }
 });

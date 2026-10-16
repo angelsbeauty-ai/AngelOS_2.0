@@ -18,6 +18,8 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [muted, setMutedState] = useState(false);
+  const [caption, setCaption] = useState<string | null>(null);
   const roomRef = useRef<Room | null>(null);
   const pcRef = useRef<any>(null); const micRef = useRef<any>(null); const outRef = useRef<any>(null);
   const audioRef = useRef<HTMLMediaElement[]>([]);
@@ -33,7 +35,15 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     if (outRef.current) { outRef.current.srcObject = null; outRef.current.remove?.(); }
     pcRef.current = null; micRef.current = null; outRef.current = null;
     void stopVoiceAudio();
+    setMutedState(false);
     setState('idle');
+  }
+
+  /** Mute only the microphone; the session stays open. */
+  function setMuted(m: boolean) {
+    setMutedState(m);
+    try { micRef.current?.getTracks?.().forEach((t: any) => { t.enabled = !m; }); } catch { /* ignore */ }
+    void roomRef.current?.localParticipant.setMicrophoneEnabled(!m).catch(() => undefined);
   }
 
   useEffect(() => {
@@ -56,7 +66,8 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     micRef.current = stream;
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
-    peer.createDataChannel('oai-events'); // events are not saved anywhere
+    const dc = peer.createDataChannel('oai-events'); // events are not saved anywhere; only the latest spoken line is shown as a caption
+    dc.onmessage = (e: any) => { try { const ev = JSON.parse(e.data); if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) setCaption(ev.transcript.trim()); } catch { /* ignore */ } };
     const offer = await peer.createOffer({ offerToReceiveAudio: true });
     await peer.setLocalDescription(offer);
     const res = await fetch('https://api.openai.com/v1/realtime/calls', { method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/sdp' } });
@@ -100,7 +111,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop };
+  return { status, state, error, start, stop, muted, setMuted, caption };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {

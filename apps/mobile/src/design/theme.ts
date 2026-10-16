@@ -1,25 +1,25 @@
 import { Platform as _P } from 'react-native';
-// AngelOS Option A design tokens: Palette 2, Greige & Rose Gold.
-const charcoal = '#262626';
+// AngelOS final-D2 design tokens (Neutral Calm). See `D` for the full set.
+const charcoal = '#151515';
 
 export const tokens = {
   color: {
     charcoal,
-    charcoal2: '#737373',
+    charcoal2: '#6B645B',
     charcoal3: 'rgba(42,39,37,0.45)',
     ivory: '#FFFFFF',
     ivorySolid: '#FFFFFF',
     raised: '#FFFFFF',
-    pearl: '#FFFFFF',
-    tide: '#000000',
-    accentPressed: '#262626',
+    pearl: '#F7F5F1',
+    tide: '#151515',
+    accentPressed: '#4F4A44',
     coral: '#B3261E',
-    success: '#000000',
-    warning: '#262626',
+    success: '#4F4A44',
+    warning: '#4F4A44',
     error: '#B3261E',
     glassTint: '#FFFFFF',
-    seaGlass: '#737373',
-    hairline: '#DBDBDB',
+    seaGlass: '#6B645B',
+    hairline: 'rgba(60,48,32,0.17)',
     onCharcoal: '#FFFFFF'
   },
   type: {
@@ -43,7 +43,7 @@ export const tokens = {
     uiBold: 'Manrope_700Bold'
   },
   numerals: ['lining-nums', 'tabular-nums'] as const,
-  icon: { weight: 'duotone' as const, duotoneColor: '#8E8E8E', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
+  icon: { weight: 'duotone' as const, duotoneColor: '#766E64', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
   space: { screen: 16, tap: 44 },
   radius: { pill: 999, block: 20, card: 28 }
 } as const;
@@ -75,7 +75,7 @@ const lightCompat = {
   secondaryText: tokens.color.charcoal2,
   border: tokens.color.hairline,
   gold: tokens.color.tide,
-  softGold: '#EFEFEF',
+  softGold: '#EFECE6',
   success: tokens.color.success,
   warning: tokens.color.warning,
   critical: tokens.color.error
@@ -94,3 +94,11 @@ export const shadow = { soft: { shadowColor: charcoal, shadowOpacity: 0, shadowR
 /** Flat Instagram-style surfaces: solid white, no blur/shadow (name kept for compatibility). */
 export const webGlass: Record<string, unknown> = { backgroundColor: '#FFFFFF' };
 void _P;
+
+/** final-D2 tokens (TOKENS.md). */
+export const D = {
+  bg: '#F7F5F1', surface: '#FFFFFF', bgTab: '#FBFAF7', fill: '#EFECE6', fill2: '#E9E5DE',
+  text: '#151515', text2: '#4F4A44', muted: '#6B645B', faint: '#766E64', disabled: '#BDB6AC',
+  hairline: 'rgba(60,48,32,0.17)', accent: '#B8A48A', accentDeep: '#8C7A64', accentTint: 'rgba(184,164,138,0.20)',
+  pendingRule: '#8A8379', danger: '#B3261E', listening: '#75654F',
+} as const;

@@ -27,7 +27,7 @@ export default function ImportMediaScreen() {
 }
 
 const styles = StyleSheet.create({
-  primary: { minHeight: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: '#737373' },
+  primary: { minHeight: 52, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: '#6B645B' },
   primaryText: { color: '#FFFFFF', fontFamily: 'Manrope_700Bold', fontSize: 16 },
   cancel: { color: ui.colors.primaryText, fontFamily: 'Manrope_600SemiBold', fontSize: 16, paddingHorizontal: 8 }
 });

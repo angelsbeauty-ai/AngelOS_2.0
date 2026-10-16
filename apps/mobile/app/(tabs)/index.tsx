@@ -2,7 +2,7 @@ import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ArrowRight } from 'phosphor-react-native/src/icons/ArrowRight';
+import { ArrowUpRight } from 'phosphor-react-native/src/icons/ArrowUpRight';
 import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';
 import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
 import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
@@ -10,7 +10,6 @@ import { ShareNetwork } from 'phosphor-react-native/src/icons/ShareNetwork';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
-import { BrandMark } from '../../src/components/BrandMark';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { getMe } from '../../src/lib/me';
 import { supabase } from '../../src/lib/supabase';
@@ -18,9 +17,9 @@ import { getHomeSummary, type HomeSummary } from '../../src/lib/home';
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { tokens } from '../../src/design/theme';
 
-export const GREEN = '#000000';
+export const GREEN = '#151515';
 
-const ICON = { size: 16, color: '#000', weight: 'regular' as const };
+const ICON = { size: 16, color: '#151515', weight: 'regular' as const };
 
 /** Home Command Center: date, greeting + voice, AI briefing (numbers only), and four boxes. Real data only. */
 export default function HomeScreen() {
@@ -69,11 +68,11 @@ export default function HomeScreen() {
 
   return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()}>
     <View style={styles.hello}>
-      <BrandMark size={64} />
       <View style={{ flex: 1, gap: 14 }}>
         <View style={{ gap: 2 }}>
           <Text style={styles.hi} numberOfLines={1}>{name ? t('home.hiName', { defaultValue: 'Hi, {{name}}', name }) : t('home.hi', 'Hi')}</Text>
           <Text style={styles.welcome}>{t('home.welcome', 'Welcome back')}</Text>
+          <View style={styles.rule} />
         </View>
         <View style={{ gap: 4 }}>
           <Text style={styles.big}>{hello}</Text>
@@ -95,43 +94,16 @@ export default function HomeScreen() {
           lines={so ? (so.connected.length ? [so.followersChange7d != null ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'this week')}` : '', so.engagement != null ? `${so.engagement.toLocaleString(locale)} ${t('home.interactions', 'recent interactions')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('home.weekTitle')}</Text>
-        {week ? <>
-          <Goal label={t('home.weekStories')} n={week.stories} goal={week.goals.stories} of={t('home.weekOf', { n: week.stories, goal: week.goals.stories })} />
-          <Goal label={t('home.weekCarousel')} n={week.carousels} goal={week.goals.carousels} of={t('home.weekOf', { n: week.carousels, goal: week.goals.carousels })} />
-          <Text style={styles.note}>{t('home.weekNote')}</Text>
-        </> : <Text style={styles.note}>{sum && !sumErr ? t('home.weekMissing') : '–'}</Text>}
-      </View>
-
-      {inspire ? <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('home.inspireTitle')}</Text>
-        <Text style={styles.inspire} numberOfLines={2}>{inspire.title}</Text>
-        <Text style={styles.note}>{PLATFORM_NAME[inspire.platform as keyof typeof PLATFORM_NAME] ?? inspire.platform} · {t('home.inspireViews', { n: inspire.views.toLocaleString(locale) })}</Text>
-        <Text style={styles.note}>{t('home.inspireNote')}</Text>
-      </View> : null}
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('home.competeTitle')}</Text>
-        <Text style={styles.note}>{t('home.competeBody')}</Text>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t('home.practiceTitle')}</Text>
-        <Practice title={t('home.practiceAsk')} sub={t('home.practiceAskSub')} onPress={() => router.push('/ai' as any)} />
-        <Practice title={t('home.practicePersonality')} sub={t('home.practicePersonalitySub')} onPress={() => router.push('/ai-settings' as any)} />
-        <Practice title={t('home.practiceStory')} sub={t('home.practiceStorySub')} onPress={() => router.push({ pathname: '/content/new', params: { format: 'story' } } as any)} last />
-      </View>
     </>}
   </Screen>;
 }
 
 function Box({ icon, title, value, unit, lines, onPress }: { icon: ReactNode; title: string; value: string; unit?: string; lines: string[]; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, pressed && { backgroundColor: '#FAFAFA' }]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, pressed && { backgroundColor: '#FBFAF7' }]}>
     <View style={styles.titleRow}>{icon}<Text style={styles.boxTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text></View>
     <Text style={styles.value} numberOfLines={1} adjustsFontSizeToFit>{value}{unit ? <Text style={styles.unit}> {unit}</Text> : null}</Text>
     <View style={{ gap: 4, flex: 1 }}>{lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={styles.line} numberOfLines={1}>{l}</Text>)}</View>
-    <View style={styles.arrow}><ArrowRight size={18} color="#000" weight="bold" /></View>
+    <View style={styles.arrow}><ArrowUpRight size={18} color="#000" weight="bold" /></View>
   </Pressable>;
 }
 
@@ -154,29 +126,30 @@ function Practice({ title, sub, onPress, last }: { title: string; sub: string; o
 }
 
 const styles = StyleSheet.create({
+  rule: { width: 32, height: 1.5, marginTop: 10, backgroundColor: '#B8A48A' },
   hello: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#737373' },
-  welcome: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#000' },
-  big: { fontFamily: tokens.font.uiBold, fontSize: 32, lineHeight: 38, color: '#000', letterSpacing: -0.5 },
-  sub: { fontFamily: tokens.font.uiMedium, fontSize: 20, lineHeight: 26, color: '#262626' },
+  hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#6B645B' },
+  welcome: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
+  big: { fontFamily: tokens.font.uiBold, fontSize: 32, lineHeight: 38, color: '#151515', letterSpacing: -0.5 },
+  sub: { fontFamily: tokens.font.uiMedium, fontSize: 20, lineHeight: 26, color: '#151515' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  box: { width: '48.4%', minHeight: 196, padding: 16, gap: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFEFEF', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
+  box: { width: '48.4%', minHeight: 196, padding: 16, gap: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(60,48,32,0.17)', shadowColor: '#151515', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  boxTitle: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#000' },
-  value: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, color: '#000' },
-  unit: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#737373' },
-  line: { fontFamily: tokens.font.ui, fontSize: 13.5, lineHeight: 18, color: '#262626' },
-  arrow: { alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFEFEF' },
-  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFEFEF' },
-  cardTitle: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#000' },
-  goalLabel: { flex: 1, fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#000' },
-  goalOf: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#000', fontVariant: ['tabular-nums'] },
-  track: { height: 3, borderRadius: 2, backgroundColor: '#EFEFEF', overflow: 'hidden' },
-  fill: { height: 3, backgroundColor: '#000' },
-  inspire: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 22, color: '#000' },
+  boxTitle: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
+  value: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, color: '#151515' },
+  unit: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#6B645B' },
+  line: { fontFamily: tokens.font.ui, fontSize: 13.5, lineHeight: 18, color: '#151515' },
+  arrow: { alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EFECE6' },
+  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EFECE6' },
+  cardTitle: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
+  goalLabel: { flex: 1, fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
+  goalOf: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515', fontVariant: ['tabular-nums'] },
+  track: { height: 3, borderRadius: 2, backgroundColor: '#EFECE6', overflow: 'hidden' },
+  fill: { height: 3, backgroundColor: '#151515' },
+  inspire: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 22, color: '#151515' },
   practice: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
-  practiceLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFEFEF' },
-  practiceTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#000' },
-  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#737373' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 15, color: '#737373' }
+  practiceLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EFECE6' },
+  practiceTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
+  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6B645B' },
+  muted: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B' }
 });

@@ -294,7 +294,7 @@ export default function NewPostScreen() {
       <Text style={styles.label}>{t('cnew.presets')}</Text>
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>{t('cnew.comments')}</Text>
-        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#EFEFEF', true: '#000' }} thumbColor="#FFF" />
+        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#EFECE6', true: '#151515' }} thumbColor="#FFF" />
       </View>
       {!commentsOn ? <SupportText>{t('cnew.commentsOff')}</SupportText> : null}
       <TextInput value={tags} onChangeText={setTags} placeholder={t('cnew.tagPeople')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" style={styles.input} />
@@ -370,18 +370,18 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 },
   chip: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
-  chipSelected: { backgroundColor: '#EFEFEF', borderColor: '#EFEFEF' },
-  chipText: { color: '#262626', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
-  chipTextSelected: { color: '#000' },
-  label: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#000', marginTop: 8 },
+  chipSelected: { backgroundColor: '#EFECE6', borderColor: '#EFECE6' },
+  chipText: { color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
+  chipTextSelected: { color: '#151515' },
+  label: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#151515', marginTop: 8 },
   plat: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
-  platOn: { backgroundColor: '#EFEFEF', borderColor: '#EFEFEF' },
-  platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#000' },
+  platOn: { backgroundColor: '#EFECE6', borderColor: '#EFECE6' },
+  platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
-  switchLabel: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#000' },
-  primaryBtn: { minHeight: 48, borderRadius: 12, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center' },
+  switchLabel: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },
+  primaryBtn: { minHeight: 48, borderRadius: 12, backgroundColor: '#151515', alignItems: 'center', justifyContent: 'center' },
   primaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#FFF' },
-  secondaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#000' },
+  secondaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   input: { minHeight: 44, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.block, paddingHorizontal: 14, marginVertical: 6, color: colors.charcoal, backgroundColor: colors.raised, fontFamily: tokens.font.ui, fontSize: 16 },
   captionInput: { minHeight: 140, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.block, padding: 14, marginVertical: 6, color: colors.charcoal, backgroundColor: colors.raised, fontFamily: tokens.font.ui, fontSize: 16, textAlignVertical: 'top' },
   dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

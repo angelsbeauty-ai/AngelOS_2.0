@@ -29,7 +29,6 @@ import { DeleteAccountSheet } from '../../src/components/DeleteAccountSheet';
 import { clearMe, getMe, updateMe, type Me } from '../../src/lib/me';
 import { getActiveWorkspace, type WorkspaceSummary } from '../../src/lib/workspace';
 import { AiMeter } from '../../src/components/AiMeter';
-import { FounderAiUsage } from '../../src/components/FounderAiUsage';
 import { listServices } from '../../src/lib/bookings';
 import { listConnections } from '../../src/lib/messaging';
 import { getSubscription } from '../../src/lib/subscription';
@@ -90,7 +89,7 @@ export default function ProfileScreen() {
   return <Screen onRefresh={load}>
     <View style={{ gap: 2 }}><Overline>{t('pf.eyebrow')}</Overline><ScreenTitle>{t('pf.title')}</ScreenTitle></View>
 
-    {me?.founder ? <FounderAiUsage /> : me && ws ? <AiMeter workspaceId={ws.id} /> : null}
+    {me && ws ? <AiMeter workspaceId={ws.id} /> : null}
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
     {me ? <View style={styles.card}>
@@ -167,17 +166,17 @@ function checkedLabel(t: (k: string, o?: Record<string, unknown>) => string, min
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
-  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#737373' },
-  avatarText: { color: '#FFFFFF', fontFamily: tokens.font.display, fontSize: 26 },
-  name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#262626' },
-  studio: { fontFamily: tokens.font.ui, fontSize: 13, color: '#737373' },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(60,48,32,0.17)', ...(webGlass as object) },
+  avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9E5DE' },
+  avatarText: { color: '#151515', fontFamily: tokens.font.display, fontSize: 26 },
+  name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
+  studio: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
   edit: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: ROSE },
-  version: { textAlign: 'center', fontFamily: tokens.font.ui, fontSize: 12, color: '#8E8E8E', marginTop: 4 },
+  version: { textAlign: 'center', fontFamily: tokens.font.ui, fontSize: 12, color: '#766E64', marginTop: 4 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
-  sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FAFAFA' },
-  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#262626', textAlign: 'center', marginBottom: 4 },
+  sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FBFAF7' },
+  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#151515', textAlign: 'center', marginBottom: 4 },
   option: { minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)' },
-  optionOn: { backgroundColor: '#262626', borderColor: '#262626' },
-  optionText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#262626' }
+  optionOn: { backgroundColor: '#151515', borderColor: '#151515' },
+  optionText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' }
 });

@@ -117,7 +117,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
           {month ? Array.from({ length: 7 }, (_, i) => <View key={`w${i}`} style={styles.wd}><Text style={styles.dow}>{new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })}</Text></View>) : null}
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
-            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#000000' : ps.length ? ROSE : 'transparent';
+            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#151515' : ps.length ? ROSE : 'transparent';
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, month && styles.cellBig, today && styles.cellToday, sel && !today && styles.cellSel]}>
               {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
               <Text numberOfLines={1} style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
@@ -162,42 +162,42 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
-  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
+  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
   cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
   stripBig: { paddingVertical: 14, paddingHorizontal: 4, marginHorizontal: -10 },
   cellBig: { paddingVertical: 12, minHeight: 64 },
   wd: { width: '14.28%', alignItems: 'center', paddingBottom: 6 },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
-  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#262626', textAlign: 'center' },
-  cellToday: { backgroundColor: '#262626' }, cellSel: { backgroundColor: 'rgba(0,0,0,0.12)' },
-  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8E8E8E' },
-  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#262626', fontVariant: ['lining-nums'] },
+  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
+  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#151515', textAlign: 'center' },
+  cellToday: { backgroundColor: '#151515' }, cellSel: { backgroundColor: 'rgba(0,0,0,0.12)' },
+  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#766E64' },
+  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515', fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   marks: { flexDirection: 'row', gap: 1, minHeight: 11 },
   dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },
   seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   segOn: { backgroundColor: ROSE },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#262626' },
-  list: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', overflow: 'hidden', ...(webGlass as object) },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#DBDBDB' },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
+  list: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', overflow: 'hidden', ...(webGlass as object) },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(60,48,32,0.17)' },
   thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' },
   thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   half: { flex: 1 },
-  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#262626' },
+  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#151515' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   fail: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16, color: '#A3392F' },
-  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#737373', flexShrink: 1 },
-  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFEFEF', ...(webGlass as object) },
-  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#262626', textAlign: 'center' },
-  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#737373', textAlign: 'center' },
+  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6B645B', flexShrink: 1 },
+  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EFECE6', ...(webGlass as object) },
+  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#151515', textAlign: 'center' },
+  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B', textAlign: 'center' },
   emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
-  fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ROSE, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ROSE, shadowColor: '#151515', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
   fabText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#FFF' },
   backdrop: { flex: 1, justifyContent: 'center', padding: 32, backgroundColor: 'rgba(0,0,0,0.25)' },
   menu: { borderRadius: 20, backgroundColor: '#FFFFFF', overflow: 'hidden' },
-  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#DBDBDB' },
-  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#262626' }
+  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(60,48,32,0.17)' },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' }
 });
