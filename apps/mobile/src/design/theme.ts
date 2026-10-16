@@ -44,7 +44,7 @@ export const tokens = {
   },
   numerals: ['lining-nums', 'tabular-nums'] as const,
   icon: { weight: 'duotone' as const, duotoneColor: '#B98474', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
-  space: { screen: 20, tap: 44 },
+  space: { screen: 16, tap: 44 },
   radius: { pill: 999, block: 20, card: 28 }
 } as const;
 

@@ -16,7 +16,6 @@ import { Lightbulb } from 'phosphor-react-native/src/icons/Lightbulb';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
-import { Scissors } from 'phosphor-react-native/src/icons/Scissors';
 import { Screen } from '../../src/components/Screen';
 import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui';
 import { Chip, ROSE } from '../../src/components/SettingsList';
@@ -93,10 +92,10 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
     <Screen onRefresh={load}>
       <View style={styles.head}>
         <View style={{ flex: 1 }}>{!asCalendar ? <Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline> : null}<ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
-        {asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav2.bookingsCal')} onPress={() => router.push('/bookings/week' as any)} style={styles.round}><Scissors size={20} color="#2A2725" /></Pressable> : null}
+        
         {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#2A2725" weight={month ? 'fill' : 'regular'} /></Pressable> : null}
         {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#2A2725" /></Pressable> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable>
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#2A2725" /></Pressable> : null}
       </View>
 
       {state === 'loading' ? <><Skeleton rows={1} height={64} /><Skeleton rows={4} height={86} /></> : null}
@@ -170,15 +169,15 @@ const styles = StyleSheet.create({
   round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
-  stripBig: { paddingVertical: 12, paddingHorizontal: 6, marginHorizontal: -8 },
-  cellBig: { paddingVertical: 11, minHeight: 58 },
+  stripBig: { paddingVertical: 14, paddingHorizontal: 4, marginHorizontal: -10 },
+  cellBig: { paddingVertical: 12, minHeight: 64 },
   wd: { width: '14.28%', alignItems: 'center', paddingBottom: 6 },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(250,248,245,0.86)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(42,39,37,0.08)', ...(webGlass as object) },
   monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#2A2725', textAlign: 'center' },
   cellToday: { backgroundColor: '#2A2725' }, cellSel: { backgroundColor: 'rgba(140,85,71,0.12)' },
   dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#8C847D' },
-  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#2A2725', fontVariant: ['lining-nums'] },
+  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#2A2725', fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   marks: { flexDirection: 'row', gap: 1, minHeight: 11 },
   dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },

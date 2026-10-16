@@ -43,8 +43,8 @@ export function Banner({ children, tone = 'info' }: PropsWithChildren<{ tone?: '
 const styles = StyleSheet.create({
   badge: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' },
   badgeText: { fontFamily: tokens.font.uiBold, fontSize: 11, letterSpacing: 0.4 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: ui.colors.softGold },
-  avatarText: { fontFamily: tokens.font.display, fontSize: 22, color: ui.colors.primaryText },
+  avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: ui.colors.softGold },
+  avatarText: { fontFamily: tokens.font.uiSemibold, fontSize: 22, color: ui.colors.primaryText },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: tokens.color.tide },
   dotSpace: { width: 10, height: 10 },
   chip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, borderColor: ui.colors.border, backgroundColor: ui.colors.elevated, justifyContent: 'center' },
