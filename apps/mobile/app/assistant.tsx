@@ -56,14 +56,14 @@ export default function AssistantWorkspace() {
   }
 
   return <Screen onRefresh={() => load()}>
-    <ScreenTitle>{profile?.display_name ?? 'Assistant'}</ScreenTitle>
+    <ScreenTitle>AI Assistant workspace</ScreenTitle>
     <SupportText>This is her workspace. Personality, rules, skills, and the repeating tasks she can keep.</SupportText>
 
     <Card>
       <SectionTitle>Personality</SectionTitle>
       <Text style={styles.line}>{profile ? `${profile.display_name} · ${profile.tone.replaceAll('_', ' ')} · ${profile.proactivity}` : 'Loading…'}</Text>
       <SupportText>{profile?.personality_prompt?.trim() || 'No extra personality note yet.'}</SupportText>
-      <ActionButton label="Edit personality and reply style" onPress={() => router.push('/ai-settings' as any)} />
+      <ActionButton label="AI Assistant settings" onPress={() => router.push('/ai-settings' as any)} />
     </Card>
 
     <Card>

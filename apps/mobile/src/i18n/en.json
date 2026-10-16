@@ -289,7 +289,7 @@
   "conversation": "Conversation",
   "savedReplies": "Saved replies",
   "connections": "Connections",
-  "assistant": "Assistant settings",
+  "assistant": "AI Assistant settings",
   "suggestions": "Suggestions",
   "clients": "Clients",
   "client": "Client",
@@ -811,7 +811,7 @@
   "delDone": "Done",
   "business": "Business",
   "money": "Money & income",
-  "aiAssistant": "AI assistant",
+  "aiAssistant": "AI Assistant workspace",
   "checkedH": "Checked {{h}} h ago",
   "checkedD": "Checked {{d}} days ago"
  },
@@ -878,7 +878,7 @@
  },
  "aiset": {
   "s0": "Loading assistant settings…",
-  "s1": "Assistant settings",
+  "s1": "AI Assistant settings",
   "s2": "How AngelOS talks to you, and how it writes to your clients.",
   "s3": "Your assistant",
   "s4": "How it talks to you",

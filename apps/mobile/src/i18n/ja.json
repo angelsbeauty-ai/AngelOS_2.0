@@ -289,7 +289,7 @@
   "conversation": "会話",
   "savedReplies": "定型返信",
   "connections": "連携",
-  "assistant": "アシスタント設定",
+  "assistant": "AIアシスタント設定",
   "suggestions": "提案",
   "clients": "お客様",
   "client": "お客様",
@@ -811,7 +811,7 @@
   "delDone": "閉じる",
   "business": "ビジネス",
   "money": "売上・収入",
-  "aiAssistant": "AIアシスタント",
+  "aiAssistant": "AIアシスタントの作業スペース",
   "checkedH": "{{h}}時間前に確認",
   "checkedD": "{{d}}日前に確認"
  },
@@ -878,7 +878,7 @@
  },
  "aiset": {
   "s0": "アシスタント設定を読み込み中…",
-  "s1": "アシスタント設定",
+  "s1": "AIアシスタント設定",
   "s2": "AngelOSの話し方と、お客様への文章の書き方を決めるよ。",
   "s3": "あなたのアシスタント",
   "s4": "話し方",
