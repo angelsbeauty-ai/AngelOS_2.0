@@ -101,8 +101,8 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   async function startOpenAI(secret: string) {
     const g: any = globalThis as any;
     if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
-    // Audio session: LiveKit's native path also manages it, so a failure here must not stop the call.
-    await startVoiceAudio().catch(() => undefined);
+    // Audio session must succeed before the mic opens. Swallowing a failure here and continuing is what kills the iPhone process.
+    await startVoiceAudio();
     // Always pass explicit objects to native WebRTC: on iOS a missing (undefined) config reaches the native module as nil.
     const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
@@ -111,9 +111,9 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     micRef.current = stream;
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
-    // The init object is required on iPhone: with no init the native side gets a nil LKRTCDataChannelConfiguration,
-    // WebRTC reads its C++ DataChannelInit from nil and the app crashes natively the moment voice starts.
-    const dc = peer.createDataChannel('oai-events', { ordered: true });
+    // protocol must be a real string. Native builds an NSDictionary of the new channel and inserts dataChannel.protocol;
+    // the default is nil, and inserting nil throws NSInvalidArgumentException, which closes the app. ordered alone does not set it.
+    const dc = peer.createDataChannel('oai-events', { ordered: true, protocol: 'oai' });
     const answered = new Set<string>();
     dc.onmessage = (e: any) => {
       try {
