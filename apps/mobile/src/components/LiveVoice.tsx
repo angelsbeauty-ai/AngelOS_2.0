@@ -77,7 +77,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     try { pcRef.current?.close?.(); } catch { /* ignore */ }
     if (outRef.current) { outRef.current.srcObject = null; outRef.current.remove?.(); }
     pcRef.current = null; micRef.current = null; outRef.current = null;
-    void stopVoiceAudio();
+    void stopVoiceAudio().catch(() => undefined);
     setMutedState(false);
     setState('idle');
   }
@@ -101,15 +101,19 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   async function startOpenAI(secret: string) {
     const g: any = globalThis as any;
     if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
-    await startVoiceAudio();
-    const peer = new g.RTCPeerConnection();
+    // Audio session: LiveKit's native path also manages it, so a failure here must not stop the call.
+    await startVoiceAudio().catch(() => undefined);
+    // Always pass explicit objects to native WebRTC: on iOS a missing (undefined) config reaches the native module as nil.
+    const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
     if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }
     // On iPhone the remote audio track plays through the audio session automatically.
     const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     micRef.current = stream;
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
-    const dc = peer.createDataChannel('oai-events');
+    // The init object is required on iPhone: with no init the native side gets a nil LKRTCDataChannelConfiguration,
+    // WebRTC reads its C++ DataChannelInit from nil and the app crashes natively the moment voice starts.
+    const dc = peer.createDataChannel('oai-events', { ordered: true });
     const answered = new Set<string>();
     dc.onmessage = (e: any) => {
       try {
@@ -123,7 +127,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
           if (dc.readyState !== 'open') return;
           dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
           dc.send(JSON.stringify({ type: 'response.create' }));
-        });
+        }).catch(() => undefined);
       } catch { /* ignore */ }
     };
     const offer = await peer.createOffer({ offerToReceiveAudio: true });
@@ -147,7 +151,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (session.clientSecret) { await startOpenAI(session.clientSecret); return; }
       if (!session.url || !session.token) throw new Error(session.reason ?? 'Live voice is off.');
-      await startVoiceAudio();
+      await startVoiceAudio().catch(() => undefined);
       const room = new Room();
       roomRef.current = room;
       room.on(RoomEvent.TrackSubscribed, (track) => {
@@ -190,7 +194,7 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
 }
 
 /** Speech amplitude (0..1, linear) mapped so normal talking lands mid-range and loud speech near 1. */
-const shape = (a: number) => Math.min(1, Math.sqrt(Math.max(0, a)) * 1.9);
+export const shape = (a: number) => (Number.isFinite(a) ? Math.min(1, Math.sqrt(Math.max(0, a)) * 1.9) : 0);
 
 /**
  * Real audio levels for the orb.
@@ -215,7 +219,7 @@ function startMeter(src: { pc?: any; mic?: any; out?: () => any; room?: Room }, 
     try {
       if (web) level.current = shape(web.read());
       else if (src.room) { const r = src.room; let lv = muted.current ? 0 : r.localParticipant.audioLevel ?? 0; r.remoteParticipants.forEach((p) => { lv = Math.max(lv, p.audioLevel ?? 0); }); level.current = shape(lv); }
-      else if (src.pc?.getStats) {
+      else if (src.pc?.getStats && src.pc.connectionState !== 'closed' && src.pc.signalingState !== 'closed') {
         const stats = await src.pc.getStats(); let mic = 0; let out = 0;
         stats.forEach((r: any) => { if (r.kind !== 'audio' && r.mediaType !== 'audio') return; if (r.type === 'media-source' && typeof r.audioLevel === 'number') mic = r.audioLevel; if (r.type === 'inbound-rtp' && typeof r.audioLevel === 'number') out = r.audioLevel; });
         level.current = shape(Math.max(muted.current ? 0 : mic, out));

@@ -17,10 +17,12 @@ export function useOrbMotion(state: OrbState, level?: () => number, onFrame?: (f
     let id = 0;
     const tick = (now: number) => {
       const st = s.current; const dt = st.last ? Math.min(0.05, (now - st.last) / 1000) : 1 / 60; st.last = now;
-      let raw = state === 'live' && level ? Math.max(0, Math.min(1, level())) : 0;
+      let raw = state === 'live' && level ? Number(level()) : 0;
+      raw = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 0;
       if (raw < 0.04) raw = 0;
       const k = raw > st.L ? 0.05 : 0.2; // attack 50 ms / release 200 ms (between the mic and AI-output values in the spec)
       st.L += (raw - st.L) * (1 - Math.exp(-dt / k));
+      if (!Number.isFinite(st.L)) st.L = 0;
       st.t += dt;
       if (!reduce) st.phase += dt * (1 + 1.2 * st.L + (state === 'connecting' ? 0.4 : 0));
       const scale = reduce ? 1 + 0.02 * st.L : 1 + 0.015 * Math.sin((2 * Math.PI * st.t) / 3.2) + 0.04 * st.L;

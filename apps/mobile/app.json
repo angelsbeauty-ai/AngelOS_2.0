@@ -9,7 +9,13 @@
     "plugins": [
       "expo-router",
       "@livekit/react-native-expo-plugin",
-      "@config-plugins/react-native-webrtc",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "AngelOS uses the microphone only while you talk to your assistant. Nothing is recorded.",
+          "cameraPermission": "Allow AngelOS to use the camera only when you choose to take a photo for your studio."
+        }
+      ],
       [
         "expo-image-picker",
         {
