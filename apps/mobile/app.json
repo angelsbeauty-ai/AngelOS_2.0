@@ -8,11 +8,20 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
+      "@livekit/react-native-expo-plugin",
+      "./plugins/withWebRtcDataChannelFix",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "AngelOS uses the microphone only while you talk to your assistant. Nothing is recorded.",
+          "cameraPermission": "Allow AngelOS to use the camera only when you choose to take a photo for your studio."
+        }
+      ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AngelOS to access photos and videos only when you choose business media to import.",
-          "cameraPermission": "Allow AngelOS to use the camera only when you choose to capture business media.",
+          "photosPermission": "Allow AngelOS to access your photos only when you choose a photo to post or to save to your studio media.",
+          "cameraPermission": "Allow AngelOS to use the camera only when you choose to take a photo for your studio.",
           "microphonePermission": false
         }
       ]
@@ -32,10 +41,20 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.angelos.app"
+      "bundleIdentifier": "com.angelos.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "AngelOS uses the microphone only while you talk to your assistant. Nothing is recorded."
+      }
     },
     "android": {
       "package": "com.angelos.app"
+    },
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F1EC"
     }
   }
 }

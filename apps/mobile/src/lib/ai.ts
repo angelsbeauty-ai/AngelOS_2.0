@@ -106,6 +106,18 @@ export async function cancelAiAction(workspaceId: string, actionId: string) {
   return apiFetch(`/workspaces/${workspaceId}/ai/actions/${actionId}/cancel`, { method: 'POST' });
 }
 
+export async function addAssistantSkill(workspaceId: string, content: string) {
+  return apiFetch<{ id: string; content: string }>(`/workspaces/${workspaceId}/ai/skills`, { method: 'POST', body: JSON.stringify({ content }) });
+}
+
+export async function retireAssistantSkill(workspaceId: string, skillId: string) {
+  return apiFetch<{ id: string }>(`/workspaces/${workspaceId}/ai/skills/${skillId}/retire`, { method: 'POST' });
+}
+
+export async function listAssistantMemory(workspaceId: string) {
+  return apiFetch<Array<{ id: string; category: string; content: string; status: string }>>(`/workspaces/${workspaceId}/ai/memory`);
+}
+
 export interface LearnedStyle {
   sampleCount: number;
   languageMix: { en: number; ja: number };
@@ -151,6 +163,7 @@ export const getBrainSummaries = (workspaceId: string) =>
 // C1 tools registry + live voice (ephemeral session minted by the server; nothing recorded or stored).
 export interface AiTool { key: string; kind: 'read' | 'draft' | 'change'; risk: 'low' | 'medium' | 'high'; label: string; example: string; touchesClients: boolean }
 export const listAiTools = (workspaceId: string) => apiFetch<{ tools: AiTool[] }>(`/workspaces/${workspaceId}/ai/tools`);
-export interface VoiceSession { available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; expiresAt: number | null; model: string | null; stored: false }
-export const getVoiceStatus = (workspaceId: string) => apiFetch<Omit<VoiceSession, 'clientSecret' | 'expiresAt' | 'model'>>(`/workspaces/${workspaceId}/ai/voice/status`);
-export const createVoiceSession = (workspaceId: string, screen?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen }) });
+export interface VoiceSession {
+  provider?: 'livekit' | 'openai' | null; available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; token: string | null; url: string | null; room: string | null; expiresAt: number | null; model: string | null; stored: false }
+export const getVoiceStatus = (workspaceId: string) => apiFetch<Pick<VoiceSession, 'available' | 'mode' | 'reason' | 'stored'>>(`/workspaces/${workspaceId}/ai/voice/status`);
+export const createVoiceSession = (workspaceId: string, screen?: string, context?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen, context }) });
