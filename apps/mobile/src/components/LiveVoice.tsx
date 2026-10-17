@@ -151,7 +151,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (session.clientSecret) { await startOpenAI(session.clientSecret); return; }
       if (!session.url || !session.token) throw new Error(session.reason ?? 'Live voice is off.');
-      await startVoiceAudio().catch(() => undefined);
+      await startVoiceAudio();
       const room = new Room();
       roomRef.current = room;
       room.on(RoomEvent.TrackSubscribed, (track) => {
