@@ -3,39 +3,82 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AccessibilityInfo, Animated, ActivityIndicator, Platform, StyleSheet, Text, TextInput, View, Pressable, type TextInputProps, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing, tokens, typography, webGlass } from '../design/theme';
+import { useAppearance } from '../design/appearance';
 
 const palette = colors.light;
 type TextTone = 'primary' | 'secondary' | 'gold' | 'success' | 'warning' | 'critical';
 
-function toneColor(tone: TextTone) {
+function useInk() {
+  const { mode, palette: p } = useAppearance();
+  const night = mode === 'night';
+  return {
+    night,
+    text: night ? '#F4F4F5' : '#151515',
+    secondary: night ? '#C7C7CC' : '#4F4A44',
+    muted: night ? '#9A9A9F' : '#6B645B',
+    card: night ? '#161618' : '#FFFFFF',
+    border: night ? 'rgba(255,255,255,0.14)' : '#EDEDED',
+    primaryBg: night ? '#F4F4F5' : '#151515',
+    primaryFg: night ? '#151515' : '#FFFFFF',
+    gloss: night ? p.gloss : {}
+  };
+}
+
+function toneColor(tone: TextTone, ink: ReturnType<typeof useInk>) {
   switch (tone) {
-    case 'gold': return palette.gold;
-    case 'success': return palette.success;
-    case 'warning': return palette.warning;
+    case 'gold': return ink.text;
+    case 'success': return ink.text;
+    case 'warning': return ink.text;
     case 'critical': return palette.critical;
-    case 'secondary': return palette.secondaryText;
-    default: return palette.primaryText;
+    case 'secondary': return ink.secondary;
+    default: return ink.text;
   }
 }
 
 const textProps = { maxFontSizeMultiplier: tokens.type.maxFontScale } as const;
 
 export function AppTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.appTitle}>{children}</Text>; }
-export function ScreenTitle({ children, color }: PropsWithChildren<{ color?: string }>) { return <Text {...textProps} style={[styles.screenTitle, color ? { color } : null]}>{children}</Text>; }
-export function SectionTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.sectionTitle}>{children}</Text>; }
-export function BodyText({ children, tone = 'primary' }: PropsWithChildren<{ tone?: TextTone }>) { return <Text {...textProps} style={[styles.body, { color: toneColor(tone) }]}>{children}</Text>; }
-export function SupportText({ children, tone = 'secondary' }: PropsWithChildren<{ tone?: TextTone }>) { return <Text {...textProps} style={[styles.support, { color: toneColor(tone) }]}>{children}</Text>; }
-export function Card({ children, premium = false }: PropsWithChildren<{ premium?: boolean }>) { return <View style={[styles.card, premium && styles.premiumCard]}>{children}</View>; }
+export function ScreenTitle({ children, color }: PropsWithChildren<{ color?: string }>) {
+  const ink = useInk();
+  return <Text {...textProps} style={[styles.screenTitle, { color: color ?? ink.text, fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 30 }]}>{children}</Text>;
+}
+export function SectionTitle({ children }: PropsWithChildren) {
+  const ink = useInk();
+  return <Text {...textProps} style={[styles.sectionTitle, { color: ink.text }]}>{children}</Text>;
+}
+export function BodyText({ children, tone = 'primary' }: PropsWithChildren<{ tone?: TextTone }>) {
+  const ink = useInk();
+  return <Text {...textProps} style={[styles.body, { color: toneColor(tone, ink) }]}>{children}</Text>;
+}
+export function SupportText({ children, tone = 'secondary' }: PropsWithChildren<{ tone?: TextTone }>) {
+  const ink = useInk();
+  return <Text {...textProps} style={[styles.support, { color: toneColor(tone, ink) }]}>{children}</Text>;
+}
+export function Card({ children, premium = false }: PropsWithChildren<{ premium?: boolean }>) {
+  const ink = useInk();
+  return <View style={[styles.card, { backgroundColor: ink.card, borderColor: ink.night ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)', borderWidth: ink.night ? 1 : StyleSheet.hairlineWidth, borderRadius: ink.night ? 20 : radius.card }, ink.night ? ink.gloss : null, premium && !ink.night && styles.premiumCard]}>{children}</View>;
+}
 export function StatCard({ label, value, detail }: { label: string; value: string; detail: string }) { return <View style={[styles.card, styles.statCard]}><SupportText>{label}</SupportText><Text {...textProps} style={styles.statValue}>{value}</Text><SupportText>{detail}</SupportText></View>; }
-export function Pill({ children, tone = 'secondary' }: PropsWithChildren<{ tone?: TextTone }>) { return <View style={[styles.pill, tone === 'gold' && styles.goldPill]}><Text {...textProps} style={[styles.pillText, { color: tone === 'gold' ? palette.primaryText : toneColor(tone) }]}>{children}</Text></View>; }
+export function Pill({ children, tone = 'secondary' }: PropsWithChildren<{ tone?: TextTone }>) {
+  const ink = useInk();
+  const on = tone === 'gold' || tone === 'success';
+  return <View style={[styles.pill, { backgroundColor: on ? ink.primaryBg : ink.card, borderColor: ink.border }, on && { borderColor: ink.primaryBg }]}><Text {...textProps} style={[styles.pillText, { color: on ? ink.primaryFg : (ink.night ? '#E5E5E7' : ink.text) }]}>{children}</Text></View>;
+}
 export function Row({ children, accessory }: PropsWithChildren<{ accessory?: ReactNode }>) { return <View style={styles.row}><View style={styles.rowContent}>{children}</View>{accessory}</View>; }
-export function PrimaryActionLabel({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.primaryAction}>{children}</Text>; }
-export function SecondaryActionLabel({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.secondaryAction}>{children}</Text>; }
+export function PrimaryActionLabel({ children }: PropsWithChildren) {
+  const ink = useInk();
+  return <Text {...textProps} style={[styles.primaryAction, { backgroundColor: ink.primaryBg, color: ink.primaryFg }]}>{children}</Text>;
+}
+export function SecondaryActionLabel({ children }: PropsWithChildren) {
+  const ink = useInk();
+  return <Text {...textProps} style={[styles.secondaryAction, { backgroundColor: 'transparent', borderColor: ink.border, color: ink.text }]}>{children}</Text>;
+}
 export function EmptyState({ title, message, action, icon }: { title: string; message?: string; action?: { label: string; onPress: () => void }; icon?: ReactNode }) {
+  const ink = useInk();
   return (
     <View style={styles.emptyState} accessibilityRole="summary">
       {icon ? <View style={styles.emptyIcon}>{icon}</View> : null}
-      <Text {...textProps} style={styles.emptyTitle}>{title}</Text>
+      <Text {...textProps} style={[styles.emptyTitle, { color: ink.text }]}>{title}</Text>
       {message ? <SupportText>{message}</SupportText> : null}
       {action ? <Button variant="secondary" label={action.label} onPress={action.onPress} /> : null}
     </View>
@@ -45,11 +88,12 @@ export function EmptyState({ title, message, action, icon }: { title: string; me
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 /** A1 button: charcoal pill (primary), outline (secondary), text (ghost), red outline (danger). Min 44pt. */
 export function Button({ label, onPress, variant = 'primary', loading, disabled, small, style, accessibilityLabel }: { label: string; onPress: () => void; variant?: ButtonVariant; loading?: boolean; disabled?: boolean; small?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel?: string }) {
+  const ink = useInk();
   const off = disabled || loading;
-  const fg = variant === 'primary' ? tokens.color.onCharcoal : variant === 'danger' ? palette.critical : palette.primaryText;
+  const fg = variant === 'primary' ? ink.primaryFg : variant === 'danger' ? palette.critical : ink.text;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ disabled: !!off, busy: !!loading }} disabled={off} onPress={onPress}
-      style={({ pressed }) => [styles.btn, small && styles.btnSmall, variant === 'primary' && styles.btnPrimary, variant === 'secondary' && styles.btnSecondary, variant === 'danger' && styles.btnDanger, variant === 'ghost' && styles.btnGhost, off && { opacity: 0.5 }, pressed && { transform: [{ scale: 0.97 }] }, style]}>
+      style={({ pressed }) => [styles.btn, small && styles.btnSmall, variant === 'primary' && { backgroundColor: ink.primaryBg }, variant === 'secondary' && { borderWidth: 1, borderColor: ink.border, backgroundColor: 'transparent' }, variant === 'danger' && styles.btnDanger, variant === 'ghost' && styles.btnGhost, pressed && !off && { transform: [{ scale: 0.97 }] }, style]}>
       {loading ? <ActivityIndicator color={fg} size="small" /> : <Text {...textProps} numberOfLines={1} style={[styles.btnText, { color: fg }]}>{label}</Text>}
     </Pressable>
   );
@@ -59,14 +103,15 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
 export function TextField({ label, error, hint, secure, style, ...props }: TextInputProps & { label: string; error?: string | null; hint?: string; secure?: boolean }) {
   const [shown, setShown] = useState(false);
   const { t } = useTranslation();
+  const ink = useInk();
   return (
     <View style={{ gap: 4 }}>
-      <Text {...textProps} style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.fieldBox, !!error && { borderColor: palette.critical }]}>
-        <TextInput {...props} secureTextEntry={secure && !shown} accessibilityLabel={label} placeholderTextColor={palette.secondaryText} maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.fieldInput, props.multiline && { minHeight: 80, textAlignVertical: 'top' }, style]} />
-        {secure ? <Pressable accessibilityRole="button" accessibilityLabel={shown ? t('ui.hidePassword') : t('ui.showPassword')} onPress={() => setShown((v) => !v)} hitSlop={8}><Text {...textProps} style={styles.eye}>{shown ? t('ui.hide') : t('ui.show')}</Text></Pressable> : null}
+      <Text {...textProps} style={[styles.fieldLabel, { color: ink.secondary }]}>{label}</Text>
+      <View style={[styles.fieldBox, { backgroundColor: ink.card, borderColor: error ? palette.critical : ink.border, minHeight: 48, borderRadius: 16 }]}>
+        <TextInput {...props} secureTextEntry={secure && !shown} accessibilityLabel={label} placeholderTextColor={ink.muted} maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.fieldInput, { color: ink.text }, props.multiline && { minHeight: 80, textAlignVertical: 'top' }, style]} />
+        {secure ? <Pressable accessibilityRole="button" accessibilityLabel={shown ? t('ui.hidePassword') : t('ui.showPassword')} onPress={() => setShown((v) => !v)} hitSlop={8}><Text {...textProps} style={[styles.eye, { color: ink.text }]}>{shown ? t('ui.hide') : t('ui.show')}</Text></Pressable> : null}
       </View>
-      {error ? <Text {...textProps} style={[styles.fieldHint, { color: palette.critical }]}>{error}</Text> : hint ? <Text {...textProps} style={styles.fieldHint}>{hint}</Text> : null}
+      {error ? <Text {...textProps} style={[styles.fieldHint, { color: palette.critical }]}>{error}</Text> : hint ? <Text {...textProps} style={[styles.fieldHint, { color: ink.muted }]}>{hint}</Text> : null}
     </View>
   );
 }
@@ -88,20 +133,23 @@ export function Badge({ status, label }: { status: string; label?: string }) {
 
 /** Tappable list row: avatar/leading, title, subtitle, trailing, chevron. */
 export function ListRow({ title, subtitle, leading, trailing, onPress, chevron = true, accessibilityHint }: { title: string; subtitle?: string; leading?: ReactNode; trailing?: ReactNode; onPress?: () => void; chevron?: boolean; accessibilityHint?: string }) {
+  const ink = useInk();
   return (
-    <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={title} accessibilityHint={accessibilityHint} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.listRow, pressed && { transform: [{ scale: 0.97 }] }]}>
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={title} accessibilityHint={accessibilityHint} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.listRow, { backgroundColor: ink.card, borderRadius: ink.night ? 20 : radius.card, borderWidth: ink.night ? 1 : 0, borderColor: ink.border }, pressed && { transform: [{ scale: 0.97 }] }]}>
       {leading ?? <Avatar name={title} />}
-      <View style={{ flex: 1, gap: 2 }}><Text {...textProps} numberOfLines={1} style={styles.listTitle}>{title}</Text>{subtitle ? <Text {...textProps} numberOfLines={2} style={styles.support}>{subtitle}</Text> : null}</View>
+      <View style={{ flex: 1, gap: 2 }}><Text {...textProps} numberOfLines={1} style={[styles.listTitle, { color: ink.text }]}>{title}</Text>{subtitle ? <Text {...textProps} numberOfLines={2} style={[styles.support, { color: ink.secondary }]}>{subtitle}</Text> : null}</View>
       {trailing}
-      {onPress && chevron ? <Text style={styles.chevron}>›</Text> : null}
+      {onPress && chevron ? <Text style={[styles.chevron, { color: ink.muted }]}>›</Text> : null}
     </Pressable>
   );
 }
 
 /** Big-number tile (Cormorant tabular numerals). */
 export function StatTile({ label, value, detail, onPress }: { label: string; value: string | number; detail?: string; onPress?: () => void }) {
-  const body = <><Text {...textProps} style={styles.tileLabel}>{label}</Text><Text {...textProps} style={styles.tileValue}>{value}</Text>{detail ? <Text {...textProps} style={styles.fieldHint}>{detail}</Text> : null}</>;
-  return onPress ? <Pressable accessibilityRole="button" onPress={onPress} style={[styles.card, styles.tile]}>{body}</Pressable> : <View style={[styles.card, styles.tile]}>{body}</View>;
+  const ink = useInk();
+  const body = <><Text {...textProps} style={[styles.tileLabel, { color: ink.secondary }]}>{label}</Text><Text {...textProps} style={[styles.tileValue, { color: ink.text }]}>{value}</Text>{detail ? <Text {...textProps} style={[styles.fieldHint, { color: ink.muted }]}>{detail}</Text> : null}</>;
+  const box = [styles.card, styles.tile, { backgroundColor: ink.card, borderColor: ink.border, borderRadius: ink.night ? 20 : radius.card }, ink.night ? ink.gloss : null];
+  return onPress ? <Pressable accessibilityRole="button" onPress={onPress} style={box}>{body}</Pressable> : <View style={box}>{body}</View>;
 }
 
 /** Page header: large Cormorant title, optional subtitle, optional action on the right. */

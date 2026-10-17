@@ -361,9 +361,9 @@
   "archived": "Archived",
   "saved": "Saved replies",
   "loading": "Loading messages…",
-  "none": "No conversations yet",
+  "none": "No messages yet",
   "nothing": "Nothing here",
-  "noneMsg": "Paste a message a client sent you on LINE, Instagram or Facebook to get an AI reply draft.",
+  "noneMsg": "When a client messages you on Instagram, Facebook or LINE, the conversation shows up here.",
   "tryFilter": "Try another filter.",
   "unknown": "Unknown sender",
   "needsYou": "Needs you",
@@ -457,7 +457,7 @@
   }
  },
  "cf": {
-  "quick": "Quick Record",
+  "quick": "New client",
   "newTitle": "New Client",
   "newSub": "Start with what you know. AngelOS can complete the profile over time.",
   "name": "Name",
@@ -467,7 +467,7 @@
   "emailOpt": "Email (optional)",
   "email": "Email",
   "lang": "Language",
-  "langPh": "Language, e.g. en / ja",
+  "langPh": "English or Japanese",
   "create": "Create client",
   "saving": "Saving…",
   "createFail": "Could not create client",
@@ -1237,7 +1237,7 @@
   "s15": "Private student token"
  },
  "svcs": {
-  "s0": "Booking Rules",
+  "s0": "Services",
   "s1": "Services",
   "s2": "Your real services, timing and prices power reliable availability. AngelOS never fills in missing business facts.",
   "s3": "Active services",
@@ -1469,7 +1469,7 @@
   "s9": "Approved"
  },
  "mkt": {
-  "s0": "Growth Context",
+  "s0": "Marketing",
   "s1": "Marketing Profile",
   "s2": "Tell AngelOS what growth means for this business. It can learn the details over time.",
   "s3": "Primary goal",

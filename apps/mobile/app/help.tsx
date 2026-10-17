@@ -9,7 +9,7 @@ const FAQ = [
   ['Is anything sent to my clients automatically?', 'No. Every client message, post and LINE broadcast waits for your Approve tap.'],
   ['Why does LINE / Instagram say "not connected"?', 'Those need your own LINE and Meta accounts. Until they are connected, AngelOS only makes drafts you can copy.'],
   ['Does the voice assistant record me?', 'No. Live voice is never recorded or stored, and no transcripts are kept.'],
-  ['How do I delete my data?', 'Settings → Account → Delete account. It removes your account and business data.'],
+  ['How do I delete my data?', 'Profile › Account › Delete account. It removes your account and business data.'],
 ] as const;
 
 export default function HelpScreen() {

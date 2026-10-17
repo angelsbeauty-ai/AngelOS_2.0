@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../src/components/Screen';
-import { Card, EmptyState, Skeleton } from '../src/components/ui';
+import { Card, EmptyState, ScreenTitle, Skeleton } from '../src/components/ui';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { listMessageThreads, timeLabel, type MessageThreadSummary } from '../src/lib/messaging';
 import { colors } from '../src/design/theme';
@@ -18,6 +18,7 @@ export default function Notifications() {
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
   return <Screen onRefresh={load}>
+    <ScreenTitle>{t('top.notifications', { defaultValue: 'Notifications' })}</ScreenTitle>
     {items === null ? <Skeleton /> : items.length === 0
       ? <EmptyState title={t('notif.empty', { defaultValue: 'No notifications yet' })} message={t('notif.emptyMsg', { defaultValue: 'New messages, likes, comments and mentions will show up here.' })} />
       : <Card>{items.map((x) => <Pressable key={x.id} accessibilityRole="button" style={styles.row} onPress={() => router.push(`/messages/${x.id}` as any)}>

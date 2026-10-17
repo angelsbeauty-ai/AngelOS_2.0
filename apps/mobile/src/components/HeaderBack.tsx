@@ -2,7 +2,7 @@ import { Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
-import { colors } from '../design/theme';
+import { useAppearance } from '../design/appearance';
 
 /** Sensible parent tab for a pushed screen, used when there is no history (deep link, OAuth return, refresh). */
 export function parentFor(name: string): string {
@@ -22,8 +22,9 @@ export function parentFor(name: string): string {
 
 export function HeaderBack({ fallback }: { fallback: string }) {
   const { t } = useTranslation();
+  const { palette } = useAppearance();
   return <Pressable accessibilityRole="button" accessibilityLabel={t('common.back', { defaultValue: 'Back' })} testID="header-back" hitSlop={12} style={{ paddingHorizontal: 8, paddingVertical: 4 }}
     onPress={() => { if (router.canGoBack()) router.back(); else router.replace(fallback as any); }}>
-    <CaretLeft size={24} color={colors.light.primaryText as string} weight="bold" />
+    <CaretLeft size={24} color={palette.text} weight="bold" />
   </Pressable>;
 }

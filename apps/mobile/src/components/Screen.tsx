@@ -8,9 +8,11 @@ import { BlurView } from 'expo-blur';
 import { showsAppTabBar } from './AppTabBar';
 import { colors, spacing, tokens } from '../design/theme';
 import { useAppearance } from '../design/appearance';
+import { useNightFix } from '../design/night-web';
 import { GlassBackdrop } from './GlassBackdrop';
 
 const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
+const LOCKED = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/ai', '/voice']);
 const logo = require('../../assets/brand/mark-charcoal.png');
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
@@ -24,11 +26,13 @@ export function Screen({ children, hideAsk, askBottom, askRight, onRefresh, onSw
   // B9 route guard: students only reach the Academy and their own settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
   const showAsk = !hideAsk && role !== 'student' && TAB_PATHS.has(pathname);
-  const { palette } = useAppearance();
+  const { palette, mode } = useAppearance();
+  const nightFix = mode === 'night' && !LOCKED.has(pathname);
+  useNightFix(nightFix);
   return <View style={[styles.bg, { backgroundColor: palette.bg }]}>
     <GlassBackdrop />
     <SafeAreaView style={styles.safe}>
-    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, Platform.OS === 'web' && !LOCKED.has(pathname) && styles.webTop]} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} bottom={askBottom} right={askRight} /> : null}
   </SafeAreaView></View>;
 }
@@ -51,6 +55,7 @@ const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: '#F3F4F6' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: tokens.space.screen, paddingTop: 4, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
+  webTop: { justifyContent: 'flex-start' },
   stack: { gap: spacing.md },
   webStack: { maxWidth: 480, width: '100%', paddingBottom: 120 },
   refresh: { alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.light.border },

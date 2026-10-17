@@ -53,7 +53,7 @@ export default function FounderAdminScreen() {
 
   const SECTIONS = [{id:'overview' as const,label:'Overview'},{id:'invites' as const,label:'Invites & testers'},{id:'feedback' as const,label:'Feedback'},{id:'flags' as const,label:'Feature flags'},{id:'discounts' as const,label:'Discount codes'}];
   return <Screen onRefresh={load}><View style={styles.stack}>
-    <Header eyebrow="Founder only" title={t('fadm.s22')} subtitle={t('fadm.s23')} />
+    <Header title="Founder" subtitle={t('fadm.s23')} />
     <FounderAiUsage />
     <Tabs value={section} options={SECTIONS} onChange={setSection} />
 

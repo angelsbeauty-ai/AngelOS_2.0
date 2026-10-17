@@ -9,10 +9,15 @@ import { supabase } from '../src/lib/supabase';
 import { apiFetch } from '../src/lib/api';
 import { toFriendly } from '../src/lib/friendly-error';
 import { tokens } from '../src/design/theme';
+import { useAppearance } from '../src/design/appearance';
 
 /** final-A1 01-login: mark, "Welcome back", two fields, forgot link, one Log in button. Fits 390x844 without scrolling. */
 export default function LoginScreen() {
   const { t } = useTranslation();
+  const { mode } = useAppearance();
+  const night = mode === 'night';
+  const titleC = night ? '#F4F4F5' : ui.colors.primaryText;
+  const subC = night ? '#C7C7CC' : ui.colors.secondaryText;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,15 +38,15 @@ export default function LoginScreen() {
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" bounces={false}>
       <View style={styles.col}>
         <BrandMark size={96} />
-        <Text style={styles.title}>{t('auth.loginTitle')}</Text>
-        <Text style={styles.sub}>{t('auth.loginSub')}</Text>
+        <Text style={[styles.title, { color: titleC }]}>{t('auth.loginTitle')}</Text>
+        <Text style={[styles.sub, { color: subC }]}>{t('auth.loginSub')}</Text>
         <View style={styles.form}>
           <TextField label={t('auth.email')} autoCapitalize="none" autoComplete="email" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="you@example.com" />
           <TextField label={t('auth.password')} secure autoCapitalize="none" autoComplete="current-password" value={password} onChangeText={setPassword} onSubmitEditing={() => void signIn()} />
-          <Link href="/forgot-password" accessibilityRole="link" style={styles.forgot}>{t('auth.forgot')}</Link>
+          <Link href="/forgot-password" accessibilityRole="link" style={[styles.forgot, { color: titleC }]}>{t('auth.forgot')}</Link>
           <Button label={busy ? t('auth.working') : t('auth.logIn')} loading={busy} onPress={() => void signIn()} />
         </View>
-        <Pressable accessibilityRole="link" onPress={() => router.push('/signup')} style={styles.signup}><Text style={styles.signupText}>{t('auth.newHereLink')}</Text></Pressable>
+        <Pressable accessibilityRole="link" onPress={() => router.push('/signup')} style={styles.signup}><Text style={[styles.signupText, { color: titleC }]}>{t('auth.newHereLink')}</Text></Pressable>
       </View>
     </ScrollView>
   </SafeAreaView></SilkBackground>;

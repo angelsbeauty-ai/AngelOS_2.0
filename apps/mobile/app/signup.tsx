@@ -9,9 +9,14 @@ import { supabase } from '../src/lib/supabase';
 import { toFriendly } from '../src/lib/friendly-error';
 import { authRedirect } from '../src/lib/auth-redirect';
 import { tokens } from '../src/design/theme';
+import { useAppearance } from '../src/design/appearance';
 
 export default function SignupScreen() {
   const { t } = useTranslation();
+  const { mode } = useAppearance();
+  const night = mode === 'night';
+  const titleC = night ? '#F4F4F5' : ui.colors.primaryText;
+  const subC = night ? '#C7C7CC' : ui.colors.secondaryText;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -36,8 +41,8 @@ export default function SignupScreen() {
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
       <View style={styles.col}>
         <BrandMark size={72} />
-        <Text style={styles.title}>{t('auth.signupTitle')}</Text>
-        <Text style={styles.sub}>{t('auth.signupSub')}</Text>
+        <Text style={[styles.title, { color: titleC }]}>{t('auth.signupTitle')}</Text>
+        <Text style={[styles.sub, { color: subC }]}>{t('auth.signupSub')}</Text>
         <View style={styles.form}>
           <TextField label={t('auth.email')} autoCapitalize="none" autoComplete="email" autoCorrect={false} keyboardType="email-address" value={email} onChangeText={setEmail} />
           <TextField label={t('auth.password')} secure autoCapitalize="none" autoComplete="new-password" value={password} onChangeText={setPassword} hint={t('auth.min8')} />

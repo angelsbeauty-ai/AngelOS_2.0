@@ -51,7 +51,7 @@ export default function AccountSettings() {
     {email ? <SupportText>{email}</SupportText> : null}
     <Card><Field label={t('account.name')} value={name} onChangeText={setName} autoComplete="name" /><ActionButton kind="primary" label={t('common.save')} disabled={busy || !name.trim()} onPress={() => void saveName()} /></Card>
     <Card><SectionTitle>{t('account.language')}</SectionTitle><Tabs<Lang> value={i18n.language === 'ja' ? 'ja' : 'en'} options={[{ id: 'en', label: 'English' }, { id: 'ja', label: '日本語' }]} onChange={(l) => void setLang(l)} /></Card>
-    <Card><Field label={t('account.password')} hint={t('account.passwordHint')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" /><ActionButton label={t('account.changePassword')} disabled={busy || !password} onPress={() => void changePassword()} /></Card>
+    <Card><Field label={t('account.password')} hint={t('account.passwordHint')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" /><ActionButton kind="primary" label={t('account.changePassword')} disabled={busy || !password} onPress={() => void changePassword()} /></Card>
     {founder ? null : <Card><SectionTitle>{t('account.danger')}</SectionTitle><BodyText>{t('pf.delBody')}</BodyText><ActionButton label={t('pf.delete')} onPress={() => setDelOpen(true)} /></Card>}
     <DeleteAccountSheet visible={delOpen} onClose={() => setDelOpen(false)} workspaceId={wsId} email={email || null} />
   </Screen>;

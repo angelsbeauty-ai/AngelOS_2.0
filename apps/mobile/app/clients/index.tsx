@@ -12,12 +12,15 @@ import { isDemoSeed, listClients, setClientArchived, type ClientFilter, type Cli
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { toFriendly, type FriendlyResult } from '../../src/lib/friendly-error';
 import { label } from '../../src/lib/labels';
+import { useAppearance } from '../../src/design/appearance';
 import { confirm } from '../../src/lib/dialog';
 
 const FILTER_IDS: ClientFilter[] = ['all', 'new', 'active', 'touch_up', 'archived'];
 
 export default function ClientsScreen() {
   const { t } = useTranslation();
+  const { mode } = useAppearance();
+  const night = mode === 'night';
   const FILTERS = FILTER_IDS.map((id) => ({ id, label: t(`clients.filter.${id}`) }));
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -49,7 +52,7 @@ export default function ClientsScreen() {
 
   return <Screen onRefresh={() => load()}>
     <Header title={t('clients.title')} action={<Pressable accessibilityRole="button" accessibilityLabel={t('clients.add')} onPress={() => router.push('/clients/new')} style={styles.plus}><Text style={styles.plusText}>+</Text></Pressable>} />
-    <TextInput value={search} onChangeText={setSearch} placeholder={t('clients.search')} accessibilityLabel={t('clients.search')} placeholderTextColor={ui.colors.secondaryText} style={styles.search} />
+    <TextInput value={search} onChangeText={setSearch} placeholder={t('clients.search')} accessibilityLabel={t('clients.search')} placeholderTextColor={night ? '#9A9A9F' : ui.colors.secondaryText} style={[styles.search, night && { backgroundColor: '#161618', color: '#F4F4F5', borderColor: 'rgba(255,255,255,0.14)' }]} />
     <Tabs value={filter} options={FILTERS} onChange={setFilter} />
     {busy && !clients.length ? <Skeleton rows={4} /> : null}
     {noStudio ? <NoStudio /> : null}
@@ -58,9 +61,9 @@ export default function ClientsScreen() {
     {clients.map((client) => <RowMenu key={client.id} accessibilityHint={t('clients.holdHint')} onPress={() => router.push(`/clients/${client.id}` as any)}
       actions={[{ id: 'book', title: t('clients.book') }, { id: 'edit', title: t('clients.edit') }, { id: 'archive', title: client.archived_at ? t('clients.unarchive') : t('clients.archive') }]}
       onAction={(action) => { if (action === 'book') router.push({ pathname: '/bookings/new', params: { clientId: client.id } }); if (action === 'edit') router.push(`/clients/${client.id}/edit` as any); if (action === 'archive') void archive(client); }}>
-      <View style={styles.clientRow}>
+      <View style={[styles.clientRow, night && { backgroundColor: '#161618', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' }]}>
         <Avatar name={client.display_name} />
-        <View style={styles.clientCopy}><Text style={styles.clientName}>{client.display_name}</Text><View style={{ flexDirection: 'row' }}><Badge status={client.status === 'lead' ? 'request' : 'confirmed'} label={client.status === 'lead' ? t('clients.chipLead') : t('clients.chipClient')} /></View>{client.phone || client.email ? <SupportText>{client.phone ?? client.email}</SupportText> : null}</View>
+        <View style={styles.clientCopy}><Text style={[styles.clientName, night && { color: '#F4F4F5' }]}>{client.display_name}</Text><View style={{ flexDirection: 'row' }}><Badge status={client.status === 'lead' ? 'request' : 'confirmed'} label={client.status === 'lead' ? t('clients.chipLead') : t('clients.chipClient')} /></View>{client.phone || client.email ? <SupportText>{client.phone ?? client.email}</SupportText> : null}</View>
         {client.health_flag ? <Badge status="request" label={t('clients.checkHealth')} /> : null}
         {client.archived_at ? <Badge status="cancelled" label={t('clients.archived')} /> : null}
       </View>

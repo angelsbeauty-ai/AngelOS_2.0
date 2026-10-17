@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
+import { useNightCss } from './night-web';
 
 export type AppearanceMode = 'day' | 'night';
 
@@ -68,6 +69,7 @@ const KEY = 'angelos.appearance';
 const Ctx = createContext<{ mode: AppearanceMode; palette: Palette; setMode: (mode: AppearanceMode) => void }>({ mode: 'day', palette: day, setMode: () => undefined });
 
 export function AppearanceProvider({ children }: PropsWithChildren) {
+  useNightCss();
   const [mode, setModeState] = useState<AppearanceMode>('day');
   useEffect(() => { void AsyncStorage.getItem(KEY).then((v) => { if (v === 'night' || v === 'day') setModeState(v); }); }, []);
   function setMode(next: AppearanceMode) { setModeState(next); void AsyncStorage.setItem(KEY, next); }

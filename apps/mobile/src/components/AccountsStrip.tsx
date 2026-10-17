@@ -23,7 +23,7 @@ export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: s
     getSocialAccounts(workspaceId).then(setItems).catch((e) => setError(e instanceof Error ? e.message : t('acs.loadFail')));
   }, [workspaceId, given, t]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
-  const fmt = (n: number | null | undefined) => (n == null ? t('acs.na') : n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US'));
+  const fmt = (n: number | null | undefined) => (n == null ? '' : n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US'));
   if (error) return <View style={[styles.card, nc]}><Text style={styles.warn}>{t('acs.loadFail')}: {error}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={load} /></View>;
   if (!items) return null;
   const shown = items.filter((a) => a.state !== 'not_connected');
@@ -41,7 +41,7 @@ export function AccountsStrip({ workspaceId, accounts: given }: { workspaceId: s
         <View style={styles.stat}>
           <BrandLogo platform={a.platform} size={14} />
           {a.followers == null && (a.platform === 'line' || a.posts == null) ? <><Text numberOfLines={1} style={[styles.body, nm]}>{a.state === 'needs_reconnect' || a.syncError ? t('acs.reconnectStats', 'Reconnect to see stats') : t('acs.syncing', 'Stats syncing…')}</Text>{a.state === 'needs_reconnect' || a.syncError ? <CaretRight size={12} color={palette.muted} /> : null}</>
-            : <Text numberOfLines={1} style={[styles.body, nm]}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {fmt(a.followers)}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${fmt(a.posts)}` : ''}</Text>}
+            : <Text numberOfLines={1} style={[styles.body, nm]}>{[a.followers != null ? `${t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: ${fmt(a.followers)}` : null, a.platform !== 'line' && a.posts != null ? `${t('acs.posts')}: ${fmt(a.posts)}` : null].filter(Boolean).join(' · ')}</Text>}
         </View>
         {a.state === 'needs_reconnect' ? <Text numberOfLines={3} style={styles.warn}>{a.reason ?? t('sml.reconnect')}</Text> : null}
         {a.syncError ? <Text numberOfLines={3} style={styles.warn}>{a.syncError}</Text> : null}

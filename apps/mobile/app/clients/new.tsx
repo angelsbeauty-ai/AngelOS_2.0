@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { dialog } from '../../src/lib/dialog';
 import { router } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
-import { Card, Pill, PrimaryActionLabel, ScreenTitle, SupportText, ui } from '../../src/components/ui';
+import { Card, PrimaryActionLabel, ScreenTitle, SupportText, ui } from '../../src/components/ui';
+import { Chip } from '../../src/components/MessagingBits';
 import { createClient } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 
@@ -38,7 +39,6 @@ export default function NewClientScreen() {
 
   return (
     <Screen>
-      <Pill tone="gold">{t('cf.quick')}</Pill>
       <ScreenTitle>{t('cf.newTitle')}</ScreenTitle>
       <SupportText>{t('cf.newSub')}</SupportText>
 
@@ -46,7 +46,11 @@ export default function NewClientScreen() {
         <TextInput value={name} onChangeText={setName} placeholder={t('cf.namePh')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
         <TextInput value={phone} onChangeText={setPhone} placeholder={t('cf.phoneOpt')} placeholderTextColor={ui.colors.secondaryText} keyboardType="phone-pad" style={styles.input} />
         <TextInput value={email} onChangeText={setEmail} placeholder={t('cf.emailOpt')} placeholderTextColor={ui.colors.secondaryText} keyboardType="email-address" autoCapitalize="none" style={styles.input} />
-        <TextInput value={language} onChangeText={setLanguage} placeholder={t('cf.langPh')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
+        <SupportText>{t('cf.lang')}</SupportText>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Chip label="English" selected={language === 'en'} onPress={() => setLanguage('en')} />
+          <Chip label="日本語" selected={language === 'ja'} onPress={() => setLanguage('ja')} />
+        </View>
       </Card>
 
       <Pressable disabled={busy || !name.trim()} onPress={() => void save()}>
@@ -64,6 +68,7 @@ const styles = StyleSheet.create({
     backgroundColor: ui.colors.elevated,
     color: ui.colors.primaryText,
     padding: ui.spacing.sm,
-    fontSize: 16
+    fontSize: 16,
+    minHeight: 48
   }
 });

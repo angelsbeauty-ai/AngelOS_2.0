@@ -4,7 +4,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing, getHomeSummary, type HomeSummary, type Period } from '../src/lib/home';
-import { Skeleton } from '../src/components/ui';
+import { Skeleton, ScreenTitle } from '../src/components/ui';
+import { useAppearance } from '../src/design/appearance';
+import { useNightFix } from '../src/design/night-web';
 import { PLATFORM_NAME } from '../src/lib/social';
 import { tokens } from '../src/design/theme';
 
@@ -26,12 +28,15 @@ export default function Reports() {
   }, []);
   useEffect(() => { void load(period); }, [period, load]);
   useEffect(() => { if (state === 'ready' && params.section) setTimeout(() => scroll.current?.scrollTo({ y: Math.max(0, (pos.current[params.section!] ?? 0) - 8), animated: true }), 50); }, [state, params.section]);
+  const { palette, mode } = useAppearance();
+  useNightFix(mode === 'night');
   const when = period === 'day' ? t('rep.today', 'today') : period === 'week' ? t('rep.week', 'this week') : t('rep.month', 'this month');
   const dt = (iso: string) => new Date(iso).toLocaleString(locale, period === 'day' ? { hour: '2-digit', minute: '2-digit' } : { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   const s = data?.schedule; const m = data?.messages; const so = data?.social; const a = data?.assistant;
   const mark = (k: string) => ({ onLayout: (e: any) => { pos.current[k] = e.nativeEvent.layout.y; } });
 
-  return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: '#FFF' }} contentContainerStyle={styles.page}>
+  return <ScrollView ref={scroll} style={{ flex: 1, backgroundColor: palette.bg }} contentContainerStyle={styles.page}>
+    <ScreenTitle>{t('home.reportTitle', { defaultValue: 'Full report' })}</ScreenTitle>
     <View style={styles.seg}>{(['day', 'week', 'month'] as Period[]).map((p) => <Pressable key={p} accessibilityRole="tab" accessibilityState={{ selected: period === p }} onPress={() => setPeriod(p)} style={[styles.segItem, period === p && styles.segOn]}>
       <Text style={[styles.segText, period === p && { color: '#FFF' }]}>{p === 'day' ? t('rep.day', 'Day') : p === 'week' ? t('rep.weekBtn', 'Week') : t('rep.monthBtn', 'Month')}</Text></Pressable>)}</View>
     {state === 'loading' ? <Skeleton rows={4} height={90} /> : null}

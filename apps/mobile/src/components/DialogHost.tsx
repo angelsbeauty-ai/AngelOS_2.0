@@ -2,6 +2,8 @@ import i18n from '../i18n';
 import React, { useState, useCallback } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { tokens } from '../design/theme';
+import { useAppearance } from '../design/appearance';
+import { humanMessage } from '../design/night-web';
 
 type DialogRequest = {
   id: string;
@@ -59,31 +61,44 @@ export function DialogHost() {
   if (!current) return null;
 
   const isConfirm = current.type === 'confirm';
+  const message = humanMessage(current.message);
+  return <ThemedDialog current={current} isConfirm={isConfirm} message={message} onResolve={handleResolve} />;
+}
+
+function ThemedDialog({ current, isConfirm, message, onResolve }: { current: DialogRequest; isConfirm: boolean; message?: string; onResolve: (v: boolean) => void }) {
+  const { mode } = useAppearance();
+  const night = mode === 'night';
+  const card = night ? '#161618' : tokens.color.ivorySolid;
+  const text = night ? '#F4F4F5' : tokens.color.charcoal;
+  const secondary = night ? '#C7C7CC' : tokens.color.charcoal2;
+  const border = night ? 'rgba(255,255,255,0.14)' : tokens.color.hairline;
+  const primaryBg = night ? '#F4F4F5' : tokens.color.charcoal;
+  const primaryFg = night ? '#151515' : '#FFFFFF';
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={() => handleResolve(false)}>
-      <Pressable style={styles.backdrop} onPress={() => isConfirm && handleResolve(false)} accessibilityRole="none">
+    <Modal visible transparent animationType="fade" onRequestClose={() => onResolve(false)}>
+      <Pressable style={[styles.backdrop, night && { backgroundColor: 'rgba(0,0,0,0.62)' }]} onPress={() => isConfirm && onResolve(false)} accessibilityRole="none">
         <View style={styles.center}>
-          <Pressable style={[styles.dialog, Platform.OS === 'web' ? webGlass : null]} onPress={(e) => e.stopPropagation()} accessibilityRole="alert">
-            <Text maxFontSizeMultiplier={1.3} style={styles.title}>{current.title}</Text>
-            {current.message ? <Text maxFontSizeMultiplier={1.3} style={styles.message}>{current.message}</Text> : null}
+          <Pressable style={[styles.dialog, { backgroundColor: card, borderWidth: 1, borderColor: border, borderRadius: 20 }, Platform.OS === 'web' ? webGlass : null]} onPress={(e) => e.stopPropagation()} accessibilityRole="alert">
+            <Text maxFontSizeMultiplier={1.3} style={[styles.title, { color: text }]}>{current.title}</Text>
+            {message ? <Text maxFontSizeMultiplier={1.3} style={[styles.message, { color: secondary }]}>{message}</Text> : null}
             <View style={styles.buttons}>
               {isConfirm && (
                 <Pressable
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={() => handleResolve(false)}
+                  style={[styles.button, { backgroundColor: 'transparent', borderWidth: 1, borderColor: border }]}
+                  onPress={() => onResolve(false)}
                   accessibilityRole="button"
                   accessibilityLabel={current.cancelText || i18n.t('dialog.cancel')}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.cancelText}>{current.cancelText || i18n.t('dialog.cancel')}</Text>
+                  <Text maxFontSizeMultiplier={1.3} style={[styles.cancelText, { color: text }]}>{current.cancelText || i18n.t('dialog.cancel')}</Text>
                 </Pressable>
               )}
               <Pressable
-                style={[styles.button, styles.primaryButton, current.destructive && styles.destructiveButton]}
-                onPress={() => handleResolve(true)}
+                style={[styles.button, { backgroundColor: current.destructive ? tokens.color.coral : primaryBg }]}
+                onPress={() => onResolve(true)}
                 accessibilityRole="button"
                 accessibilityLabel={current.confirmText || i18n.t('dialog.ok')}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.buttonText, current.destructive && styles.destructiveText]}>
+                <Text maxFontSizeMultiplier={1.3} style={[styles.buttonText, { color: current.destructive ? '#FFFFFF' : primaryFg }]}>
                   {current.confirmText || i18n.t('dialog.ok')}
                 </Text>
               </Pressable>

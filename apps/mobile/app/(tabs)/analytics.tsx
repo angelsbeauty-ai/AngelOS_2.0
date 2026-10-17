@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Svg, { Circle, G, Polygon, Polyline } from 'react-native-svg';
 import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
+import { Check } from 'phosphor-react-native/src/icons/Check';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Skeleton, screenHeader } from '../../src/components/ui';
@@ -52,9 +53,9 @@ export default function AnalyticsScreen() {
       </Pressable>
     </View>
     <Modal visible={pickOpen} transparent animationType="fade" onRequestClose={() => setPickOpen(false)}>
-      <Pressable style={styles.menuBack} onPress={() => setPickOpen(false)}><View style={styles.menu}>
-        {PLATS.map((p, i) => <Pressable key={p} accessibilityRole="button" accessibilityState={{ selected: plat === p }} onPress={() => { setPickOpen(false); pick(p); }} style={[styles.menuRow, i > 0 && styles.menuLine]}>
-          {p !== 'all' ? <BrandLogo platform={p} size={20} /> : null}<Text style={[styles.segText, plat === p && { color: D.text }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text></Pressable>)}
+      <Pressable style={styles.menuBack} onPress={() => setPickOpen(false)}><View style={[styles.menu, look === 'night' && { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.14)' }]}>
+        {PLATS.map((p, i) => <Pressable key={p} accessibilityRole="button" accessibilityState={{ selected: plat === p }} onPress={() => { setPickOpen(false); pick(p); }} style={[styles.menuRow, i > 0 && styles.menuLine, i > 0 && look === 'night' && { borderTopColor: 'rgba(255,255,255,0.14)' }]}>
+          {p !== 'all' ? <BrandLogo platform={p} size={20} /> : null}<Text style={[styles.segText, look === 'night' && { color: '#F4F4F5' }, plat === p && look !== 'night' && { color: D.text }]}>{p === 'all' ? t('messages.all') : PLATFORM_NAME[p as keyof typeof PLATFORM_NAME]}</Text>{plat === p ? <Check size={16} color={look === 'night' ? '#F4F4F5' : D.text} weight="bold" style={{ marginLeft: 'auto' }} /> : null}</Pressable>)}
       </View></Pressable>
     </Modal>
 

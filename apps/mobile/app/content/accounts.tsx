@@ -103,7 +103,7 @@ export default function SocialAccounts() {
         </View>
         <View style={[styles.dot, { backgroundColor: a.state === 'connected' ? tokens.color.success : a.state === 'needs_reconnect' ? tokens.color.warning : '#A8A8A8' }]} />
       </View>
-      {a.state !== 'not_connected' ? <Text style={styles.body}>{t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: {a.followers == null ? t('acs.na') : a.followers.toLocaleString()}{a.platform !== 'line' ? ` · ${t('acs.posts')}: ${a.posts == null ? t('acs.na') : a.posts.toLocaleString()}` : ''}</Text> : null}
+      {a.state !== 'not_connected' && (a.followers != null || a.posts != null) ? <Text style={styles.body}>{a.followers != null ? `${t(a.platform === 'line' ? 'acs.friends' : 'acs.followers')}: ${a.followers.toLocaleString()}` : ''}{a.platform !== 'line' && a.posts != null ? `${a.followers != null ? ' · ' : ''}${t('acs.posts')}: ${a.posts.toLocaleString()}` : ''}</Text> : null}
       {a.state === 'connected' ? <Text style={styles.ok}>{t('sml.connected')}</Text> : null}
       {a.state === 'needs_reconnect' && a.reason ? <Text style={styles.warn}>{a.reason}</Text> : null}
       {a.syncError ? <Text style={styles.warn}>{a.syncError}</Text> : null}

@@ -25,8 +25,8 @@ export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
     {items.map((n) => <View key={n.platform} style={styles.row}>
       <Text numberOfLines={1} style={styles.name}>{PLATFORM_NAME[n.platform]}</Text>
       <View style={styles.vals}>
-        <Text numberOfLines={1} style={styles.val}>{n.followers == null ? t('acs.na') : t(n.platform === 'line' ? 'sml.friends' : 'sml.followers', { n: fmt(n.followers) })}</Text>
-        {n.platform !== 'line' ? <Text numberOfLines={1} style={styles.sub}>{t('acs.posts')}: {n.posts == null ? t('acs.na') : fmt(n.posts)}</Text> : null}
+        <Text numberOfLines={1} style={styles.val}>{n.followers == null ? '' : t(n.platform === 'line' ? 'sml.friends' : 'sml.followers', { n: fmt(n.followers) })}</Text>
+        {n.platform !== 'line' && n.posts != null ? <Text numberOfLines={1} style={styles.sub}>{t('acs.posts')}: {fmt(n.posts)}</Text> : null}
         {n.engagement != null ? <Text numberOfLines={1} style={styles.sub}>{t('sml.engagement', { n: fmt(n.engagement) })}</Text> : null}
         {n.followersChange7d != null ? <Text numberOfLines={1} style={styles.sub}>{t('sml.change7d', { n: (n.followersChange7d >= 0 ? '+' : '') + fmt(n.followersChange7d) })}</Text> : null}
       </View>

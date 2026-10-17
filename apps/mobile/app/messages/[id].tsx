@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
-import { Card, SectionTitle, SupportText, ui } from '../../src/components/ui';
+import { Card, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { ActionButton, Avatar, Banner, BilingualBlock, PlatformBadge } from '../../src/components/MessagingBits';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
@@ -59,8 +59,8 @@ export default function MessageThreadScreen() {
     } finally { setBusy(null); }
   }
 
-  if (state === 'error') return <Screen><ErrorState title={t('msgd.s12')} message={t('msgd.s13')} onRetry={() => { setState('loading'); void load(); }} /></Screen>;
-  if (!detail || !workspaceId) return <Screen><Card><SupportText>{t('msgd.s0')}</SupportText></Card></Screen>;
+  if (state === 'error') return <Screen><ScreenTitle>{t('nav.conversation')}</ScreenTitle><ErrorState title={t('msgd.s12')} message={t('msgd.s13')} onRetry={() => { setState('loading'); void load(); }} /></Screen>;
+  if (!detail || !workspaceId) return <Screen><ScreenTitle>{t('nav.conversation')}</ScreenTitle><Card><SupportText>{t('msgd.s0')}</SupportText><SupportText>If this chat does not open, go back to Messages and pick it from the list.</SupportText></Card></Screen>;
 
   const thread = detail.thread;
   const name = thread.client?.display_name ?? thread.contact_display_name ?? 'Conversation';

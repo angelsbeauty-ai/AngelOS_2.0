@@ -73,8 +73,11 @@ export default function AiSettingsScreen() {
   const saveProfile = (patch: Record<string, unknown>) => workspaceId && act(() => updateAssistantProfile(workspaceId, patch), setProfile);
   const saveStyle = (patch: Record<string, unknown>) => workspaceId && act(() => updateReplyStyle(workspaceId, patch), setStyle);
 
-  if (state === 'error') return <Screen><ErrorState title={t('aiset.s23')} message={t('aiset.s24')} onRetry={() => { setState('loading'); void load(); }} /></Screen>;
-  if (!profile || !workspaceId) return <Screen><Card><SupportText>{t('aiset.s0')}</SupportText></Card></Screen>;
+  if (state === 'error' || !profile || !workspaceId) return <Screen>
+    <ScreenTitle>{t('aiset.s1')}</ScreenTitle>
+    <SupportText>How your assistant sounds, and when she speaks up.</SupportText>
+    {state === 'error' ? <ErrorState title={t('aiset.s23')} message={t('aiset.s24')} onRetry={() => { setState('loading'); void load(); }} /> : <Card><SupportText>These settings appear once you are signed in to your studio.</SupportText></Card>}
+  </Screen>;
   const learned = style?.learned ?? {};
 
   return <Screen>

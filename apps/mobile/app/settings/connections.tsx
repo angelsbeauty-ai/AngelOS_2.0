@@ -50,7 +50,7 @@ export default function ConnectionsScreen() {
       </View>
       {item.accountName ? <SupportText>Account: {item.accountName}</SupportText> : null}
       <SupportText>{item.detail}</SupportText>
-      {item.needs.length && !item.connected ? <View style={{ gap: 2 }}><Text style={styles.needsLabel}>{t('conn.s3')}</Text>{item.needs.map((need) => <SupportText key={need}>• {need}</SupportText>)}</View> : null}
+      {item.needs.length && !item.connected ? <View style={{ gap: 2 }}><Text style={styles.needsLabel}>{t('conn.s3')}</Text>{item.needs.filter((need) => !/project key|admin key/i.test(need)).map((need) => <SupportText key={need}>• {need}</SupportText>)}</View> : null}
       {item.provider === 'line' && item.canConnect ? <ActionButton kind="primary" label={busy ? 'Connecting…' : 'Connect LINE'} disabled={busy} onPress={() => void connect()} /> : null}
     </Card>)}
 
