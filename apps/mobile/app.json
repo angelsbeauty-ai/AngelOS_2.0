@@ -8,7 +8,6 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-router",
-      "@livekit/react-native-expo-plugin",
       "./plugins/withWebRtcDataChannelFix",
       [
         "@config-plugins/react-native-webrtc",
