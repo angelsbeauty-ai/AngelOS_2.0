@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { useAppearance } from '../../src/design/appearance';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { SlidersHorizontal } from 'phosphor-icon-native/src/icons/SlidersHorizontal';
+import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizontal';
 import { Button } from '../../src/components/ui';
 import { getSocialAccounts, PLATFORM_NAME, type SocialAccount, type SocialPlatform } from '../../src/lib/social';
 import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
