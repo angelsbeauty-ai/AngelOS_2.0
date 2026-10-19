@@ -3,7 +3,8 @@ import { Pressable, Text, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../src/components/Screen';
-import { Card, ScreenTitle, SupportText, TextField } from '../../src/components/ui';
+import { Card, SupportText, TextField } from '../../src/components/ui';
+import { PushedHeader } from '../../src/components/PushedHeader';
 import { getMe, updateMe } from '../../src/lib/me';
 import { getActiveWorkspace, updateWorkspace } from '../../src/lib/workspace';
 import { supabase } from '../../src/lib/supabase';
@@ -44,9 +45,8 @@ export default function EditProfileScreen() {
   }
 
   return <Screen hideAsk>
-    <Stack.Screen options={{ title: t('pf.editTitle'),
-      headerRight: () => <Pressable accessibilityRole="button" accessibilityLabel={t('pf.save')} onPress={() => { if (changed && !busy) void save(); }} hitSlop={8} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, backgroundColor: mode === 'night' ? '#F4F4F5' : '#151515', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 14, fontWeight: '700', color: mode === 'night' ? '#151515' : '#FFFFFF' }}>{t('pf.save')}</Text></Pressable> }} />
-    <ScreenTitle>{t('pf.editTitle')}</ScreenTitle>
+    <Stack.Screen options={{ headerShown: false }} />
+    <PushedHeader title={t('pf.editTitle')} right={<Pressable accessibilityRole="button" accessibilityLabel={t('pf.save')} onPress={() => { if (changed && !busy) void save(); }} hitSlop={8} style={{ height: 32, paddingHorizontal: 14, borderRadius: 999, backgroundColor: mode === 'night' ? '#F4F4F5' : '#151515', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 14, fontWeight: '700', color: mode === 'night' ? '#151515' : '#FFFFFF' }}>{t('pf.save')}</Text></Pressable>} />
     <Card>
       <TextField label={t('pf.name')} value={form.name} onChangeText={(name) => setForm({ ...form, name })} error={errors.name} />
       {wsId ? <TextField label={t('pf.studio')} value={form.studio} onChangeText={(studio) => setForm({ ...form, studio })} error={errors.studio} /> : null}
