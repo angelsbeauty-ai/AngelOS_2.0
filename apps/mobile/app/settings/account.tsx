@@ -4,12 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Screen } from '../../src/components/Screen';
 import { Field, Tabs } from '../../src/components/Field';
 import { ActionButton } from '../../src/components/MessagingBits';
-import { BodyText, Card, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
+import { BodyText, Card, SectionTitle, SupportText } from '../../src/components/ui';
+import { PushedHeader } from '../../src/components/PushedHeader';
 import type { Lang } from '../../src/i18n';
 import { dialog } from '../../src/lib/dialog';
 import { DeleteAccountSheet } from '../../src/components/DeleteAccountSheet';
 import { getActiveWorkspace } from '../../src/lib/workspace';
-import { useEffect as useEffect2 } from 'react';
 import { clearMe, getMe, updateMe } from '../../src/lib/me';
 import { supabase } from '../../src/lib/supabase';
 
@@ -21,7 +21,6 @@ export default function AccountSettings() {
   const [email, setEmail] = useState<string | null>(null);
   const [founder, setFounder] = useState(false);
   const [password, setPassword] = useState('');
-  const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { getMe().then((me) => { setName(me.displayName ?? ''); setEmail(me.email); setFounder(me.founder); }).catch(() => undefined); }, []);
@@ -45,9 +44,9 @@ export default function AccountSettings() {
 
   const [delOpen, setDelOpen] = useState(false);
   const [wsId, setWsId] = useState<string | null>(null);
-  useEffect2(() => { void getActiveWorkspace().then((w) => setWsId(w?.id ?? null)).catch(() => undefined); }, []);
+  useEffect(() => { void getActiveWorkspace().then((w) => setWsId(w?.id ?? null)).catch(() => undefined); }, []);
   return <Screen>
-    <ScreenTitle>{t('account.title')}</ScreenTitle>
+    <PushedHeader title={t('account.title')} />
     {email ? <SupportText>{email}</SupportText> : null}
     <Card><Field label={t('account.name')} value={name} onChangeText={setName} autoComplete="name" /><ActionButton kind="primary" label={t('common.save')} disabled={busy || !name.trim()} onPress={() => void saveName()} /></Card>
     <Card><SectionTitle>{t('account.language')}</SectionTitle><Tabs<Lang> value={i18n.language === 'ja' ? 'ja' : 'en'} options={[{ id: 'en', label: 'English' }, { id: 'ja', label: '日本語' }]} onChange={(l) => void setLang(l)} /></Card>
