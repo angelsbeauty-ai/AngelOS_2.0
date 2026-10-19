@@ -10,6 +10,7 @@ import { ShareNetwork } from 'phosphor-react-native/src/icons/ShareNetwork';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
+import { BusinessSwitcher } from '../../src/components/BusinessSwitcher';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { getMe } from '../../src/lib/me';
 import { supabase } from '../../src/lib/supabase';
@@ -20,7 +21,6 @@ import { useAppearance } from '../../src/design/appearance';
 
 export const GREEN = '#151515';
 
-/** Home Command Center: date, greeting + voice, AI briefing (numbers only), and four boxes. Real data only. */
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
   const { palette } = useAppearance();
@@ -64,10 +64,9 @@ export default function HomeScreen() {
   const openReport = (section?: string) => router.push({ pathname: '/reports', params: section ? { section } : {} } as any);
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
   const tasks = imp?.tasks ?? (a ? a.pendingApprovals + a.suggestions.length : null);
-  const week = sum?.weekWork ?? null;
-  const inspire = sum?.inspiration ?? null;
 
   return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()}>
+    <BusinessSwitcher onChanged={() => void load()} />
     <View style={styles.hello}>
       <View style={{ flex: 1, gap: 14 }}>
         <View style={{ gap: 2 }}>
@@ -94,7 +93,6 @@ export default function HomeScreen() {
         <Box icon={<ShareNetwork {...icon} />} title={t('home.social', 'Social media')} value={so?.followers != null ? `${so.followers.toLocaleString(locale)}` : '–'} unit={so?.followers != null ? t('home.followers', 'followers') : ''} onPress={() => openReport('social')}
           lines={so ? (so.connected.length ? [so.followersChange7d != null ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'this week')}` : '', so.engagement != null ? `${so.engagement.toLocaleString(locale)} ${t('home.interactionsShort', 'interactions')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
       </View>
-
     </>}
   </Screen>;
 }
