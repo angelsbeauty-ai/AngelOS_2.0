@@ -22,6 +22,9 @@ import { Users } from 'phosphor-react-native/src/icons/Users';
 import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
 import { Clock } from 'phosphor-react-native/src/icons/Clock';
 import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
+import { Bell } from 'phosphor-react-native/src/icons/Bell';
+import { Pause } from 'phosphor-react-native/src/icons/Pause';
+import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
 import { Screen } from '../../src/components/Screen';
 import { screenHeader, Skeleton, SupportText, Button } from '../../src/components/ui';
 import { Chip, ROSE, SettingsGroup, SettingsRow } from '../../src/components/SettingsList';
@@ -67,7 +70,6 @@ export default function ProfileScreen() {
         void listConnections(w.id).then((c) => setConnected(c.filter((x) => x.connected).length)).catch(() => undefined);
         void getSubscription(w.id).then((s) => setPlan(s.plan?.name ?? s.plan?.code ?? null)).catch(() => undefined);
       }
-      // Founder group: the server decides (GET /me → founder from platform_founders). Never by email.
       if (m.founder) {
         if (w) void getSystemHealth(w.id).then(setHealth).catch(() => setHealth('error'));
         void listBetaFeedback().then((rows) => setNewFeedback(rows.filter((r: any) => r.status === 'new').length)).catch(() => undefined);
@@ -117,6 +119,7 @@ export default function ProfileScreen() {
     {owner ? <SettingsGroup title={t('pf.business')}>
       <SettingsRow icon={<Users {...ink} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
       <SettingsRow icon={<CurrencyJpy {...ink} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
+      <SettingsRow icon={<ListChecks {...ink} />} title="Tasks" onPress={() => router.push('/tasks' as any)} />
       <SettingsRow last icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
     </SettingsGroup> : null}
 
@@ -124,7 +127,9 @@ export default function ProfileScreen() {
       <SettingsRow icon={<Link {...ink} />} title={t('pf.connected')} value={connected} onPress={() => router.push('/settings/connections')} />
       <SettingsRow icon={<Scissors {...ink} />} title={t('pf.services')} value={services} onPress={() => router.push('/services')} />
       <SettingsRow icon={<Clock {...ink} />} title={t('pf.hours')} onPress={() => router.push('/business-hours' as any)} />
-      <SettingsRow last icon={<Clock {...ink} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
+      <SettingsRow icon={<Clock {...ink} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
+      <SettingsRow icon={<Bell {...ink} />} title="Notifications" onPress={() => router.push('/notifications' as any)} />
+      <SettingsRow last icon={<Pause {...ink} />} title="Automations" onPress={() => router.push('/automations' as any)} />
     </SettingsGroup> : null}
     {student ? <SettingsGroup title={t('pf.app')}><SettingsRow last icon={<GraduationCap {...ink} />} title={t('pf.academy')} onPress={() => router.push('/academy' as any)} /></SettingsGroup> : null}
 
@@ -169,7 +174,6 @@ export default function ProfileScreen() {
   </Screen>;
 }
 
-/** Real relative time of the last health check: just now / N min / N h / N days. */
 function checkedLabel(t: (k: string, o?: Record<string, unknown>) => string, min: number) {
   if (min < 1) return t('pf.checkedNow');
   if (min < 60) return t('pf.checked', { min });
