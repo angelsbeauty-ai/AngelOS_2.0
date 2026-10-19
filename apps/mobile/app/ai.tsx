@@ -1,3 +1,4 @@
+import { crumb as dbgCrumb, readCrumbs as dbgRead } from '../src/lib/crash-guard';
 import { Pressable as EBPressable, Text as EBText, View as EBView } from 'react-native';
 import { router as ebRouter } from 'expo-router';
 import { Waveform } from 'phosphor-react-native/src/icons/Waveform';
@@ -68,11 +69,13 @@ export default function AiScreen() {
   const [rated, setRated] = useState<Record<string, 'up' | 'down'>>({});
   const [listening, setListening] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const [lastRun, setLastRun] = useState('');
+  useEffect(() => { void dbgRead().then((c) => setLastRun(c.trim())); }, []);
 
   /** Dictation into the composer where the browser supports it; otherwise open voice. */
   function dictate() {
     const g: any = globalThis as any; const SR = g.SpeechRecognition ?? g.webkitSpeechRecognition;
-    if (Platform.OS !== 'web' || !SR) { router.push('/voice' as any); return; }
+    if (Platform.OS !== 'web' || !SR) { void dbgRead(true).then(() => dbgCrumb('mic tapped')).then(() => router.push('/voice' as any)); return; }
     const r = new SR(); r.lang = i18n.language === 'ja' ? 'ja-JP' : 'en-US'; r.interimResults = false;
     r.onresult = (e: any) => setComposer((c) => `${c}${c ? ' ' : ''}${e.results?.[0]?.[0]?.transcript ?? ''}`);
     r.onend = () => setListening(false); setListening(true); r.start();
@@ -181,6 +184,7 @@ export default function AiScreen() {
 
   return (
     <View style={styles.page}><GlassBackdrop /><SafeAreaView style={{ flex: 1 }}>
+      {lastRun ? <Text selectable style={{ color: P.muted, fontSize: 11, paddingHorizontal: 16 }}>{`Last voice try:\n${lastRun}`}</Text> : null}
       <View style={[screenHeader.row, styles.head]}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('aip.s1')} onPress={() => router.push('/ai-settings' as any)} style={styles.titleBtn}>
           <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { flex: undefined, flexShrink: 1, color: P.text }]}>{t('aip.assistant', 'Assistant')}</Text><CaretDown size={18} color={P.text} weight="bold" /></Pressable>

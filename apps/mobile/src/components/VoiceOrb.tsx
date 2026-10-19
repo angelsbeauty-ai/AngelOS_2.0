@@ -1,9 +1,11 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { PixelRatio, StyleSheet, View } from 'react-native';
 import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
 import { useAppearance } from '../design/appearance';
 import { ORB_SKSL } from './orbShader';
 import { useOrbMotion, type OrbState } from './orbMotion';
+import { crumb } from '../lib/crash-guard';
+void crumb('orb code loaded');
 
 // RuntimeEffect.Make returns null when the shader does not compile; never let that (or a throw) take down the screen.
 const effect = (() => { try { return Skia.RuntimeEffect.Make(ORB_SKSL); } catch { return null; } })();
@@ -16,6 +18,7 @@ const fin = (v: number, d: number) => (Number.isFinite(v) ? v : d);
  */
 export function VoiceOrb({ size = 240, state = 'idle', dimmed, level }: { size?: number; state?: OrbState; dimmed?: boolean; level?: () => number }) {
   const { mode } = useAppearance();
+  useEffect(() => { void crumb(`orb drawn (shader ${effect ? 'ok' : 'none'})`); }, []);
   const f = useOrbMotion(state, level);
   const C = 320; const R = 100; const dpr = PixelRatio.get();
   // Skia canvases are in points with the DPR transform applied, so the shader works in points and AA widths scale by 1/dpr.

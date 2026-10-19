@@ -10,6 +10,7 @@ import { MicrophoneSlash } from 'phosphor-react-native/src/icons/MicrophoneSlash
 import { ClosedCaptioning } from 'phosphor-react-native/src/icons/ClosedCaptioning';
 import { useLiveVoice } from '../src/components/LiveVoice';
 import { crumb, readCrumbs } from '../src/lib/crash-guard';
+void crumb('voice code loaded');
 import { VoiceOrb } from '../src/components/VoiceOrb';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing } from '../src/lib/home';
@@ -24,8 +25,7 @@ export default function VoiceScreen() {
   const [facts, setFacts] = useState<string | undefined>(undefined);
   const [noWs, setNoWs] = useState(false);
   const [cc, setCc] = useState(true);
-  const [lastRun, setLastRun] = useState('');
-  useEffect(() => { void readCrumbs(true).then((c) => { setLastRun(c.trim()); void crumb('voice opened'); }); }, []);
+  useEffect(() => { void crumb('voice screen shown'); }, []);
   useEffect(() => { void getActiveWorkspace().then(async (w) => { setWs(w.id); const b = await getBriefing(w.id).catch(() => null); setFacts(b?.facts?.join('\n')); }).catch(() => setNoWs(true)); }, []);
   const voice = useLiveVoice(ws, 'home', facts);
   const close = () => { voice.stop(); if (router.canGoBack()) router.back(); else router.replace('/'); };
@@ -63,8 +63,7 @@ export default function VoiceScreen() {
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={[styles.round, styles.end]}><X size={24} color="#FFFFFF" /></Pressable>
     </View>
-    {lastRun ? <Text selectable style={{ color: palette.muted, fontSize: 11, padding: 12 }}>{`Last voice try:\n${lastRun}`}</Text> : null}
-  </View>;
+      </View>;
 }
 
 const styles = StyleSheet.create({
