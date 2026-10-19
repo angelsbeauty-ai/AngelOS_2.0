@@ -7,7 +7,8 @@ import { FounderAiUsage } from '../src/components/FounderAiUsage';
 import { Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
-import { Badge, BodyText, Button, Card, Header, ListRow, Overline, SectionTitle, StatTile, SupportText, TextField, ui } from '../src/components/ui';
+import { Badge, BodyText, Button, Card, ListRow, Overline, SectionTitle, StatTile, SupportText, TextField, ui } from '../src/components/ui';
+import { PushedHeader } from '../src/components/PushedHeader';
 import { createStudentDiscount, getBrainAggregates, getFounderOverview, type BrainAggregateTopic, listFeatureFlags, listFounderWorkspaces, updateFeatureFlag } from '../src/lib/founder';
 import { createBetaInvite, getFounderBetaOverview, listBetaFeedback, listBetaInvites, revokeBetaInvite, revokeBetaTester, type BetaOverview } from '../src/lib/beta';
 
@@ -53,7 +54,7 @@ export default function FounderAdminScreen() {
 
   const SECTIONS = [{id:'overview' as const,label:'Overview'},{id:'invites' as const,label:'Invites & testers'},{id:'feedback' as const,label:'Feedback'},{id:'flags' as const,label:'Feature flags'},{id:'discounts' as const,label:'Discount codes'}];
   return <Screen onRefresh={load}><View style={styles.stack}>
-    <Header title="Founder" subtitle={t('fadm.s23')} />
+    <PushedHeader title="Founder" />
     <FounderAiUsage />
     <Tabs value={section} options={SECTIONS} onChange={setSection} />
 
