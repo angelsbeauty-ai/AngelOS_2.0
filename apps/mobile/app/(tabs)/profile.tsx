@@ -25,6 +25,7 @@ import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
 import { Pause } from 'phosphor-react-native/src/icons/Pause';
 import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
+import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Screen } from '../../src/components/Screen';
 import { screenHeader, Skeleton, SupportText, Button } from '../../src/components/ui';
 import { Chip, ROSE, SettingsGroup, SettingsRow } from '../../src/components/SettingsList';
@@ -120,6 +121,7 @@ export default function ProfileScreen() {
       <SettingsRow icon={<Users {...ink} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
       <SettingsRow icon={<CurrencyJpy {...ink} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
       <SettingsRow icon={<ListChecks {...ink} />} title="Tasks" onPress={() => router.push('/tasks' as any)} />
+      <SettingsRow icon={<Plus {...ink} />} title="New business" onPress={() => router.push('/workspaces/new' as any)} />
       <SettingsRow last icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
     </SettingsGroup> : null}
 
