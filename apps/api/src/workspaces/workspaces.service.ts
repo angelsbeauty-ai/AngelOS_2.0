@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { createUserSupabaseClient } from '../config/supabase';
 import type { AuthUser } from '../auth/auth-user';
 import type { CreateWorkspaceDto } from './create-workspace.dto';
@@ -10,10 +10,6 @@ export class WorkspacesService {
 
   async create(user: AuthUser, dto: CreateWorkspaceDto) {
     await this.beta.ensureCanCreateWorkspace(user);
-    // V1 is intentionally one owner / one main business workspace. The schema remains multi-workspace-ready for later.
-    const existing = await this.list(user);
-    if (existing.length) throw new ConflictException('AngelOS V1 supports one main business workspace per account. Multi-business switching is planned for a later version.');
-    // Use a user-scoped Supabase client so RLS remains part of the protection model.
     const supabase = createUserSupabaseClient(user.accessToken);
 
     const { data, error } = await supabase.rpc('create_workspace_with_owner', {
@@ -42,7 +38,6 @@ export class WorkspacesService {
       throw new InternalServerErrorException(error.message);
     }
 
-    // Owner studios first, then studios where the user is a student.
     return (data ?? []).filter((row: any) => row.workspace).map((row: any) => ({ ...row.workspace, role: row.role === 'student' ? 'student' : 'owner' })).sort((a: any, b: any) => (a.role === b.role ? 0 : a.role === 'owner' ? -1 : 1));
   }
 }
