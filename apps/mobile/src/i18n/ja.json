@@ -1038,7 +1038,14 @@
     "copyFailTitle": "コピーできませんでした",
     "copyFailMsg": "文字を選んで自分でコピーしてください。",
     "today": "今日",
-    "yesterday": "昨日"
+    "yesterday": "昨日",
+    "menuTranslate": "翻訳",
+    "menuReply": "返信",
+    "menuLinkClient": "顧客にリンク",
+    "menuCancel": "キャンセル",
+    "menuTitle": "メッセージ",
+    "showOriginal": "原文を表示",
+    "showTranslation": "翻訳を表示"
   },
   "fadm": {
     "s0": "プラットフォーム概要",

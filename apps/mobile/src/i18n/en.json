@@ -1038,7 +1038,14 @@
     "copyFailTitle": "Could not copy",
     "copyFailMsg": "Select the text and copy it yourself.",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "menuTranslate": "Translate",
+    "menuReply": "Reply",
+    "menuLinkClient": "Link to client",
+    "menuCancel": "Cancel",
+    "menuTitle": "Message",
+    "showOriginal": "Show original",
+    "showTranslation": "Show translation"
   },
   "fadm": {
     "s0": "Platform overview",

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActionSheetIOS, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { ErrorState } from '../../src/components/ErrorState';
@@ -43,8 +43,10 @@ function dayLabel(iso: string, t: (k: string) => string) {
 }
 
 export default function MessageThreadScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const appLang: 'en' | 'ja' = i18n.language?.startsWith('ja') ? 'ja' : 'en';
   const { palette, mode } = useAppearance();
+  const [translations, setTranslations] = useState<Record<string, { text: string; shown: boolean }>>({});
   const night = mode === 'night';
   const scrollRef = useRef<ScrollView>(null);
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -148,6 +150,36 @@ export default function MessageThreadScreen() {
     rows.push({ key: message.id, kind: 'msg', message });
   }
 
+  const translateBubble = (message: ClientMessage) => {
+    if (!workspaceId || !message.body) return;
+    void run(`tr-${message.id}`, async () => {
+      const result = await translateText(workspaceId, message.body, appLang);
+      if (result?.translation) setTranslations((prev) => ({ ...prev, [message.id]: { text: result.translation, shown: true } }));
+    }, false);
+  };
+  const replyTo = (message: ClientMessage) => {
+    const quote = message.body.split('\n').map((line) => `> ${line}`).join('\n');
+    setReply((prev) => `${quote}\n${prev}`);
+    setReplyMeaning(null);
+  };
+  const openBubbleMenu = (message: ClientMessage) => {
+    if (message.direction !== 'inbound' || !message.body) return;
+    const clientId = detail?.thread.client?.id;
+    const options: { label: string; run: () => void }[] = [
+      { label: t('msgd.menuTranslate'), run: () => translateBubble(message) },
+      { label: t('msgd.menuReply'), run: () => replyTo(message) },
+    ];
+    if (clientId) options.push({ label: t('msgd.menuLinkClient'), run: () => router.push(`/clients/${clientId}` as any) });
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        { options: [...options.map((o) => o.label), t('msgd.menuCancel')], cancelButtonIndex: options.length },
+        (index) => { if (index < options.length) options[index].run(); },
+      );
+    } else {
+      Alert.alert(t('msgd.menuTitle'), undefined, [...options.map((o) => ({ text: o.label, onPress: o.run })), { text: t('msgd.menuCancel'), style: 'cancel' as const }]);
+    }
+  };
+
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: night ? '#050505' : '#F3F3F3' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}>
       <View style={[styles.top, { borderBottomColor: fieldBorder }]}>
@@ -184,7 +216,9 @@ export default function MessageThreadScreen() {
           {rows.map((row) => row.kind === 'day'
             ? <Text key={row.key} style={[styles.day, { color: palette.muted }]}>{row.label}</Text>
             : <Bubble key={row.key} message={row.message!} appName={appName} manual={manual} busy={busy} night={night} paletteText={palette.text} paletteMuted={palette.muted}
-                onTranslate={() => void run(`tr-${row.message!.id}`, () => translateClientMessage(workspaceId, row.message!.id, 'en'))}
+                translation={translations[row.message!.id] ?? null}
+                onToggleTranslation={() => setTranslations((prev) => { const cur = prev[row.message!.id]; return cur ? { ...prev, [row.message!.id]: { ...cur, shown: !cur.shown } } : prev; })}
+                onLongPress={() => openBubbleMenu(row.message!)}
                 onCopy={() => void copyAndOpen(row.message!.body, thread.platform).then((result) => { if (result === 'failed') void dialog.notify(t('msgd.copyFailTitle'), t('msgd.copyFailMsg')); })}
                 onMarkSent={() => void run(`sent-${row.message!.id}`, () => markReplySent(workspaceId, row.message!.id))} />)}
         </View>
@@ -240,25 +274,25 @@ export default function MessageThreadScreen() {
   );
 }
 
-function Bubble({ message, appName, manual, busy, night, paletteText, paletteMuted, onTranslate, onCopy, onMarkSent }: { message: ClientMessage; appName: string; manual: boolean; busy: string | null; night: boolean; paletteText: string; paletteMuted: string; onTranslate: () => void; onCopy: () => void; onMarkSent: () => void }) {
+function Bubble({ message, appName, manual, busy, night, paletteText, paletteMuted, translation, onToggleTranslation, onLongPress, onCopy, onMarkSent }: { message: ClientMessage; appName: string; manual: boolean; busy: string | null; night: boolean; paletteText: string; paletteMuted: string; translation: { text: string; shown: boolean } | null; onToggleTranslation: () => void; onLongPress: () => void; onCopy: () => void; onMarkSent: () => void }) {
   const { t } = useTranslation();
   const inbound = message.direction === 'inbound';
   const ready = message.status === 'queued' && (message.metadata?.delivery === 'manual' || manual);
   const failed = message.status === 'failed' || (manual && message.direction === 'outbound' && message.status !== 'sent');
-  const ja = isJapanese(message.body);
   const photo = photoUrl(message);
   const statusLabel = !inbound
     ? (message.status === 'sent' ? (message.metadata?.sent_by === 'owner_manual' ? t('msgd.sentByYou') : t('msgd.sent')) : ready ? t('msgd.readySend') : failed ? t('msgd.notSent') : message.status)
     : '';
   return <View style={[styles.bubbleWrap, inbound ? styles.left : styles.right]}>
-    <View style={[styles.bubble, inbound ? (night ? styles.inBubbleNight : styles.inBubble) : styles.outBubble]}>
+    <Pressable onLongPress={inbound ? onLongPress : undefined} delayLongPress={350} accessibilityActions={inbound ? [{ name: 'translate', label: t('msgd.menuTranslate') }] : undefined} onAccessibilityAction={() => onLongPress()} style={[styles.bubble, inbound ? (night ? styles.inBubbleNight : styles.inBubble) : styles.outBubble]}>
       {photo ? <Image source={{ uri: photo }} style={styles.photo} accessibilityLabel={t('msgd.s11')} /> : null}
       {message.body ? <Text style={[styles.bubbleText, inbound ? { color: paletteText } : styles.outText]}>{message.body}</Text> : null}
-      {message.translated_body ? <View style={styles.translation}><Text style={[styles.translationLabel, { color: inbound ? paletteMuted : '#E5E5E7' }]}>{t('msgd.s11')}</Text><Text style={[styles.bubbleText, inbound ? { color: paletteText } : styles.outText]}>{message.translated_body}</Text></View> : null}
-    </View>
+      {translation?.shown ? <Text style={[styles.translatedText, { color: night ? '#9A9A9F' : '#6B6B70' }]}>{translation.text}</Text> : null}
+    </Pressable>
     <View style={[styles.meta, inbound ? styles.left : styles.right]}>
       <Text style={[styles.metaText, { color: paletteMuted }]}>{timeLabel(message.created_at)}{statusLabel ? ` · ${statusLabel}` : ''}</Text>
-      {ja && !message.translated_body ? <Pressable accessibilityRole="button" accessibilityLabel={t('msgd.s29')} onPress={onTranslate} disabled={Boolean(busy)}><Text style={[styles.metaLink, { color: paletteMuted }]}>{busy === `tr-${message.id}` ? t('msgd.translating') : t('msgd.translate')}</Text></Pressable> : null}
+      {busy === `tr-${message.id}` ? <Text style={[styles.metaText, { color: paletteMuted }]}>{t('msgd.translating')}</Text> : null}
+      {translation ? <Pressable accessibilityRole="button" onPress={onToggleTranslation}><Text style={[styles.metaLink, { color: paletteMuted }]}>{translation.shown ? t('msgd.showOriginal') : t('msgd.showTranslation')}</Text></Pressable> : null}
     </View>
     {ready && manual ? <View style={[styles.inline, styles.right]}>
       <ActionButton kind="primary" label={t('msgd.copyOpen', { app: appName })} onPress={onCopy} />
@@ -289,6 +323,7 @@ const styles = StyleSheet.create({
   outText: { color: '#F4F4F5' },
   photo: { width: 180, height: 180, borderRadius: 14 },
   translation: { gap: 2, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(127,127,127,0.3)', paddingTop: 8 },
+  translatedText: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20 },
   translationLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 12 },
   meta: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   metaText: { fontFamily: tokens.font.uiMedium, fontSize: 12 },
