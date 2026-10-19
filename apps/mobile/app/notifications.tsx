@@ -1,36 +1,48 @@
 import { useCallback, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
-import { useTranslation } from 'react-i18next';
+import { StyleSheet, Switch, Text, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 import { Screen } from '../src/components/Screen';
-import { Card, EmptyState, ScreenTitle, Skeleton } from '../src/components/ui';
-import { getActiveWorkspace } from '../src/lib/workspace';
-import { listMessageThreads, timeLabel, type MessageThreadSummary } from '../src/lib/messaging';
-import { colors } from '../src/design/theme';
+import { ScreenTitle, SupportText } from '../src/components/ui';
+import { useAppearance } from '../src/design/appearance';
+import { tokens } from '../src/design/theme';
 
-/** Notifications: real data only. Today the API exposes new/unanswered messages; likes, comments and mentions appear once that feed exists. */
-export default function Notifications() {
-  const { t } = useTranslation();
-  const [items, setItems] = useState<MessageThreadSummary[] | null>(null);
+const KEY = 'angelos.notificationPrefs';
+type Prefs = { messages: boolean; bookings: boolean; ai: boolean };
+const DEFAULT: Prefs = { messages: true, bookings: true, ai: true };
+
+export default function NotificationsScreen() {
+  const { palette } = useAppearance();
+  const [prefs, setPrefs] = useState<Prefs>(DEFAULT);
+
   const load = useCallback(async () => {
-    try { const ws = await getActiveWorkspace(); const all = await listMessageThreads(ws.id); setItems(all.filter((x) => x.unread || x.needs_reply)); }
-    catch { setItems([]); }
+    const raw = await AsyncStorage.getItem(KEY);
+    if (raw) try { setPrefs({ ...DEFAULT, ...JSON.parse(raw) }); } catch { /* ignore */ }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
-  return <Screen onRefresh={load}>
-    <ScreenTitle>{t('top.notifications', { defaultValue: 'Notifications' })}</ScreenTitle>
-    {items === null ? <Skeleton /> : items.length === 0
-      ? <EmptyState title={t('notif.empty', { defaultValue: 'No notifications yet' })} message={t('notif.emptyMsg', { defaultValue: 'New messages, likes, comments and mentions will show up here.' })} />
-      : <Card>{items.map((x) => <Pressable key={x.id} accessibilityRole="button" style={styles.row} onPress={() => router.push(`/messages/${x.id}` as any)}>
-          <View style={{ flex: 1 }}><Text style={styles.name}>{t('notif.newMessage', { defaultValue: 'New message from {{name}}', name: x.contact_display_name ?? '' })}</Text>
-          <Text style={styles.sub} numberOfLines={1}>{[x.platform_label, x.last_preview].filter(Boolean).join(' · ')}</Text></View>
-          <Text style={styles.sub}>{timeLabel(x.last_message_at)}</Text>
-        </Pressable>)}</Card>}
+
+  async function toggle(key: keyof Prefs) {
+    const next = { ...prefs, [key]: !prefs[key] };
+    setPrefs(next);
+    await AsyncStorage.setItem(KEY, JSON.stringify(next));
+  }
+
+  return <Screen>
+    <ScreenTitle>Notifications</ScreenTitle>
+    <SupportText>Choose which alerts you want. These are stored on this device.</SupportText>
+    {(['messages', 'bookings', 'ai'] as const).map((key) => (
+      <View key={key} style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.label, { color: palette.text }]}>{key === 'messages' ? 'New messages' : key === 'bookings' ? 'Bookings' : 'AI suggestions'}</Text>
+          <SupportText>{key === 'messages' ? 'When a client messages you' : key === 'bookings' ? 'When a booking is created or changed' : 'When the assistant has something for you'}</SupportText>
+        </View>
+        <Switch value={prefs[key]} onValueChange={() => void toggle(key)} />
+      </View>
+    ))}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
-  name: { fontFamily: 'Manrope_600SemiBold', fontSize: 15, color: colors.light.primaryText as string },
-  sub: { fontSize: 13, color: colors.light.secondaryText as string },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 16 }
 });
