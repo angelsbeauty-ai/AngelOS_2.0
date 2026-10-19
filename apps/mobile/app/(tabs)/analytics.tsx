@@ -7,7 +7,7 @@ import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { Check } from 'phosphor-react-native/src/icons/Check';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
-import { Skeleton, screenHeader } from '../../src/components/ui';
+import { Skeleton, screenHeader, SupportText } from '../../src/components/ui';
 import { PostThumb } from '../../src/components/PostThumb';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
@@ -20,7 +20,6 @@ type Plat = typeof PLATS[number];
 const BRAND: Record<string, string> = { instagram: '#D62976', facebook: '#1877F2', line: '#06C755', tiktok: '#151515' };
 const GREY = '#6B645B';
 
-/** Analytics, Meta Business Suite Insights style: last 30 days vs the 30 before. Stored real metrics only. */
 export default function AnalyticsScreen() {
   const { palette, mode: look } = useAppearance();
   const nt = look === 'night' ? { color: palette.text } : null; const nm = look === 'night' ? { color: palette.muted } : null; const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0, ...palette.gloss } : null;
@@ -43,6 +42,8 @@ export default function AnalyticsScreen() {
   const h = data?.headline;
   const label: Record<InsightCard['key'], string> = { views: t('ins.views', 'Views'), interactions: t('ins.interactions', 'Content interactions'), follows: t('ins.follows', 'Follows'), linkClicks: t('ins.linkClicks', 'Link clicks') };
   const top = data ? (tab === 'follows' ? [] : data.top[tab]) : [];
+  const noAccounts = state === 'ready' && data && !data.connected.length;
+  const noData = state === 'ready' && data && data.connected.length > 0 && h == null;
 
   return <Screen onRefresh={() => load()}>
     <View style={screenHeader.row}>
@@ -62,8 +63,9 @@ export default function AnalyticsScreen() {
     {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'loading' ? <Skeleton rows={3} height={110} /> : null}
     {state === 'error' ? <Text style={[styles.muted, nm]}>{t('ins.error', 'Insights could not load right now. Pull down to try again.')}</Text> : null}
-    {state === 'ready' && data ? <>
-      {!data.connected.length ? <Text style={[styles.muted, nm]}>{t('ins.noAccounts', 'Connect Instagram, Facebook or LINE to see insights here.')}</Text> : null}
+    {noAccounts ? <SupportText>Connect Instagram, Facebook or LINE to see insights. No data is available until an account is connected.</SupportText> : null}
+    {noData ? <SupportText>No {name}data recorded in the last 30 days. Numbers will appear after the connected accounts have activity.</SupportText> : null}
+    {state === 'ready' && data && !noAccounts ? <>
       <Text style={[styles.headline, nt]}>{h == null ? t('ins.noData', { defaultValue: 'No {{name}}views recorded in the last 30 days yet.', name }) : h.change == null ? t('ins.headFlatNew', { defaultValue: 'Your {{name}}views: {{n}} in the last 30 days', name, n: fmt(h.total) })
         : Math.abs(h.change) < 5 ? t('ins.headSteady', { defaultValue: 'A steady month. Your {{name}}views are about the same as usual.', name })
         : h.change > 0 ? t('ins.headUp', { defaultValue: 'A good month. Your {{name}}views are a little above your usual.', name }) : t('ins.headDown', { defaultValue: 'A quieter month. Your {{name}}views are a little below your usual.', name })}</Text>
@@ -91,7 +93,6 @@ export default function AnalyticsScreen() {
   </Screen>;
 }
 
-/** Compared with her own previous period only. Never red or green. */
 function Change({ v, prev }: { v: number | null; prev: number | null }) {
   const { t } = useTranslation();
   const { palette, mode } = useAppearance(); const c = mode === 'night' ? { color: palette.muted } : null;
