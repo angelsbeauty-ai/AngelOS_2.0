@@ -2,22 +2,23 @@
 
 Branch: feat/design-a1. No push to main. No EAS build started from this pass.
 
-## Fixed in code
+## Fixed in code (ready for rebuild)
 
-1. **Night white slabs** — Shared `Card`, `ListRow`, `TextField` and `SilkBackground` follow the night palette. New `NightSafe` helper for search bars and menus.
-2. **One title** — `PushedHeader`: one Messages-style title, no ghost.
-3. **Back chevron** — 36pt glass button, bold chevron, visible Day and Night.
-4. **Friendly errors** — Login, Signup, Assistant and Messages use `toFriendly` / `humanMessage`.
-5. **Login / Signup Night** — Both follow the theme and use the shiny rose-gold logo.
-6. **Assistant and Plan** — Both render content or a clear fallback. Not blank.
-7. **Calendar** — Plain + (no circle). Booking blocks are neutral (`#151515`). Week/Month already apply night glass. Contrast still needs a device check.
-8. **Privacy** — No `[FILL IN]` in the live text.
+1. **Night white slabs** — Shared Card, ListRow, TextField, SilkBackground follow night. NightSafe helper for search, menus, error text.
+2. **Messages** — Search bar, filter menu, more menu, chips and empty states use NightSafe. Chip row starts at the 20pt inset.
+3. **Analytics** — Picker button, platform menu, cards, tabs and top-content tiles follow night. No white slabs.
+4. **One title + back chevron** — PushedHeader ready for pushed screens.
+5. **Friendly errors** — Login, Signup, Assistant, Messages, Clients use toFriendly.
+6. **Login / Signup** — Night theme + shiny rose-gold logo.
+7. **Assistant and Plan** — Both render content or a clear fallback.
+8. **Calendar** — Plain + , neutral blocks, night glass on Week/Month.
+9. **Privacy** — No [FILL IN] text.
+10. **Clients** — Search and rows already night-aware.
 
-## Still open (needs device proof or per-screen wiring)
+## Still open
 
-- 390pt Day + Night screenshots beside mockups, saved in this folder.
-- Wire `NightSafe` into Messages search/menu, Analytics picker, and any screen that still hardcodes `#FFFFFF` in its own StyleSheet.
-- Chip row inset snap on Messages and Founder (first chip whole, 20pt inset).
+- 390pt Day + Night screenshots beside mockups in this folder.
+- Wire PushedHeader into remaining pushed screens that still show a double title.
 - JP copy review and VoiceOver labels on every icon-only button.
 
 ## Locked and not touched
