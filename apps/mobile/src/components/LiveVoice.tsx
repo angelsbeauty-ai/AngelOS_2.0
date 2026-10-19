@@ -1,3 +1,4 @@
+import { installCrashGuard } from '../lib/crash-guard';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
@@ -122,6 +123,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   }
 
   async function start() {
+    installCrashGuard();
     setError(null);
     setState('connecting');
     try {

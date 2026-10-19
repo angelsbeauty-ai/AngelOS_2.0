@@ -1,3 +1,5 @@
+import { Pressable as EBPressable, Text as EBText, View as EBView } from 'react-native';
+import { router as ebRouter } from 'expo-router';
 import { Waveform } from 'phosphor-react-native/src/icons/Waveform';
 import { ArrowUp } from 'phosphor-react-native/src/icons/ArrowUp';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
@@ -272,3 +274,12 @@ const makeStyles = (P: Palette, night: boolean) => StyleSheet.create({
   input: { flex: 1, fontFamily: tokens.font.ui, fontSize: 16, color: P.text, height: 44, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
   voiceBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: night ? '#F4F4F5' : '#151515', alignItems: 'center', justifyContent: 'center' },
 });
+
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  return <EBView style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 24 }}>
+    <EBText style={{ color: '#fff', fontSize: 18, marginBottom: 12 }}>Something went wrong</EBText>
+    <EBText selectable style={{ color: '#bbb', fontSize: 14, marginBottom: 20 }}>{String(error?.message ?? error)}</EBText>
+    <EBPressable onPress={() => { void retry(); }}><EBText style={{ color: '#fff', fontSize: 16 }}>Try again</EBText></EBPressable>
+    <EBPressable onPress={() => ebRouter.back()} style={{ marginTop: 16 }}><EBText style={{ color: '#fff', fontSize: 16 }}>Go back</EBText></EBPressable>
+  </EBView>;
+}
