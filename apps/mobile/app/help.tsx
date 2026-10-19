@@ -2,7 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'expo-router';
 import { Pressable } from 'react-native';
 import { Screen } from '../src/components/Screen';
-import { BodyText, Card, ScreenTitle, SectionTitle, SupportText } from '../src/components/ui';
+import { BodyText, Card, SectionTitle, SupportText } from '../src/components/ui';
+import { PushedHeader } from '../src/components/PushedHeader';
 import { LEGAL } from '../src/legal/texts';
 
 const FAQ = [
@@ -15,7 +16,7 @@ const FAQ = [
 export default function HelpScreen() {
   const { t } = useTranslation();
   return <Screen>
-    <ScreenTitle>{t('hlp.s0')}</ScreenTitle>
+    <PushedHeader title={t('hlp.s0')} />
     {FAQ.map(([q, a]) => <Card key={q}><SectionTitle>{q}</SectionTitle><BodyText>{a}</BodyText></Card>)}
     <Card><SectionTitle>{t('hlp.s1')}</SectionTitle><SupportText>{LEGAL.summary}</SupportText></Card>
     <Link href="/beta-feedback" asChild><Pressable accessibilityRole="link"><Card><SectionTitle>{t('hlp.s2')}</SectionTitle></Card></Pressable></Link>
