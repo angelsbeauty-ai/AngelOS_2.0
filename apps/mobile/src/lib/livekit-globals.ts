@@ -15,6 +15,16 @@ export async function startVoiceAudio(): Promise<{ ok: boolean; error?: string }
   }
 }
 
+/** Play the assistant through the main loudspeaker (iPhone defaults voice calls to the quiet earpiece). */
+export function setLoudSpeaker(on: boolean) {
+  if (Platform.OS === 'web') return;
+  try {
+    const InCallManager = require('react-native-incall-manager').default;
+    if (on) { InCallManager.start({ media: 'audio' }); InCallManager.setForceSpeakerphoneOn(true); }
+    else { InCallManager.setForceSpeakerphoneOn(false); InCallManager.stop(); }
+  } catch { /* never crash voice over speaker routing */ }
+}
+
 export async function stopVoiceAudio() {
-  // No LiveKit audio session to stop.
+  setLoudSpeaker(false);
 }

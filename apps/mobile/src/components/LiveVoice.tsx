@@ -7,7 +7,7 @@ import { Card, Pill, SectionTitle, SupportText } from './ui';
 import { createVoiceSession, getVoiceStatus } from '../lib/ai';
 import { getHomeSummary } from '../lib/home';
 import { createMessageReply } from '../lib/messaging';
-import { startVoiceAudio, stopVoiceAudio } from '../lib/livekit-globals';
+import { setLoudSpeaker, startVoiceAudio, stopVoiceAudio } from '../lib/livekit-globals';
 
 type State = 'idle' | 'connecting' | 'live' | 'error';
 
@@ -129,6 +129,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     meterRef.current = startMeter({ pc: peer, mic: stream, out: () => outRef.current?.srcObject ?? null }, levelRef, mutedRef);
     peer.addEventListener?.('connectionstatechange', () => { if (['failed', 'closed'].includes(peer.connectionState)) stop(); });
     await crumb('live');
+    setLoudSpeaker(true);
     setState('live');
   }
 
