@@ -11,6 +11,7 @@ import { getClient, listClients, type ClientSummary } from '../../src/lib/client
 import { startConversation } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
+import { useAppearance } from '../../src/design/appearance';
 
 const PLATFORMS = [
   { key: 'line', label: 'LINE' }, { key: 'instagram', label: 'Instagram' }, { key: 'facebook', label: 'Facebook' }, { key: 'other', label: 'Other' }
@@ -18,6 +19,9 @@ const PLATFORMS = [
 
 export default function NewConversationScreen() {
   const { t } = useTranslation();
+  const { palette, mode } = useAppearance();
+  const night = mode === 'night';
+  const field = { backgroundColor: night ? palette.fill : 'rgba(255,255,255,0.80)', borderColor: night ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.06)', color: palette.text };
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -64,9 +68,9 @@ export default function NewConversationScreen() {
         </View>
       ) : (
         <>
-          <TextInput accessibilityLabel={t('mnew.s6')} value={search} onChangeText={setSearch} placeholder={t('mnew.s7')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} autoCorrect={false} />
+          <TextInput accessibilityLabel={t('mnew.s6')} value={search} onChangeText={setSearch} placeholder={t('mnew.s7')} placeholderTextColor={palette.muted} style={[styles.input, field]} autoCorrect={false} />
           {clients.slice(0, 8).map((item) => (
-            <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={`Choose ${item.display_name}`} onPress={() => setClient(item)} style={styles.clientRow}>
+            <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('mnew.choose', { name: item.display_name })} onPress={() => setClient(item)} style={styles.clientRow}>
               <Avatar name={item.display_name} /><Text style={styles.name}>{item.display_name}</Text>
             </Pressable>
           ))}
@@ -77,16 +81,16 @@ export default function NewConversationScreen() {
     </Card>
 
     <Card>
-      <SectionTitle>2 · Where did they message you?</SectionTitle>
+      <SectionTitle>{t('mnew.where')}</SectionTitle>
       <View style={styles.chips}>{PLATFORMS.map((item) => <Chip key={item.key} label={item.label} selected={platform === item.key} onPress={() => setPlatform(item.key)} />)}</View>
     </Card>
 
     <Card>
       <SectionTitle>{t('mnew.s4')}</SectionTitle>
-      <TextInput accessibilityLabel={t('mnew.s9')} value={body} onChangeText={setBody} placeholder={t('mnew.s10')} placeholderTextColor={ui.colors.secondaryText} multiline style={[styles.input, styles.multiline]} />
+      <TextInput accessibilityLabel={t('mnew.s9')} value={body} onChangeText={setBody} placeholder={t('mnew.s10')} placeholderTextColor={palette.muted} multiline style={[styles.input, styles.multiline, field]} />
     </Card>
 
-    <ActionButton kind="primary" label={busy ? 'Saving…' : 'Add conversation'} disabled={busy || !client || !body.trim()} onPress={() => void save()} />
+    <ActionButton kind="primary" label={busy ? t('mnew.saving') : t('mnew.add')} disabled={busy || !client || !body.trim()} onPress={() => void save()} />
   </Screen>;
 }
 
@@ -95,6 +99,6 @@ const styles = StyleSheet.create({
   clientRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: ui.colors.border },
   name: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: ui.colors.primaryText },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  input: { borderWidth: 1, borderColor: ui.colors.border, borderRadius: 20, backgroundColor: tokens.color.raised, color: ui.colors.primaryText, padding: 14, fontSize: 16, fontFamily: tokens.font.ui },
+  input: { borderWidth: 1, borderColor: ui.colors.border, borderRadius: 20, padding: 14, fontSize: 16, fontFamily: tokens.font.ui },
   multiline: { minHeight: 120, textAlignVertical: 'top' }
 });

@@ -58,6 +58,7 @@ export default function MessagesScreen() {
   const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [reErr, setReErr] = useState<{ provider: SocialPlatform; message: string; kind: string } | null>(null);
   const [reBusy, setReBusy] = useState(false);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
 
   const load = useCallback(async (pull = false) => {
     try {
@@ -69,7 +70,7 @@ export default function MessagesScreen() {
         getSocialAccounts(workspace.id).catch(() => [] as SocialAccount[])
       ]);
       setThreads(rows.filter((r) => !(r.channel?.provider === 'manual' || (r.channel?.capabilities as any)?.demo === true)));
-      setConnections(conn); setAccounts(accs); setState('ready');
+      setConnections(conn); setAccounts(accs); setLastSync(new Date()); setState('ready');
     } catch (error) {
       if (isNoWorkspace(error)) { setState('nostudio'); return; }
       const friendly = toFriendly(error, { action: 'load', thing: 'messages' });
@@ -138,23 +139,26 @@ export default function MessagesScreen() {
     {state === 'error' ? <ErrorState title={errorText.title} message={errorText.message} onRetry={() => { setState('loading'); void load(); }} /> : null}
 
     {seg === 'messages' && noAccounts ? <EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /> : null}
-    {seg === 'messages' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /> : null}
+    {state === 'ready' && lastSync ? <Text style={[styles.updated, { color: palette.muted }]}>{t('messages.updated', { time: rel(lastSync.toISOString()) })} · {t('messages.updatedHint')}</Text> : null}
+    {seg === 'messages' && plat === 'tiktok' && state === 'ready' ? <EmptyState title={t('messages.tiktokEmpty')} message={t('messages.tiktokMsg')} /> : null}
+    {seg === 'messages' && plat !== 'tiktok' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /> : null}
 
     {seg === 'messages' && state === 'ready' && visible.length ? <View style={[styles.list, mode === 'night' && { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>
       {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
-        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : '#FFFFFF' }]}>
+        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
-            <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.name, { color: palette.text }]}>{name}</Text>
+            <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
             <View style={styles.rowTop}>
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
-              <Text numberOfLines={1} maxFontSizeMultiplier={1.3} style={[styles.time, { color: palette.muted }]}>· {rel(thread.last_message_at)}</Text>
+              <Text numberOfLines={1} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
+              <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>· {rel(thread.last_message_at)}</Text>
             </View>
+            {thread.needs_reply ? <View style={styles.needsTag}><Text style={styles.needsTagText}>{t('messages.needsReplyTag')}</Text></View> : null}
             {thread.status === 'done' ? <View style={styles.donePill}><Text style={styles.done}>{t('messages.done')}</Text></View> : null}
           </View>
-          {thread.unread || thread.needs_reply ? <View accessibilityLabel="Unread" style={[styles.unread, { backgroundColor: palette.text }]} /> : <View style={{ width: 8 }} />}
+          {thread.unread ? <View accessibilityLabel={t('messages.unreadF')} style={[styles.unread, { backgroundColor: palette.text }]} /> : <View style={{ width: 8 }} />}
         </Pressable>;
       })}
     </View> : null}
@@ -187,14 +191,14 @@ function rel(iso?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  tabsWrap: { marginHorizontal: -tokens.space.screen, flexGrow: 0 },
+  tabsWrap: { marginHorizontal: 0, flexGrow: 0 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8C7A64', borderWidth: 1.5, borderColor: '#FFF' },
+  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8C7A64' },
   unread: { width: 8, height: 8, borderRadius: 4 },
   previewRead: { fontFamily: tokens.font.ui },
-  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: tokens.space.screen },
-  chip: { flexShrink: 0, height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
+  chips: { flexDirection: 'row', gap: 8, paddingLeft: 20, paddingRight: 20 },
+  chip: { flexShrink: 0, height: 38, paddingHorizontal: 14, borderRadius: 19, justifyContent: 'center', backgroundColor: 'transparent', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
@@ -209,5 +213,8 @@ const styles = StyleSheet.create({
   preview: { flex: 1, fontFamily: tokens.font.ui, fontSize: 14 },
   time: { fontFamily: tokens.font.ui, fontSize: 13 },
   donePill: { alignSelf: 'flex-start', marginTop: 2 },
-  done: { fontFamily: tokens.font.uiMedium, fontSize: 12, color: '#8C7A64' }
+  done: { fontFamily: tokens.font.uiMedium, fontSize: 12, color: '#8C7A64' },
+  updated: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, marginTop: 4 },
+  needsTag: { alignSelf: 'flex-start', marginTop: 2, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: 'rgba(184,164,138,0.16)' },
+  needsTagText: { fontFamily: tokens.font.uiMedium, fontSize: 12, color: '#8C7A64' }
 });
