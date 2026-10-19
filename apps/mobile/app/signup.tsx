@@ -40,7 +40,7 @@ export default function SignupScreen() {
   return <SilkBackground><SafeAreaView style={{ flex: 1 }}>
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
       <View style={styles.col}>
-        <BrandMark size={72} />
+        <BrandMark size={72} variant="rose" />
         <Text style={[styles.title, { color: titleC }]}>{t('auth.signupTitle')}</Text>
         <Text style={[styles.sub, { color: subC }]}>{t('auth.signupSub')}</Text>
         <View style={styles.form}>
