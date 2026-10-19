@@ -69,8 +69,6 @@ export default function AiScreen() {
   const [rated, setRated] = useState<Record<string, 'up' | 'down'>>({});
   const [listening, setListening] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const [lastRun, setLastRun] = useState('');
-  useEffect(() => { void dbgRead().then((c) => setLastRun(c.trim())); }, []);
 
   /** Dictation into the composer where the browser supports it; otherwise open voice. */
   function dictate() {
@@ -184,7 +182,6 @@ export default function AiScreen() {
 
   return (
     <View style={styles.page}><GlassBackdrop /><SafeAreaView style={{ flex: 1 }}>
-      {lastRun ? <Text selectable style={{ color: P.muted, fontSize: 11, paddingHorizontal: 16 }}>{`Last voice try:\n${lastRun}`}</Text> : null}
       <View style={[screenHeader.row, styles.head]}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('aip.s1')} onPress={() => router.push('/ai-settings' as any)} style={styles.titleBtn}>
           <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { flex: undefined, flexShrink: 1, color: P.text }]}>{t('aip.assistant', 'Assistant')}</Text><CaretDown size={18} color={P.text} weight="bold" /></Pressable>
