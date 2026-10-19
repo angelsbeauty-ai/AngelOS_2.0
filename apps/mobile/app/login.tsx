@@ -11,7 +11,6 @@ import { toFriendly } from '../src/lib/friendly-error';
 import { tokens } from '../src/design/theme';
 import { useAppearance } from '../src/design/appearance';
 
-/** final-A1 01-login: mark, "Welcome back", two fields, forgot link, one Log in button. Fits 390x844 without scrolling. */
 export default function LoginScreen() {
   const { t } = useTranslation();
   const { mode } = useAppearance();
@@ -37,7 +36,7 @@ export default function LoginScreen() {
   return <SilkBackground><SafeAreaView style={{ flex: 1 }}>
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" bounces={false}>
       <View style={styles.col}>
-        <BrandMark size={96} />
+        <BrandMark size={96} variant="rose" />
         <Text style={[styles.title, { color: titleC }]}>{t('auth.loginTitle')}</Text>
         <Text style={[styles.sub, { color: subC }]}>{t('auth.loginSub')}</Text>
         <View style={styles.form}>
