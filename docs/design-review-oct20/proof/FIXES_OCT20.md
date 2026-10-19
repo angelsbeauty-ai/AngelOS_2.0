@@ -7,7 +7,7 @@ Branch: feat/design-a1. No push to main. No EAS build started from this pass.
 1. **Night white slabs** — Shared Card, ListRow, TextField, SilkBackground follow night. NightSafe for search, menus, error text.
 2. **Messages** — Search, menus, chips and empty states use NightSafe. Chip row starts at the 20pt inset.
 3. **Analytics** — Picker, menu, cards, tabs and tiles follow night.
-4. **One title + back chevron** — PushedHeader on Account, Help, Feedback, Privacy and Terms.
+4. **One title + back chevron** — PushedHeader on Account, Help, Feedback, Privacy, Terms, Edit profile and Founder.
 5. **Friendly errors** — Login, Signup, Assistant, Messages, Clients use toFriendly.
 6. **Login / Signup** — Night theme + shiny rose-gold logo.
 7. **Assistant and Plan** — Both render content or a clear fallback.
@@ -18,7 +18,6 @@ Branch: feat/design-a1. No push to main. No EAS build started from this pass.
 ## Still open
 
 - 390pt Day + Night screenshots beside mockups in this folder.
-- Wire PushedHeader into remaining pushed screens (Edit profile, Founder, Connections).
 - JP copy review and VoiceOver labels on every icon-only button.
 
 ## Locked and not touched
