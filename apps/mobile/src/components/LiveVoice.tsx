@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
-import { Room, RoomEvent, Track } from 'livekit-client';
 import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
 import { createVoiceSession, getVoiceStatus } from '../lib/ai';
@@ -47,32 +46,20 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string): Pro
   }
 }
 
-/**
- * Live voice. With LiveKit keys the server opens a LiveKit room; otherwise it mints a 2-minute OpenAI Realtime key and
- * the device talks to OpenAI directly over WebRTC.
- * Nothing is recorded or saved by AngelOS.
- */
+/** OpenAI Realtime voice over WebRTC. Nothing is recorded or saved by AngelOS. */
 export function useLiveVoice(workspaceId: string | null, screen?: string, context?: string) {
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
   const [muted, setMutedState] = useState(false);
   const [caption, setCaption] = useState<string | null>(null);
-  const roomRef = useRef<Room | null>(null);
   const pcRef = useRef<any>(null); const micRef = useRef<any>(null); const outRef = useRef<any>(null);
-  const audioRef = useRef<HTMLMediaElement[]>([]);
-  /** Live voice level 0..1: the louder of her mic and the assistant's output. Read by the orb each frame. */
   const levelRef = useRef(0); const meterRef = useRef<{ stop: () => void } | null>(null);
   const mutedRef = useRef(false);
   const getLevel = useCallback(() => levelRef.current, []);
 
   function stop() {
     meterRef.current?.stop(); meterRef.current = null; levelRef.current = 0;
-    const room = roomRef.current;
-    roomRef.current = null;
-    audioRef.current.forEach((el) => { el.srcObject = null; el.remove(); });
-    audioRef.current = [];
-    void room?.disconnect();
     try { micRef.current?.getTracks?.().forEach((t: any) => t.stop()); } catch { /* ignore */ }
     try { pcRef.current?.close?.(); } catch { /* ignore */ }
     if (outRef.current) { outRef.current.srcObject = null; outRef.current.remove?.(); }
@@ -82,11 +69,9 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     setState('idle');
   }
 
-  /** Mute only the microphone; the session stays open. */
   function setMuted(m: boolean) {
     setMutedState(m); mutedRef.current = m;
     try { micRef.current?.getTracks?.().forEach((t: any) => { t.enabled = !m; }); } catch { /* ignore */ }
-    void roomRef.current?.localParticipant.setMicrophoneEnabled(!m).catch(() => undefined);
   }
 
   useEffect(() => {
@@ -97,7 +82,6 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     return () => stop();
   }, [workspaceId]);
 
-  /** OpenAI Realtime over WebRTC: the browser's WebRTC on web, LiveKit's native react-native-webrtc on iPhone (globals registered). */
   async function startOpenAI(secret: string) {
     const g: any = globalThis as any;
     if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
@@ -145,26 +129,8 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       const session = await createVoiceSession(workspaceId, screen, context);
       setStatus({ available: session.available, reason: session.reason });
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
-      if (session.clientSecret) { await startOpenAI(session.clientSecret); return; }
-      if (!session.url || !session.token) throw new Error(session.reason ?? 'Live voice is off.');
-      const audio = await startVoiceAudio();
-      if (!audio.ok) throw new Error(audio.error ?? 'Could not start the microphone. Check Settings.');
-      const room = new Room();
-      roomRef.current = room;
-      room.on(RoomEvent.TrackSubscribed, (track) => {
-        if (track.kind !== Track.Kind.Audio || Platform.OS !== 'web') return;
-        const el = track.attach();
-        el.autoplay = true;
-        document.body.appendChild(el);
-        audioRef.current.push(el);
-      });
-      room.on(RoomEvent.Disconnected, () => {
-        if (roomRef.current === room) stop();
-      });
-      await room.connect(session.url, session.token);
-      await room.localParticipant.setMicrophoneEnabled(true);
-      meterRef.current = startMeter({ room }, levelRef, mutedRef);
-      setState('live');
+      if (!session.clientSecret) throw new Error('Voice is not available right now.');
+      await startOpenAI(session.clientSecret);
     } catch (e) {
       stop();
       setState('error');
@@ -193,10 +159,9 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
   </Card>;
 }
 
-/** Speech amplitude (0..1, linear) mapped so normal talking lands mid-range and loud speech near 1. */
 export const shape = (a: number) => (Number.isFinite(a) ? Math.min(1, Math.sqrt(Math.max(0, a)) * 1.9) : 0);
 
-function startMeter(src: { pc?: any; mic?: any; out?: () => any; room?: Room }, level: { current: number }, muted: { current: boolean }) {
+function startMeter(src: { pc?: any; mic?: any; out?: () => any }, level: { current: number }, muted: { current: boolean }) {
   const g: any = globalThis as any; let stopped = false; const cleanups: Array<() => void> = [];
   let web: { read: () => number } | null = null;
   if (Platform.OS === 'web' && src.pc && g.AudioContext) {
@@ -211,7 +176,6 @@ function startMeter(src: { pc?: any; mic?: any; out?: () => any; room?: Room }, 
     if (stopped) return;
     try {
       if (web) level.current = shape(web.read());
-      else if (src.room) { const r = src.room; let lv = muted.current ? 0 : r.localParticipant.audioLevel ?? 0; r.remoteParticipants.forEach((p) => { lv = Math.max(lv, p.audioLevel ?? 0); }); level.current = shape(lv); }
       else if (src.pc?.getStats && src.pc.connectionState !== 'closed' && src.pc.signalingState !== 'closed') {
         const stats = await src.pc.getStats(); let mic = 0; let out = 0;
         stats.forEach((r: any) => { if (r.kind !== 'audio' && r.mediaType !== 'audio') return; if (r.type === 'media-source' && typeof r.audioLevel === 'number') mic = r.audioLevel; if (r.type === 'inbound-rtp' && typeof r.audioLevel === 'number') out = r.audioLevel; });
