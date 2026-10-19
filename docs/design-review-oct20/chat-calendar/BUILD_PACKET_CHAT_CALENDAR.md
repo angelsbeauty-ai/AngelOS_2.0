@@ -64,3 +64,11 @@ Real device or simulator captures at 390 pt (@3x 1170×2532), Day and Night, wit
 - docs/design-review-oct20/proof/calendar/: month-{day,night}, week-{day,night}, day-list-{day,night}, create-from-plus-{day,night}, post-sheet-{day,night}, post-deleted-{day,night}
 - Plus a short recording: thread opens at the newest message, and a scheduled IG test post goes Scheduled → Posted on staging (or shows "Reminder" when the cron is off).
 - Each PNG must match the code on the branch. Layout-only renders are not accepted as proof.
+
+## CHANGE 2026-10-20 (Angel): Translate on long-press, not automatic
+- Remove the automatic English line under client bubbles (mockups 01-03 show it; drop it).
+- Long-press a client bubble opens a native context menu (iOS-style, the bubble lifts and the background blurs): Translate, Copy, Reply, Link to client.
+- Translate shows the translation inline under that bubble in smaller secondary text (#9A9A9F Night / #6B6B70 Day), with a "Show original" toggle. Only that message is translated, and it stays translated until toggled.
+- The target language is the app language (EN or JP), so Japanese users translate into Japanese. The same applies to AI drafts: the meaning appears only on long-press or a tap on "Translate".
+- Safety rule kept: the Approve step for a draft in another language still shows its meaning before sending.
+- Haptic: light impact on long-press. VoiceOver: "Translate" is listed as a custom action.
