@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { getActiveWorkspace, listWorkspaces, setActiveWorkspace, type WorkspaceSummary } from '../lib/workspace';
 import { useAppearance } from '../design/appearance';
@@ -20,7 +20,7 @@ export function BusinessSwitcher({ onChanged }: { onChanged?: () => void }) {
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
-  if (!current || all.length < 2) return null;
+  if (!current) return null;
 
   async function choose(id: string) {
     await setActiveWorkspace(id);
@@ -42,6 +42,9 @@ export function BusinessSwitcher({ onChanged }: { onChanged?: () => void }) {
               <Text style={[styles.optionText, { color: palette.text }, w.id === current.id && { color: '#FFFFFF' }]}>{w.name}</Text>
             </Pressable>
           ))}
+          <Pressable accessibilityRole="button" onPress={() => { setOpen(false); router.push('/workspaces/new' as any); }} style={styles.option}>
+            <Text style={[styles.optionText, { color: palette.text }]}>+ New business</Text>
+          </Pressable>
         </View>
       </Pressable>
     </Modal>
