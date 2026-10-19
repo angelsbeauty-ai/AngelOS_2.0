@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
@@ -101,18 +101,14 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   async function startOpenAI(secret: string) {
     const g: any = globalThis as any;
     if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
-    // Audio session must succeed before the mic opens. Swallowing a failure here and continuing is what kills the iPhone process.
-    await startVoiceAudio();
-    // Always pass explicit objects to native WebRTC: on iOS a missing (undefined) config reaches the native module as nil.
+    const audio = await startVoiceAudio();
+    if (!audio.ok) throw new Error(audio.error ?? 'Could not start the microphone. Check Settings.');
     const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
     if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }
-    // On iPhone the remote audio track plays through the audio session automatically.
     const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     micRef.current = stream;
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
-    // protocol must be a real string. Native builds an NSDictionary of the new channel and inserts dataChannel.protocol;
-    // the default is nil, and inserting nil throws NSInvalidArgumentException, which closes the app. ordered alone does not set it.
     const dc = peer.createDataChannel('oai-events', { ordered: true, protocol: 'oai' });
     const answered = new Set<string>();
     dc.onmessage = (e: any) => {
@@ -151,7 +147,8 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (session.clientSecret) { await startOpenAI(session.clientSecret); return; }
       if (!session.url || !session.token) throw new Error(session.reason ?? 'Live voice is off.');
-      await startVoiceAudio();
+      const audio = await startVoiceAudio();
+      if (!audio.ok) throw new Error(audio.error ?? 'Could not start the microphone. Check Settings.');
       const room = new Room();
       roomRef.current = room;
       room.on(RoomEvent.TrackSubscribed, (track) => {
@@ -171,7 +168,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     } catch (e) {
       stop();
       setState('error');
-      setError(e instanceof Error ? e.message : 'Voice could not start.');
+      setError(e instanceof Error ? e.message : 'Voice could not start. Check microphone permission in Settings.');
     }
   }
 
@@ -188,7 +185,10 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
       {state === 'live' ? <Pill tone="success">{t('lv.s1')}</Pill> : null}
       <ActionButton kind={state === 'live' ? 'secondary' : 'primary'} label={state === 'live' ? 'Stop' : state === 'connecting' ? 'Connecting…' : 'Start talking'} disabled={state === 'connecting'} accessibilityHint="Uses your microphone. Nothing is recorded or saved." onPress={() => (state === 'live' ? stop() : void start())} />
     </> : null}
-    {error ? <SupportText tone="warning">{error}</SupportText> : null}
+    {error ? <>
+      <SupportText tone="warning">{error}</SupportText>
+      <ActionButton kind="secondary" label="Open Settings" onPress={() => void Linking.openSettings()} />
+    </> : null}
     <SupportText>{t('lv.s2')}</SupportText>
   </Card>;
 }
@@ -196,13 +196,6 @@ export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen
 /** Speech amplitude (0..1, linear) mapped so normal talking lands mid-range and loud speech near 1. */
 export const shape = (a: number) => (Number.isFinite(a) ? Math.min(1, Math.sqrt(Math.max(0, a)) * 1.9) : 0);
 
-/**
- * Real audio levels for the orb.
- * Web: Web Audio analysers on the mic and the remote stream (true realtime).
- * iPhone (react-native-webrtc) and any fallback: RTCPeerConnection stats audioLevel (media-source = mic, inbound-rtp = assistant), polled every 50 ms.
- * LiveKit rooms: participant audioLevel (local mic and remote agent).
- * The orb smooths these at its 60 fps frame rate.
- */
 function startMeter(src: { pc?: any; mic?: any; out?: () => any; room?: Room }, level: { current: number }, muted: { current: boolean }) {
   const g: any = globalThis as any; let stopped = false; const cleanups: Array<() => void> = [];
   let web: { read: () => number } | null = null;
