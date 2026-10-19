@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { X } from 'phosphor-react-native/src/icons/X';
@@ -29,7 +29,7 @@ export default function VoiceScreen() {
   const top = live ? (voice.muted ? t('voice.muted', 'Muted') : t('voice.listening', 'Listening')) : voice.state === 'connecting' ? t('voice.connecting', 'Connecting…') : t('voice.title', 'Talk to your assistant');
   const caption = noWs ? t('voice.noStudio', 'Set up your studio first, then you can talk to your assistant.')
     : off ? (voice.status?.reason ?? t('voice.off', 'Voice is not available right now.'))
-    : voice.state === 'error' ? (voice.error ?? t('voice.error', 'Voice could not start.'))
+    : voice.state === 'error' ? (voice.error ?? t('voice.error', 'Voice could not start. Check microphone permission in Settings.'))
     : live ? (voice.caption ? `“${voice.caption}”` : t('voice.listenCopy', "I'm listening. Take your time."))
     : null;
   const hint = live ? t('voice.tapPause', 'Tap the orb to pause') : t('voice.tapStart', 'Tap the orb to start');
@@ -45,6 +45,11 @@ export default function VoiceScreen() {
         <VoiceOrb state={voice.state} dimmed={!!off || noWs} level={voice.getLevel} />
       </Pressable>
       {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{caption}</Text> : null}
+      {voice.state === 'error' ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Open Settings" onPress={() => void Linking.openSettings()} style={[styles.settingsBtn, { backgroundColor: palette.text }]}>
+          <Text style={[styles.settingsText, { color: palette.bg }]}>Open Settings</Text>
+        </Pressable>
+      ) : null}
       <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>
     </View>
     <View style={styles.buttons}>
@@ -64,6 +69,8 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 },
   caption: { fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 32, color: D.text, textAlign: 'center', maxWidth: 340, marginTop: 24 },
   hint: { fontFamily: tokens.font.ui, fontSize: 15, color: D.muted, textAlign: 'center' },
+  settingsBtn: { minHeight: 44, paddingHorizontal: 24, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  settingsText: { fontFamily: tokens.font.uiSemibold, fontSize: 16 },
   buttons: { flexDirection: 'row', justifyContent: 'center', gap: 40 },
   round: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   mute: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: D.hairline },
