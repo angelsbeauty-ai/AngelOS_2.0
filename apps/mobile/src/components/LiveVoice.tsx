@@ -1,4 +1,4 @@
-import { installCrashGuard } from '../lib/crash-guard';
+import { installCrashGuard, crumb } from '../lib/crash-guard';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
@@ -85,15 +85,20 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
 
   async function startOpenAI(secret: string) {
     const g: any = globalThis as any;
+    await crumb('webrtc load');
     const audio = await startVoiceAudio();
     if (!audio.ok) throw new Error(audio.error ?? 'Could not start the microphone. Check Settings.');
     if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
+    await crumb('new peer');
     const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
     if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }
+    await crumb('mic');
     const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     micRef.current = stream;
+    await crumb('add track');
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
+    await crumb('data channel');
     const dc = peer.createDataChannel('oai-events', { ordered: true, protocol: 'oai' });
     const answered = new Set<string>();
     dc.onmessage = (e: any) => {
@@ -111,14 +116,19 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
         }).catch(() => undefined);
       } catch { /* ignore */ }
     };
+    await crumb('offer');
     const offer = await peer.createOffer({ offerToReceiveAudio: true });
     await peer.setLocalDescription(offer);
+    await crumb('openai call');
     const res = await fetch('https://api.openai.com/v1/realtime/calls', { method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/sdp' } });
     if (!res.ok) throw new Error(`Voice could not connect (${res.status}).`);
     const answer = await res.text();
+    await crumb('answer');
     await peer.setRemoteDescription(Platform.OS === 'web' ? { type: 'answer', sdp: answer } : new g.RTCSessionDescription({ type: 'answer', sdp: answer }));
+    await crumb('meter');
     meterRef.current = startMeter({ pc: peer, mic: stream, out: () => outRef.current?.srcObject ?? null }, levelRef, mutedRef);
     peer.addEventListener?.('connectionstatechange', () => { if (['failed', 'closed'].includes(peer.connectionState)) stop(); });
+    await crumb('live');
     setState('live');
   }
 
@@ -128,12 +138,14 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     setState('connecting');
     try {
       if (!workspaceId) throw new Error('No studio selected.');
+      await crumb('session');
       const session = await createVoiceSession(workspaceId, screen, context);
       setStatus({ available: session.available, reason: session.reason });
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (!session.clientSecret) throw new Error('Voice is not available right now.');
       await startOpenAI(session.clientSecret);
     } catch (e) {
+      await crumb(`caught: ${e instanceof Error ? e.message : String(e)}`);
       stop();
       setState('error');
       setError(e instanceof Error ? e.message : 'Voice could not start. Check microphone permission in Settings.');
