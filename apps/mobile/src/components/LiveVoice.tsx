@@ -84,9 +84,9 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
 
   async function startOpenAI(secret: string) {
     const g: any = globalThis as any;
-    if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
     const audio = await startVoiceAudio();
     if (!audio.ok) throw new Error(audio.error ?? 'Could not start the microphone. Check Settings.');
+    if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
     const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
     if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }

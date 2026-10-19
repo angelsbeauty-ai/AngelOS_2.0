@@ -1,3 +1,4 @@
+import '../src/lib/crash-guard';
 import '../src/i18n';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
