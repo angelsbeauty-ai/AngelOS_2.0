@@ -59,6 +59,7 @@ export function ChatBar({
           placeholder={placeholder}
           placeholderTextColor={night ? '#9A9A9F' : '#6C6C70'}
           multiline
+          numberOfLines={1}
           scrollEnabled
           textAlignVertical="center"
           style={[styles.input, { color: palette.text }]}
