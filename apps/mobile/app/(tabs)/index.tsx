@@ -61,7 +61,7 @@ export default function HomeScreen() {
   const h = now.getHours();
   const hello = h < 5 ? t('home.evening2', 'Good evening!') : h < 12 ? t('home.morning2', 'Good morning!') : h < 18 ? t('home.afternoon2', 'Good afternoon!') : t('home.evening2', 'Good evening!');
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
-  const time = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  const time = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
   const s = sum?.schedule; const m = sum?.messages; const so = sum?.social; const imp = sum?.important; const a = sum?.assistant;
   const openReport = (section?: string) => router.push({ pathname: '/reports', params: section ? { section } : {} } as any);
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
@@ -73,7 +73,7 @@ export default function HomeScreen() {
   const statusLabel = (st: string) => t(`home.st.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : st === 'pending' ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : '' });
   const na = t('home.unavailable', 'Unavailable');
 
-  return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()}>
+  return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()} header={<View style={styles.pinned}>
     <View style={styles.top}>
       <View style={{ flex: 1 }}><BusinessSwitcher onChanged={() => void load()} /></View>
       <View style={[styles.actions, { backgroundColor: palette.glass, borderColor: palette.border }]}>
@@ -83,9 +83,10 @@ export default function HomeScreen() {
     </View>
     <View style={{ gap: 6 }}>
       <Text accessibilityRole="header" style={[styles.big, { color: palette.text }]}>{t('home.today', 'Today')}</Text>
-      <Text style={[styles.sub, { color: palette.muted }]} numberOfLines={1}>{dateLine}{name ? ` · ${t('home.hiName', { defaultValue: 'Hi, {{name}}', name })}` : ''}</Text>
+      <Text style={[styles.sub, { color: palette.muted }]} numberOfLines={1}>{dateLine} · {name ? t('home.hiName', { defaultValue: 'Hi, {{name}}', name }) : t('home.hi', 'Hi')}</Text>
     </View>
 
+    </View>}>
     {noStudio ? <NoStudio /> : <>
       {sumErr && !sum ? <Text style={[styles.muted, { color: palette.muted }]}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
       <Text style={[styles.section, { color: palette.text }]}>{t('home.upNext', 'Up next')}</Text>
@@ -113,10 +114,11 @@ export default function HomeScreen() {
 
 function Tile({ title, value, line, onPress }: { title: string; value: string; line: string; onPress: () => void }) {
   const { palette } = useAppearance();
+  const { t } = useTranslation();
   return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value}`} onPress={onPress} style={({ pressed }) => [styles.tile, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
     <Text numberOfLines={1} style={[styles.tileTitle, { color: palette.muted }]}>{title}</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.tileValue, { color: palette.text }]}>{value}</Text>
-    {line ? <Text numberOfLines={1} style={[styles.tileLine, { color: palette.muted }]}>{line}</Text> : null}
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[value === t('home.unavailable', 'Unavailable') ? styles.tileNa : styles.tileValue, { color: value === t('home.unavailable', 'Unavailable') ? palette.muted : palette.text }]}>{value}</Text>
+    {line ? <Text numberOfLines={2} style={[styles.tileLine, { color: palette.muted }]}>{line}</Text> : null}
   </Pressable>;
 }
 
@@ -162,7 +164,9 @@ const styles = StyleSheet.create({
   tile: { width: '48.4%', minHeight: 128, padding: 16, gap: 6, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth },
   tileTitle: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
   tileValue: { fontFamily: tokens.font.uiBold, fontSize: 28, lineHeight: 34 },
-  tileLine: { fontFamily: tokens.font.ui, fontSize: 14 },
+  tileLine: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 17 },
+  tileNa: { fontFamily: tokens.font.uiSemibold, fontSize: 18, lineHeight: 34 },
+  pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 12 },
   hello: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#6B645B' },
   welcome: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
