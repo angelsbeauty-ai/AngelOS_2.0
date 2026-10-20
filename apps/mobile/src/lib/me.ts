@@ -26,5 +26,5 @@ export function useRole() {
   return role;
 }
 
-/** Studio pages a student may open. Everything else redirects to the Academy. */
-export const STUDENT_ALLOWED = /^\/(academy|account|profile|settings|login|onboarding|forgot-password|reset-password|beta-feedback|privacy|terms|help)(\/|$)/;
+/** Studio pages a student may open. Everything else redirects to Profile. Academy is off in V1. */
+export const STUDENT_ALLOWED = /^\/(account|profile|settings|login|onboarding|forgot-password|reset-password|beta-feedback|privacy|terms|help)(\/|$)/;

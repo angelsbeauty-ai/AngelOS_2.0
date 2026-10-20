@@ -24,7 +24,7 @@ export function Screen({ children, hideAsk, askBottom, askRight, onRefresh, onSw
   const pathname = usePathname() ?? '/';
   const role = useRole();
   // B9 route guard: students only reach the Academy and their own settings.
-  useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/academy' as any); }, [role, pathname]);
+  useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/profile' as any); }, [role, pathname]);
   const showAsk = !hideAsk && role !== 'student' && TAB_PATHS.has(pathname);
   const { palette, mode } = useAppearance();
   const nightFix = mode === 'night' && !LOCKED.has(pathname);

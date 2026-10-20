@@ -51,7 +51,7 @@ export default function OnboardingScreen() {
     try {
       const result: any = await redeemBetaInvite(invite.trim()); setInvite('');
       clearMe();
-      if (result?.role === 'student') { router.replace('/academy' as any); return; }
+      if (result?.role === 'student') { router.replace('/profile' as any); return; }
       setAccess(result);
     } catch (e) { void dialog.notify('Invite could not be used', e instanceof Error ? e.message : ''); }
     finally { setSaving(false); }

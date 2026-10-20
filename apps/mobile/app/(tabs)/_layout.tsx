@@ -40,7 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="messages" options={{ ...studio, title: t('tabs.messages'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused} badge={unread}><ChatCircleDots size={24} color={color as string} weight="duotone" /></TabIcon> }} />
       <Tabs.Screen name="calendar" options={{ ...studio, title: t('tabs.calendar'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><CalendarBlank size={24} color={color as string} weight="duotone" /></TabIcon> }} />
       <Tabs.Screen name="analytics" options={{ ...studio, title: t('tabs.analytics'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><ChartBar size={24} color={color as string} weight="duotone" /></TabIcon> }} />
-      <Tabs.Screen name="academy" options={{ href: student ? undefined : null, title: t('tabs.academy'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><GraduationCap size={24} color={color as string} weight="duotone" /></TabIcon> }} />
+      <Tabs.Screen name="academy" options={{ href: null, title: t('tabs.academy'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><GraduationCap size={24} color={color as string} weight="duotone" /></TabIcon> }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><UserCircle size={24} color={color as string} weight="duotone" /></TabIcon> }} />
       {/* Moved out of the tab bar (NAV V1): Clients lives under Profile, Social posts under Calendar. Routes stay reachable. */}
       <Tabs.Screen name="clients" options={{ href: null, title: t('tabs.clients') }} />
