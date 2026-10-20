@@ -15,9 +15,11 @@ import { useAppearance } from '../design/appearance';
 /** Paths that render the real Tabs bar themselves. */
 export const TAB_ROOTS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
 const NO_BAR = /^\/(login|signup|sign-up|sign_up|register|onboarding|forgot-password|reset-password|voice)(\/|$)/;
+/** Chat thread is one full screen. No tab bar. */
+const NO_BAR_THREAD = /^\/messages\/[^/]+$/;
 
 /** Inner (pushed) screens get the same 5-tab bar so Angel is never stuck. */
-export function showsAppTabBar(pathname: string) { return !TAB_ROOTS.has(pathname) && !NO_BAR.test(pathname); }
+export function showsAppTabBar(pathname: string) { return !TAB_ROOTS.has(pathname) && !NO_BAR.test(pathname) && !NO_BAR_THREAD.test(pathname); }
 
 function activeTab(p: string) {
   if (/^\/messages\//.test(p) || p === '/notifications') return p === '/notifications' ? '/' : '/messages';
