@@ -13,7 +13,7 @@ const NAMES: Record<string, string> = { instagram: 'Instagram', facebook: 'Faceb
 export function notConnectedReason(platform: string): string {
   if (platform === 'line') return 'LINE isn\'t connected. Connect LINE in Social › Accounts, then tap Try again.';
   if (platform === 'instagram' || platform === 'facebook') return `${NAMES[platform]} isn't connected yet, so AngelOS didn't post. Post it by hand and tap Mark as posted, or connect ${NAMES[platform]} and tap Try again.`;
-  if (platform === 'tiktok') return 'TikTok posts automatically once Postiz is connected. Set the Postiz key, then tap Try again.';
+  if (platform === 'tiktok') return "TikTok isn't connected yet, so AngelOS didn't post. Post it by hand and tap Mark as posted, or tap Try again once TikTok is connected.";
   return `AngelOS can't post to ${NAMES[platform] ?? platform} automatically. Post it by hand and tap Mark as posted.`;
 }
 
@@ -85,7 +85,7 @@ export class SocialPublisherService {
         const photo = assets.find((a: any) => a.media_type === 'image' && a.storage_path);
         const imageUrl = photo ? (await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, 3600)).data?.signedUrl : undefined;
         const r = await new PostizPublishingAdapter().publish({ platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey: key, imageUrl });
-        return this.finish(variant, r.status === 'published' ? { status: 'published', providerPostId: r.providerPostId, liveUrl: r.liveUrl, raw: r.raw } : { status: 'failed', reason: r.error ?? 'Postiz failed.', raw: r.raw });
+        return this.finish(variant, r.status === 'published' ? { status: 'published', providerPostId: r.providerPostId, liveUrl: r.liveUrl, raw: r.raw } : { status: 'failed', reason: r.error ?? "It didn't post. Tap Try again.", raw: r.raw });
       }
       // Fallback only when Postiz is not configured. TikTok has no Meta path.
       if (platform === 'tiktok') return this.finish(variant, { status: 'failed', reason: notConnectedReason('tiktok') });

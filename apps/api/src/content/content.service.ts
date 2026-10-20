@@ -255,6 +255,20 @@ export class ContentService {
     return this.get(user, workspaceId, contentPostId);
   }
 
+  /** Archive a post: cancels anything still queued with the posting service, then hides it from Calendar/Social. Published variants keep their record. */
+  async archive(user: AuthUser, workspaceId: string, contentPostId: string, postiz = new PostizPublishingAdapter()) {
+    const detail = await this.get(user, workspaceId, contentPostId);
+    for (const v of (detail.variants ?? []) as any[]) {
+      if (v.status === 'scheduled' && v.provider_post_id) { const r = await postiz.cancel(v.provider_post_id); if (!r.ok) throw new InternalServerErrorException(r.error ?? 'Could not cancel the scheduled post'); }
+    }
+    const service = createServiceSupabaseClient();
+    const now = new Date().toISOString();
+    await service.from('content_variants').update({ status: 'archived', provider_post_id: null, updated_at: now }).eq('workspace_id', workspaceId).eq('content_post_id', contentPostId).neq('status', 'published');
+    const { data, error } = await service.from('content_posts').update({ status: 'archived', updated_at: now }).eq('workspace_id', workspaceId).eq('id', contentPostId).select('id,status').single();
+    if (error || !data) throw new NotFoundException('Content post not found');
+    return data;
+  }
+
   /** Approve tap → schedule. Sends to the posting service as `schedule`; rescheduling replaces the old one. */
   async scheduleVariant(user: AuthUser, workspaceId: string, variantId: string, scheduledFor: string, postiz = new PostizPublishingAdapter()) {
     const supabase = createUserSupabaseClient(user.accessToken);

@@ -58,7 +58,7 @@ export class PostizPublishingAdapter implements SocialPublishingAdapter {
     if (!this.key) return { ok: false, code: 'not_configured', error: 'Auto-posting is not connected yet.' };
     const platform = input.platform.replace(/^instagram_.*/, 'instagram');
     const list = await this.call('/integrations');
-    if (list.status === 401) return { ok: false, code: 'auth', error: 'The posting service key was refused.' };
+    if (list.status === 401) return { ok: false, code: 'auth', error: 'The posting service login has expired.' };
     const integration = await this.integrationFor(platform);
     if (!integration) return { ok: false, code: 'no_channel', error: `No connected ${platform} account yet.` };
     const r = await this.call('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.body('schedule', input.scheduledFor, integration, platform, input)) });
@@ -85,14 +85,14 @@ export class PostizPublishingAdapter implements SocialPublishingAdapter {
   }
 
   async publish(input: PublishContentInput): Promise<PublishContentResult> {
-    if (!this.key) return { status: 'failed', error: 'Postiz key is not set.' };
+    if (!this.key) return { status: 'failed', error: "Auto-posting isn't connected yet." };
     const platform = input.platform.replace(/^instagram_.*/, 'instagram');
     const integration = await this.integrationFor(platform);
-    if (!integration) return { status: 'failed', error: `Postiz has no connected ${platform} account.` };
+    if (!integration) return { status: 'failed', error: `${platform.charAt(0).toUpperCase() + platform.slice(1)} isn't connected yet.` };
 
     const body = this.body('now', new Date().toISOString(), integration, platform, input);
     const r = await this.call('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) return { status: 'failed', error: `Postiz failed (${r.status})`, raw: r.json };
+    if (!r.ok) return { status: 'failed', error: `It didn't post (error ${r.status}). Tap Try again.`, raw: r.json };
     const first = Array.isArray(r.json) ? r.json[0] : r.json;
     return { status: 'published', providerPostId: String(first?.postId ?? first?.id ?? ''), raw: { transport: 'postiz', integration: integration.id } };
   }
