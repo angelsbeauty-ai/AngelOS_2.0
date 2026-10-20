@@ -10,7 +10,9 @@ import { useToast } from '../../src/components/Toast';
 import { tokens } from '../../src/design/theme';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { ApiError } from '../../src/lib/api';
-import { approveContentPost, publishContentVariant, scheduleContentVariant, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import * as Haptics from 'expo-haptics';
+import { useOnline } from '../../src/lib/offline';
+import { approveContentPost, publishContentVariant, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -61,7 +63,8 @@ export default function NewPostScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const toast = useToast();
-  const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string; format?: string }>();
+  const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string; format?: string; time?: string }>();
+  const online = useOnline();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [goalIndex, setGoalIndex] = useState<number | null>(0);
@@ -74,7 +77,7 @@ export default function NewPostScreen() {
   const [link, setLink] = useState('');
   const [showRepost, setShowRepost] = useState(false);
   const [day, setDay] = useState<Date>(() => parseDayParam(params.date));
-  const [time, setTime] = useState('19:00');
+  const [time, setTime] = useState(() => (params.time && /^\d{2}:\d{2}$/.test(String(params.time)) ? String(params.time) : '19:00'));
   const [media, setMedia] = useState<MediaAsset[]>([]);
   const [previews, setPreviews] = useState<Record<string, string>>({});
   const [mediaState, setMediaState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -208,6 +211,7 @@ export default function NewPostScreen() {
     const text = postedCaption.trim() || ' ';
     setBusy(true);
     try {
+      if (!online) { void dialog.notify(t('sched.offlineTitle', "You're offline"), t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
       if (mode === 'schedule' && when.getTime() <= Date.now() + 60000) { void dialog.notify(t('sml.pastTitle'), t('sml.pastBody')); return; }
       const draft = await createComposerDraft(workspaceId, {
         title: title.trim() || undefined,
@@ -223,8 +227,22 @@ export default function NewPostScreen() {
       });
       await approveContentPost(workspaceId, draft.id);
       if (mode === 'schedule') {
-        for (const v of draft.variants ?? []) await scheduleContentVariant(workspaceId, v.id, when.toISOString());
-        toast.show({ title: t('sml.scheduled'), message: t('sml.onCalendar', { when: `${when.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}` }), tone: 'success' });
+        const ok: string[] = []; let auto = 0; let failedMsg: string | null = null;
+        for (const v of draft.variants ?? []) {
+          try { const r = await scheduleContentVariant(workspaceId, v.id, when.toISOString()); ok.push(v.id); if (r.delivery === 'auto') auto += 1; }
+          catch (e) { failedMsg = e instanceof ApiError && e.status !== 0 && e.message ? e.message : t('sched.failedBody', "It couldn't be scheduled. Your post is kept as approved."); }
+        }
+        const whenText = `${when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Tokyo' })}, ${time}`;
+        if (!ok.length) { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined); void dialog.notify(t('sched.failedTitle', 'Not scheduled'), failedMsg ?? ''); return; }
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+        const note = failedMsg ? t('sched.partial', { defaultValue: '{{ok}} of {{all}} platforms scheduled. Open the post to try the rest again.', ok: ok.length, all: (draft.variants ?? []).length })
+          : auto === ok.length ? t('sched.willPost', { defaultValue: '{{when}} · Posts automatically', when: whenText })
+          : t('sched.calendarOnly', { defaultValue: "{{when}} · Scheduling isn't connected yet, so it won't post by itself", when: whenText });
+        const ws = workspaceId;
+        toast.show({ title: t('sched.savedToCalendar', 'Saved to calendar'), message: note, tone: failedMsg ? 'info' : 'success', action: { label: t('sched.undo', 'Undo'), onPress: () => { void (async () => {
+          let undone = 0; for (const id of ok) { try { await cancelScheduledVariant(ws, id); undone += 1; } catch { /* keep going */ } }
+          toast.show(undone === ok.length ? { title: t('sched.undone', 'Schedule undone'), message: t('sched.keptApproved', 'Your post is kept as approved.'), tone: 'info' } : { title: t('sched.undoFailed', "Couldn't undo"), message: t('sched.undoFailedBody', 'Open the post in Calendar and cancel it there.'), tone: 'error' });
+        })(); } } });
       } else {
         let posted = 0; let failed: string | null = null;
         for (const v of draft.variants ?? []) {
@@ -333,6 +351,11 @@ export default function NewPostScreen() {
       <View style={styles.chips}>
         {TIMES.map((value) => <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />)}
       </View>
+      {(() => { const best = bestTimes(platforms, day); return <View style={{ gap: 6 }}>
+        <Text style={styles.label}>{t('sched.bestTime', 'Best time')}{best.goodDay ? '' : ` · ${t('sched.quietDay', 'quieter day')}`}</Text>
+        <View style={styles.chips}>{best.times.map((value) => <Chip key={`b-${value}`} label={`✦ ${value}`} a11y={t('sched.bestAt', { defaultValue: 'Best time {{t}}', t: value })} selected={time === value} onPress={() => setTime(value)} />)}</View>
+        <SupportText>{t('sched.bestSource', { defaultValue: 'From: {{src}}', src: BEST_TIME_SOURCE })}</SupportText>
+      </View>; })()}
 
       {showRepost ? <View style={{ gap: 8 }}>
         <Text style={styles.label}>{t('cnew.repost')}</Text>
@@ -390,8 +413,8 @@ export default function NewPostScreen() {
   );
 }
 
-function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[styles.chip, selected && styles.chipOn]}><Text style={[styles.chipText, selected && styles.chipTextOn]}>{label}</Text></Pressable>;
+function Chip({ label, selected, onPress, a11y }: { label: string; selected: boolean; onPress: () => void; a11y?: string }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={a11y ?? label} accessibilityState={{ selected }} hitSlop={6} onPress={onPress} style={[styles.chip, selected && styles.chipOn]}><Text style={[styles.chipText, selected && styles.chipTextOn]}>{label}</Text></Pressable>;
 }
 
 const styles = StyleSheet.create({

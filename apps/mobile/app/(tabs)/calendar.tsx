@@ -16,7 +16,10 @@ import { listClients } from '../../src/lib/clients';
 import { PostThumb } from '../../src/components/PostThumb';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { DotsThreeVertical } from 'phosphor-react-native/src/icons/DotsThreeVertical';
-import { contentPostDate, listContent, type ContentPost } from '../../src/lib/content';
+import { contentPostDate, getSchedulingStatus, listContent, type ContentPost } from '../../src/lib/content';
+import { PostScheduleSheet, postStatusLabel, hhmm, type SchedState } from '../../src/components/PostScheduleSheet';
+import { useOnline } from '../../src/lib/offline';
+import * as Haptics from 'expo-haptics';
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, webGlass, D } from '../../src/design/theme';
@@ -57,7 +60,12 @@ export default function CalendarTab() {
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [day, setDay] = useState<Date | null>(null);
   const [addOpen, setAddOpen] = useState(false);
-  const [mode, setMode] = useState<'day' | 'week' | 'month'>('month');
+  const [mode, setMode] = useState<'day' | 'week' | 'month' | 'list'>('month');
+  const [sched, setSched] = useState<SchedState>({ kind: 'loading' });
+  const [choice, setChoice] = useState<{ day: Date; min: number | null } | null>(null);
+  const online = useOnline();
+  const night = look === 'night';
+  const sheetBg = { backgroundColor: night ? '#1C1C1E' : '#FFFFFF' };
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
   const [moreOpen, setMoreOpen] = useState(false);
   const [draft, setDraft] = useState<{ day: Date; startMin: number } | null>(null);
@@ -83,7 +91,7 @@ export default function CalendarTab() {
     onPanResponderMove: (_e, g) => setHowLong(Math.min(720, Math.max(15, lengthBase.current + Math.round(g.dy / 28) * 15)))
   })).current;
   const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts' | 'tasks'>('all');
-  function setView(m: 'day' | 'week' | 'month') { setMode(m); if (m !== 'month') setAnchor(offset === 0 ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : base); }
+  function setView(m: 'day' | 'week' | 'month' | 'list') { setMode(m); if (m !== 'month' && m !== 'list') setAnchor(offset === 0 ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : base); }
   const [anchor, setAnchor] = useState(() => new Date(now.getFullYear(), now.getMonth(), now.getDate()));
   const [sel, setSel] = useState<Item | null>(null);
   const [detail, setDetail] = useState<AppointmentDetail | null>(null);
@@ -98,8 +106,9 @@ export default function CalendarTab() {
   const cells = Array.from({ length: weeks * 7 }, (_, i) => new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i));
   const weekStart = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate() - anchor.getDay());
   const tlDays = mode === 'day' ? [anchor] : Array.from({ length: 7 }, (_, i) => new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i));
-  const rangeStart = mode === 'month' ? gridStart : tlDays[0];
-  const rangeDays = mode === 'month' ? weeks * 7 : tlDays.length;
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const rangeStart = mode === 'month' ? gridStart : mode === 'list' ? todayStart : tlDays[0];
+  const rangeDays = mode === 'month' ? weeks * 7 : mode === 'list' ? 31 : tlDays.length;
   function shiftMonth(n: number) {
     const next = new Date(anchor.getFullYear(), anchor.getMonth() + n, 1);
     const day = Math.min(anchor.getDate(), new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate());
@@ -108,7 +117,7 @@ export default function CalendarTab() {
     setOffset((moved.getFullYear() - now.getFullYear()) * 12 + (moved.getMonth() - now.getMonth()));
   }
   function shiftView(n: number) {
-    const order = ['day', 'week', 'month'] as const;
+    const order = ['day', 'week', 'month', 'list'] as const;
     setView(order[(order.indexOf(mode) + n + order.length) % order.length]);
   }
   const nav = useRef({ mode, shiftMonth, shiftView });
@@ -127,11 +136,14 @@ export default function CalendarTab() {
     }
   })).current;
   const reqId = useRef(0);
+  async function loadSched(id = ws) { if (!id) return; setSched({ kind: 'loading' }); try { setSched({ kind: 'ok', status: await getSchedulingStatus(id) }); } catch { setSched({ kind: 'error' }); } }
+  function openChoice(d: Date, min: number | null, long = false) { if (long) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined); setChoice({ day: d, min }); }
 
   const load = useCallback(async () => {
     const id = ++reqId.current;
     try {
       const w = await getActiveWorkspace(); setWs(w.id);
+      void loadSched(w.id);
       const s = new Date(rangeStart); const e = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate() + rangeDays);
       const [cal, list] = await Promise.all([
         getCalendar(w.id, s.toISOString(), e.toISOString()).catch(() => ({ appointments: [] as CalendarAppointment[], blocks: [] })),
@@ -159,13 +171,13 @@ export default function CalendarTab() {
     setDraft({ day: d, startMin: hour * 60 + (y > HOUR_H / 2 ? 30 : 0) });
     if (ws) void listClients(ws).then((rows) => setClients(rows.map((c) => ({ id: c.id, display_name: c.display_name })))).catch(() => setClients([]));
   };
-  function openKind(kind: 'task' | 'off') {
+  function openKind(kind: 'task' | 'off', on: Date = anchor) {
     setAddOpen(false);
     setTitle(kind === 'off' ? t('cal.dayOff', 'Day off') : '');
     setHowLong(60); setAllDay(kind === 'off'); setDesc(''); setNote(''); setLink(''); setPlace(''); setRemind(kind === 'off' ? null : 30); setClientId(null);
     setTag(kind === 'off' ? 'private' : 'task');
     setColor(kind === 'off' ? TAGS[3].color : TAGS[1].color);
-    setDraft({ day: anchor, startMin: 10 * 60 });
+    setDraft({ day: on, startMin: 10 * 60 });
     if (ws) void listClients(ws).then((rows) => setClients(rows.map((c) => ({ id: c.id, display_name: c.display_name })))).catch(() => setClients([]));
   }
   async function saveDraft() {
@@ -182,13 +194,40 @@ export default function CalendarTab() {
       void load();
     } finally { setSaving(false); }
   }
-  const time = (d: Date) => d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+  const time = (d: Date) => hhmm(d);
   const label = (it: Item) => it.kind === 'booking' ? `${it.a.client?.display_name ?? ''} ${it.a.service_name}`.trim() : (it.p.variants?.[0]?.caption || it.p.title || t('tabs.calendar'));
   const dayItems = day ? byDay.get(key(day)) ?? [] : [];
+  /** F16 List view: upcoming bookings and posts, grouped by day, 24h times. */
+  function ListView() {
+    const days = Array.from({ length: 31 }, (_, i) => new Date(todayStart.getFullYear(), todayStart.getMonth(), todayStart.getDate() + i))
+      .map((d) => ({ d, items: (byDay.get(key(d)) ?? []).filter((it) => key(d) !== key(now) || it.at.getTime() >= now.getTime() - 3600000) })).filter((g) => g.items.length);
+    if (!days.length) return <View style={{ paddingVertical: 32, gap: 6, alignItems: 'center' }}>
+      <Text style={[styles.rowTitle, { color: palette.text }]}>{t('cal.listEmpty', 'Nothing coming up')}</Text>
+      <Text style={[styles.rowSub, { color: palette.muted, textAlign: 'center' }]}>{t('cal.listEmptySub', 'Tap + to add a post or a booking.')}</Text>
+    </View>;
+    return <View>
+      <Text style={[styles.rowSub, { color: palette.muted, marginTop: 4 }]}>{t('cal.listSub', 'List · upcoming')}</Text>
+      {days.map(({ d, items }) => { const today = key(d) === key(now); return <View key={key(d)}>
+        <Text accessibilityRole="header" style={[styles.listHead, { color: today ? (night ? '#FF453A' : '#D70015') : palette.text }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+        {items.map((it, i) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
+          const title = it.kind === 'booking' ? [it.a.client?.display_name, it.a.service_name].filter(Boolean).join(' · ') + (pend ? ` · ${t('cal.pending', 'pending')}` : '') : `${it.platforms.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ')} · ${label(it)}`;
+          const st = it.kind === 'post' ? postStatusLabel(it.p, (k, dd) => t(k, dd)) : '';
+          return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${hhmm(it.at)}, ${title}${st ? `, ${st}` : ''}`} onPress={() => void openItem(it)} style={({ pressed }) => [styles.listRow, { borderColor: night ? 'rgba(255,255,255,0.10)' : LINE }, pressed && { backgroundColor: palette.fill }]}>
+            <View style={[styles.listBar, pend ? { borderWidth: 1, borderColor: palette.muted } : { backgroundColor: palette.muted }]} />
+            <View style={{ flex: 1 }}>
+              <Text numberOfLines={2} style={[styles.listTitle, { color: palette.text }]}>{title}</Text>
+              {st ? <Text numberOfLines={1} style={[styles.rowSub, { color: palette.muted }]}>{st}</Text> : null}
+            </View>
+            <Text style={[styles.listTime, { color: palette.muted }]}>{hhmm(it.at)}</Text>
+          </Pressable>; })}
+      </View>; })}
+    </View>;
+  }
 
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load} askBottom={132} askRight={20}>
       <View {...swipe.panHandlers}>
+      {!online && state === 'ready' ? <Text accessibilityLiveRegion="polite" style={[styles.offline, { color: palette.text, backgroundColor: palette.fill }]}>{t('sched.offlineBar', "You're offline · showing what was last loaded")}</Text> : null}
       <View style={screenHeader.row}>
         <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{(mode === 'month' ? base : anchor).toLocaleDateString(lang, { month: 'long' })}</Text>
         <View style={{ flex: 1 }} />
@@ -196,8 +235,8 @@ export default function CalendarTab() {
         <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
       </View>
       <View style={[styles.seg, look === 'night' && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
-        {(['day', 'week', 'month'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} onPress={() => setView(m)} style={[styles.segItem, mode === m && styles.segOn, mode === m && look === 'night' && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
-          <Text style={[styles.segText, look === 'night' && { color: palette.text }, mode !== m && { color: look === 'night' ? palette.muted : D.text2 }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' })}</Text></Pressable>)}
+        {(['day', 'week', 'month', 'list'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} onPress={() => { setView(m); void Haptics.selectionAsync().catch(() => undefined); }} style={[styles.segItem, mode === m && styles.segOn, mode === m && look === 'night' && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
+          <Text style={[styles.segText, look === 'night' && { color: palette.text }, mode !== m && { color: look === 'night' ? palette.muted : D.text2 }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : m === 'month' ? 'Month' : 'List' })}</Text></Pressable>)}
       </View>
       {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor={D.faint} style={styles.search} /> : null}
 
@@ -208,7 +247,7 @@ export default function CalendarTab() {
           <View style={{ gap: 2 }}><Text style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString(lang, { weekday: 'long' })}</Text>
             <Text style={[styles.rowSub, { color: palette.muted }]}>{t('cal.dayCount', { defaultValue: '{{n}} bookings · {{h}} h booked', n: its.length, h: Math.round(hrs * 10) / 10 })}</Text></View>
         </View>; })() : null}
-      {mode !== 'month' && state === 'ready' ? <View style={[styles.grid, ln]}>
+      {mode !== 'month' && mode !== 'list' && state === 'ready' ? <View style={[styles.grid, ln]}>
         {mode === 'week' ? <View style={[styles.wkRow, ln, { backgroundColor: palette.glass }, Platform.OS === 'web' && ({ backdropFilter: 'blur(20px)' } as object)]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
           <Text style={styles.wk}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text>
           <View style={[styles.num, today && styles.numToday, today && look === 'night' && { backgroundColor: '#F4F4F5' }]}><Text style={[styles.numText, { color: palette.text }, today && { color: look === 'night' ? '#151515' : '#FFF' }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
@@ -217,7 +256,7 @@ export default function CalendarTab() {
           {tlDays.map((d) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
             const dayBlocks = (show === 'all' || show === 'tasks') ? blocks.filter((bl) => key(new Date(bl.start_at)) === key(d)) : [];
             return <View key={key(d)} style={[styles.col, ln, mode === 'day' && { borderLeftWidth: 0 }]}>
-            {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAt', { defaultValue: 'Add an appointment' })} onPress={(e) => addAt(d, h, e.nativeEvent.locationY)} onLongPress={(e) => addAt(d, h, e.nativeEvent.locationY)} style={[styles.hourLine, ln]} />)}
+            {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAtTime', { defaultValue: 'Add at {{t}}', t: `${String(h).padStart(2, '0')}:00` })} accessibilityHint={t('cal.addHint', 'Opens New post or New booking')} delayLongPress={500} onPress={(e) => openChoice(d, h * 60 + (e.nativeEvent.locationY > HOUR_H / 2 ? 30 : 0))} onLongPress={(e) => openChoice(d, h * 60 + (e.nativeEvent.locationY > HOUR_H / 2 ? 30 : 0), true)} style={[styles.hourLine, ln]} />)}
             {dayBlocks.map((bl) => { const st = new Date(bl.start_at); const en = new Date(bl.end_at); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
               const mark = blockMark(bl.notes);
               return <View key={bl.id} style={[styles.block, styles.blocked, { top, height: h }, mark && { backgroundColor: `${mark.color}22`, borderColor: mark.color, borderLeftWidth: 3, borderLeftColor: mark.color }]}><Text numberOfLines={2} style={[styles.chipText, mark && { color: mark.color }]}>{bl.title}</Text>{mode === 'day' ? <Text style={styles.blockSub}>{TAGS.find((row) => row.id === mark?.tag)?.label ?? t('cal.blocked', 'Blocked')}</Text> : null}</View>; })}
@@ -225,7 +264,7 @@ export default function CalendarTab() {
               const top = (Math.max(startH, HOURS[0]) - HOURS[0]) * HOUR_H; const h = Math.max(22, ((endAt.getTime() - it.at.getTime()) / 3600000) * HOUR_H - 2);
               const kind = it.kind === 'post' ? styles.blocked : PENDING.test(it.a.status) ? styles.pending : styles.confirmed;
               const title = it.kind === 'booking' ? it.a.service_name : label(it); const sub = it.kind === 'booking' ? it.a.client?.display_name ?? '' : it.platforms.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ');
-              return <Pressable key={i} accessibilityRole="button" onPress={() => void openItem(it)} style={[styles.block, kind, look === 'night' && kind !== styles.confirmed && nc, look === 'night' && kind === styles.confirmed && { backgroundColor: 'rgba(255,255,255,0.10)' }, { top, height: h }]}>
+              return <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${hhmm(it.at)}, ${title}${sub ? `, ${sub}` : ''}${it.kind === 'post' ? `, ${postStatusLabel(it.p, (k, dd) => t(k, dd))}` : ''}`} onPress={() => void openItem(it)} style={[styles.block, kind, look === 'night' && kind !== styles.confirmed && nc, look === 'night' && kind === styles.confirmed && { backgroundColor: 'rgba(255,255,255,0.10)' }, { top, height: h }]}>
                 <Text numberOfLines={mode === 'day' ? 1 : 2} style={[styles.chipText, look === 'night' && { color: palette.text }]}>{title}</Text>
                 {sub && mode === 'day' ? <Text numberOfLines={1} style={[styles.blockSub, look === 'night' && { color: palette.muted }]}>{sub}</Text> : null}
               </Pressable>; })}
@@ -235,6 +274,7 @@ export default function CalendarTab() {
       </View> : null}
       {state === 'loading' ? <Skeleton rows={5} height={80} /> : null}
 
+      {mode === 'list' && state === 'ready' ? <ListView /> : null}
       {mode === 'month' && state !== 'nostudio' && state !== 'loading' ? (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }}>
           {Array.from({ length: 13 }, (_, m) => {
@@ -280,19 +320,39 @@ export default function CalendarTab() {
           })}
         </ScrollView>
       ) : null}
-      {state === 'error' ? <Text style={styles.err}>{t('s3.errBody')}</Text> : null}
+      {state === 'error' ? <View style={{ alignItems: 'center', gap: 8, paddingVertical: 24 }}>
+        <Text style={[styles.err, { color: palette.muted }]}>{online ? t('s3.errBody') : t('sched.offlineCal', "You're offline. Your calendar will load when you're back online.")}</Text>
+        <Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={[styles.btn, { flex: 0, paddingHorizontal: 24, borderColor: palette.border }]}><Text style={[styles.btnText, { color: palette.text }]}>{t('sched.tryAgain', 'Try again')}</Text></Pressable>
+      </View> : null}
       </View>
     </Screen>
 
-    <Pressable accessibilityRole="button" accessibilityLabel={t('cal.add', 'Add')} onPress={() => setAddOpen(true)} hitSlop={8} style={styles.fab}><Plus size={28} color={palette.icon} weight="bold" /></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel={t('cal.addNew', 'Add a post or booking')} onPress={() => openChoice(mode === 'month' || mode === 'list' ? (offset === 0 ? todayStart : base) : anchor, null)} hitSlop={8} style={styles.fab}><Plus size={28} color={palette.icon} weight="bold" /></Pressable>
 
-    <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
-      <Pressable style={styles.backdrop} onPress={() => setAddOpen(false)}><View style={styles.sheet}>
-        <Pressable style={styles.mi} onPress={() => { setAddOpen(false); const start = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate(), 10, 0, 0, 0); router.push({ pathname: '/bookings/new', params: { start: start.toISOString() } } as any); }}><Text style={styles.miText}>{t('cal.appointment', 'Appointment')}</Text></Pressable>
-        <Pressable style={styles.mi} onPress={() => { setAddOpen(false); router.push('/content/new'); }}><Text style={styles.miText}>{t('cal.content', 'Content')}</Text></Pressable>
-        <Pressable style={styles.mi} onPress={() => openKind('task')}><Text style={styles.miText}>{t('cal.task', 'Task')}</Text></Pressable>
-        <Pressable style={styles.mi} onPress={() => openKind('off')}><Text style={styles.miText}>{t('cal.dayOff', 'Day off')}</Text></Pressable>
-      </View></Pressable>
+    <Modal visible={!!choice} transparent animationType="slide" onRequestClose={() => setChoice(null)}>
+      <Pressable accessibilityLabel={t('common.close', 'Close')} style={styles.backdrop} onPress={() => setChoice(null)}><Pressable style={[styles.sheet, sheetBg]} onPress={() => undefined}>
+        <View style={styles.grabber} />
+        {choice ? <Text style={[styles.sheetSub, { color: palette.muted }]}>{choice.day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}{choice.min != null ? ` · ${String(Math.floor(choice.min / 60)).padStart(2, '0')}:${String(choice.min % 60).padStart(2, '0')}` : ''}</Text> : null}
+        {([
+          ['post', t('cal.newPost', 'New post'), t('cal.newPostSub', 'Write it, then Approve to schedule')],
+          ['booking', t('cal.newBooking', 'New booking'), t('cal.newBookingSub', 'Add an appointment')],
+          ['task', t('cal.task', 'Task'), ''],
+          ['off', t('cal.dayOff', 'Day off'), '']
+        ] as const).map(([id, label, sub]) => <Pressable key={id} accessibilityRole="button" accessibilityLabel={label} onPress={() => {
+          const c = choice; setChoice(null); if (!c) return;
+          const min = c.min ?? (id === 'post' ? 19 * 60 : 10 * 60);
+          const start = new Date(c.day.getFullYear(), c.day.getMonth(), c.day.getDate(), Math.floor(min / 60), min % 60);
+          const ymd = `${c.day.getFullYear()}-${String(c.day.getMonth() + 1).padStart(2, '0')}-${String(c.day.getDate()).padStart(2, '0')}`;
+          if (id === 'post') router.push({ pathname: '/content/new', params: { date: ymd, ...(c.min != null ? { time: hhmm(start) } : {}) } } as any);
+          else if (id === 'booking') router.push({ pathname: '/bookings/new', params: { start: start.toISOString() } } as any);
+          else if (id === 'task') { addAt(c.day, Math.floor(min / 60), (min % 60) ? HOUR_H : 0); }
+          else openKind('off', c.day);
+        }} style={[styles.mi, { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: night ? 'rgba(255,255,255,0.10)' : LINE }]}>
+          <Text style={[styles.miText, { color: palette.text }]}>{label}</Text>
+          {sub ? <Text style={[styles.rowSub, { color: palette.muted }]}>{sub}</Text> : null}
+        </Pressable>)}
+        <Pressable accessibilityRole="button" onPress={() => setChoice(null)} style={[styles.mi, { alignItems: 'center' }]}><Text style={[styles.miText, { color: palette.text }]}>{t('common.cancel', 'Cancel')}</Text></Pressable>
+      </Pressable></Pressable>
     </Modal>
 
     <Modal visible={!!draft} transparent animationType="slide" onRequestClose={() => setDraft(null)}>
@@ -360,7 +420,8 @@ export default function CalendarTab() {
       </View></Pressable>
     </Modal>
     <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
-      <Pressable style={styles.backdrop} onPress={() => setSel(null)}><Pressable style={styles.sheet} onPress={() => undefined}>
+      <Pressable accessibilityLabel={t('common.close', 'Close')} style={styles.backdrop} onPress={() => setSel(null)}><Pressable style={[styles.sheet, sel?.kind === 'post' && sheetBg]} onPress={() => undefined}>
+        {sel?.kind === 'post' ? <View style={styles.grabber} /> : null}
         {sel?.kind === 'booking' ? (() => { const a = detail?.appointment; const c = a?.client ?? sel.a.client; const mins = Math.round((new Date(sel.a.end_at).getTime() - sel.at.getTime()) / 60000);
           return <View style={{ gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -383,20 +444,7 @@ export default function CalendarTab() {
             </View>
             <Pressable style={styles.mi} onPress={() => { setSel(null); router.push(`/bookings/${sel.a.id}` as any); }}><Text style={[styles.miText, { color: ROSE }]}>{t('cal.openBooking', 'Open booking')}</Text></Pressable>
           </View>; })() : null}
-        {sel?.kind === 'post' ? <View style={{ gap: 10 }}>
-          <View style={{ flexDirection: 'row', gap: 14 }}>
-            <PostThumb workspaceId={ws} post={sel.p} size={88} radius={16} />
-            <View style={{ flex: 1, gap: 4 }}><Text numberOfLines={2} style={styles.rowTitle}>{sel.p.title}</Text><Text numberOfLines={4} style={styles.rowSub}>{sel.p.variants?.[0]?.caption ?? ''}</Text></View>
-          </View>
-          <Field k={t('cal.platforms', 'Platforms')} v={sel.platforms.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ') || '—'} />
-          <Field k={t('cal.status', 'Status')} v={sel.p.status} />
-          <Field k={t('cal.when', 'When')} v={`${sel.at.toLocaleDateString(lang, { weekday: 'short', month: 'short', day: 'numeric' })} · ${time(sel.at)}`} />
-          <Field k={t('cal.description', 'Description')} v={sel.p.variants?.[0]?.caption?.trim() || t('cal.none', 'None')} />
-          <Field k={t('cal.notes', 'Notes')} v={sel.p.strategy_reason?.trim() || t('cal.none', 'None')} />
-          <Field k={t('cal.link', 'Link')} v={sel.p.variants?.find((v) => v.live_url)?.live_url || t('cal.none', 'None')} />
-          <Field k={t('cal.attachments', 'Attachments')} v={sel.p.media?.map((m) => m.asset?.original_filename).filter(Boolean).join(', ') || t('cal.none', 'None')} />
-          <Pressable style={[styles.btn, styles.btnPrimary]} onPress={() => { setSel(null); router.push(`/content/${sel.p.id}` as any); }}><Text style={[styles.btnText, { color: '#FFF' }]}>{t('cal.edit', 'Edit post')}</Text></Pressable>
-        </View> : null}
+        {sel?.kind === 'post' && ws ? <PostScheduleSheet ws={ws} post={sel.p} at={sel.at} sched={sched} onChanged={() => void load()} onClose={() => setSel(null)} onRetryStatus={() => void loadSched()} /> : null}
       </Pressable></Pressable>
     </Modal>
   </View>;
@@ -404,7 +452,7 @@ export default function CalendarTab() {
 function Field({ k, v }: { k: string; v: string }) { return <View style={styles.field}><Text style={styles.fieldK}>{k}</Text><Text style={styles.fieldV}>{v}</Text></View>; }
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); const HOUR_H = 52; const GUTTER = 48;
 const PENDING = /pending|request|tentative|unconfirmed/i;
-function hourLabel(h: number, lang: string) { return new Date(2000, 0, 1, h).toLocaleTimeString(lang, { hour: 'numeric' }); }
+function hourLabel(h: number, _lang: string) { return `${String(h).padStart(2, '0')}:00`; }
 function GROUP_POSTED(s: string) { return s === 'published' || s === 'analyzed'; }
 
 const LINE = '#EDEDED'; const HOUR_H_STYLE = 52;
@@ -499,5 +547,12 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: ROSE, borderColor: ROSE },
   btnText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
   mi: { minHeight: 52, justifyContent: 'center', paddingHorizontal: 4 },
-  miText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' }
+  miText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(127,127,127,0.4)', marginBottom: 4 },
+  offline: { fontFamily: tokens.font.uiMedium, fontSize: 14, textAlign: 'center', paddingVertical: 8, borderRadius: 10, marginBottom: 6, overflow: 'hidden' },
+  listHead: { fontFamily: tokens.font.uiSemibold, fontSize: 17, paddingTop: 18, paddingBottom: 8 },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  listBar: { width: 4, alignSelf: 'stretch', minHeight: 28, borderRadius: 2 },
+  listTitle: { fontFamily: tokens.font.ui, fontSize: 17 },
+  listTime: { fontFamily: tokens.font.ui, fontSize: 17, fontVariant: ['tabular-nums'] }
 });

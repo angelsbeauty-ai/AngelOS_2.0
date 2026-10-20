@@ -64,9 +64,38 @@ export function updateContentVariant(workspaceId: string, variantId: string, inp
   return apiFetch<ContentVariant>(`/workspaces/${workspaceId}/content/variants/${variantId}`, { method: 'PATCH', body: JSON.stringify(input) });
 }
 
+export type ScheduledVariant = ContentVariant & { delivery?: 'auto' | 'calendar'; reason?: string };
+/** Approve tap → the server schedules it (auto-posts when the posting service is connected, otherwise it is only on the calendar). */
 export function scheduleContentVariant(workspaceId: string, variantId: string, scheduledFor: string) {
-  return apiFetch<ContentVariant>(`/workspaces/${workspaceId}/content/variants/${variantId}/schedule`, { method: 'POST', body: JSON.stringify({ scheduledFor }) });
+  return apiFetch<ScheduledVariant>(`/workspaces/${workspaceId}/content/variants/${variantId}/schedule`, { method: 'POST', body: JSON.stringify({ scheduledFor }) });
 }
+
+/** Undo / Cancel: removes the post from the posting queue; the approved draft stays. */
+export function cancelScheduledVariant(workspaceId: string, variantId: string) {
+  return apiFetch<ContentVariant & { previousScheduledFor: string | null }>(`/workspaces/${workspaceId}/content/variants/${variantId}/schedule`, { method: 'DELETE' });
+}
+
+export interface SchedulingStatus { configured: boolean; keyValid: boolean; channels: string[] }
+/** Is auto-posting connected? configured=false → "Scheduling isn't connected yet"; keyValid=false → login expired. */
+export function getSchedulingStatus(workspaceId: string) {
+  return apiFetch<SchedulingStatus>(`/workspaces/${workspaceId}/content/scheduling/status`);
+}
+
+/** Best posting times (JST) from the Okinawa posting rulebook §3. Starting points until 4 weeks of insights exist. */
+const BEST: Record<string, { days: number[]; times: string[] }> = {
+  instagram: { days: [2, 3, 4], times: ['20:00', '21:00', '12:00'] },
+  facebook: { days: [2, 3, 4, 6], times: ['19:00', '11:00', '20:00'] },
+  tiktok: { days: [5, 6, 0], times: ['21:00', '12:00', '20:00'] },
+  line: { days: [3, 0, 4, 5], times: ['12:00', '20:00', '21:00'] }
+};
+export function bestTimes(platforms: string[], day: Date): { times: string[]; goodDay: boolean } {
+  const ps = platforms.map((p) => p.split('_')[0]).filter((p) => BEST[p]);
+  const main = BEST[ps[0] ?? 'instagram'];
+  const sunReel = day.getDay() === 0 && ps[0] === 'instagram';
+  const times = Array.from(new Set([...(sunReel ? ['13:00'] : []), ...ps.flatMap((p) => BEST[p].times)])).slice(0, 3);
+  return { times, goodDay: main.days.includes(day.getDay()) };
+}
+export const BEST_TIME_SOURCE = 'Posting rulebook (Okinawa), JST';
 
 export function publishContentVariant(workspaceId: string, variantId: string) {
   return apiFetch<{ variant: ContentVariant; published: boolean; duplicatePrevented: boolean }>(`/workspaces/${workspaceId}/content/variants/${variantId}/publish`, { method: 'POST' });
