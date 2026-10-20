@@ -32,8 +32,10 @@ export default function MessageThreadScreen() {
   const [reply, setReply] = useState('');
   const [translations, setTranslations] = useState<Record<string, { text: string; shown: boolean }>>({});
   const [saved, setSaved] = useState<SavedReply[] | null>(null);
+  const [showPlus, setShowPlus] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
+  const [draftHidden, setDraftHidden] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -88,7 +90,7 @@ export default function MessageThreadScreen() {
   }
 
   async function openSaved() {
-    setShowSaved(true);
+    setShowPlus(false); setShowSaved(true);
     if (saved === null) {
       try { setSaved((await listSavedReplies(workspaceId!)).replies.filter((r) => (r.status ?? 'approved') === 'approved')); }
       catch { setSaved([]); }
@@ -98,6 +100,10 @@ export default function MessageThreadScreen() {
     const useJa = thread.reply_language === 'ja' && item.body_ja;
     setReply(fillName((useJa ? item.body_ja : item.body_en ?? item.body_ja) ?? '', firstName));
     setShowSaved(false);
+  }
+  function openPhoto() {
+    setShowPlus(false);
+    router.push({ pathname: '/media/import', params: { clientId: thread.client?.id, role: 'other' } } as any);
   }
 
   function onLongPress(message: ClientMessage) {
@@ -115,6 +121,8 @@ export default function MessageThreadScreen() {
     if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options, cancelButtonIndex: 4 }, runIndex);
     else Alert.alert('Message', undefined, options.slice(0, 4).map((label, i) => ({ text: label, onPress: () => runIndex(i) })).concat({ text: 'Cancel', style: 'cancel' as const }));
   }
+
+  const showChip = pendingDraft && !draftHidden;
 
   return (
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3' }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -156,12 +164,17 @@ export default function MessageThreadScreen() {
         })}
       </ScrollView>
 
-      {pendingDraft ? (
-        <Pressable onPress={() => setDraftOpen((v) => !v)} style={[styles.chip, night && { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.10)' }]}>
-          <Text style={[styles.chipText, { color: palette.text }]}>{draftOpen ? 'Hide draft' : 'AI draft'}</Text>
-        </Pressable>
+      {showChip ? (
+        <View style={[styles.chip, night && { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.10)' }]}>
+          <Pressable onPress={() => setDraftOpen((v) => !v)} style={{ flex: 1 }}>
+            <Text style={[styles.chipText, { color: palette.text }]}>{draftOpen ? 'Hide draft' : 'AI draft'}</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close draft" onPress={() => { setDraftHidden(true); setDraftOpen(false); }} hitSlop={8} style={styles.close}>
+            <Text style={[styles.closeText, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>×</Text>
+          </Pressable>
+        </View>
       ) : null}
-      {draftOpen && pendingDraft ? (
+      {draftOpen && pendingDraft && !draftHidden ? (
         <View style={[styles.draft, night && { backgroundColor: '#161618' }]}>
           <Text style={[styles.draftText, { color: palette.text }]}>{pendingDraft.body}</Text>
           <View style={styles.draftRow}>
@@ -171,7 +184,16 @@ export default function MessageThreadScreen() {
         </View>
       ) : null}
 
-      <ChatBar value={reply} onChangeText={setReply} placeholder={thread.reply_language === 'ja' ? 'Write in Japanese' : 'Write a message'} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => void openSaved()} />
+      <ChatBar value={reply} onChangeText={setReply} placeholder={thread.reply_language === 'ja' ? 'Write in Japanese' : 'Write a message'} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => setShowPlus(true)} />
+
+      <ChatTools visible={showPlus} onClose={() => setShowPlus(false)} night={night}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Saved replies" onPress={() => void openSaved()} style={styles.plusRow}>
+          <Text style={[styles.plusTitle, { color: palette.text }]}>Saved replies</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Photo" onPress={openPhoto} style={styles.plusRow}>
+          <Text style={[styles.plusTitle, { color: palette.text }]}>Photo</Text>
+        </Pressable>
+      </ChatTools>
 
       <ChatTools visible={showSaved} onClose={() => setShowSaved(false)} night={night}>
         {saved === null ? <Text style={{ color: palette.muted }}>Loading…</Text> : null}
@@ -202,12 +224,16 @@ const styles = StyleSheet.create({
   body: { fontSize: 16, lineHeight: 22 },
   meaning: { fontSize: 12, lineHeight: 16, marginTop: 2 },
   time: { fontSize: 11, lineHeight: 14, marginTop: 2 },
-  chip: { alignSelf: 'flex-start', marginLeft: 12, marginBottom: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', backgroundColor: '#FFFFFF' },
+  chip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', marginLeft: 12, marginBottom: 4, paddingLeft: 12, paddingRight: 4, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', backgroundColor: '#FFFFFF', gap: 4 },
   chipText: { fontSize: 13, fontWeight: '600' },
+  close: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  closeText: { fontSize: 18, lineHeight: 20 },
   draft: { marginHorizontal: 12, marginBottom: 6, padding: 12, borderRadius: 16, backgroundColor: '#FFFFFF', gap: 8 },
   draftText: { fontSize: 15, lineHeight: 20 },
   draftRow: { flexDirection: 'row', gap: 12 },
   draftBtn: { fontSize: 14, fontWeight: '600' },
+  plusRow: { paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
+  plusTitle: { fontSize: 16, fontWeight: '600' },
   saved: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
   savedTitle: { fontSize: 16 },
   err: { fontSize: 16, textAlign: 'center', marginTop: 40 }
