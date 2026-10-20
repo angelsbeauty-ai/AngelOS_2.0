@@ -52,7 +52,7 @@ export function AppTabBar() {
     {items.map(({ href, label, Icon }) => {
       const active = on === href; const color = active ? palette.text : palette.muted;
       return <Pressable key={href} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={label} onPress={() => router.navigate(href as any)} style={[styles.item, active && styles.itemOn]}>
-        <TabIcon active={active} badge={href === '/messages' ? unread : 0}><Icon size={24} color={color} weight="duotone" /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
+        <TabIcon active={active} badge={href === '/messages' ? unread : 0}><Icon size={25} color={color} weight={active ? "fill" : "regular"} /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
       </Pressable>;
     })}
   </View>;
