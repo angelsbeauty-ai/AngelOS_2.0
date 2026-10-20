@@ -11,6 +11,7 @@ import { Skeleton, screenHeader, SupportText } from '../../src/components/ui';
 import { PostThumb } from '../../src/components/PostThumb';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
+import { listContent, contentPostDate, type ContentPost } from '../../src/lib/content';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, D } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
@@ -32,11 +33,18 @@ export default function AnalyticsScreen() {
   const [plat, setPlat] = useState<Plat>('all');
   const [ws, setWs] = useState<string | null>(null);
   const [data, setData] = useState<Insights | null>(null);
+  const [posts, setPosts] = useState<ContentPost[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [tab, setTab] = useState<'views' | 'interactions' | 'follows'>('views');
   const [pickOpen, setPickOpen] = useState(false);
   const load = useCallback(async (p: Plat = plat) => {
-    try { const w = await getActiveWorkspace(); setWs(w.id); setData(await getInsights(w.id, p)); setState('ready'); }
+    try {
+      const w = await getActiveWorkspace(); setWs(w.id);
+      const [ins, list] = await Promise.all([getInsights(w.id, p), listContent(w.id).catch(() => [] as ContentPost[])]);
+      setData(ins);
+      setPosts(list.filter((x) => x.status !== 'archived').sort((a, b) => (contentPostDate(b)?.getTime() ?? 0) - (contentPostDate(a)?.getTime() ?? 0)));
+      setState('ready');
+    }
     catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
   }, [plat]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -58,7 +66,16 @@ export default function AnalyticsScreen() {
     {view === 'profile' ? (
       <View style={{ gap: 12, paddingTop: 8 }}>
         <Text style={[styles.headline, nt]}>Profile pages</Text>
-        <SupportText>Your Instagram, Facebook and TikTok profile pages will appear here. Feed order is not set yet, so this view stays empty until you confirm it.</SupportText>
+        <SupportText>Newest first. This is your AngelOS feed, not the live Instagram or Facebook feed.</SupportText>
+        {state === 'loading' ? <Skeleton rows={2} height={80} /> : null}
+        {!posts.length && state === 'ready' ? <SupportText>No posts yet. Create one and it will appear here.</SupportText> : null}
+        {posts.slice(0, 12).map((p) => <Pressable key={p.id} onPress={() => router.push(`/content/${p.id}` as any)} style={[styles.card, { width: '100%', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }, nc]}>
+          <PostThumb workspaceId={ws} post={p} size={56} radius={12} />
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={[styles.cardTitle, nt, { minHeight: 0 }]}>{p.title || p.variants?.[0]?.caption || 'Post'}</Text>
+            <Text style={[styles.muted, nm]}>{contentPostDate(p)?.toLocaleDateString(locale) ?? ''}</Text>
+          </View>
+        </Pressable>)}
       </View>
     ) : <>
     <View style={screenHeader.row}>
