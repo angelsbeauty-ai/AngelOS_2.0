@@ -464,7 +464,13 @@
     "firstMessage": "First message",
     "messageCount": "Messages",
     "openIn": "Open in {{app}}",
-    "sharedPhotos": "Shared photos"
+    "sharedPhotos": "Shared photos",
+    "ai_times": "Offer times",
+    "ai_price": "Price",
+    "ai_thanks": "Thanks",
+    "aiChipA11y": "AI draft: {{label}}",
+    "aiChipHint": "Writes a draft. Nothing is sent until you approve it.",
+    "aiChipBusy": "Writing…"
   },
   "booking": {
     "newTitle": "New booking",
@@ -2116,7 +2122,15 @@
     "postedOn": "Posted on {{p}}",
     "statsUnavailable": "Views and likes: Unavailable",
     "viewOn": "View on {{p}}",
-    "noLink": "Link: Unavailable"
+    "noLink": "Link: Unavailable",
+    "ncTitle": "Account not connected",
+    "ncBody": "Nothing was posted. Connect this account in Connected accounts, then post again.",
+    "ncConnect": "Connect",
+    "ncLater": "Not now",
+    "ncInline": "Not connected, so nothing was posted. Connect the account in Profile › Connected accounts.",
+    "duplicated": "Duplicated",
+    "duplicatedBody": "The copy is in Drafts with no time set.",
+    "dupFailed": "Couldn't duplicate. Try again."
   },
   "nt": {
     "activity": "Activity",

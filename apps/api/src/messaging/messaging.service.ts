@@ -39,6 +39,12 @@ interface InboundRecordInput {
   createdBy?: string | null;
 }
 
+export const REPLY_INTENTS: Record<string, string> = {
+  times: 'offer to find a time for the appointment and ask which days suit them',
+  price: 'answer the question about price politely, using only prices the studio has set',
+  thanks: 'thank the client warmly and briefly'
+};
+
 @Injectable()
 export class MessagingService {
   private readonly logger = new Logger('MessagingService');
@@ -364,7 +370,7 @@ export class MessagingService {
     return { threadId, message, intent, sensitive, phishing, priority, clientId };
   }
 
-  async draftReply(user: AuthUser, workspaceId: string, threadId: string) {
+  async draftReply(user: AuthUser, workspaceId: string, threadId: string, intent?: string) {
     const detail = await this.getThread(user, workspaceId, threadId);
     const latestInbound = [...detail.messages].reverse().find((item: any) => item.direction === 'inbound');
     if (!latestInbound) throw new BadRequestException('No client message to reply to yet. Paste their message first.');
@@ -372,10 +378,13 @@ export class MessagingService {
     const client = thread.client;
     const language: ClientLanguage = thread.reply_language;
     const name = firstName(client?.display_name ?? thread.contact_display_name);
-    const instructions = buildClientReplyInstructions({
+    let instructions = buildClientReplyInstructions({
       language, clientName: name, intent: thread.intent, knownClient: Boolean(client),
       doNotAutoMessage: Boolean(client?.do_not_auto_message), styleContext: await this.replyStyleContext(user, workspaceId, thread.intent, language)
     });
+    // M27 suggestion chips: the owner's chosen intent steers the draft. Still a draft; she approves it.
+    const goal = intent ? REPLY_INTENTS[intent] : undefined;
+    if (goal) instructions = `${instructions}\nThe studio owner wants this reply to: ${goal}. Never invent times, prices or facts you were not given; ask or leave a clear gap instead.`;
     const recent = detail.messages.filter((m: any) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval')).slice(-6)
       .map((m: any) => `${m.direction === 'inbound' ? 'Client' : 'Studio'}: ${m.body}`).join('\n');
     let response = await this.aiProvider.generate({ instructions, input: recent || `Client: ${latestInbound.body}` });

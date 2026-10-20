@@ -75,6 +75,17 @@ export function cancelScheduledVariant(workspaceId: string, variantId: string) {
   return apiFetch<ContentVariant & { previousScheduledFor: string | null }>(`/workspaces/${workspaceId}/content/variants/${variantId}/schedule`, { method: 'DELETE' });
 }
 
+/** S13 Duplicate: a new draft with the same caption, platforms and photos; no time. */
+export function duplicateContentPost(workspaceId: string, postId: string) {
+  return apiFetch<ContentPost>(`/workspaces/${workspaceId}/content/${postId}/duplicate`, { method: 'POST' });
+}
+
+/** S12: the server answers 409 not_connected instead of ever faking a post. */
+export function isNotConnected(e: unknown): boolean {
+  const p = (e as { payload?: { code?: string; message?: unknown } } | null)?.payload;
+  return Boolean(p && (p.code === 'not_connected' || (typeof p.message === 'object' && (p.message as { code?: string } | null)?.code === 'not_connected')));
+}
+
 export interface SchedulingStatus { configured: boolean; keyValid: boolean; channels: string[] }
 /** Is auto-posting connected? configured=false → "Scheduling isn't connected yet"; keyValid=false → login expired. */
 export function getSchedulingStatus(workspaceId: string) {

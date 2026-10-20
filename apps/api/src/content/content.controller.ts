@@ -59,6 +59,9 @@ export class ContentController {
     return this.content.createComposerDraft(user, workspaceId, dto);
   }
 
+  @Post(':contentPostId/duplicate')
+  duplicate(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('contentPostId') id: string) { return this.content.duplicate(user, ws, id); }
+
   @Post(':contentPostId/archive')
   archive(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('contentPostId') contentPostId: string) {
     return this.content.archive(user, workspaceId, contentPostId);

@@ -98,8 +98,10 @@ export const startConversation = (workspaceId: string, input: { clientId: string
   apiFetch<{ threadId: string }>(`${base(workspaceId)}/conversations`, { method: 'POST', body: JSON.stringify(input) });
 export const addInboundMessage = (workspaceId: string, threadId: string, body: string) =>
   apiFetch<{ threadId: string }>(`${base(workspaceId)}/threads/${threadId}/inbound`, { method: 'POST', body: JSON.stringify({ body }) });
-export const createAiReplyDraft = (workspaceId: string, threadId: string) =>
-  apiFetch<{ message: ClientMessage; requiresApproval: boolean; reason: string; language: 'en' | 'ja' }>(`${base(workspaceId)}/threads/${threadId}/ai-draft`, { method: 'POST' });
+export type ReplyIntent = 'times' | 'price' | 'thanks';
+/** Always a draft: it waits in the draft card until Angel taps Approve. */
+export const createAiReplyDraft = (workspaceId: string, threadId: string, intent?: ReplyIntent) =>
+  apiFetch<{ message: ClientMessage; requiresApproval: boolean; reason: string; language: 'en' | 'ja' }>(`${base(workspaceId)}/threads/${threadId}/ai-draft`, { method: 'POST', body: JSON.stringify(intent ? { intent } : {}) });
 export const createMessageReply = (workspaceId: string, threadId: string, body: string, approveNow = false, opts?: { replyToMessageId?: string; attachmentAssetId?: string }) =>
   apiFetch<{ message: ClientMessage; sent: boolean; delivery?: 'manual' | 'sent' }>(`${base(workspaceId)}/threads/${threadId}/replies`, { method: 'POST', body: JSON.stringify({ body, sendNow: approveNow, ...(opts ?? {}) }) });
 export interface SearchResult { threadId: string; messageId: string | null; snippet: string; at: string | null; kind: 'message' | 'contact' }

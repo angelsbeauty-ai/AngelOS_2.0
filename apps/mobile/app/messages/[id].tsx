@@ -301,8 +301,9 @@ export default function MessageThreadScreen() {
           </Pressable>
         </View>
       ) : null}
-      {!replyTo && !reply && chips.length > 0 && !locked ? (
+      {!replyTo && !reply && !locked && !pendingDraft ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggest} keyboardShouldPersistTaps="handled">
+          {(['times', 'price', 'thanks'] as const).map((k) => <Pressable key={k} accessibilityRole="button" accessibilityLabel={t('messages.aiChipA11y', { label: t(`messages.ai_${k}`) })} accessibilityHint={t('messages.aiChipHint')} disabled={Boolean(busy) || !online} onPress={() => { setDraftHidden(false); void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id, k); setDraftOpen(true); }); }} style={[styles.suggestChip, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }, (Boolean(busy) || !online) && { opacity: 0.5 }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{busy === 'draft' ? t('messages.aiChipBusy') : `✦ ${t(`messages.ai_${k}`)}`}</Text></Pressable>)}
           {chips.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('messages.useSaved', { title: item.title })} onPress={() => insertSaved(item)} style={[styles.suggestChip, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{item.title}</Text></Pressable>)}
         </ScrollView>
       ) : null}

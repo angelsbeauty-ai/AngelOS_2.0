@@ -6,13 +6,11 @@ import type { CreateComposerDraftDto } from './dto/create-composer-draft.dto';
 import type { CreateContentDraftDto } from './dto/create-content-draft.dto';
 import type { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
-import { ManualDemoPublishingAdapter } from './publishing-adapter';
 import { PostizPublishingAdapter, POSTIZ_PLATFORMS, postizReady } from './postiz-publishing.adapter';
 import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
 
 @Injectable()
 export class ContentService {
-  private readonly demoPublisher = new ManualDemoPublishingAdapter();
   constructor(private readonly aiProvider: AiProviderService) {}
 
   async list(user: AuthUser, workspaceId: string) {
@@ -128,7 +126,7 @@ export class ContentService {
         cta: aiDraft.cta,
         hashtags: aiDraft.hashtags,
         status: 'draft',
-        capabilities_snapshot: platform === 'manual' ? { demo: true, publish: true } : { connected: false, publish: false, sprint: 7 },
+        capabilities_snapshot: platform === 'manual' ? { manual: true, publish: false } : { connected: false, publish: false, sprint: 7 },
         rule_version: 'sprint7-prototype'
       }));
       const { error: variantError } = await service.from('content_variants').insert(variantRows);
@@ -325,6 +323,40 @@ export class ContentService {
     return { ...updated, previousScheduledFor: variant.scheduled_for };
   }
 
+  /** S13 Duplicate: a new draft with the same caption, hashtags, platforms and photos. No time, not approved. */
+  async duplicate(user: AuthUser, workspaceId: string, contentPostId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const src = await this.get(user, workspaceId, contentPostId) as any;
+    const now = new Date().toISOString();
+    const p = src.post ?? src;
+    const { data: post, error } = await supabase.from('content_posts').insert({
+      workspace_id: workspaceId, title: String(p.title ?? '').slice(0, 160), objective: p.objective, primary_format: p.primary_format,
+      status: 'draft', source_goal: p.source_goal ?? null, strategy_reason: null,
+      editing_instructions: { ...(p.editing_instructions ?? {}), duplicated_from: contentPostId }, created_by: user.id, updated_at: now
+    }).select('id').single();
+    if (error || !post) throw new InternalServerErrorException(error?.message ?? 'Could not duplicate the post');
+    try {
+      const variants = (src.variants ?? []).filter((v: any) => v.status !== 'archived');
+      if (variants.length) {
+        const ins = await supabase.from('content_variants').insert(variants.map((v: any) => ({
+          workspace_id: workspaceId, content_post_id: post.id, platform: v.platform, format: v.format, hook: v.hook ?? null, caption: v.caption ?? '',
+          cta: v.cta ?? null, hashtags: v.hashtags ?? [], scheduled_for: null, status: 'draft',
+          capabilities_snapshot: v.capabilities_snapshot ?? {}, rule_version: v.rule_version ?? null
+        })));
+        if (ins.error) throw ins.error;
+      }
+      const media = (src.media ?? []).filter((m: any) => m.asset?.id);
+      if (media.length) {
+        const ins = await supabase.from('content_post_media').insert(media.map((m: any, position: number) => ({ workspace_id: workspaceId, content_post_id: post.id, media_asset_id: m.asset.id, position, role: position === 0 ? 'primary' : 'secondary' })));
+        if (ins.error) throw ins.error;
+      }
+      return this.get(user, workspaceId, post.id);
+    } catch (caught) {
+      await supabase.from('content_posts').delete().eq('workspace_id', workspaceId).eq('id', post.id);
+      throw new InternalServerErrorException((caught as any)?.message ?? 'Could not duplicate the post');
+    }
+  }
+
   async schedulingStatus() { return new PostizPublishingAdapter().status(); }
 
   async publishNow(user: AuthUser, workspaceId: string, variantId: string) {
@@ -335,7 +367,8 @@ export class ContentService {
     if (!['approved','scheduled','publishing','failed'].includes(post?.status)) throw new ConflictException('Content must be approved before publishing');
     if (!['approved','scheduled','publishing','failed'].includes(variant.status)) throw new ConflictException('This platform version is not approved for publishing');
     const live = metaPublishingReady(variant.platform);
-    if (variant.platform !== 'manual' && !live) throw new ConflictException('Live social publishing is not connected. AngelOS stops here instead of pretending the post was published.');
+    // S12/O22: no demo publisher. Not connected → a clear 409 the phone shows as "Connect … first"; never a fake post.
+    if (!live) throw new ConflictException({ statusCode: 409, code: 'not_connected', platform: variant.platform, message: 'This account is not connected, so nothing was posted.' });
 
     // Re-check marketing permission at publish time because consent can change after approval.
     const detail = await this.get(user, workspaceId, post.id);
@@ -360,8 +393,8 @@ export class ContentService {
     await service.from('content_variants').update({ status: 'publishing', updated_at: now }).eq('id', variant.id);
     let imageUrl: string | undefined;
     const photo = assets.find((a: any) => a.media_type === 'image' && a.storage_path);
-    if (live && photo) { const signed = await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, 3600); imageUrl = signed.data?.signedUrl; }
-    const publisher = live ? new MetaPublishingAdapter() : this.demoPublisher;
+    if (photo) { const signed = await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, 3600); imageUrl = signed.data?.signedUrl; }
+    const publisher = new MetaPublishingAdapter();
     const result = await publisher.publish({ platform: variant.platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey, imageUrl });
     if (result.status !== 'published') {
       await service.from('content_publish_attempts').update({ status: result.status === 'failed' ? 'failed' : 'unknown', provider_response: result.raw ?? null, error_message: result.error ?? null }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
@@ -371,7 +404,7 @@ export class ContentService {
     }
 
     const publishedAt = new Date().toISOString();
-    const verification = { verified: true, transport: live ? `meta-${variant.platform}` : 'manual-demo', providerPostId: result.providerPostId, verifiedAt: publishedAt };
+    const verification = { verified: true, transport: `meta-${variant.platform}`, providerPostId: result.providerPostId, verifiedAt: publishedAt };
     await service.from('content_publish_attempts').update({ status: 'published', provider_response: result.raw ?? null, verification, error_message: null }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
     const { data: publishedVariant, error: updateError } = await service.from('content_variants').update({ status: 'published', provider_post_id: result.providerPostId, live_url: result.liveUrl, published_at: publishedAt, updated_at: publishedAt }).eq('id', variant.id).select('*').single();
     if (updateError || !publishedVariant) throw new InternalServerErrorException(updateError?.message ?? 'Could not finalize published content');

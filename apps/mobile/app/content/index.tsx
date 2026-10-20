@@ -20,7 +20,7 @@ import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
 import { Screen } from '../../src/components/Screen';
 import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui';
 import { Chip, ROSE } from '../../src/components/SettingsList';
-import { contentPostDate, listContent, listIdeas, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
+import { contentPostDate, listContent, listIdeas, duplicateContentPost, isNotConnected, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
 import { getSocialAccounts } from '../../src/lib/social';
 import { SocialNumbersCard } from '../../src/components/SocialNumbersCard';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
@@ -80,7 +80,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
   async function postNow(p: ContentPost) {
     setMenu(null); const v = p.variants?.[0]; if (!ws || !v) return;
     if (!(await confirm({ title: t('s3.postNowQ'), message: p.status === 'scheduled' ? t('s3.postNowSched') : t('s3.postNowMsg'), confirmText: t('s3.postNow') }))) return;
-    try { await publishContentVariant(ws, v.id); await dialog.notify(t('s3.posted')); void load(); } catch (e) { await dialog.notify(t('s3.failed'), e instanceof Error ? e.message : ''); }
+    try { await publishContentVariant(ws, v.id); await dialog.notify(t('s3.posted')); void load(); } catch (e) { if (isNotConnected(e)) { if (await confirm({ title: t('sched.ncTitle'), message: t('sched.ncBody'), confirmText: t('sched.ncConnect') })) router.push('/settings/connections' as any); } else await dialog.notify(t('s3.failed'), t('sched.postFailed')); }
   }
 
   const empty = state === 'ready' && posts.length === 0;
@@ -154,6 +154,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
         {menu && GROUP[menu.status] !== 'posted' ? <Pressable style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); router.push(`/content/${id}`); }}><Text style={styles.miText}>{t('s3.edit')}</Text></Pressable> : null}
         {menu && GROUP[menu.status] !== 'posted' ? <Pressable style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); router.push(`/content/${id}`); }}><Text style={styles.miText}>{t('s3.reschedule')}</Text></Pressable> : null}
         {menu && GROUP[menu.status] !== 'posted' && menu.variants?.length ? <Pressable style={styles.mi} onPress={() => void postNow(menu)}><Text style={styles.miText}>{menu.status === 'failed' ? t('pf.tryAgain') : t('s3.postNow')}</Text></Pressable> : null}
+        {menu ? <Pressable accessibilityRole="button" style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); if (ws) void duplicateContentPost(ws, id).then((c) => { void load(); router.push(`/content/${c.id}` as any); }).catch(() => void dialog.notify(t('sched.dupFailed'))); }}><Text style={styles.miText}>{t('sched.duplicate')}</Text></Pressable> : null}
         {menu && GROUP[menu.status] === 'posted' ? <Pressable style={styles.mi} onPress={() => { const id = menu.id; setMenu(null); router.push(`/content/${id}`); }}><Text style={styles.miText}>{t('s3.open')}</Text></Pressable> : null}
       </View></Pressable>
     </Modal>

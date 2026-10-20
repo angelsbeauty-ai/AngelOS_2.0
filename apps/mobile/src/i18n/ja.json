@@ -464,7 +464,13 @@
     "firstMessage": "最初のメッセージ",
     "messageCount": "メッセージ数",
     "openIn": "{{app}}で開く",
-    "sharedPhotos": "共有した写真"
+    "sharedPhotos": "共有した写真",
+    "ai_times": "日時を提案",
+    "ai_price": "料金",
+    "ai_thanks": "お礼",
+    "aiChipA11y": "AI下書き：{{label}}",
+    "aiChipHint": "下書きを作成します。承認するまで送信されません。",
+    "aiChipBusy": "作成中…"
   },
   "booking": {
     "newTitle": "新しい予約",
@@ -2116,7 +2122,15 @@
     "postedOn": "{{p}}に投稿済み",
     "statsUnavailable": "表示回数といいね：利用できません",
     "viewOn": "{{p}}で見る",
-    "noLink": "リンク：利用できません"
+    "noLink": "リンク：利用できません",
+    "ncTitle": "アカウントが未接続です",
+    "ncBody": "投稿されていません。「接続済みアカウント」で接続してから、もう一度投稿してください。",
+    "ncConnect": "接続する",
+    "ncLater": "あとで",
+    "ncInline": "未接続のため投稿されていません。プロフィール ›「接続済みアカウント」で接続してください。",
+    "duplicated": "複製しました",
+    "duplicatedBody": "コピーは時間未設定で下書きに入っています。",
+    "dupFailed": "複製できませんでした。もう一度お試しください。"
   },
   "nt": {
     "activity": "アクティビティ",

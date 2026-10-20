@@ -13,7 +13,7 @@ import { ApiError } from '../../src/lib/api';
 import * as Haptics from 'expo-haptics';
 import { useOnline } from '../../src/lib/offline';
 import { fromJ, ymd } from '../../src/lib/jst';
-import { approveContentPost, publishContentVariant, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import { approveContentPost, publishContentVariant, isNotConnected, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -264,7 +264,7 @@ export default function NewPostScreen() {
       let posted = 0; let failed: string | null = null;
       for (const v of draft.variants ?? []) {
         try { const r = await publishContentVariant(workspaceId, v.id); if (r.published) posted += 1; }
-        catch (e) { failed = e instanceof ApiError && e.message ? e.message : t('cnew.postFailed'); }
+        catch (e) { failed = isNotConnected(e) ? t('sched.ncInline') : e instanceof ApiError && e.message ? e.message : t('cnew.postFailed'); }
       }
       setReview(null);
       if (failed) { void dialog.notify(posted ? t('cnew.postedSome', { count: posted }) : t('cnew.notPosted'), `${failed}\n${t('cnew.keptApproved')}`); }

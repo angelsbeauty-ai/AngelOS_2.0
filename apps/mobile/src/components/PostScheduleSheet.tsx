@@ -12,7 +12,7 @@ import { tokens } from '../design/theme';
 import { ApiError } from '../lib/api';
 import { dialog } from '../lib/dialog';
 import { useOnline } from '../lib/offline';
-import { bestTimes, BEST_TIME_SOURCE, cancelScheduledVariant, publishContentVariant, scheduleContentVariant, type ContentPost, type SchedulingStatus } from '../lib/content';
+import { bestTimes, BEST_TIME_SOURCE, cancelScheduledVariant, duplicateContentPost, isNotConnected, publishContentVariant, scheduleContentVariant, type ContentPost, type SchedulingStatus } from '../lib/content';
 
 export type SchedState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ok'; status: SchedulingStatus };
 
@@ -129,12 +129,21 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
     else { haptic('error'); setInline(r.msg); }
   }
 
+  async function duplicate() {
+    if (!online) { setInline(t('sched.offlineBody')); return; }
+    setBusy(true);
+    try { const copy = await duplicateContentPost(ws, post.id); haptic('success'); onChanged(); onClose();
+      toast.show({ title: t('sched.duplicated'), message: t('sched.duplicatedBody'), tone: 'success', action: { label: t('sched.open'), onPress: () => router.push(`/content/${copy.id}` as any) } }); }
+    catch { setInline(t('sched.dupFailed')); }
+    finally { setBusy(false); }
+  }
+
   async function postNow() {
     const yes = await dialog.confirm({ title: t('sched.postNowTitle', 'Post now?'), message: t('sched.postNowBody', { defaultValue: 'It goes out to {{p}} right away instead of at {{time}}.', p: platforms.map(name).join(', '), time: hhmm(at) }), confirmText: t('sched.postNow', 'Post now'), cancelText: t('sched.keepScheduled', 'Keep the time') });
     if (!yes) return;
     if (!online) { setInline(t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
     setBusy(true); let ok = 0; let msg: string | null = null;
-    for (const v of vs.filter((x) => ['scheduled', 'approved', 'failed'].includes(x.status))) { try { const r = await publishContentVariant(ws, v.id); if (r.published) ok += 1; } catch (e) { msg = e instanceof ApiError && e.status && e.status < 500 && e.message ? e.message : t('sched.postFailed', "It didn't post. Tap Try again."); } }
+    for (const v of vs.filter((x) => ['scheduled', 'approved', 'failed'].includes(x.status))) { try { const r = await publishContentVariant(ws, v.id); if (r.published) ok += 1; } catch (e) { if (isNotConnected(e)) { setBusy(false); setInline(t('sched.ncInline')); onChanged(); return; } msg = e instanceof ApiError && e.status && e.status < 500 && e.message ? e.message : t('sched.postFailed', "It didn't post. Tap Try again."); } }
     setBusy(false);
     if (!ok) { haptic('error'); setInline(msg ?? t('sched.postFailed', "It didn't post. Tap Try again.")); onChanged(); return; }
     haptic('success'); onChanged(); onClose();
@@ -206,6 +215,7 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
         : <Btn label={t('sched.reschedule', 'Reschedule')} onPress={() => { setEditing(true); void Haptics.selectionAsync().catch(() => undefined); }} />) : null}
       {movable.length && !editing ? <Btn primary label={t('sched.postNow', 'Post now')} disabled={busy} onPress={() => void postNow()} /> : null}
     </View>
+    <Pressable accessibilityRole="button" accessibilityLabel={t('sched.duplicate')} disabled={busy} onPress={() => void duplicate()} style={s.link}><Text style={[s.linkText, { color: palette.text }]}>{t('sched.duplicate')}</Text></Pressable>
     {scheduled.length ? <Pressable accessibilityRole="button" accessibilityLabel={t('sched.cancelPost', 'Cancel post')} disabled={busy} onPress={() => void cancelPost()} style={s.link}><Text style={[s.linkText, { color: red }]}>{t('sched.cancelPost', 'Cancel post')}</Text></Pressable> : null}
   </View>;
 
