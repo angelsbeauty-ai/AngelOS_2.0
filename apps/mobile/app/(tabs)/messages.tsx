@@ -32,7 +32,7 @@ type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
 type ChipKey = 'facebook' | 'instagram' | 'line' | 'unread' | 'tiktok';
 const CHIPS: Array<[ChipKey, string]> = [['facebook', 'Messenger'], ['instagram', 'Instagram'], ['line', 'LINE'], ['unread', ''], ['tiktok', 'TikTok']];
 type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'done';
-const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
+const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Messenger'], ['line', 'LINE'], ['tiktok', 'TikTok']];
 const PROBLEM = /needs permission|needs reconnect|could not read|meta said|permission|error|expired/i;
 const FILTERS: Filter[] = ['unread', 'unanswered', 'booked', 'follow_up', 'done'];
 
@@ -119,13 +119,16 @@ export default function MessagesScreen() {
   }
   const markDone = (th: MessageThreadSummary) => void patch(th, { status: 'done', needs_reply: false }, { status: 'done' }, { label: t('messages.markedDone', { defaultValue: 'Marked as done' }), body: { status: th.status } });
   function more(th: MessageThreadSummary) {
-    const opts = [t('messages.archive', { defaultValue: 'Archive' }), th.unread ? t('messages.markRead', { defaultValue: 'Mark as read' }) : t('messages.markUnread', { defaultValue: 'Mark as unread' }), t('common.cancel', { defaultValue: 'Cancel' })];
-    const pick = (i: number) => {
-      if (i === 0) void patch(th, {}, { archived: true }, { label: t('messages.archived', { defaultValue: 'Archived' }), body: { archived: false } });
-      else if (i === 1) void patch(th, { unread: !th.unread }, { unread: !th.unread });
-    };
-    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options: opts, cancelButtonIndex: 2 }, pick);
-    else Alert.alert(t('top.more', { defaultValue: 'More' }), undefined, [{ text: opts[0], onPress: () => pick(0) }, { text: opts[1], onPress: () => pick(1) }, { text: opts[2], style: 'cancel' }]);
+    // Long-press menu: only actions the server really supports.
+    const acts: Array<[string, () => void]> = [
+      [th.unread ? t('messages.markRead', { defaultValue: 'Mark as read' }) : t('messages.markUnread', { defaultValue: 'Mark as unread' }), () => void patch(th, { unread: !th.unread }, { unread: !th.unread })],
+      ...(th.needs_reply ? [[t('messages.markDone', { defaultValue: 'Mark as done' }), () => markDone(th)] as [string, () => void]] : []),
+      ...(th.client ? [[t('messages.openClient'), () => router.push(`/clients/${th.client!.id}` as any)] as [string, () => void]] : []),
+      [t('messages.archive', { defaultValue: 'Archive' }), () => void patch(th, {}, { archived: true }, { label: t('messages.archived', { defaultValue: 'Archived' }), body: { archived: false } })]
+    ];
+    const cancel = t('common.cancel', { defaultValue: 'Cancel' });
+    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options: [...acts.map((a) => a[0]), cancel], cancelButtonIndex: acts.length, title: th.client?.display_name ?? th.contact_display_name ?? undefined }, (i) => acts[i]?.[1]());
+    else Alert.alert(t('top.more', { defaultValue: 'More' }), undefined, [...acts.map(([text, onPress]) => ({ text, onPress })), { text: cancel, style: 'cancel' as const }]);
   }
   const anyConnected = connections.some((c) => c.connected) || accounts.some((a) => a.state !== 'not_connected');
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
@@ -209,7 +212,7 @@ export default function MessagesScreen() {
   <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
     <Pressable style={styles.backdrop} onPress={() => setMenuOpen(false)}><View style={safe.menu}>
       <Text style={safe.menuHead}>{t('messages.platform', { defaultValue: 'Platform' })}</Text>
-      {PLATS.map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => { setPlat(k); setMenuOpen(false); }} style={styles.mi}>{k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={20} /> : null}
+      {PLATS.filter(([k]) => k !== 'all').map(([k, name]) => <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: plat === k }} onPress={() => { setPlat(plat === k ? 'all' : k); setMenuOpen(false); }} style={styles.mi}>{k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={20} /> : null}
         <Text style={[safe.menuText, plat === k && { fontFamily: tokens.font.uiSemibold }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>)}
       <Text style={[safe.menuHead, styles.miSep]}>{t('inbox.filter')}</Text>
       {FILTERS.map((f) => <Pressable key={f} accessibilityRole="button" accessibilityState={{ selected: filter === f }} onPress={() => { setFilter(filter === f ? null : f); setMenuOpen(false); }} style={styles.mi}>
