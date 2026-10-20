@@ -19,6 +19,7 @@ import { toFriendly } from '../../src/lib/friendly-error';
 import { listConnections, listMessageThreads, syncMessages, updateThread, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
+const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
 import { useNightSafe } from '../../src/components/NightSafe';
 import { SwipeRow } from '../../src/components/SwipeRow';
 import { useToast } from '../../src/components/Toast';
@@ -195,7 +196,7 @@ export default function MessagesScreen() {
           <View style={styles.rowBody}>
             <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
             <View style={styles.rowTop}>
-              <Text numberOfLines={1} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
+              <Text numberOfLines={1} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }, JP_FONT(thread.last_preview)]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
               <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>{rel(thread.last_message_at)}</Text>
             </View>
           </View>

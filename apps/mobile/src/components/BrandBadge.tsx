@@ -17,9 +17,10 @@ export function BrandLogo({ platform, size = 20 }: { platform: string; size?: nu
   if (platform === 'facebook') return <Svg width={size} height={size} viewBox="0 0 24 24">
     <Circle cx="12" cy="12" r="12" fill="#0866FF" />
     <Path d="M13.4 24v-8.4h2.8l.5-3.3h-3.3v-2.1c0-.9.5-1.8 1.9-1.8h1.5V5.6s-1.3-.2-2.6-.2c-2.7 0-4.4 1.6-4.4 4.6v2.3H6.9v3.3h2.9V24z" fill="#FFF" /></Svg>;
+  // LINE: green rounded square with a white speech bubble (F01 badge).
   if (platform === 'line') return <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path d="M12 1.6C5.6 1.6.6 5.7.6 10.8c0 4.5 4 8.3 9.4 9.1.4.1.9.3 1 .6.1.3.1.7 0 1l-.2 1c0 .3-.2 1.2 1 .6 1.3-.5 6.8-4 9.3-6.9 1.7-1.9 2.5-3.8 2.5-5.4 0-5.1-5-9.2-11.6-9.2z" fill="#06C755" />
-    <SvgText x="12" y="13.6" fontSize="6.6" fontWeight="bold" fill="#FFF" textAnchor="middle" fontFamily="Arial">LINE</SvgText></Svg>;
+    <Rect x="0" y="0" width="24" height="24" rx="6" fill="#06C755" />
+    <Path d="M12 5.2c-4.1 0-7.4 2.6-7.4 5.9 0 2.9 2.6 5.3 6.2 5.8.3.1.6.2.6.4l-.1 1.2c0 .3.2.6.6.4 2.6-1.4 6.6-4.3 7.2-6.6.2-.4.3-.8.3-1.2 0-3.3-3.3-5.9-7.4-5.9z" fill="#FFF" /></Svg>;
   if (platform === 'tiktok') return <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx="12" cy="12" r="12" fill="#000" />
     <Path d="M15.6 5.5c.4 1.6 1.5 2.7 3.1 2.9v2.4c-1.1 0-2.2-.3-3.1-.9v4.7c0 2.6-2.1 4.6-4.7 4.6s-4.6-2-4.6-4.6 2.3-4.8 5-4.5v2.5c-1.2-.4-2.6.5-2.6 2 0 1.2.9 2.1 2.2 2.1 1.2 0 2.2-.9 2.2-2.2V5.5z" fill="#FFF" /></Svg>;
   return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#766E64' }} />;
@@ -31,9 +32,14 @@ export function BrandBadge({ platform, size = 20 }: { platform: string; size?: n
 }
 
 /** Round profile photo with an initial fallback and the platform badge bottom-right. */
-export function ContactAvatar({ name, uri, platform, size = 64 }: { name: string; uri?: string | null; platform?: string; size?: number }) {
+/** Initials used everywhere a contact has no photo (inbox + chat): first + last word, e.g. 'TB' for Test Client B. */
+export function contactInitials(name: string) {
   const parts = name.replace(/^[^\p{L}]+/u, '').trim().split(/\s+/).filter(Boolean);
-  const initial = (parts.length > 1 ? (parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '') : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
+  return (parts.length > 1 ? (parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '') : (parts[0] ?? '?').slice(0, 2)).toUpperCase();
+}
+
+export function ContactAvatar({ name, uri, platform, size = 64 }: { name: string; uri?: string | null; platform?: string; size?: number }) {
+  const initial = contactInitials(name);
   return <View style={{ width: size, height: size }} accessibilityElementsHidden>
     {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#F2F2F2' }} />
       : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#EDEDED' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}

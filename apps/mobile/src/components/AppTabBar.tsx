@@ -42,9 +42,9 @@ export function AppTabBar() {
     { href: '/profile', label: t('tabs.profile'), glyph: 'profile' as TabGlyphName },
   ];
   // 49pt bar sits above the phone's bottom safe area. Read it from the device.
-  const barHeight = 49 + insets.bottom;
-  return <View style={[styles.bar, { height: barHeight, paddingBottom: insets.bottom, borderTopColor: palette.border, backgroundColor: 'transparent' }]} accessibilityRole="tablist">
-    <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />
+  const bottom = Math.max(insets.bottom, 34); // web reports 0: keep the 34pt home-indicator inset
+  const barHeight = 49 + bottom;
+  return <View style={[styles.bar, { height: barHeight, paddingBottom: bottom, borderTopColor: palette.border, backgroundColor: palette.bg }]} accessibilityRole="tablist">
     {items.map(({ href, label, glyph }) => {
       const active = on === href; const color = active ? palette.text : '#9A9A9F';
       return <Pressable key={href} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={label} onPress={() => router.navigate(href as any)} style={[styles.item, active && styles.itemOn]}>

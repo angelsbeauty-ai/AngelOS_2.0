@@ -8,7 +8,7 @@ import { useToast } from '../../src/components/Toast';
 import { ChatBar } from '../../src/components/ChatBar';
 import { useDictation } from '../../src/lib/dictation';
 import { ChatTools } from '../../src/components/ChatTools';
-import { BrandLogo } from '../../src/components/BrandBadge';
+import { BrandLogo, contactInitials } from '../../src/components/BrandBadge';
 import { SwipeReply } from '../../src/components/SwipeReply';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
@@ -23,6 +23,8 @@ import {
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { useAppearance } from '../../src/design/appearance';
 
+/** Japanese text uses the system font (Manrope has no kana; web would fall back to a handwriting face). */
+const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
 const APP_NAME: Record<string, string> = { line: 'LINE', instagram: 'Instagram', facebook: 'Messenger', other: 'the app' };
 
 export default function MessageThreadScreen() {
@@ -88,10 +90,10 @@ export default function MessageThreadScreen() {
   const firstName = name.split(/[\s\u3000]+/)[0];
   const appName = APP_NAME[thread.platform] ?? 'LINE';
   const live = thread.delivery === 'live';
-  const incBg = night ? '#26262A' : '#E4E4E6';
+  const incBg = night ? '#26262A' : '#FFFFFF';
   const incText = night ? '#F4F4F5' : '#151515';
-  const outBg = night ? '#E9E9EB' : '#1C1C1E';
-  const outText = night ? '#151515' : '#F4F4F5';
+  const outBg = night ? '#E9E9EB' : '#E4E4E6';
+  const outText = '#151515';
 
   async function send() {
     const text = reply.trim();
@@ -170,9 +172,8 @@ export default function MessageThreadScreen() {
         const dayLabel = (iso: string) => { const d = new Date(iso); const n = new Date(); const y = new Date(Date.now() - 86400000);
           return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
         for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
-        const sticky = items.map((x, i) => (x.kind === 'day' ? i : -1)).filter((i) => i >= 0);
-        const initials = name.split(/[\s\u3000]+/).filter(Boolean).slice(0, 2).map((w: string) => w[0]?.toUpperCase()).join('');
-        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} stickyHeaderIndices={sticky} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+        const initials = contactInitials(name);
+        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
           {items.map((x) => {
             if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: night ? '#2C2C2E' : '#E4E4E6', color: palette.text }]}>{x.label}</Text></View>;
             const message = x.m; const out = message.direction === 'outbound'; const tr = translations[message.id];
@@ -180,7 +181,7 @@ export default function MessageThreadScreen() {
               {!out ? (x.first ? <View style={[styles.inAvatar, { backgroundColor: night ? '#3A3A3D' : '#D1D1D6' }]}>{thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.inAvatarImg} /> : <Text style={[styles.inAvatarText, { color: palette.text }]}>{initials}</Text>}</View> : <View style={styles.inAvatarGap} />) : null}
               <Pressable onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
                 <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }]}>
-                  <Text style={[styles.body, { color: out ? outText : incText }]}>{message.body}</Text>
+                  <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text>
                 </View>
                 {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{tr.text}</Text> : null}
                 <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}</Text>

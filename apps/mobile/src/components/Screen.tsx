@@ -44,7 +44,7 @@ function AskButton({ pathname, bottom, right }: { pathname: string; bottom?: num
   const { palette, mode } = useAppearance();
   const parts = pathname.split('/').filter(Boolean);
   const entityType = parts[0] === 'clients' && parts[1] && parts[1] !== 'new' ? 'client' : undefined;
-  const lift = bottom ?? (TAB_PATHS.has(pathname) ? 88 : showsAppTabBar(pathname) ? 72 : undefined);
+  const lift = bottom ?? (TAB_PATHS.has(pathname) ? 151 : showsAppTabBar(pathname) ? 96 : undefined); // F01: logo button y617–661 on 812
   return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, { borderColor: palette.border }, lift != null && { bottom: lift }, right != null && { right }]}>
     <BlurView intensity={palette.blur} tint={palette.tint} style={StyleSheet.absoluteFill} />
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.55)' }]} />
@@ -56,12 +56,12 @@ const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: '#F3F4F6' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   pinned: { zIndex: 2 },
-  content: { padding: tokens.space.screen, paddingTop: 4, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
+  content: { padding: tokens.space.screen, paddingTop: 4, paddingBottom: 140, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   webTop: { justifyContent: 'flex-start' },
   stack: { gap: spacing.md },
   webStack: { maxWidth: 480, width: '100%', paddingBottom: 120 },
   refresh: { alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.light.border },
   refreshText: { color: colors.light.secondaryText, fontSize: 13, fontWeight: '600' },
-  ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, width: 36, height: 36, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   askLogo: { width: 24, height: 24 }
 });

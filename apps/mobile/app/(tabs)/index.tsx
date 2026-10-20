@@ -67,10 +67,10 @@ export default function HomeScreen() {
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
   const tasks = imp?.tasks ?? (a ? a.pendingApprovals + a.suggestions.length : null);
 
-  const dateLine = now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+  const dateLine = now.toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   const upcoming = (s?.items ?? []).filter((it) => it.status !== 'cancelled' && new Date(it.end_at).getTime() > now.getTime()).slice(0, 4);
   const confirmed = (s?.items ?? []).filter((it) => it.status === 'confirmed').length;
-  const statusLabel = (st: string) => t(`home.st.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : st === 'pending' ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : '' });
+  const statusLabel = (st: string) => t(`home.st.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : st === 'pending' ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : st ? st.charAt(0).toUpperCase() + st.slice(1).replace(/_/g, ' ') : '' });
   const na = t('home.unavailable', 'Unavailable');
 
   return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()} header={<View style={styles.pinned}>
@@ -95,15 +95,14 @@ export default function HomeScreen() {
         {s && !upcoming.length ? <Text style={[styles.empty, { color: palette.muted }]}>{t('home.noMore', 'Nothing else booked today')}</Text> : null}
         {upcoming.map((it, i) => <Pressable key={it.id} accessibilityRole="button" onPress={() => router.push(`/bookings/${it.id}` as any)} style={({ pressed }) => [styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
           <View style={{ flex: 1, gap: 2 }}>
-            <Text numberOfLines={1} style={[styles.itemTitle, { color: palette.text }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
-            <Text style={[styles.itemSub, { color: palette.muted }]}>{time(it.start_at)} – {time(it.end_at)}</Text>
+            <Text numberOfLines={2} style={[styles.itemTitle, { color: palette.text }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
+            <Text numberOfLines={1} style={[styles.itemSub, { color: palette.muted }]}>{time(it.start_at)} – {time(it.end_at)}{statusLabel(it.status) ? ` · ${statusLabel(it.status)}` : ''}</Text>
           </View>
-          <Text style={[styles.itemStatus, { color: palette.muted }]}>{statusLabel(it.status)}</Text>
           <CaretRight size={16} color={palette.muted} />
         </Pressable>)}
       </View>
       <View style={styles.grid}>
-        <Tile title={t('home.bookingsToday', 'Bookings today')} value={s ? String(s.total) : na} line={s ? `${confirmed} ${t('home.confirmed', 'confirmed')} · ${s.pending} ${t('home.pendingShort', 'pending')}` : ''} onPress={() => router.push('/calendar' as any)} />
+        <Tile title={t('home.bookingsToday', 'Bookings today')} value={s ? String(s.total) : na} line={s ? `${confirmed} ${t('home.confirmed', 'confirmed')} · ${s.pending} ${t('home.pendingShort', 'pending')}` : ''} oneLine onPress={() => router.push('/calendar' as any)} />
         <Tile title={t('home.booked', 'Booked')} value={na} line={t('home.thisWeek', 'this week')} onPress={() => openReport('schedule')} />
         <Tile title={t('home.unreadTitle', 'Unread')} value={m ? String(m.unread) : na} line={t('home.chatsWaiting', 'chats waiting')} onPress={() => router.push('/messages' as any)} />
         <Tile title={t('home.scheduled', 'Scheduled')} value={imp?.scheduledPosts != null ? String(imp.scheduledPosts) : na} line={imp?.scheduledPosts === 1 ? t('home.postToday', 'post today') : t('home.postsTodayS', 'posts today')} onPress={() => openReport('social')} />
@@ -112,13 +111,13 @@ export default function HomeScreen() {
   </Screen>;
 }
 
-function Tile({ title, value, line, onPress }: { title: string; value: string; line: string; onPress: () => void }) {
+function Tile({ title, value, line, onPress, oneLine }: { title: string; value: string; line: string; onPress: () => void; oneLine?: boolean }) {
   const { palette } = useAppearance();
   const { t } = useTranslation();
   return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value}`} onPress={onPress} style={({ pressed }) => [styles.tile, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
     <Text numberOfLines={1} style={[styles.tileTitle, { color: palette.muted }]}>{title}</Text>
     <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[value === t('home.unavailable', 'Unavailable') ? styles.tileNa : styles.tileValue, { color: value === t('home.unavailable', 'Unavailable') ? palette.muted : palette.text }]}>{value}</Text>
-    {line ? <Text numberOfLines={2} style={[styles.tileLine, { color: palette.muted }]}>{line}</Text> : null}
+    {line ? <Text numberOfLines={oneLine ? 1 : 2} adjustsFontSizeToFit={oneLine} minimumFontScale={0.8} style={[styles.tileLine, oneLine && styles.tileLineTight, { color: palette.muted }]}>{line}</Text> : null}
   </Pressable>;
 }
 
@@ -161,10 +160,11 @@ const styles = StyleSheet.create({
   itemSub: { fontFamily: tokens.font.ui, fontSize: 15 },
   itemStatus: { fontFamily: tokens.font.ui, fontSize: 16 },
   empty: { fontFamily: tokens.font.ui, fontSize: 15, padding: 16 },
-  tile: { width: '48.4%', minHeight: 128, padding: 16, gap: 6, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth },
+  tile: { width: '48.4%', minHeight: 128, padding: 16, paddingHorizontal: 14, gap: 6, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth },
   tileTitle: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
   tileValue: { fontFamily: tokens.font.uiBold, fontSize: 28, lineHeight: 34 },
   tileLine: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 17 },
+  tileLineTight: { fontSize: 12, letterSpacing: -0.1 },
   tileNa: { fontFamily: tokens.font.uiSemibold, fontSize: 18, lineHeight: 34 },
   pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 12 },
   hello: { flexDirection: 'row', alignItems: 'center', gap: 12 },

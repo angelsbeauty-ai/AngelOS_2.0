@@ -5,7 +5,6 @@ import { D, tokens } from '../design/theme';
 /** final-D2 tab icon: accent bar above the active tab and a static count badge. */
 export function TabIcon({ active, badge, children }: { active: boolean; badge?: number; children: ReactNode }) {
   return <View style={styles.wrap}>
-    {active ? <View style={styles.bar} /> : null}
     {children}
     {badge ? <View style={styles.badge}><Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text></View> : null}
   </View>;
