@@ -301,6 +301,10 @@ export default function CalendarTab() {
     </View>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor={palette.muted} style={[styles.search, { color: palette.text, backgroundColor: palette.fill }]} /> : null}
     {mode === 'month' ? <View style={styles.wkHead} importantForAccessibility="no-hide-descendants">{cells.slice(0, 7).map((d, i) => <Text key={i} maxFontSizeMultiplier={1.3} style={[styles.wkH, { color: palette.muted }]}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</Text>)}</View> : null}
+    {mode === 'day' ? <View style={[styles.dayHead, { backgroundColor: night ? '#000000' : D.bg }]}>
+      <View style={[styles.num, styles.numBig, key(anchor) === key(now) ? { backgroundColor: RED } : { backgroundColor: palette.fill }]}><Text style={[styles.numText, { color: key(anchor) === key(now) ? '#FFFFFF' : palette.text }]}>{anchor.getDate()}</Text></View>
+      <Text maxFontSizeMultiplier={1.4} style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+    </View> : null}
     {mode === 'week' ? <View style={[styles.wkRow, ln, night && { backgroundColor: '#000000' }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} accessibilityRole="button" accessibilityLabel={d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 44 }}>
       <Text maxFontSizeMultiplier={1.3} style={[styles.wk, { color: palette.muted }]}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</Text>
       <View style={[styles.num, today && { backgroundColor: RED }]}><Text maxFontSizeMultiplier={1.3} style={[styles.numText, { color: today ? '#FFFFFF' : palette.text }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
@@ -331,10 +335,6 @@ export default function CalendarTab() {
   };
 
   const grid = () => <View style={[styles.grid, ln]} {...dragPan.panHandlers} onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
-    {mode === 'day' ? <View style={styles.dayHead}>
-      <View style={[styles.num, styles.numBig, key(anchor) === key(now) ? { backgroundColor: RED } : { backgroundColor: palette.fill }]}><Text style={[styles.numText, { color: key(anchor) === key(now) ? '#FFFFFF' : palette.text }]}>{anchor.getDate()}</Text></View>
-      <Text maxFontSizeMultiplier={1.4} style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-    </View> : null}
     <View style={{ flexDirection: 'row', paddingTop: 12 }}>
       <View style={{ width: GUTTER }}>{HOURS.map((h) => <View key={h} style={{ height: HOUR_H }}><Text maxFontSizeMultiplier={1.3} style={[styles.hour, { color: palette.muted }]}>{hourLabel(h)}</Text></View>)}</View>
       {tlDays.map((d, col) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
@@ -350,8 +350,8 @@ export default function CalendarTab() {
           {isToday && nowTop > 0 && nowTop < HOURS.length * HOUR_H ? <View pointerEvents="none" style={[styles.nowLine, { top: nowTop, backgroundColor: RED }]}><View style={[styles.nowDot, { backgroundColor: RED }]} /></View> : null}
         </View>; })}
     </View>
-    {tlDays.some((d) => key(d) === key(now)) ? (() => { const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H; return nowTop > 0 && nowTop < HOURS.length * HOUR_H ? <View pointerEvents="none" style={[styles.nowPill, { top: 12 + nowTop - 9 + (mode === 'day' ? 52 : 0), backgroundColor: RED }]}><Text style={styles.nowPillText}>{time(now)}</Text></View> : null; })() : null}
-    {dragging && tl.current.colW ? <Animated.View pointerEvents="none" style={[styles.block, styles.lifted, { top: 12 + dragging.top + (mode === 'day' ? 52 : 0), left: GUTTER + dragging.col * tl.current.colW + 2, width: tl.current.colW - 4, height: dragging.h, backgroundColor: night ? '#2C2C2E' : '#FFFFFF', borderColor: palette.text }, reduceMotion && { shadowOpacity: 0, elevation: 0 }, ghostStyle]}>
+    {tlDays.some((d) => key(d) === key(now)) ? (() => { const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H; return nowTop > 0 && nowTop < HOURS.length * HOUR_H ? <View pointerEvents="none" style={[styles.nowPill, { top: 12 + nowTop - 9 + 0, backgroundColor: RED }]}><Text style={styles.nowPillText}>{time(now)}</Text></View> : null; })() : null}
+    {dragging && tl.current.colW ? <Animated.View pointerEvents="none" style={[styles.block, styles.lifted, { top: 12 + dragging.top + 0, left: GUTTER + dragging.col * tl.current.colW + 2, width: tl.current.colW - 4, height: dragging.h, backgroundColor: night ? '#2C2C2E' : '#FFFFFF', borderColor: palette.text }, reduceMotion && { shadowOpacity: 0, elevation: 0 }, ghostStyle]}>
       <Text maxFontSizeMultiplier={MAXF} style={[styles.chipText, { color: palette.text }]}>{glyph(dragging.it.p)} {postTitle(dragging.it.p)}</Text>
     </Animated.View> : null}
   </View>;
@@ -382,14 +382,14 @@ export default function CalendarTab() {
       <Text style={[styles.rowTitle, { color: palette.text }]}>{t('cal.listEmpty', 'Nothing coming up')}</Text>
       <Text style={[styles.rowSub, { color: palette.muted, textAlign: 'center' }]}>{t('cal.listEmptySub', 'Tap + to add a post or a booking.')}</Text>
     </View>;
-    return <View style={{ paddingBottom: 120, paddingRight: 52 }}>
-      <Text style={[styles.rowSub, { color: palette.muted }]}>{t('cal.listSub', 'List · upcoming')}</Text>
+    return <View style={{ paddingBottom: 120, marginHorizontal: -16 }}>
+      <Text style={[styles.rowSub, { color: palette.muted, marginHorizontal: 16 }]}>{t('cal.listSub', 'List · upcoming')}</Text>
       {listItems.map(({ d, items }) => { const today = key(d) === key(now); return <View key={key(d)}>
-        <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.listHead, { color: today ? RED : palette.text }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.listHead, { color: today ? RED : palette.text, marginHorizontal: 16 }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
         {items.map((it) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
           const title = it.kind === 'booking' ? [it.a.client?.display_name, it.a.service_name].filter(Boolean).join(' · ') + (pend ? ` · ${t('cal.pending', 'pending')}` : '') : `${platformNames(it.platforms)} · ${postTitle(it.p)}`;
           const st = it.kind === 'post' ? postStatusLabel(it.p, (k, dd) => t(k, dd)) : '';
-          const row = <Pressable accessibilityRole="button" accessibilityLabel={`${time(it.at)}, ${title}${st ? `, ${st}` : ''}`} onPress={() => void openItem(it)} style={({ pressed }) => [styles.listRow, { minHeight: Math.round(60 * FS), borderColor: night ? 'rgba(255,255,255,0.10)' : LINE, backgroundColor: palette.bg }, pressed && { backgroundColor: palette.fill }]}>
+          const row = <Pressable accessibilityRole="button" accessibilityLabel={`${time(it.at)}, ${title}${st ? `, ${st}` : ''}`} onPress={() => void openItem(it)} style={({ pressed }) => [styles.listRow, { minHeight: Math.round(60 * FS), paddingHorizontal: 16, borderColor: night ? 'rgba(255,255,255,0.10)' : LINE, backgroundColor: palette.bg }, pressed && { backgroundColor: palette.fill }]}>
             <View style={[styles.listBar, pend ? { borderWidth: 1, borderColor: palette.muted } : { backgroundColor: it.kind === 'post' && glyph(it.p) === '!' ? RED : palette.muted }]} />
             <View style={{ flex: 1 }}>
               <Text maxFontSizeMultiplier={MAXF} numberOfLines={2} style={[styles.listTitle, { color: palette.text }]}>{title}</Text>
@@ -399,17 +399,17 @@ export default function CalendarTab() {
           </Pressable>;
           if (it.kind !== 'post') return <View key={`b-${it.a.id}`}>{row}</View>;
           const ic = palette.text;
-          return <SwipeRow key={`p-${it.p.id}`} night={night} height={Math.round(64 * FS)} onFullSwipe={() => undefined} actions={[
+          return <SwipeRow key={`p-${it.p.id}`} night={night} onFullSwipe={() => undefined} actions={[
             { key: 'reschedule', label: t('sched.reschedule', 'Reschedule'), icon: <ArrowsClockwise size={20} color={ic} />, onPress: () => void openItem(it, { edit: true }) },
             { key: 'duplicate', label: t('sched.duplicate', 'Duplicate'), icon: <Copy size={20} color={ic} />, onPress: () => router.push({ pathname: '/content/new', params: { title: it.p.title ?? '', caption: it.p.variants?.[0]?.caption ?? '', date: ymd(addD(it.at, 7)), time: hhmm(it.at) } } as any) },
-            ...((it.p.variants ?? []).some((v) => v.status === 'scheduled') ? [{ key: 'cancel', label: t('sched.cancel', 'Cancel'), icon: <X size={20} color={RED} />, onPress: () => void openItem(it, { cancel: true }) }] : [])
+            { key: 'cancel', label: t('sched.cancel', 'Cancel'), danger: true, icon: <X size={20} color={RED} />, onPress: () => void openItem(it, { cancel: true }) }
           ]}>{row}</SwipeRow>; })}
       </View>; })}
     </View>;
   };
 
   return <View style={{ flex: 1 }}>
-    <Screen onRefresh={load} scrollEnabled={!dragging} scrollY={mode === 'day' && state === 'ready' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : undefined} header={header}>
+    <Screen onRefresh={load} scrollEnabled={!dragging} scrollY={state !== 'ready' ? undefined : mode === 'day' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') && tlDays.some((d) => key(d) === key(now)) ? Math.max(0, (now.getHours() - HOURS[0] - 2) * HOUR_H) : undefined} header={header}>
       <View {...swipe.panHandlers}>
       {!online && state === 'ready' ? <Text accessibilityLiveRegion="polite" style={[styles.offline, { color: palette.text, backgroundColor: palette.fill }]}>{t('sched.offlineBar', "You're offline · showing what was last loaded")}</Text> : null}
       {state === 'nostudio' ? <NoStudio /> : null}

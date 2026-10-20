@@ -27,7 +27,8 @@ export function postStatusLabel(p: ContentPost, t: (k: string, d: string) => str
   if (vs.some((v) => v.status === 'failed')) return t('sched.stFailed', "Didn't post");
   if (vs.some((v) => v.status === 'publishing')) return t('sched.stPosting', 'Posting…');
   if (vs.length && vs.every((v) => v.status === 'published')) return t('sched.stPosted', 'Posted');
-  if (vs.some((v) => v.status === 'scheduled')) return t('sched.stScheduled', 'Scheduled');
+  // A stored time means it is scheduled, whatever the variant status says (approved + scheduled_for when auto-posting is not connected).
+  if (vs.some((v) => v.status === 'scheduled' || (v.scheduled_for && v.status !== 'archived' && v.status !== 'draft'))) return t('sched.stScheduled', 'Scheduled');
   if (vs.some((v) => v.status === 'approved') || p.status === 'approved') return t('sched.stApproved', 'Approved · no time set');
   return t('sched.stDraft', 'Draft');
 }

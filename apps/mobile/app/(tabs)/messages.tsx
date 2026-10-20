@@ -230,7 +230,7 @@ export default function MessagesScreen() {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
         const fg = palette.text;
-        return <SwipeRow key={thread.id} night={mode === 'night'} onFullSwipe={() => markDone(thread)} actions={[
+        return <SwipeRow key={thread.id} height={80} night={mode === 'night'} onFullSwipe={() => markDone(thread)} actions={[
           { key: 'more', label: t('top.more', { defaultValue: 'More' }), icon: <DotsThree size={24} color={fg} weight="bold" />, onPress: () => more(thread) },
           { key: 'done', label: t('messages.done'), icon: <Check size={24} color={fg} />, onPress: () => markDone(thread) },
           { key: 'unread', label: t('messages.unreadA', { defaultValue: 'Unread' }), icon: <EnvelopeSimple size={24} color={fg} />, onPress: () => void patch(thread, { unread: true }, { unread: true }) },

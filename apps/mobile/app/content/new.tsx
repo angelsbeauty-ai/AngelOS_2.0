@@ -18,6 +18,8 @@ import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { useAppearance } from '../../src/design/appearance';
+import { translateText } from '../../src/lib/messaging';
 
 const colors = tokens.color;
 const radius = tokens.radius;
@@ -100,6 +102,10 @@ export default function NewPostScreen() {
     if (params.mediaId) setSelectedMedia([String(params.mediaId)]);
   }, [params.title, params.caption, params.goal, params.mediaId]);
   const [hashtagSets, setHashtagSets] = useState<HashtagSet[]>([]);
+  const { mode: look } = useAppearance(); const night = look === 'night';
+  const [revEn, setRevEn] = useState('');
+  // C06: a Japanese caption gets an English meaning line in the review sheet.
+  useEffect(() => { const c = (caption.trim() || '').slice(0, 600); setRevEn(''); if (!review || !workspaceId || captionEn.trim() || !/[\u3040-\u30ff\u4e00-\u9faf]/.test(c)) return; let live = true; translateText(workspaceId, c, 'en').then((r) => { if (live) setRevEn(r.translation); }).catch(() => undefined); return () => { live = false; }; }, [review, workspaceId, caption, captionEn]);
   useEffect(() => { if (workspaceId) listHashtagSets(workspaceId).then((r) => setHashtagSets(r.sets)).catch(() => undefined); }, [workspaceId]);
 
   async function loadMedia() {
@@ -418,13 +424,13 @@ export default function NewPostScreen() {
             </View> : null}
             <View style={{ gap: 4 }}>
               <Text numberOfLines={4} style={styles.sheetCaption}>{caption.trim() || postedCaption.trim()}</Text>
-              {captionEn.trim() && captionEn.trim() !== caption.trim() ? <Text numberOfLines={3} style={styles.sheetSub}>EN: {captionEn.trim()}</Text> : null}
+              {(captionEn.trim() && captionEn.trim() !== caption.trim()) || revEn ? <Text numberOfLines={3} style={styles.sheetSub}>EN: {captionEn.trim() || revEn}</Text> : null}
               {hashtags.length ? <Text numberOfLines={1} style={styles.sheetSub}>{hashtags.slice(0, 3).join(' ')}{hashtags.length > 3 ? ` +${hashtags.length - 3}` : ''}</Text> : null}
             </View>
             <SupportText>{review === 'now' ? t('cnew.reviewNowNote') : t('sched.reviewNote', { defaultValue: 'AngelOS will post this at {{time}} on {{day}}. You can edit or cancel until then.', time, day: plannedAt.toLocaleDateString('en-GB', { weekday: 'long' }) })}</SupportText>
             {inlineErr ? <Text accessibilityLiveRegion="assertive" style={styles.inlineErr}>{inlineErr}</Text> : null}
-            <Pressable accessibilityRole="button" accessibilityState={{ busy }} disabled={busy} onPress={() => { if (review) void save(review); }} style={styles.approveBtn}>
-              {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{review === 'now' ? t('sched.postNow', 'Post now') : t('sched.approveSchedule', 'Approve & schedule')}</Text>}
+            <Pressable accessibilityRole="button" accessibilityState={{ busy }} disabled={busy} onPress={() => { if (review) void save(review); }} style={[styles.approveBtn, night && { backgroundColor: '#FFFFFF' }]}>
+              {busy ? <ActivityIndicator color={night ? '#151515' : '#FFFFFF'} /> : <Text style={[styles.primaryText, night && { color: '#151515' }]}>{review === 'now' ? t('sched.postNow', 'Post now') : t('sched.approveSchedule', 'Approve & schedule')}</Text>}
             </Pressable>
             <Pressable accessibilityRole="button" disabled={busy} onPress={() => void save('draft')} style={styles.draftBtn}><Text style={styles.secondaryText}>{t('sched.saveDraft', 'Save as draft')}</Text></Pressable>
           </View>
