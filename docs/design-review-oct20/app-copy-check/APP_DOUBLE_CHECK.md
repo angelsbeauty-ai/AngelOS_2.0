@@ -123,3 +123,31 @@ Side-by-side PNGs are in `compare/`: real app on the left, AngelOS fix on the ri
 - [x] Real app vs AngelOS image.
 - [x] Plain English, with a Works/Broken/Missing/Fake verdict and proof.
 - [x] New screen-map items listed above.
+
+## Calendar v2 (2026-10-20) — copy Apple Calendar (iOS 18/26)
+Generator: `gen_v2.py` (screen 390×844 pt @3x = 1170×2532 px). Font: Manrope. Palette: Night `#000` bg / `#161618` card / `#2C2C2E` chip; Day `#F3F3F3` / `#FFFFFF` / `#E5E5EA`. Red (`#FF453A` Night / `#FF3B30` Day) is used only for today and the current-time line. Brand logos are in colour. Sample names only. The tab bar is visible.
+
+| Element | Exact size | Source |
+|---|---|---|
+| Nav: "< 2026" back + list / search / + | 44 pt row, 17 pt/600 label, 24–26 pt icons | Apple Calendar `refs/applecal_3.png` |
+| Large title "October" | 34 pt/800 | `refs/applecal_3.png` |
+| Filter row All / Appointments / Posts / Tasks | 32 pt chips, 14 pt/600, 8 pt gap | Google Calendar `refs/gcal_1.png` (calendar filters) |
+| Weekday letters | 12 pt/600 muted | `refs/applecal_3.png` |
+| Month day cell | full width ÷ 7 (55.7 pt) × **96 pt**, 0.5 pt hairlines, no margins | `refs/applecal_3.png` |
+| Day number / today circle | 17 pt/600; today = 28 pt red circle, white 800 | `refs/applecal_3.png` |
+| Month chip | 15 pt high, 10 pt/700, 4 pt radius, 2 pt gap, max 3 + "+N" (10 pt muted) | `refs/applecal_3.png` |
+| Appointment marker | 2.5 pt left bar in text colour + "Name HH" | Apple chip bar `refs/applecal_1.png` |
+| Post marker | 11 pt thumbnail + 11 pt colour platform logo + time | Buffer `refs/buffer_*.png`, Metricool `refs/metricool_*.png` |
+| Task marker | 9–11 pt outlined checkbox, transparent chip with hairline | Apple reminders in calendar `refs/applecal_1.png`, Fantastical `refs/fantastical_1.png` |
+| Bottom bar "Today / Filter" (Apple has Today / Calendars / Inbox) | 44 pt, 17 pt/600, above the 83 pt tab bar | `refs/applecal_1.png`, `refs/applecal_3.png` |
+| Week / Day hour grid | **60 pt per hour**, 50 pt time gutter, 11 pt/600 hour labels | `refs/applecal_1.png`, `refs/fantastical_3.png` |
+| Week/day strip | 11 pt letter + 30 pt date circle, 17 pt | `refs/applecal_1.png` |
+| All-day row | ≥26 pt, "all-day" 11 pt | `refs/applecal_1.png` |
+| Current-time line | 1.5 pt red line + red 11 pt/700 "11:41" pill | `refs/applecal_1.png` |
+| Overlapping items | split the column into equal lanes side by side, 2 pt gap; narrow lane = initials + hour, or thumbnail + logo | `refs/applecal_1.png`, `refs/notioncal_1.png` |
+| Day-view item | 12 pt/700 title + 12 pt/600 muted subtitle, 5 pt radius | `refs/applecal_1.png` |
+| Drag (long-press) | item lifts at scale 1.02 with a 0 12 28 shadow and a dashed ghost at the original slot; snaps every 15 min; time pill 11 pt; "Move to Tue 13:15? Undo / Move" toast 44 pt | Apple Calendar drag behaviour (not in App Store shots); Notion Calendar `refs/notioncal_2.png` |
+| Year grid | 3 × 4 months, 17 pt/700 month name, 8 pt days in 14 pt cells, today red | Apple Calendar year view (no screenshot found; built from iOS layout) |
+
+Screens: `out/calendar-v2-{month,week,day,drag,year}-{night,day}.png`. Compares (real app vs AngelOS, Night): `compare/calendar-v2-{month,week,day,drag,year}-night.png`, plus `compare/calendar-v2-night.png` (month).
+Gaps: the App Store has no screenshots of Apple's portrait week view or year view, so the week compare uses Fantastical and the year compare uses Apple's month view.
