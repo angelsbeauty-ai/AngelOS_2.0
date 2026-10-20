@@ -24,7 +24,7 @@ test('post status rollup', () => {
 test('failure reasons are plain and specific', () => {
   assert.match(pub.notConnectedReason('line'), /Connect LINE/);
   assert.match(pub.notConnectedReason('instagram'), /Instagram isn't connected/);
-  assert.match(pub.notConnectedReason('tiktok'), /by hand/);
+  assert.match(pub.notConnectedReason('tiktok'), /TikTok posts automatically once .* is connected/);
 });
 test('Meta numbers: followers + likes/comments, unknown stays null', async () => {
   const replies = [{ followers_count: 1200, media_count: 40 }, { data: [{ like_count: 10, comments_count: 2 }, { like_count: 5 }] }];

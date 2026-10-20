@@ -12,8 +12,9 @@ test('JA strings are really Japanese and keep placeholders', () => {
   for (const k of keys(en)) {
     const e = get(en, k); const j = get(ja, k);
     assert.ok(j && j.length > 0, k);
-    assert.deepEqual(j.match(/{{\w+}}/g) ?? [], e.match(/{{\w+}}/g) ?? [], `placeholders ${k}`);
+    assert.deepEqual((j.match(/{{\w+}}/g) ?? []).sort(), (e.match(/{{\w+}}/g) ?? []).sort(), `placeholders ${k}`); // JA word order may differ
   }
-  const japanese = keys(ja).filter((k) => /[\u3040-\u30ff\u4e00-\u9faf]/.test(get(ja, k)));
-  assert.ok(japanese.length >= keys(ja).length - 2, 'almost every JA string contains Japanese');
+  // Emoji, acronyms (SNS) and counters like "1 / {{count}}" are fine; an untranslated English sentence is not.
+  const english = keys(ja).filter((k) => { const v = get(ja, k); return !/[\u3040-\u30ff\u4e00-\u9faf]/.test(v) && /[A-Za-z]{4,}/.test(v.replace(/{{\w+}}/g, '')); });
+  assert.ok(english.length <= 2, `untranslated JA strings: ${english.join(', ')}`);
 });
