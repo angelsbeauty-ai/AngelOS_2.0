@@ -2,14 +2,10 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { House } from 'phosphor-react-native/src/icons/House';
-import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
-import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';
-import { ChartBar } from 'phosphor-react-native/src/icons/ChartBar';
-import { UserCircle } from 'phosphor-react-native/src/icons/UserCircle';
 import { GlassSurface } from './Glass';
 import { colors, D } from '../design/theme';
 import { TabIcon } from './TabIcon';
+import { TabGlyph, type TabGlyphName } from './TabGlyph';
 import { useUnreadCount } from '../lib/unread';
 import { useAppearance } from '../design/appearance';
 
@@ -39,20 +35,20 @@ export function AppTabBar() {
   if (!showsAppTabBar(pathname)) return null;
   const on = activeTab(pathname);
   const items = [
-    { href: '/', label: t('tabs.home'), Icon: House },
-    { href: '/messages', label: t('tabs.messages'), Icon: ChatCircleDots },
-    { href: '/calendar', label: t('tabs.calendar'), Icon: CalendarBlank },
-    { href: '/analytics', label: t('tabs.analytics'), Icon: ChartBar },
-    { href: '/profile', label: t('tabs.profile'), Icon: UserCircle },
+    { href: '/', label: t('tabs.home'), glyph: 'home' as TabGlyphName },
+    { href: '/messages', label: t('tabs.messages'), glyph: 'messages' as TabGlyphName },
+    { href: '/calendar', label: t('tabs.calendar'), glyph: 'calendar' as TabGlyphName },
+    { href: '/analytics', label: t('tabs.analytics'), glyph: 'analytics' as TabGlyphName },
+    { href: '/profile', label: t('tabs.profile'), glyph: 'profile' as TabGlyphName },
   ];
   // 49pt bar sits above the phone's bottom safe area. Read it from the device.
   const barHeight = 49 + insets.bottom;
   return <View style={[styles.bar, { height: barHeight, paddingBottom: insets.bottom, borderTopColor: palette.border, backgroundColor: 'transparent' }]} accessibilityRole="tablist">
     <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />
-    {items.map(({ href, label, Icon }) => {
-      const active = on === href; const color = active ? palette.text : palette.muted;
+    {items.map(({ href, label, glyph }) => {
+      const active = on === href; const color = active ? palette.text : '#9A9A9F';
       return <Pressable key={href} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={label} onPress={() => router.navigate(href as any)} style={[styles.item, active && styles.itemOn]}>
-        <TabIcon active={active} badge={href === '/messages' ? unread : 0}><Icon size={25} color={color} weight={active ? "fill" : "regular"} /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
+        <TabIcon active={active} badge={href === '/messages' ? unread : 0}><TabGlyph name={glyph} active={active} color={color} /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
       </Pressable>;
     })}
   </View>;
