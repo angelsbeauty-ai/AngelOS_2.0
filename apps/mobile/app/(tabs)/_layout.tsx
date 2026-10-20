@@ -26,7 +26,8 @@ export default function TabsLayout() {
     tabBarStyle: [styles.tabBar, { height: 49 + Math.max(insets.bottom, 34), paddingBottom: Math.max(insets.bottom, 34), borderTopColor: palette.border, backgroundColor: palette.bg }],
     tabBarShowLabel: true,
     tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14, paddingBottom: 0 },
-    tabBarItemStyle: { paddingTop: 3, paddingBottom: 3 },
+    tabBarItemStyle: { height: 49, paddingTop: 5, paddingBottom: 2 },
+    tabBarIconStyle: { height: 26, marginBottom: 0 },
     // A1 .tab.on: raised white pill behind the active tab.
     tabBarActiveBackgroundColor: 'transparent',
   };
