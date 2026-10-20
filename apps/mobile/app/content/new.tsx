@@ -30,11 +30,11 @@ const GOALS: { label: string; objective: ContentObjective; goal: string }[] = [
   { label: 'Engagement', objective: 'engagement', goal: 'engagement' },
 ];
 
+/** LINE is not a post platform. TikTok posts automatically once Postiz is wired. */
 const PLATFORMS: { id: ContentPlatform; label: string }[] = [
   { id: 'instagram', label: 'Instagram' },
   { id: 'facebook', label: 'Facebook' },
   { id: 'tiktok', label: 'TikTok' },
-  { id: 'line', label: 'LINE' },
 ];
 
 type Kind = 'story' | 'post' | 'carousel' | 'reel' | 'live' | 'thread';
@@ -71,8 +71,6 @@ export default function NewPostScreen() {
   const [kind, setKind] = useState<Kind>(params.format === 'story' || params.format === 'reel' || params.format === 'carousel' ? params.format : 'post');
   const [platforms, setPlatforms] = useState<ContentPlatform[]>(['instagram']);
   const [commentsOn, setCommentsOn] = useState(true);
-  const [tags, setTags] = useState('');
-  const [place, setPlace] = useState('');
   const [link, setLink] = useState('');
   const [showRepost, setShowRepost] = useState(false);
   const [day, setDay] = useState<Date>(() => parseDayParam(params.date));
@@ -89,7 +87,6 @@ export default function NewPostScreen() {
 
   useEffect(() => { void loadMedia(); }, []);
   useEffect(() => { if (params.date) setDay(parseDayParam(params.date)); }, [params.date]);
-  // Prefill from ideas / before-after maker.
   useEffect(() => {
     if (params.title) setTitle(String(params.title));
     if (params.caption) setCaption(String(params.caption));
@@ -121,9 +118,8 @@ export default function NewPostScreen() {
     const primary = caption.trim();
     const english = captionEn.trim();
     const text = language === 'both' && english && !primary.includes(english) ? `${primary}\n\n${english}`.trim() : primary;
-    const mentions = tags.split(/[\s,、]+/).map((tag) => tag.trim()).filter(Boolean).map((tag) => tag.startsWith('@') ? tag : `@${tag}`);
-    return [text, mentions.join(' '), place.trim(), link.trim()].filter(Boolean).join('\n');
-  }, [caption, captionEn, language, tags, place, link]);
+    return [text, link.trim()].filter(Boolean).join('\n');
+  }, [caption, captionEn, language, link]);
   const plannedAt = useMemo(() => {
     const [hours, minutes] = time.split(':').map(Number);
     return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes);
@@ -271,7 +267,7 @@ export default function NewPostScreen() {
           </Pressable>
         ))}
       </View>
-      {platforms.includes('line') ? <SupportText tone="warning">{t('cnew.s5')}</SupportText> : null}
+      {platforms.includes('tiktok') ? <SupportText>TikTok posts automatically.</SupportText> : null}
 
       <TextInput
         value={caption}
@@ -291,14 +287,11 @@ export default function NewPostScreen() {
         {postedCaption.length}{platforms.includes('instagram') ? ` / ${IG_CAPTION_LIMIT}` : ''}
       </SupportText>
 
-      <Text style={styles.label}>{t('cnew.presets')}</Text>
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>{t('cnew.comments')}</Text>
         <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#F2F2F2', true: '#151515' }} thumbColor="#FFF" />
       </View>
       {!commentsOn ? <SupportText>{t('cnew.commentsOff')}</SupportText> : null}
-      <TextInput value={tags} onChangeText={setTags} placeholder={t('cnew.tagPeople')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" style={styles.input} />
-      <TextInput value={place} onChangeText={setPlace} placeholder={t('cnew.location')} placeholderTextColor={colors.charcoal3} style={styles.input} />
       <TextInput value={link} onChangeText={setLink} placeholder={t('cnew.link')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" keyboardType="url" style={styles.input} />
 
       <Text style={styles.label}>{t('cnew.s18')}</Text>
@@ -348,56 +341,50 @@ export default function NewPostScreen() {
 
       <View style={styles.actions}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.postNow')} disabled={!canSave} onPress={() => void save('now')} style={[styles.primaryBtn, !canSave && styles.disabled]}>
-          <Text style={styles.primaryText}>{busy ? t('sml.saving') : t('cnew.postNow')}</Text>
+          <Text style={styles.primaryText}>{busy ? t('cnew.saving') : t('cnew.postNow')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedulePost')} disabled={!canSave} onPress={() => void save('schedule')} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
-          <Text style={styles.secondaryText}>{t('cnew.schedulePost')}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedule')} disabled={!canSave} onPress={() => void save('schedule')} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
+          <Text style={styles.secondaryText}>{t('cnew.schedule')}</Text>
         </Pressable>
-        <SupportText>{t('cnew.notSent')}</SupportText>
       </View>
     </Screen>
   );
 }
 
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={label} onPress={onPress} style={[styles.chip, selected && styles.chipSelected]}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </Pressable>
-  );
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[styles.chip, selected && styles.chipOn]}><Text style={[styles.chipText, selected && styles.chipTextOn]}>{label}</Text></Pressable>;
 }
 
 const styles = StyleSheet.create({
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 6 },
-  chip: { minHeight: 36, justifyContent: 'center', paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
-  chipSelected: { backgroundColor: '#F2F2F2', borderColor: '#F2F2F2' },
-  chipText: { color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 14 },
-  chipTextSelected: { color: '#151515' },
-  label: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#151515', marginTop: 8 },
-  plat: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E5E5' },
-  platOn: { backgroundColor: '#F2F2F2', borderColor: '#F2F2F2' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap },
+  chip: { height: 32, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', justifyContent: 'center' },
+  chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
+  chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#151515' },
+  chipTextOn: { color: '#FFFFFF' },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#6B645B', marginTop: 4 },
+  plat: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
+  platOn: { borderColor: '#151515', backgroundColor: 'rgba(0,0,0,0.04)' },
   platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
-  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
-  switchLabel: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },
-  primaryBtn: { minHeight: 48, borderRadius: 12, backgroundColor: '#151515', alignItems: 'center', justifyContent: 'center' },
-  primaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#FFF' },
-  secondaryText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
-  input: { minHeight: 44, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.block, paddingHorizontal: 14, marginVertical: 6, color: colors.charcoal, backgroundColor: colors.raised, fontFamily: tokens.font.ui, fontSize: 16 },
-  captionInput: { minHeight: 140, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.block, padding: 14, marginVertical: 6, color: colors.charcoal, backgroundColor: colors.raised, fontFamily: tokens.font.ui, fontSize: 16, textAlignVertical: 'top' },
+  captionInput: { minHeight: 100, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', padding: 12, fontFamily: tokens.font.ui, fontSize: 16, color: '#151515', backgroundColor: '#FFFFFF' },
+  link: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
+  switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  switchLabel: { fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
+  input: { height: 44, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: 12, fontFamily: tokens.font.ui, fontSize: 15, color: '#151515', backgroundColor: '#FFFFFF' },
   dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dayNav: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  dayNavText: { color: colors.tide, fontSize: 26, fontFamily: tokens.font.uiSemibold },
-  dayLabel: { flex: 1, textAlign: 'center', color: colors.charcoal, fontFamily: tokens.font.uiSemibold, fontSize: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap },
-  tile: { width: '31%', aspectRatio: 1, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.pearl, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  tileSelected: { borderColor: colors.tide },
-  tileImage: { width: '100%', height: '100%' },
-  tileName: { color: colors.charcoal2, fontSize: 11, padding: 6, textAlign: 'center' },
-  badge: { position: 'absolute', top: 6, right: 6, minWidth: 22, height: 22, borderRadius: 11, backgroundColor: colors.tide, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: colors.onCharcoal, fontFamily: tokens.font.uiBold, fontSize: 12 },
-  emptyMedia: { gap: 6 },
-  link: { color: colors.tide, fontFamily: tokens.font.uiBold, fontSize: 15 },
-  actions: { gap: 8, marginTop: 8, marginBottom: 48 },
-  disabled: { opacity: 0.45 },
-  secondaryBtn: { alignItems: 'center', paddingVertical: 12 },
+  dayNav: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  dayNavText: { fontSize: 22, color: '#151515' },
+  dayLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  tile: { width: 72, height: 72, borderRadius: 12, backgroundColor: '#F2F2F2', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  tileSelected: { borderWidth: 2, borderColor: '#151515' },
+  tileImage: { width: 72, height: 72 },
+  tileName: { fontSize: 10, color: '#6B645B', textAlign: 'center' },
+  badge: { position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: '#151515', justifyContent: 'center', alignItems: 'center' },
+  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 8 },
+  primaryBtn: { flex: 1, height: 44, borderRadius: 22, backgroundColor: '#151515', justifyContent: 'center', alignItems: 'center' },
+  primaryText: { color: '#FFFFFF', fontFamily: tokens.font.uiSemibold, fontSize: 15 },
+  secondaryBtn: { flex: 1, height: 44, borderRadius: 22, borderWidth: 1, borderColor: '#151515', justifyContent: 'center', alignItems: 'center' },
+  secondaryText: { color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 15 },
+  disabled: { opacity: 0.4 }
 });
