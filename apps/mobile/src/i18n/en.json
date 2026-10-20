@@ -394,7 +394,11 @@
     "placeholder": "Message",
     "reply": "Reply",
     "yourself": "yourself",
-    "add": "Add"
+    "add": "Add",
+    "holdToDictate": "Hold to dictate",
+    "dictating": "Listening… release to stop. Nothing is sent until you tap send.",
+    "dictatePerm": "Allow the microphone and speech recognition in Settings to dictate.",
+    "dictateFail": "Dictation didn't work. Try again."
   },
   "booking": {
     "newTitle": "New booking",

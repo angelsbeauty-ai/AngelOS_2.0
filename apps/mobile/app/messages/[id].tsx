@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActionSheetIOS, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import { useToast } from '../../src/components/Toast';
 import { ChatBar } from '../../src/components/ChatBar';
+import { useDictation } from '../../src/lib/dictation';
 import { ChatTools } from '../../src/components/ChatTools';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { SwipeReply } from '../../src/components/SwipeReply';
@@ -38,6 +39,7 @@ export default function MessageThreadScreen() {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [busy, setBusy] = useState<string | null>(null);
   const [reply, setReply] = useState('');
+  const replyRef = useRef(reply); replyRef.current = reply;
   const [translations, setTranslations] = useState<Record<string, { text: string; shown: boolean }>>({});
   const [saved, setSaved] = useState<SavedReply[] | null>(null);
   const [showPlus, setShowPlus] = useState(false);
@@ -71,6 +73,13 @@ export default function MessageThreadScreen() {
     } finally { setBusy(null); }
   }
 
+  // Hold the waveform to dictate. Speech only fills the draft; sending is still her tap on send.
+  const dictation = useDictation(() => replyRef.current, setReply, (detail as any)?.thread?.reply_language === 'ja' ? 'ja' : appLang);
+  useEffect(() => {
+    if (!dictation.error) return;
+    toast.show({ title: dictation.error === 'permission' ? t('messages.dictatePerm') : t('messages.dictateFail'), tone: 'error' });
+    dictation.clearError();
+  }, [dictation.error]);
   if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>Could not open this chat.</Text><Pressable onPress={() => { setState('loading'); void load(); }}><Text style={{ color: palette.text }}>Try again</Text></Pressable></View>;
   if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.muted }]}>Loading…</Text></View>;
 
@@ -202,7 +211,8 @@ export default function MessageThreadScreen() {
           </Pressable>
         </View>
       ) : null}
-      <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => setShowPlus(true)} />
+      {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, fontSize: 13, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
+      <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
 
       <ChatTools visible={showPlus} onClose={() => setShowPlus(false)} night={night}>
         <Pressable accessibilityRole="button" accessibilityLabel="Saved replies" onPress={() => void openSaved()} style={styles.plusRow}>

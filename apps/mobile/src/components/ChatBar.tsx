@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,7 @@ import { tokens } from '../design/theme';
  * that turns into the send arrow once text is typed.
  */
 export function ChatBar({
-  value, onChangeText, placeholder, onSend, disabled, onPlus, onVoice
+  value, onChangeText, placeholder, onSend, disabled, onPlus, onVoice, onHoldStart, onHoldEnd, recording
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -23,6 +24,10 @@ export function ChatBar({
   onPlus?: () => void;
   /** Waveform action when the field is empty (voice). Without it the waveform is shown inactive. */
   onVoice?: () => void;
+  /** Hold-to-dictate: press and hold the waveform to talk, release to stop. Only fills the field; never sends. */
+  onHoldStart?: () => void;
+  onHoldEnd?: () => void;
+  recording?: boolean;
 }) {
   const { t } = useTranslation();
   const { mode, palette } = useAppearance();
@@ -34,8 +39,9 @@ export function ChatBar({
   const glyph = night ? '#151515' : '#FFFFFF';
   const fieldBg = night ? '#1C1C1E' : '#FFFFFF';
   const fieldBorder = night ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)';
-  const voiceOnly = !hasText;
-  const active = voiceOnly ? Boolean(onVoice) && !disabled : canSend;
+  const holding = useRef(false);
+  const voiceOnly = !hasText || Boolean(recording);
+  const active = voiceOnly ? (Boolean(onVoice) || Boolean(onHoldStart)) && !disabled : canSend;
   return (
     <View style={[styles.wrap, { backgroundColor: night ? '#000000' : '#F3F3F3', paddingBottom: Math.max(insets.bottom, 8) }]}>
       {onPlus ? (
@@ -55,14 +61,20 @@ export function ChatBar({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={voiceOnly ? t('messages.voiceSoon', { defaultValue: 'Voice messages' }) : t('messages.send', { defaultValue: 'Send' })}
+          accessibilityLabel={voiceOnly ? (onHoldStart ? t('messages.holdToDictate', { defaultValue: 'Hold to dictate' }) : t('messages.voiceSoon', { defaultValue: 'Voice messages' })) : t('messages.send', { defaultValue: 'Send' })}
           accessibilityState={{ disabled: !active }}
           disabled={!active}
-          onPress={voiceOnly ? onVoice : onSend}
+          onPressIn={voiceOnly && onHoldStart ? () => { holding.current = true; onHoldStart(); } : undefined}
+          onPressOut={() => { if (holding.current) { onHoldEnd?.(); } }}
+          onPress={() => {
+            // A release after holding to dictate must never send.
+            if (holding.current) { holding.current = false; return; }
+            if (voiceOnly) onVoice?.(); else onSend();
+          }}
           style={styles.hit}
         >
-          <View style={[styles.circle, { backgroundColor: circle, opacity: voiceOnly || canSend ? 1 : 0.5 }]}>
-            {voiceOnly ? <Waveform size={20} color={glyph} weight="bold" /> : <ArrowUp size={20} color={glyph} weight="bold" />}
+          <View style={[styles.circle, { backgroundColor: recording ? '#B3261E' : circle, opacity: voiceOnly || canSend ? 1 : 0.5 }, recording && styles.recording]}>
+            {voiceOnly ? <Waveform size={20} color={recording ? '#FFFFFF' : glyph} weight="bold" /> : <ArrowUp size={20} color={glyph} weight="bold" />}
           </View>
         </Pressable>
       </View>
@@ -76,5 +88,6 @@ const styles = StyleSheet.create({
   pill: { flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, paddingLeft: 16 },
   input: { flex: 1, minHeight: 44, maxHeight: 120, paddingTop: 11, paddingBottom: 11, fontFamily: tokens.font.ui, fontSize: 16, lineHeight: 22 },
   hit: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  recording: { transform: [{ scale: 1.12 }] },
   circle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }
 });
