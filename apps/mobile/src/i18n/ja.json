@@ -402,7 +402,9 @@
     "comments": "コメント",
     "commentsEmpty": "表示できるコメントはまだありません",
     "commentsMsg": "コメント同期を接続すると、InstagramとFacebookのコメントがここに表示されます。",
-    "broadcast": "一斉配信"
+    "broadcast": "一斉配信",
+    "today": "今日",
+    "yesterday": "昨日"
   },
   "booking": {
     "newTitle": "新しい予約",

@@ -163,21 +163,32 @@ export default function MessageThreadScreen() {
         </View>
       </View>
 
-      <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
-        {visible.map((message) => {
-          const out = message.direction === 'outbound';
-          const tr = translations[message.id];
-          return (
-            <SwipeReply key={message.id} night={night} label={t('messages.reply', { defaultValue: 'Reply' })} onReply={() => setReplyTo(message)}><Pressable onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
-              <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }]}>
-                <Text style={[styles.body, { color: out ? outText : incText }]}>{message.body}</Text>
-              </View>
-              {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6B6B70' }]}>{tr.text}</Text> : null}
-              <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}</Text>
-            </Pressable></SwipeReply>
-          );
-        })}
-      </ScrollView>
+      {(() => {
+        // Day pills are sticky headers; the list is anchored to the bottom like iMessage.
+        const items: Array<{ kind: 'day'; key: string; label: string } | { kind: 'msg'; m: ClientMessage; first: boolean }> = [];
+        let lastDay = ''; let lastDir = '';
+        const dayLabel = (iso: string) => { const d = new Date(iso); const n = new Date(); const y = new Date(Date.now() - 86400000);
+          return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
+        for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
+        const sticky = items.map((x, i) => (x.kind === 'day' ? i : -1)).filter((i) => i >= 0);
+        const initials = name.split(/[\s\u3000]+/).filter(Boolean).slice(0, 2).map((w: string) => w[0]?.toUpperCase()).join('');
+        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} stickyHeaderIndices={sticky} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+          {items.map((x) => {
+            if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: night ? '#2C2C2E' : '#E4E4E6', color: palette.text }]}>{x.label}</Text></View>;
+            const message = x.m; const out = message.direction === 'outbound'; const tr = translations[message.id];
+            return <SwipeReply key={message.id} night={night} label={t('messages.reply', { defaultValue: 'Reply' })} onReply={() => setReplyTo(message)}><View style={[styles.line, out && styles.lineOut]}>
+              {!out ? (x.first ? <View style={[styles.inAvatar, { backgroundColor: night ? '#3A3A3D' : '#D1D1D6' }]}>{thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.inAvatarImg} /> : <Text style={[styles.inAvatarText, { color: palette.text }]}>{initials}</Text>}</View> : <View style={styles.inAvatarGap} />) : null}
+              <Pressable onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
+                <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }]}>
+                  <Text style={[styles.body, { color: out ? outText : incText }]}>{message.body}</Text>
+                </View>
+                {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{tr.text}</Text> : null}
+                <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}</Text>
+              </Pressable>
+            </View></SwipeReply>;
+          })}
+        </ScrollView>;
+      })()}
 
       {showChip ? (
         <View style={[styles.chip, night && { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.10)' }]}>
@@ -251,8 +262,16 @@ const styles = StyleSheet.create({
   subText: { fontSize: 12, lineHeight: 16 },
   open: { paddingHorizontal: 10, height: 32, justifyContent: 'center' },
   openText: { fontSize: 15, fontWeight: '600' },
-  thread: { padding: 12, gap: 8, paddingBottom: 16 },
-  row: { alignItems: 'flex-start', gap: 2, maxWidth: '80%', alignSelf: 'flex-start' },
+  thread: { flexGrow: 1, justifyContent: 'flex-end', padding: 12, gap: 8, paddingBottom: 16 },
+  dayWrap: { alignItems: 'center', paddingVertical: 6 },
+  dayPill: { overflow: 'hidden', fontSize: 13, fontWeight: '500', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  line: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  lineOut: { justifyContent: 'flex-end' },
+  inAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  inAvatarImg: { width: 32, height: 32 },
+  inAvatarText: { fontSize: 12, fontWeight: '600' },
+  inAvatarGap: { width: 32 },
+  row: { alignItems: 'flex-start', gap: 2, maxWidth: '78%' },
   rowOut: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   bubble: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9 },
   body: { fontSize: 16, lineHeight: 22 },

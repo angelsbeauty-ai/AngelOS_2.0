@@ -154,7 +154,7 @@ export function timeLabel(iso: string | null) {
   if (!iso) return '';
   const date = new Date(iso);
   const now = new Date();
-  if (date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (date.toDateString() === now.toDateString()) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   const diffDays = (now.getTime() - date.getTime()) / 86400000;
   if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'short' });
   return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
