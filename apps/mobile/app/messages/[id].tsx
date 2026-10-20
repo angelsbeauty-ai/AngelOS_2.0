@@ -128,24 +128,26 @@ export default function MessageThreadScreen() {
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3' }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { paddingTop: insets.top, borderBottomColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={styles.back}>
-          <Text style={[styles.chevron, { color: palette.text }]}>‹</Text>
-        </Pressable>
-        <View style={[styles.avatar, night && { backgroundColor: '#2A2A2D' }]}>
-          {thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.avatarImg} /> : <Text style={[styles.avatarText, night && { color: '#F4F4F5' }]}>{name.slice(0, 1).toUpperCase()}</Text>}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
-          <View style={styles.sub}>
-            <PlatformBadge platform={thread.platform} label={thread.platform_label} />
-            <Text style={[styles.subText, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>{thread.reply_language === 'ja' ? 'Writes in Japanese' : 'Writes in English'}</Text>
-          </View>
-        </View>
-        {thread.client ? (
-          <Pressable accessibilityRole="button" accessibilityLabel="Open client" onPress={() => router.push(`/clients/${thread.client!.id}` as any)} style={styles.open}>
-            <Text style={[styles.openText, { color: palette.text }]}>Open</Text>
+        <View style={styles.headerRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={styles.back}>
+            <Text style={[styles.chevron, { color: palette.text }]}>‹</Text>
           </Pressable>
-        ) : null}
+          <View style={[styles.avatar, night && { backgroundColor: '#2A2A2D' }]}>
+            {thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.avatarImg} /> : <Text style={[styles.avatarText, night && { color: '#F4F4F5' }]}>{name.slice(0, 1).toUpperCase()}</Text>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
+            <View style={styles.sub}>
+              <PlatformBadge platform={thread.platform} label={thread.platform_label} />
+              <Text style={[styles.subText, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>{thread.reply_language === 'ja' ? 'Writes in Japanese' : 'Writes in English'}</Text>
+            </View>
+          </View>
+          {thread.client ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Open client" onPress={() => router.push(`/clients/${thread.client!.id}` as any)} style={styles.open}>
+              <Text style={[styles.openText, { color: palette.text }]}>···</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </View>
 
       <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
@@ -206,7 +208,8 @@ export default function MessageThreadScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  header: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  header: { borderBottomWidth: StyleSheet.hairlineWidth },
+  headerRow: { height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
   back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   chevron: { fontSize: 28, lineHeight: 32 },
   avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E4E4E6', justifyContent: 'center', alignItems: 'center', marginRight: 8, overflow: 'hidden' },

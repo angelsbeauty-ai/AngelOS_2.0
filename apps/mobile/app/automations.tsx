@@ -1,28 +1,41 @@
 import { useCallback, useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { ScreenTitle, SupportText } from '../src/components/ui';
-import { useAppearance } from '../src/design/appearance';
-import { tokens } from '../src/design/theme';
-
-const KEY = 'angelos.automationStopped';
+import { useAppearance } from '../design/appearance';
+import { tokens } from '../design/theme';
+import { getActiveWorkspace } from '../src/lib/workspace';
+import { getSystemHealth, updateOperationalControls } from '../src/lib/system-health';
+import { toFriendly } from '../src/lib/friendly-error';
+import { dialog } from '../src/lib/dialog';
 
 export default function AutomationsScreen() {
   const { palette } = useAppearance();
   const [stopped, setStopped] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const v = await AsyncStorage.getItem(KEY);
-    setStopped(v === '1');
+    try {
+      const ws = (await getActiveWorkspace()).id;
+      setWorkspaceId(ws);
+      const health = await getSystemHealth(ws);
+      setStopped(Boolean(health.controls?.pause_automations));
+    } catch { /* keep current */ }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   async function toggle() {
+    if (!workspaceId) return;
     const next = !stopped;
     setStopped(next);
-    await AsyncStorage.setItem(KEY, next ? '1' : '0');
+    try {
+      await updateOperationalControls(workspaceId, { pauseAutomations: next });
+    } catch (error) {
+      setStopped(!next);
+      const friendly = toFriendly(error, { action: 'save' });
+      void dialog.notify(friendly.title, friendly.message);
+    }
   }
 
   return <Screen>
@@ -39,6 +52,6 @@ export default function AutomationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
   label: { fontFamily: tokens.font.uiSemibold, fontSize: 16 }
 });

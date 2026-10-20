@@ -1,5 +1,6 @@
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { House } from 'phosphor-react-native/src/icons/House';
 import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
@@ -34,6 +35,7 @@ export function AppTabBar() {
   const pathname = usePathname() ?? '/';
   const unread = useUnreadCount();
   const { palette } = useAppearance();
+  const insets = useSafeAreaInsets();
   if (!showsAppTabBar(pathname)) return null;
   const on = activeTab(pathname);
   const items = [
@@ -43,7 +45,9 @@ export function AppTabBar() {
     { href: '/analytics', label: t('tabs.analytics'), Icon: ChartBar },
     { href: '/profile', label: t('tabs.profile'), Icon: UserCircle },
   ];
-  return <View style={[styles.bar, { borderTopColor: palette.border, backgroundColor: 'transparent' }]} accessibilityRole="tablist">
+  // 49pt bar sits above the phone's bottom safe area. Read it from the device.
+  const barHeight = 49 + insets.bottom;
+  return <View style={[styles.bar, { height: barHeight, paddingBottom: insets.bottom, borderTopColor: palette.border, backgroundColor: 'transparent' }]} accessibilityRole="tablist">
     <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />
     {items.map(({ href, label, Icon }) => {
       const active = on === href; const color = active ? palette.text : palette.muted;
@@ -55,7 +59,7 @@ export function AppTabBar() {
 }
 
 const styles = StyleSheet.create({
-  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, height: 58, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
+  bar: { position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   itemOn: {},
   label: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14 },
