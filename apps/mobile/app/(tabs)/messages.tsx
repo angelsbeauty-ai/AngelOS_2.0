@@ -19,6 +19,8 @@ import { Card, EmptyState, Skeleton, ui, screenHeader } from '../../src/componen
 import { toFriendly } from '../../src/lib/friendly-error';
 import { listComments, listConnections, listMessageThreads, searchMessages, syncMessages, updateThread, timeLabel, type ConnectionStatus, type MessageThreadSummary, type SearchResult, type SocialComment } from '../../src/lib/messaging';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
+import { addTask } from '../../src/lib/tasks';
+import * as Notifications from 'expo-notifications';
 import { tokens } from '../../src/design/theme';
 const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
 import { useNightSafe } from '../../src/components/NightSafe';
@@ -89,6 +91,8 @@ export default function MessagesScreen() {
   useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter) && (!query.trim() || `${th.client?.display_name ?? ''} ${th.contact_display_name ?? ''} ${th.last_preview ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))), [threads, plat, filter, query]);
+  // M46: when two accounts share a platform, each row names its account.
+  const multiAcct = (() => { const by = new Map<string, Set<string>>(); for (const th of threads) { const id = th.channel?.id; if (!id) continue; const set = by.get(th.platform) ?? new Set<string>(); set.add(id); by.set(th.platform, set); } return new Set([...by.entries()].filter(([, v]) => v.size > 1).map(([k]) => k)); })();
   const platError = plat !== 'all' ? connections.find((x) => x.provider === plat && PROBLEM.test(x.detail ?? '')) ?? null : null;
   const needs = accounts.filter((a) => a.platform !== 'line' && a.state === 'needs_reconnect' && (plat === 'all' || a.platform === plat));
 
@@ -135,6 +139,24 @@ export default function MessagesScreen() {
     }
   }
   const markDone = (th: MessageThreadSummary) => void patch(th, { status: 'done', needs_reply: false }, { status: 'done' }, { label: t('messages.markedDone', { defaultValue: 'Marked as done' }), body: { status: th.status } });
+  // M13: Follow up asks when, adds a dated task and a reminder on this phone.
+  function followUp(th: MessageThreadSummary) {
+    if (th.status === 'follow_up_due') { void patch(th, { status: 'needs_reply' }, { status: 'needs_reply' }); return; }
+    const name = th.client?.display_name ?? th.contact_display_name ?? t('messages.unknown');
+    const pick = (days: number) => {
+      const due = new Date(); due.setDate(due.getDate() + days); due.setHours(9, 0, 0, 0);
+      void patch(th, { status: 'follow_up_due' }, { status: 'follow_up_due' });
+      void (async () => {
+        const ws = await getActiveWorkspace();
+        await addTask(ws.id, t('messages.followTask', { name }), due.toISOString());
+        if (Platform.OS !== 'web') { const perm = await Notifications.getPermissionsAsync(); if (perm.status === 'granted') await Notifications.scheduleNotificationAsync({ content: { title: t('messages.followTitle'), body: t('messages.followTask', { name }), data: { threadId: th.id } }, trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: due } }); }
+      })().catch(() => undefined);
+    };
+    const opts: Array<[string, () => void]> = [[t('messages.fuTomorrow'), () => pick(1)], [t('messages.fu3'), () => pick(3)], [t('messages.fuWeek'), () => pick(7)]];
+    const cancel = t('common.cancel', { defaultValue: 'Cancel' });
+    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options: [...opts.map((a) => a[0]), cancel], cancelButtonIndex: opts.length, title: t('messages.followWhen') }, (i) => opts[i]?.[1]());
+    else Alert.alert(t('messages.followWhen'), undefined, [...opts.map(([text, onPress]) => ({ text, onPress })), { text: cancel, style: 'cancel' as const }]);
+  }
   function more(th: MessageThreadSummary) {
     // Long-press menu: only actions the server really supports.
     const acts: Array<[string, () => void]> = [
@@ -235,17 +257,17 @@ export default function MessagesScreen() {
           { key: 'more', label: t('top.more', { defaultValue: 'More' }), icon: <DotsThree size={24} color={fg} weight="bold" />, onPress: () => more(thread) },
           { key: 'done', label: t('messages.done'), icon: <Check size={24} color={fg} />, onPress: () => markDone(thread) },
           { key: 'unread', label: t('messages.unreadA', { defaultValue: 'Unread' }), icon: <EnvelopeSimple size={24} color={fg} />, onPress: () => void patch(thread, { unread: true }, { unread: true }) },
-          { key: 'follow', label: t('messages.followUp', { defaultValue: 'Follow up' }), icon: <Star size={24} color={fg} weight={thread.status === 'follow_up_due' ? 'fill' : 'regular'} />, onPress: () => void patch(thread, { status: 'follow_up_due' }, { status: 'follow_up_due' }) }
+          { key: 'follow', label: t('messages.followUp', { defaultValue: 'Follow up' }), icon: <Star size={24} color={fg} weight={thread.status === 'follow_up_due' ? 'fill' : 'regular'} />, onPress: () => followUp(thread) }
         ]}><Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} onLongPress={() => more(thread)} delayLongPress={350} style={({ pressed }) => [styles.row, { backgroundColor: palette.bg }, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
-            <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}{thread.pinned ? <Text accessibilityLabel={t('messages.pinned')} style={{ color: palette.muted }}>{'  '}{t('messages.pinnedMark')}</Text> : null}{thread.muted ? <Text accessibilityLabel={t('messages.muted')} style={{ color: palette.muted }}>{'  '}{t('messages.mutedMark')}</Text> : null}</Text>
+            <Text numberOfLines={1} style={[styles.name, { color: palette.text }, thread.unread && { fontFamily: tokens.font.uiBold }]}>{name}{multiAcct.has(thread.platform) && thread.channel?.display_name ? <Text style={{ color: palette.muted, fontFamily: tokens.font.ui }}>{'  · '}{thread.channel.display_name}</Text> : null}{thread.pinned ? <Text accessibilityLabel={t('messages.pinned')} style={{ color: palette.muted }}>{'  '}{t('messages.pinnedMark')}</Text> : null}{thread.muted ? <Text accessibilityLabel={t('messages.muted')} style={{ color: palette.muted }}>{'  '}{t('messages.mutedMark')}</Text> : null}</Text>
             <View style={styles.rowTop}>
               <Text numberOfLines={1} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }, JP_FONT(thread.last_preview)]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
               <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>{rel(thread.last_message_at)}</Text>
             </View>
           </View>
-          {thread.unread ? <View accessibilityLabel={t('messages.unreadF')} style={[styles.unread, { backgroundColor: palette.text }]} /> : <View style={{ width: 8 }} />}
+          {thread.unread ? <View accessibilityLabel={t('messages.unreadN', { count: thread.unread_count ?? 1 })} style={[styles.badge, { backgroundColor: palette.text }]}><Text style={[styles.badgeText, { color: palette.bg }]}>{(thread.unread_count ?? 1) > 99 ? '99+' : thread.unread_count ?? 1}</Text></View> : <View style={{ width: 20 }} />}
         </Pressable></SwipeRow>;
       })}
     </View> : null}
@@ -283,6 +305,8 @@ function rel(iso?: string | null) {
 }
 
 const styles = StyleSheet.create({
+  badge: { minWidth: 20, height: 20, paddingHorizontal: 6, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { fontFamily: tokens.font.uiBold, fontSize: 12, fontVariant: ['tabular-nums'] },
   tabsWrap: { marginHorizontal: -16, flexGrow: 0 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },

@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View, ScrollView } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { getInsights } from '../../src/lib/social';
+import { getContentAccounts, getInsights, type ContentAccountStatus } from '../../src/lib/social';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { ScreenTitle, SupportText } from '../../src/components/ui';
@@ -108,6 +108,9 @@ export default function NewPostScreen() {
   const styles = useStyles();
   const [own, setOwn] = useState<{ times: string[]; posts: number } | null>(null);
   const [pickDate, setPickDate] = useState(false);
+  // S02: each platform shows whether its account is connected.
+  const [acct, setAcct] = useState<Record<string, ContentAccountStatus> | null>(null);
+  useEffect(() => { if (!workspaceId) return; void getContentAccounts(workspaceId).then((rows) => setAcct(Object.fromEntries(rows.map((r) => [r.platform, r.status])))).catch(() => setAcct(null)); }, [workspaceId]);
   const mainPlat = platforms.map((p) => p.split('_')[0]).find((p) => p !== 'line') ?? null;
   useEffect(() => { let live = true; setOwn(null); if (!workspaceId || !mainPlat) return;
     void getInsights(workspaceId, mainPlat).then((r) => { if (live) setOwn(ownBestTimes(r.top?.interactions ?? [])); }).catch(() => undefined);
@@ -312,11 +315,15 @@ export default function NewPostScreen() {
         {PLATFORMS.map((item) => (
           <Pressable key={item.id} accessibilityRole="button" accessibilityState={{ selected: platforms.includes(item.id) }} onPress={() => togglePlatform(item.id)} style={[styles.plat, platforms.includes(item.id) && styles.platOn]}>
             <BrandLogo platform={item.id} size={18} />
-            <Text style={styles.platText}>{item.label}</Text>
+            <View>
+              <Text style={styles.platText}>{item.label}</Text>
+              {acct ? <Text style={[styles.platState, { color: palette.muted }]}>{acct[item.id.split('_')[0]] === 'connected' ? t('cnew.connected') : acct[item.id.split('_')[0]] === 'needs_reconnect' ? t('cnew.reconnect') : t('cnew.notConnected')}</Text> : null}
+            </View>
           </Pressable>
         ))}
       </View>
-      {platforms.includes('tiktok') ? <SupportText>TikTok posts automatically.</SupportText> : null}
+      {acct && platforms.some((p) => acct[p.split('_')[0]] !== 'connected') ? <Pressable accessibilityRole="link" onPress={() => router.push('/settings/connections' as any)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[styles.link, { textDecorationLine: 'underline' }]}>{t('cnew.connectLink')}</Text></Pressable> : null}
+      {platforms.includes('tiktok') ? <SupportText>{t('cnew.tiktokAuto')}</SupportText> : null}
 
       <TextInput
         value={caption}
@@ -430,6 +437,15 @@ export default function NewPostScreen() {
               <Text style={[styles.revMain, { flex: 1 }]}>{t('sched.nPhotos', { defaultValue: '{{count}} photos', count: selectedMedia.length })}</Text>
               <View style={{ flexDirection: 'row', gap: 4 }}>{selectedMedia.slice(0, 3).map((id) => previews[id] ? <Image key={id} accessibilityIgnoresInvertColors source={{ uri: previews[id] }} style={styles.revThumb} /> : <View key={id} style={[styles.revThumb, { backgroundColor: night ? '#1C1C1E' : '#E4E4E6' }]} />)}</View>
             </View> : null}
+            {/* S09: how it will look on each platform (photo crop + caption cut). */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} accessibilityLabel={t('sched.previews')}>
+              {platforms.map((pl) => { const k = pl.split('_')[0]; const img = selectedMedia[0] ? previews[selectedMedia[0]] : null; const tall = k === 'tiktok' || kind === 'story' || kind === 'reel'; const w = tall ? 146 : 200; const h = tall ? 260 : k === 'facebook' ? 150 : kind === 'post' ? 250 : 200;
+                return <View key={pl} accessible accessibilityLabel={t('sched.previewOn', { p: PLATFORMS.find((x) => x.id === pl)?.label ?? k })} style={{ width: w, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><BrandLogo platform={pl} size={16} /><Text style={styles.sheetSub}>{PLATFORMS.find((x) => x.id === pl)?.label ?? k}</Text></View>
+                  {img ? <Image accessibilityIgnoresInvertColors source={{ uri: img }} style={{ width: w, height: h, borderRadius: 12 }} resizeMode="cover" /> : <View style={{ width: w, height: Math.min(h, 120), borderRadius: 12, backgroundColor: night ? '#1C1C1E' : '#E4E4E6', alignItems: 'center', justifyContent: 'center' }}><Text style={styles.sheetSub}>{t('sched.noPhoto')}</Text></View>}
+                  <Text numberOfLines={k === 'instagram' ? 2 : 3} style={[styles.sheetSub, { color: palette.text }]}>{caption.trim() || postedCaption.trim()}</Text>
+                </View>; })}
+            </ScrollView>
             <View style={{ gap: 4 }}>
               <Text numberOfLines={4} style={styles.sheetCaption}>{caption.trim() || postedCaption.trim()}</Text>
               {revEn || (captionEn.trim() && captionEn.trim() !== (caption.trim() || postedCaption.trim())) ? <Text numberOfLines={3} style={styles.sheetSub}>EN: {revEn || captionEn.trim()}</Text> : null}
@@ -468,6 +484,7 @@ const makeStyles = (c: Ink) => StyleSheet.create({
   label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: c.muted, marginTop: 4 },
   plat: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.border },
   platOn: { borderColor: c.text, backgroundColor: c.fill },
+  platState: { fontFamily: tokens.font.ui, fontSize: 12 },
   platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: c.text },
   captionInput: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: c.border, padding: 12, fontFamily: tokens.font.ui, fontSize: 16, color: c.text, backgroundColor: c.card },
   link: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: c.text },

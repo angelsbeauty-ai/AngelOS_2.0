@@ -470,7 +470,14 @@
     "ai_thanks": "お礼",
     "aiChipA11y": "AI下書き：{{label}}",
     "aiChipHint": "下書きを作成します。承認するまで送信されません。",
-    "aiChipBusy": "作成中…"
+    "aiChipBusy": "作成中…",
+    "unreadN": "未読{{count}}件",
+    "followTask": "{{name}}さんにフォローアップ",
+    "followTitle": "フォローアップ",
+    "fuTomorrow": "明日",
+    "fu3": "3日後",
+    "fuWeek": "1週間後",
+    "followWhen": "いつフォローしますか？"
   },
   "booking": {
     "newTitle": "新しい予約",
@@ -1512,7 +1519,12 @@
     "postedSome_other": "{{count}}つのアプリに投稿しました",
     "notPosted": "投稿できませんでした",
     "postFailed": "このアプリに投稿できませんでした。",
-    "keptApproved": "投稿は承認済みで保存されています。カレンダーから投稿できます。"
+    "keptApproved": "投稿は承認済みで保存されています。カレンダーから投稿できます。",
+    "connected": "接続済み",
+    "reconnect": "再接続が必要",
+    "notConnected": "未接続",
+    "connectLink": "アカウントを接続",
+    "tiktokAuto": "TikTokは自動で投稿されます。"
   },
   "ba": {
     "s0": "写真の同意があり「掲載OK」になっている写真だけ使えます。",
@@ -2134,7 +2146,10 @@
     "bestOwn": "直近{{n}}件の投稿の反応（いいね・コメント）より・日本時間",
     "bestRule": "{{src}}より（自分の投稿データが十分たまるまで）",
     "pickDate": "日時を選ぶ",
-    "pickDateHint": "日付と時刻のピッカーを開きます"
+    "pickDateHint": "日付と時刻のピッカーを開きます",
+    "previews": "プラットフォーム別プレビュー",
+    "previewOn": "{{p}}でのプレビュー",
+    "noPhoto": "テキストのみ"
   },
   "nt": {
     "activity": "アクティビティ",

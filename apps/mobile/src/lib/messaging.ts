@@ -27,6 +27,8 @@ export interface MessageThreadSummary {
   last_preview: string | null;
   last_direction: 'inbound' | 'outbound' | null;
   unread: boolean;
+  /** M06: client messages since the last reply (server). */
+  unread_count?: number;
   archived: boolean;
   pinned?: boolean;
   muted?: boolean;

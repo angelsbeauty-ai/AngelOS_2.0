@@ -470,7 +470,14 @@
     "ai_thanks": "Thanks",
     "aiChipA11y": "AI draft: {{label}}",
     "aiChipHint": "Writes a draft. Nothing is sent until you approve it.",
-    "aiChipBusy": "Writing…"
+    "aiChipBusy": "Writing…",
+    "unreadN": "{{count}} unread",
+    "followTask": "Follow up with {{name}}",
+    "followTitle": "Follow up",
+    "fuTomorrow": "Tomorrow",
+    "fu3": "In 3 days",
+    "fuWeek": "In 1 week",
+    "followWhen": "Follow up when?"
   },
   "booking": {
     "newTitle": "New booking",
@@ -1512,7 +1519,12 @@
     "postedSome_other": "Posted to {{count}} apps",
     "notPosted": "Not posted",
     "postFailed": "That app could not take the post.",
-    "keptApproved": "The post is saved and approved, so you can post it from Calendar."
+    "keptApproved": "The post is saved and approved, so you can post it from Calendar.",
+    "connected": "Connected",
+    "reconnect": "Reconnect needed",
+    "notConnected": "Not connected",
+    "connectLink": "Connect accounts",
+    "tiktokAuto": "TikTok posts automatically."
   },
   "ba": {
     "s0": "Only photos marked \"OK for marketing\" from clients with photo consent can be used.",
@@ -2134,7 +2146,10 @@
     "bestOwn": "From your last {{n}} posts (likes and comments), JST",
     "bestRule": "From {{src}} until you have enough posts of your own",
     "pickDate": "Choose date and time",
-    "pickDateHint": "Opens the date and time picker"
+    "pickDateHint": "Opens the date and time picker",
+    "previews": "Previews per platform",
+    "previewOn": "Preview on {{p}}",
+    "noPhoto": "Text only"
   },
   "nt": {
     "activity": "Activity",

@@ -154,6 +154,7 @@ export class MessagingService {
       .sort((a: any, b: any) => (b.pinned_at ? 1 : 0) - (a.pinned_at ? 1 : 0));
     const ids = threads.map((row: any) => row.id);
     const latest = new Map<string, any>();
+    const unread = new Map<string, number>();
     if (ids.length) {
       const { data: messages, error: messagesError } = await supabase
         .from('client_messages').select('thread_id,body,direction,status,sender_type,created_at')
@@ -163,8 +164,15 @@ export class MessagingService {
       for (const message of messages ?? []) {
         if (!latest.has(message.thread_id) && !(message.sender_type === 'ai' && message.status === 'pending_approval')) latest.set(message.thread_id, message);
       }
+      // M06: unread count = client messages since the studio last replied (newest first, stop at the first reply).
+      const stopped = new Set<string>();
+      for (const message of messages ?? []) {
+        if (stopped.has(message.thread_id)) continue;
+        if (message.direction === 'outbound') { stopped.add(message.thread_id); continue; }
+        if (message.direction === 'inbound') unread.set(message.thread_id, (unread.get(message.thread_id) ?? 0) + 1);
+      }
     }
-    return threads.slice(0, 100).map((row: any) => decorateThread(row, latest.get(row.id)));
+    return threads.slice(0, 100).map((row: any) => ({ ...decorateThread(row, latest.get(row.id)), unread_count: row.owner_unread ? Math.max(1, unread.get(row.id) ?? 1) : 0 }));
   }
 
   async getThread(user: AuthUser, workspaceId: string, threadId: string) {
