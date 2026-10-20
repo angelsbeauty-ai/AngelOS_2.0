@@ -477,7 +477,8 @@
     "fuTomorrow": "明日",
     "fu3": "3日後",
     "fuWeek": "1週間後",
-    "followWhen": "いつフォローしますか？"
+    "followWhen": "いつフォローしますか？",
+    "newDivider": "新着メッセージ"
   },
   "booking": {
     "newTitle": "新しい予約",

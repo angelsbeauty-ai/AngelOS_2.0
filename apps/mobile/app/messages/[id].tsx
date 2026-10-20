@@ -69,7 +69,11 @@ export default function MessageThreadScreen() {
       setWorkspaceId(ws);
       const next = await getMessageThread(ws, id);
       setDetail(next); setState('ready');
-      if (next.thread.unread) void markThreadRead(ws, id).catch(() => undefined);
+      if (next.thread.unread) {
+        // M17: remember where the unread messages start so a "New messages" divider sits above them.
+        if (firstUnread.current === undefined) { const ms = next.messages ?? []; let i = ms.length; while (i > 0 && ms[i - 1].direction === 'inbound') i -= 1; firstUnread.current = ms[i]?.id ?? null; }
+        void markThreadRead(ws, id).catch(() => undefined);
+      } else if (firstUnread.current === undefined) firstUnread.current = null;
     } catch { setState('error'); }
   }, [id, workspaceId]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -80,6 +84,7 @@ export default function MessageThreadScreen() {
   }, [workspaceId, saved]);
 
   const pendingDraft = useMemo(() => detail?.messages.slice().reverse().find((m) => m.sender_type === 'ai' && m.status === 'pending_approval') ?? null, [detail]);
+  const firstUnread = useRef<string | null | undefined>(undefined);
   const visible = useMemo(() => (detail?.messages ?? []).filter((m) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval')), [detail]);
 
   async function run(label: string, task: () => Promise<unknown>, after = true) {
@@ -234,7 +239,7 @@ export default function MessageThreadScreen() {
         let lastDay = ''; let lastDir = '';
         const dayLabel = (iso: string) => { const d = new Date(iso); const n = new Date(); const y = new Date(Date.now() - 86400000);
           return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
-        for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
+        for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } if (m.id === firstUnread.current) { items.push({ kind: 'day', key: 'unread', label: t('messages.newDivider') }); lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
         const initials = contactInitials(name);
         return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
           {items.map((x) => {

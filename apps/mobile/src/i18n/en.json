@@ -477,7 +477,8 @@
     "fuTomorrow": "Tomorrow",
     "fu3": "In 3 days",
     "fuWeek": "In 1 week",
-    "followWhen": "Follow up when?"
+    "followWhen": "Follow up when?",
+    "newDivider": "New messages"
   },
   "booking": {
     "newTitle": "New booking",
