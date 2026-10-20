@@ -58,7 +58,7 @@ export function ChatBar({
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor={night ? '#9A9A9F' : '#6C6C70'}
-          multiline
+          multiline={Platform.OS !== 'web'}
           numberOfLines={1}
           scrollEnabled
           textAlignVertical="center"
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 60, paddingHorizontal: 16, paddingTop: 8 },
   plus: { width: 44, height: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, justifyContent: 'center', alignItems: 'center' },
   pill: { flex: 1, minWidth: 0, overflow: 'hidden', paddingRight: 4, flexDirection: 'row', alignItems: 'flex-end', minHeight: 44, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, paddingLeft: 16 },
-  input: { flex: 1, minWidth: 0, minHeight: 44, maxHeight: 120, paddingTop: 11, paddingBottom: 11, borderWidth: 0, backgroundColor: 'transparent', fontFamily: tokens.font.ui, fontSize: 16, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
+  input: { flex: 1, minWidth: 0, minHeight: 44, maxHeight: 120, ...(Platform.OS === 'web' ? { height: 44, paddingVertical: 0 } : { paddingTop: 11, paddingBottom: 11 }), borderWidth: 0, backgroundColor: 'transparent', fontFamily: tokens.font.ui, fontSize: 16, ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}) },
   hit: { width: 40, height: 44, justifyContent: 'center', alignItems: 'center' },
   recording: { transform: [{ scale: 1.12 }], borderWidth: 2, borderColor: 'rgba(154,154,159,0.6)' },
   circle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }
