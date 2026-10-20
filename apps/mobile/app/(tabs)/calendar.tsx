@@ -80,7 +80,7 @@ export default function CalendarTab() {
   const [appts, setAppts] = useState<CalendarAppointment[]>([]);
   const [posts, setPosts] = useState<ContentPost[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
-  const [mode, setMode] = useState<'day' | 'week' | 'month' | 'list'>('month');
+  const [mode, setMode] = useState<'day' | 'week' | 'month' | 'list'>(() => (params.day && /^\d{4}-\d{2}-\d{2}$/.test(String(params.day)) ? 'day' : 'month'));
   const [sched, setSched] = useState<SchedState>({ kind: 'loading' });
   const [choice, setChoice] = useState<{ day: Date; min: number | null } | null>(null);
   const [blocks, setBlocks] = useState<CalendarBlock[]>([]);
@@ -108,7 +108,7 @@ export default function CalendarTab() {
     onPanResponderMove: (_e, g) => setHowLong(Math.min(720, Math.max(15, lengthBase.current + Math.round(g.dy / 28) * 15)))
   })).current;
   const [searchOpen, setSearchOpen] = useState(false); const [query, setQuery] = useState(''); const [show, setShow] = useState<'all' | 'bookings' | 'posts' | 'tasks'>('all');
-  const [anchor, setAnchor] = useState(() => todayStart);
+  const [anchor, setAnchor] = useState<Date>(() => { const d = String(params.day ?? ''); if (/^\d{4}-\d{2}-\d{2}$/.test(d)) { const [y, mo, dd] = d.split('-').map(Number); return new Date(y, mo - 1, dd); } return todayStart; });
   const [sel, setSel] = useState<Item | null>(null);
   const [selOpts, setSelOpts] = useState<{ edit?: boolean; cancel?: boolean }>({});
   const [detail, setDetail] = useState<AppointmentDetail | null>(null);
@@ -301,7 +301,7 @@ export default function CalendarTab() {
     </View>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor={palette.muted} style={[styles.search, { color: palette.text, backgroundColor: palette.fill }]} /> : null}
     {mode === 'month' ? <View style={styles.wkHead} importantForAccessibility="no-hide-descendants">{cells.slice(0, 7).map((d, i) => <Text key={i} maxFontSizeMultiplier={1.3} style={[styles.wkH, { color: palette.muted }]}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</Text>)}</View> : null}
-    {mode === 'week' ? <View style={[styles.wkRow, ln]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} accessibilityRole="button" accessibilityLabel={d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 44 }}>
+    {mode === 'week' ? <View style={[styles.wkRow, ln, night && { backgroundColor: '#000000' }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} accessibilityRole="button" accessibilityLabel={d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 44 }}>
       <Text maxFontSizeMultiplier={1.3} style={[styles.wk, { color: palette.muted }]}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</Text>
       <View style={[styles.num, today && { backgroundColor: RED }]}><Text maxFontSizeMultiplier={1.3} style={[styles.numText, { color: today ? '#FFFFFF' : palette.text }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
   </View>;
