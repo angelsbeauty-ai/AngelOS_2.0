@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { ScreenTitle, SupportText } from '../src/components/ui';
 import { useAppearance } from '../src/design/appearance';
-import { tokens } from '../design/theme';
+import { tokens } from '../src/design/theme';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getSystemHealth, updateOperationalControls } from '../src/lib/system-health';
 import { toFriendly } from '../src/lib/friendly-error';
