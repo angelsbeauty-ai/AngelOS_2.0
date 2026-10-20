@@ -182,6 +182,30 @@ export class SystemHealthService {
     return data;
   }
 
+  async getNotificationPrefs(user: AuthUser, workspaceId: string) {
+    const userClient = createUserSupabaseClient(user.accessToken);
+    await this.assertWorkspaceAccess(userClient, workspaceId);
+    const service = createServiceSupabaseClient();
+    const { data } = await service.from('notification_prefs').select('*').eq('workspace_id', workspaceId).maybeSingle();
+    return data ?? { workspace_id: workspaceId, messages: true, bookings: true, ai: true };
+  }
+
+  async updateNotificationPrefs(user: AuthUser, workspaceId: string, body: { messages?: boolean; bookings?: boolean; ai?: boolean }) {
+    const userClient = createUserSupabaseClient(user.accessToken);
+    await this.assertWorkspaceAccess(userClient, workspaceId);
+    const service = createServiceSupabaseClient();
+    const row = {
+      workspace_id: workspaceId,
+      ...(body.messages !== undefined ? { messages: body.messages } : {}),
+      ...(body.bookings !== undefined ? { bookings: body.bookings } : {}),
+      ...(body.ai !== undefined ? { ai: body.ai } : {}),
+      updated_at: new Date().toISOString()
+    };
+    const { data, error } = await service.from('notification_prefs').upsert(row, { onConflict: 'workspace_id' }).select('*').single();
+    if (error || !data) throw new InternalServerErrorException(error?.message ?? 'Could not save notification preferences');
+    return data;
+  }
+
   async updateControls(user: AuthUser, workspaceId: string, dto: UpdateOperationalControlsDto) {
     const userClient = createUserSupabaseClient(user.accessToken);
     await this.assertWorkspaceAccess(userClient, workspaceId);

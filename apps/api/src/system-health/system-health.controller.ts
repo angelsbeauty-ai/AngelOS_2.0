@@ -30,11 +30,18 @@ export class SystemHealthController {
     return this.health.acknowledgeAttention(user, workspaceId, attentionId);
   }
 
-  @Patch('controls') controls(
+  @Patch('notification-prefs') notificationPrefs(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string,
-    @Body() dto: UpdateOperationalControlsDto
+    @Body() body: { messages?: boolean; bookings?: boolean; ai?: boolean }
   ) {
-    return this.health.updateControls(user, workspaceId, dto);
+    return this.health.updateNotificationPrefs(user, workspaceId, body);
+  }
+
+  @Get('notification-prefs') getNotificationPrefs(
+    @CurrentUser() user: AuthUser,
+    @Param('workspaceId') workspaceId: string
+  ) {
+    return this.health.getNotificationPrefs(user, workspaceId);
   }
 }

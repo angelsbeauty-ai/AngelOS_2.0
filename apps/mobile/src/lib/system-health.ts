@@ -57,6 +57,10 @@ export function acknowledgeAttention(workspaceId: string, attentionId: string) {
   return apiFetch<AttentionItem>(`/workspaces/${workspaceId}/system-health/attention/${attentionId}/acknowledge`, { method: 'POST' });
 }
 
-export function updateOperationalControls(workspaceId: string, input: { pauseAiActions?: boolean; pauseAutomations?: boolean; emergencyReadOnly?: boolean; reason?: string }) {
-  return apiFetch<OperationalControls>(`/workspaces/${workspaceId}/system-health/controls`, { method: 'PATCH', body: JSON.stringify(input) });
+export function getNotificationPrefs(workspaceId: string) {
+  return apiFetch<{ workspace_id: string; messages: boolean; bookings: boolean; ai: boolean }>(`/workspaces/${workspaceId}/system-health/notification-prefs`);
+}
+
+export function updateNotificationPrefs(workspaceId: string, input: { messages?: boolean; bookings?: boolean; ai?: boolean }) {
+  return apiFetch<{ workspace_id: string; messages: boolean; bookings: boolean; ai: boolean }>(`/workspaces/${workspaceId}/system-health/notification-prefs`, { method: 'PATCH', body: JSON.stringify(input) });
 }
