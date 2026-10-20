@@ -79,8 +79,8 @@ function ThemedDialog({ current, isConfirm, message, onResolve }: { current: Dia
       <Pressable style={[styles.backdrop, night && { backgroundColor: 'rgba(0,0,0,0.62)' }]} onPress={() => isConfirm && onResolve(false)} accessibilityRole="none">
         <View style={styles.center}>
           <Pressable style={[styles.dialog, { backgroundColor: card, borderWidth: 1, borderColor: border, borderRadius: 20 }, Platform.OS === 'web' ? webGlass : null]} onPress={(e) => e.stopPropagation()} accessibilityRole="alert">
-            <Text maxFontSizeMultiplier={1.3} style={[styles.title, { color: text }]}>{current.title}</Text>
-            {message ? <Text maxFontSizeMultiplier={1.3} style={[styles.message, { color: secondary }]}>{message}</Text> : null}
+            <Text style={[styles.title, { color: text }]}>{current.title}</Text>
+            {message ? <Text style={[styles.message, { color: secondary }]}>{message}</Text> : null}
             <View style={styles.buttons}>
               {isConfirm && (
                 <Pressable
@@ -89,7 +89,7 @@ function ThemedDialog({ current, isConfirm, message, onResolve }: { current: Dia
                   accessibilityRole="button"
                   accessibilityLabel={current.cancelText || i18n.t('dialog.cancel')}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={[styles.cancelText, { color: text }]}>{current.cancelText || i18n.t('dialog.cancel')}</Text>
+                  <Text style={[styles.cancelText, { color: text }]}>{current.cancelText || i18n.t('dialog.cancel')}</Text>
                 </Pressable>
               )}
               <Pressable
@@ -98,7 +98,7 @@ function ThemedDialog({ current, isConfirm, message, onResolve }: { current: Dia
                 accessibilityRole="button"
                 accessibilityLabel={current.confirmText || i18n.t('dialog.ok')}
               >
-                <Text maxFontSizeMultiplier={1.3} style={[styles.buttonText, { color: current.destructive ? '#FFFFFF' : primaryFg }]}>
+                <Text style={[styles.buttonText, { color: current.destructive ? '#FFFFFF' : primaryFg }]}>
                   {current.confirmText || i18n.t('dialog.ok')}
                 </Text>
               </Pressable>

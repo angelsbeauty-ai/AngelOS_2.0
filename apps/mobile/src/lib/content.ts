@@ -108,6 +108,23 @@ export function bestTimes(platforms: string[], day: Date): { times: string[]; go
 }
 export const BEST_TIME_SOURCE = 'Posting rulebook (Okinawa), JST';
 
+/**
+ * S06: best hours from the studio's own posted results (likes + comments by JST hour of publishing).
+ * Needs at least 6 posts with numbers; otherwise null and the composer falls back to the rulebook.
+ */
+export function ownBestTimes(rows: Array<{ published_at: string | null; value: number }>): { times: string[]; posts: number } | null {
+  const byHour = new Map<number, { sum: number; n: number }>();
+  let posts = 0;
+  for (const r of rows) {
+    if (!r.published_at || !Number.isFinite(r.value)) continue;
+    const h = (new Date(r.published_at).getUTCHours() + 9) % 24; // JST
+    const b = byHour.get(h) ?? { sum: 0, n: 0 }; b.sum += r.value; b.n += 1; byHour.set(h, b); posts += 1;
+  }
+  if (posts < 6) return null;
+  const times = [...byHour.entries()].sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n).slice(0, 3).map(([h]) => `${String(h).padStart(2, '0')}:00`);
+  return { times, posts };
+}
+
 export function publishContentVariant(workspaceId: string, variantId: string) {
   return apiFetch<{ variant: ContentVariant; published: boolean; duplicatePrevented: boolean }>(`/workspaces/${workspaceId}/content/variants/${variantId}/publish`, { method: 'POST' });
 }

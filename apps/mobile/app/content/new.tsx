@@ -2,7 +2,9 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { getInsights } from '../../src/lib/social';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { ScreenTitle, SupportText } from '../../src/components/ui';
@@ -13,7 +15,7 @@ import { ApiError } from '../../src/lib/api';
 import * as Haptics from 'expo-haptics';
 import { useOnline } from '../../src/lib/offline';
 import { fromJ, ymd } from '../../src/lib/jst';
-import { approveContentPost, publishContentVariant, isNotConnected, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import { approveContentPost, publishContentVariant, isNotConnected, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, ownBestTimes, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -63,7 +65,7 @@ function isMarketingReady(asset: MediaAsset) {
 }
 
 export default function NewPostScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const toast = useToast();
   const params = useLocalSearchParams<{ date?: string; title?: string; goal?: string; mediaId?: string; caption?: string; format?: string; time?: string }>();
@@ -103,6 +105,13 @@ export default function NewPostScreen() {
   }, [params.title, params.caption, params.goal, params.mediaId]);
   const [hashtagSets, setHashtagSets] = useState<HashtagSet[]>([]);
   const { mode: look, palette } = useAppearance(); const night = look === 'night';
+  const styles = useStyles();
+  const [own, setOwn] = useState<{ times: string[]; posts: number } | null>(null);
+  const [pickDate, setPickDate] = useState(false);
+  const mainPlat = platforms.map((p) => p.split('_')[0]).find((p) => p !== 'line') ?? null;
+  useEffect(() => { let live = true; setOwn(null); if (!workspaceId || !mainPlat) return;
+    void getInsights(workspaceId, mainPlat).then((r) => { if (live) setOwn(ownBestTimes(r.top?.interactions ?? [])); }).catch(() => undefined);
+    return () => { live = false; }; }, [workspaceId, mainPlat]);
   const [revEn, setRevEn] = useState('');
   useEffect(() => { if (workspaceId) listHashtagSets(workspaceId).then((r) => setHashtagSets(r.sets)).catch(() => undefined); }, [workspaceId]);
 
@@ -317,7 +326,6 @@ export default function NewPostScreen() {
         multiline
         maxLength={5000}
         accessibilityLabel={t('cnew.s2')}
-        maxFontSizeMultiplier={1.3}
         style={styles.captionInput}
       />
       <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s35')} disabled={captionBusy} onPress={() => void writeCaption('write')}>
@@ -329,7 +337,7 @@ export default function NewPostScreen() {
 
       <View style={styles.switchRow}>
         <Text style={styles.switchLabel}>{t('cnew.comments')}</Text>
-        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: '#F2F2F2', true: '#151515' }} thumbColor="#FFF" />
+        <Switch value={commentsOn} onValueChange={setCommentsOn} trackColor={{ false: night ? '#3A3A3C' : '#E5E5EA', true: palette.text }} thumbColor={night ? '#F4F4F5' : '#FFFFFF'} />
       </View>
       {!commentsOn ? <SupportText>{t('cnew.commentsOff')}</SupportText> : null}
       <TextInput value={link} onChangeText={setLink} placeholder={t('cnew.link')} placeholderTextColor={colors.charcoal3} autoCapitalize="none" keyboardType="url" style={styles.input} />
@@ -342,7 +350,6 @@ export default function NewPostScreen() {
         placeholderTextColor={colors.charcoal3}
         autoCapitalize="none"
         accessibilityLabel={t('cnew.s18')}
-        maxFontSizeMultiplier={1.3}
         style={styles.input}
       />
       <SupportText tone={hashtags.length > HASHTAG_LIMIT ? 'critical' : 'secondary'}>
@@ -354,20 +361,21 @@ export default function NewPostScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s19')} onPress={() => setDay((current) => addDays(current, -1))} style={styles.dayNav}>
           <Text style={styles.dayNavText}>‹</Text>
         </Pressable>
-        <Text maxFontSizeMultiplier={1.3} style={styles.dayLabel}>
-          {day.toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric' })}
-        </Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('sched.pickDate')} accessibilityHint={t('sched.pickDateHint')} onPress={() => setPickDate((v) => !v)} style={{ flex: 1, minHeight: 44, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={styles.dayLabel}>{day.toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', month: 'long', day: 'numeric' })} · {time}</Text>
+        </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.s20')} onPress={() => setDay((current) => addDays(current, 1))} style={styles.dayNav}>
           <Text style={styles.dayNavText}>›</Text>
         </Pressable>
       </View>
+      {pickDate && Platform.OS !== 'web' ? <DateTimePicker value={new Date(day.getFullYear(), day.getMonth(), day.getDate(), Number(time.split(':')[0]), Number(time.split(':')[1]))} mode="datetime" display={Platform.OS === 'ios' ? 'inline' : 'default'} is24Hour locale={i18n.language === 'ja' ? 'ja-JP' : 'en-GB'} minuteInterval={15} minimumDate={new Date()} themeVariant={night ? 'dark' : 'light'} accentColor={palette.text} onChange={(_e, d) => { if (Platform.OS !== 'ios') setPickDate(false); if (d) { setDay(startOfDay(d)); setTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`); } }} /> : null}
       <View style={styles.chips}>
         {TIMES.map((value) => <Chip key={value} label={value} selected={time === value} onPress={() => setTime(value)} />)}
       </View>
-      {(() => { const best = bestTimes(platforms, day); return <View style={{ gap: 6 }}>
+      {(() => { const rule = bestTimes(platforms, day); const best = own ? { times: own.times, goodDay: rule.goodDay } : rule; return <View style={{ gap: 6 }}>
         <Text style={styles.label}>{t('sched.bestTime', 'Best time')}{best.goodDay ? '' : ` · ${t('sched.quietDay', 'quieter day')}`}</Text>
         <View style={styles.chips}>{best.times.map((value) => <Chip key={`b-${value}`} label={`✦ ${value}`} a11y={t('sched.bestAt', { defaultValue: 'Best time {{t}}', t: value })} selected={time === value} onPress={() => setTime(value)} />)}</View>
-        <SupportText>{t('sched.bestSource', { defaultValue: 'From: {{src}}', src: BEST_TIME_SOURCE })}</SupportText>
+        <SupportText>{own ? t('sched.bestOwn', { n: own.posts }) : t('sched.bestRule', { src: BEST_TIME_SOURCE })}</SupportText>
       </View>; })()}
 
       {showRepost ? <View style={{ gap: 8 }}>
@@ -415,12 +423,12 @@ export default function NewPostScreen() {
             <View style={styles.revRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.revMain}>{review === 'now' ? t('cnew.now') : `${plannedAt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}, ${time}`}</Text>
-                {review !== 'now' ? <Text style={styles.sheetSub}>{bestTimes(platforms, day).times.includes(time) ? `${t('sched.bestTime', 'Best time')} · JST` : 'JST · 24h'}</Text> : null}
+                {review !== 'now' ? <Text style={styles.sheetSub}>{(own?.times ?? bestTimes(platforms, day).times).includes(time) ? `${t('sched.bestTime', 'Best time')} · JST` : 'JST · 24h'}</Text> : null}
               </View>
             </View>
             {selectedMedia.length ? <View style={styles.revRow}>
               <Text style={[styles.revMain, { flex: 1 }]}>{t('sched.nPhotos', { defaultValue: '{{count}} photos', count: selectedMedia.length })}</Text>
-              <View style={{ flexDirection: 'row', gap: 4 }}>{selectedMedia.slice(0, 3).map((id) => previews[id] ? <Image key={id} accessibilityIgnoresInvertColors source={{ uri: previews[id] }} style={styles.revThumb} /> : <View key={id} style={[styles.revThumb, { backgroundColor: '#E4E4E6' }]} />)}</View>
+              <View style={{ flexDirection: 'row', gap: 4 }}>{selectedMedia.slice(0, 3).map((id) => previews[id] ? <Image key={id} accessibilityIgnoresInvertColors source={{ uri: previews[id] }} style={styles.revThumb} /> : <View key={id} style={[styles.revThumb, { backgroundColor: night ? '#1C1C1E' : '#E4E4E6' }]} />)}</View>
             </View> : null}
             <View style={{ gap: 4 }}>
               <Text numberOfLines={4} style={styles.sheetCaption}>{caption.trim() || postedCaption.trim()}</Text>
@@ -429,8 +437,8 @@ export default function NewPostScreen() {
             </View>
             <SupportText>{review === 'now' ? t('cnew.reviewNowNote') : t('sched.reviewNote', { defaultValue: 'AngelOS will post this at {{time}} on {{day}}. You can edit or cancel until then.', time, day: plannedAt.toLocaleDateString('en-GB', { weekday: 'long' }) })}</SupportText>
             {inlineErr ? <Text accessibilityLiveRegion="assertive" style={styles.inlineErr}>{inlineErr}</Text> : null}
-            <Pressable accessibilityRole="button" accessibilityState={{ busy }} disabled={busy} onPress={() => { if (review) void save(review); }} style={[styles.approveBtn, night && { backgroundColor: palette.text }]}>
-              {busy ? <ActivityIndicator color={night ? palette.bg : '#FFFFFF'} /> : <Text style={[styles.primaryText, night && { color: palette.bg }]}>{review === 'now' ? t('sched.postNow', 'Post now') : t('sched.approveSchedule', 'Approve & schedule')}</Text>}
+            <Pressable accessibilityRole="button" accessibilityState={{ busy }} disabled={busy} onPress={() => { if (review) void save(review); }} style={styles.approveBtn}>
+              {busy ? <ActivityIndicator color={palette.bg} /> : <Text style={styles.primaryText}>{review === 'now' ? t('sched.postNow', 'Post now') : t('sched.approveSchedule', 'Approve & schedule')}</Text>}
             </Pressable>
             <Pressable accessibilityRole="button" disabled={busy} onPress={() => void save('draft')} style={styles.draftBtn}><Text style={styles.secondaryText}>{t('sched.saveDraft', 'Save as draft')}</Text></Pressable>
           </View>
@@ -441,63 +449,70 @@ export default function NewPostScreen() {
 }
 
 function Chip({ label, selected, onPress, a11y }: { label: string; selected: boolean; onPress: () => void; a11y?: string }) {
+  const styles = useStyles();
   return <Pressable accessibilityRole="button" accessibilityLabel={a11y ?? label} accessibilityState={{ selected }} hitSlop={6} onPress={onPress} style={[styles.chip, selected && styles.chipOn]}><Text style={[styles.chipText, selected && styles.chipTextOn]}>{label}</Text></Pressable>;
 }
 
-const styles = StyleSheet.create({
+type Ink = { text: string; muted: string; fill: string; border: string; card: string; onText: string; red: string; redBg: string };
+// S10: every colour comes from the Day/Night palette; nothing hard-coded.
+function useStyles() {
+  const { palette, mode } = useAppearance(); const night = mode === 'night';
+  return useMemo(() => makeStyles({ text: palette.text, muted: palette.muted, fill: night ? '#1C1C1E' : '#F2F2F2', border: palette.border, card: night ? '#161618' : '#FFFFFF', onText: palette.bg, red: night ? '#FF453A' : '#D70015', redBg: night ? 'rgba(255,69,58,0.12)' : 'rgba(215,0,21,0.06)' }), [mode, palette]);
+}
+const makeStyles = (c: Ink) => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap },
-  chip: { height: 32, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)', justifyContent: 'center' },
-  chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
-  chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#151515' },
-  chipTextOn: { color: '#FFFFFF' },
-  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#6B645B', marginTop: 4 },
-  plat: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
-  platOn: { borderColor: '#151515', backgroundColor: 'rgba(0,0,0,0.04)' },
-  platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
-  captionInput: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', padding: 12, fontFamily: tokens.font.ui, fontSize: 16, color: '#151515', backgroundColor: '#FFFFFF' },
-  link: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
+  chip: { minHeight: 38, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: c.border, justifyContent: 'center' },
+  chipOn: { backgroundColor: c.text, borderColor: c.text },
+  chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: c.text },
+  chipTextOn: { color: c.onText },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: c.muted, marginTop: 4 },
+  plat: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: c.border },
+  platOn: { borderColor: c.text, backgroundColor: c.fill },
+  platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: c.text },
+  captionInput: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: c.border, padding: 12, fontFamily: tokens.font.ui, fontSize: 16, color: c.text, backgroundColor: c.card },
+  link: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: c.text },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  switchLabel: { fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
-  input: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: 12, fontFamily: tokens.font.ui, fontSize: 15, color: '#151515', backgroundColor: '#FFFFFF' },
+  switchLabel: { fontFamily: tokens.font.ui, fontSize: 15, color: c.text },
+  input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: c.border, paddingHorizontal: 12, fontFamily: tokens.font.ui, fontSize: 15, color: c.text, backgroundColor: c.card },
   dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dayNav: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  dayNavText: { fontSize: 22, color: '#151515' },
-  dayLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  dayNav: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  dayNavText: { fontSize: 22, color: c.text },
+  dayLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: c.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tile: { width: 72, height: 72, borderRadius: 12, backgroundColor: '#F2F2F2', overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
-  tileSelected: { borderWidth: 2, borderColor: '#151515' },
+  tile: { width: 72, height: 72, borderRadius: 12, backgroundColor: c.fill, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' },
+  tileSelected: { borderWidth: 2, borderColor: c.text },
   tileImage: { width: 72, height: 72 },
-  tileName: { fontSize: 10, color: '#6B645B', textAlign: 'center' },
-  badge: { position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: '#151515', justifyContent: 'center', alignItems: 'center' },
-  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  tileName: { fontSize: 10, color: c.muted, textAlign: 'center' },
+  badge: { position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 9, backgroundColor: c.text, justifyContent: 'center', alignItems: 'center' },
+  badgeText: { color: c.onText, fontSize: 11, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  primaryBtn: { flex: 1, height: 44, borderRadius: 22, backgroundColor: '#151515', justifyContent: 'center', alignItems: 'center' },
-  primaryText: { color: '#FFFFFF', fontFamily: tokens.font.uiSemibold, fontSize: 15 },
-  secondaryBtn: { flex: 1, height: 44, borderRadius: 22, borderWidth: 1, borderColor: '#151515', justifyContent: 'center', alignItems: 'center' },
-  secondaryText: { color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 15 },
+  primaryBtn: { flex: 1, minHeight: 44, borderRadius: 22, backgroundColor: c.text, justifyContent: 'center', alignItems: 'center' },
+  primaryText: { color: c.onText, fontFamily: tokens.font.uiSemibold, fontSize: 15 },
+  secondaryBtn: { flex: 1, minHeight: 44, borderRadius: 22, borderWidth: 1, borderColor: c.text, justifyContent: 'center', alignItems: 'center' },
+  secondaryText: { color: c.text, fontFamily: tokens.font.uiSemibold, fontSize: 15 },
   disabled: { opacity: 0.4 },
   sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 40, gap: 14 },
-  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.2)' },
+  sheet: { backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 40, gap: 14 },
+  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: c.border },
   sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
-  sheetClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },
-  sheetCloseText: { fontSize: 15, color: '#3A3A3C' },
-  revRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.08)', paddingVertical: 6 },
-  revMain: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: c.text },
+  sheetClose: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.fill, alignItems: 'center', justifyContent: 'center' },
+  sheetCloseText: { fontSize: 15, color: c.text },
+  revRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.border, paddingVertical: 6 },
+  revMain: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: c.text },
   revThumb: { width: 36, height: 44, borderRadius: 6 },
-  inlineErr: { fontFamily: tokens.font.ui, fontSize: 15, color: '#D70015' },
-  approveBtn: { minHeight: 50, borderRadius: 25, backgroundColor: '#151515', alignItems: 'center', justifyContent: 'center' },
-  draftBtn: { minHeight: 50, borderRadius: 25, borderWidth: 1, borderColor: 'rgba(0,0,0,0.15)', alignItems: 'center', justifyContent: 'center' },
-  tooBig: { borderRadius: 14, padding: 12, gap: 8, backgroundColor: 'rgba(215,0,21,0.06)' },
-  tooBigTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#D70015' },
+  inlineErr: { fontFamily: tokens.font.ui, fontSize: 15, color: c.red },
+  approveBtn: { minHeight: 50, borderRadius: 25, backgroundColor: c.text, alignItems: 'center', justifyContent: 'center' },
+  draftBtn: { minHeight: 50, borderRadius: 25, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
+  tooBig: { borderRadius: 14, padding: 12, gap: 8, backgroundColor: c.redBg },
+  tooBigTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: c.red },
   sheetPreview: { flexDirection: 'row', gap: 12 },
-  sheetThumb: { width: 104, height: 128, borderRadius: 12, backgroundColor: '#F2F2F2' },
+  sheetThumb: { width: 104, height: 128, borderRadius: 12, backgroundColor: c.fill },
   sheetCount: { position: 'absolute', left: 8, bottom: 8, color: '#FFFFFF', fontSize: 12 },
-  sheetCaption: { fontFamily: tokens.font.ui, fontSize: 16, lineHeight: 22, color: '#151515' },
-  sheetSub: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
-  sheetList: { borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.04)' },
+  sheetCaption: { fontFamily: tokens.font.ui, fontSize: 16, lineHeight: 22, color: c.text },
+  sheetSub: { fontFamily: tokens.font.ui, fontSize: 13, color: c.muted },
+  sheetList: { borderRadius: 12, backgroundColor: c.fill },
   sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14 },
-  sheetPlat: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
-  sheetWhen: { fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' }
+  sheetPlat: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 16, color: c.text },
+  sheetWhen: { fontFamily: tokens.font.ui, fontSize: 15, color: c.text }
 });

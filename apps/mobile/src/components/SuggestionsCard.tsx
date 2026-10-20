@@ -63,7 +63,7 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
     {items !== null && visible.length === 0 ? <SupportText>{t('sgc.s3')}</SupportText> : null}
     {shown.map((item) => <View key={item.key} style={styles.item}>
       <Text style={styles.kind}>{item.kind === 'create_post_draft' ? 'SOCIAL' : 'MESSAGES'}</Text>
-      <Text style={styles.title} maxFontSizeMultiplier={1.3}>{item.title}</Text>
+      <Text style={styles.title}>{item.title}</Text>
       {item.preview ? <Text numberOfLines={2} style={styles.preview}>"{item.preview}"</Text> : null}
       <SupportText>{item.detail}</SupportText>
       <View style={styles.actions}>

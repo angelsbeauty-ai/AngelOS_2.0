@@ -35,7 +35,8 @@ function toneColor(tone: TextTone, ink: ReturnType<typeof useInk>) {
   }
 }
 
-const textProps = { maxFontSizeMultiplier: tokens.type.maxFontScale } as const;
+// O04: no Dynamic Type cap; layouts use minHeight and wrap instead.
+const textProps = {} as const;
 
 export function AppTitle({ children }: PropsWithChildren) { return <Text {...textProps} style={styles.appTitle}>{children}</Text>; }
 export function ScreenTitle({ children, color }: PropsWithChildren<{ color?: string }>) {
@@ -108,7 +109,7 @@ export function TextField({ label, error, hint, secure, style, ...props }: TextI
     <View style={{ gap: 4 }}>
       <Text {...textProps} style={[styles.fieldLabel, { color: ink.secondary }]}>{label}</Text>
       <View style={[styles.fieldBox, { backgroundColor: ink.card, borderColor: error ? palette.critical : ink.border, minHeight: 48, borderRadius: 16 }]}>
-        <TextInput {...props} secureTextEntry={secure && !shown} accessibilityLabel={label} placeholderTextColor={ink.muted} maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.fieldInput, { color: ink.text }, props.multiline && { minHeight: 80, textAlignVertical: 'top' }, style]} />
+        <TextInput {...props} secureTextEntry={secure && !shown} accessibilityLabel={label} placeholderTextColor={ink.muted} style={[styles.fieldInput, { color: ink.text }, props.multiline && { minHeight: 80, textAlignVertical: 'top' }, style]} />
         {secure ? <Pressable accessibilityRole="button" accessibilityLabel={shown ? t('ui.hidePassword') : t('ui.showPassword')} onPress={() => setShown((v) => !v)} hitSlop={8}><Text {...textProps} style={[styles.eye, { color: ink.text }]}>{shown ? t('ui.hide') : t('ui.show')}</Text></Pressable> : null}
       </View>
       {error ? <Text {...textProps} style={[styles.fieldHint, { color: palette.critical }]}>{error}</Text> : hint ? <Text {...textProps} style={[styles.fieldHint, { color: ink.muted }]}>{hint}</Text> : null}

@@ -2130,7 +2130,11 @@
     "ncInline": "Not connected, so nothing was posted. Connect the account in Profile › Connected accounts.",
     "duplicated": "Duplicated",
     "duplicatedBody": "The copy is in Drafts with no time set.",
-    "dupFailed": "Couldn't duplicate. Try again."
+    "dupFailed": "Couldn't duplicate. Try again.",
+    "bestOwn": "From your last {{n}} posts (likes and comments), JST",
+    "bestRule": "From {{src}} until you have enough posts of your own",
+    "pickDate": "Choose date and time",
+    "pickDateHint": "Opens the date and time picker"
   },
   "nt": {
     "activity": "Activity",
