@@ -182,5 +182,5 @@ const styles = StyleSheet.create({
   tileBlank: { flex: 1, alignSelf: 'stretch' },
   badge: { position: 'absolute', bottom: 8, alignSelf: 'center', minWidth: 44, paddingHorizontal: 10, height: 22, borderRadius: 11, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontFamily: tokens.font.uiSemibold, fontSize: 12.5, color: '#151515' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 21, color: '#6B645B' }
+  muted: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 21, color: '#6C6C70' }
 });
