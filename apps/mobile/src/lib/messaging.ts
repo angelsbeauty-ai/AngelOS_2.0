@@ -28,6 +28,8 @@ export interface MessageThreadSummary {
   last_direction: 'inbound' | 'outbound' | null;
   unread: boolean;
   archived: boolean;
+  pinned?: boolean;
+  muted?: boolean;
   needs_reply: boolean;
   /** Contact profile photo (Instagram/Messenger profile_pic, LINE pictureUrl) when the server has one. */
   contact_avatar_url?: string | null;
@@ -54,6 +56,11 @@ export interface MessageThreadDetail {
     send_window?: { lastInboundAt: string | null; metaWindow: 'open' | 'human_agent' | 'closed' | null; lineReplyFree: boolean | null; lineQuota: { quota: number | null; used: number | null } | null };
   };
   messages: ClientMessage[];
+  /** Owner reactions per message id (empty until 0028 is applied, see reactionsAvailable). */
+  reactions?: Record<string, string[]>;
+  reactionsAvailable?: boolean;
+  /** Signed view URL per message id for chat photos. */
+  attachments?: Record<string, string>;
   internalNotes: Array<{ id: string; content: string; created_at: string }>;
 }
 
@@ -93,8 +100,18 @@ export const addInboundMessage = (workspaceId: string, threadId: string, body: s
   apiFetch<{ threadId: string }>(`${base(workspaceId)}/threads/${threadId}/inbound`, { method: 'POST', body: JSON.stringify({ body }) });
 export const createAiReplyDraft = (workspaceId: string, threadId: string) =>
   apiFetch<{ message: ClientMessage; requiresApproval: boolean; reason: string; language: 'en' | 'ja' }>(`${base(workspaceId)}/threads/${threadId}/ai-draft`, { method: 'POST' });
-export const createMessageReply = (workspaceId: string, threadId: string, body: string, approveNow = false) =>
-  apiFetch<{ message: ClientMessage; sent: boolean; delivery?: 'manual' | 'sent' }>(`${base(workspaceId)}/threads/${threadId}/replies`, { method: 'POST', body: JSON.stringify({ body, sendNow: approveNow }) });
+export const createMessageReply = (workspaceId: string, threadId: string, body: string, approveNow = false, opts?: { replyToMessageId?: string; attachmentAssetId?: string }) =>
+  apiFetch<{ message: ClientMessage; sent: boolean; delivery?: 'manual' | 'sent' }>(`${base(workspaceId)}/threads/${threadId}/replies`, { method: 'POST', body: JSON.stringify({ body, sendNow: approveNow, ...(opts ?? {}) }) });
+export interface SearchResult { threadId: string; messageId: string | null; snippet: string; at: string | null; kind: 'message' | 'contact' }
+export const searchMessages = (workspaceId: string, q: string) =>
+  apiFetch<{ results: SearchResult[] }>(`${base(workspaceId)}/search?q=${encodeURIComponent(q)}`);
+export interface SocialComment { id: string; platform: 'instagram' | 'facebook'; author: string | null; text: string; at: string | null; postId: string; postCaption: string | null; permalink: string | null }
+export const listComments = (workspaceId: string) =>
+  apiFetch<{ comments: SocialComment[]; unavailable: Array<{ platform: string; reason: string }> }>(`${base(workspaceId)}/comments`);
+export const toggleReaction = (workspaceId: string, messageId: string, emoji: string) =>
+  apiFetch<{ messageId: string; emoji: string; on: boolean }>(`${base(workspaceId)}/messages/${messageId}/reactions`, { method: 'POST', body: JSON.stringify({ emoji }) });
+export const savePushToken = (workspaceId: string, token: string, platform: 'ios' | 'android') =>
+  apiFetch<{ saved: boolean }>(`${base(workspaceId)}/push-token`, { method: 'POST', body: JSON.stringify({ token, platform }) });
 export const approveReply = (workspaceId: string, messageId: string, editedBody?: string) =>
   apiFetch<{ message: ClientMessage; sent: boolean; delivery: 'manual' | 'sent' }>(`${base(workspaceId)}/messages/${messageId}/approve-send`, { method: 'POST', body: JSON.stringify(editedBody !== undefined ? { body: editedBody } : {}) });
 export const markReplySent = (workspaceId: string, messageId: string) =>
@@ -103,7 +120,7 @@ export const translateClientMessage = (workspaceId: string, messageId: string, t
   apiFetch<ClientMessage>(`${base(workspaceId)}/messages/${messageId}/translate`, { method: 'POST', body: JSON.stringify({ targetLanguage }) });
 export const addThreadInternalNote = (workspaceId: string, threadId: string, content: string) =>
   apiFetch(`${base(workspaceId)}/threads/${threadId}/internal-notes`, { method: 'POST', body: JSON.stringify({ content }) });
-export const updateThread = (workspaceId: string, threadId: string, patch: { status?: string; archived?: boolean; unread?: boolean }) =>
+export const updateThread = (workspaceId: string, threadId: string, patch: { status?: string; archived?: boolean; unread?: boolean; pinned?: boolean; muted?: boolean; deleted?: boolean }) =>
   apiFetch(`${base(workspaceId)}/threads/${threadId}`, { method: 'PATCH', body: JSON.stringify(patch) });
 
 export const listSavedReplies = (workspaceId: string) =>

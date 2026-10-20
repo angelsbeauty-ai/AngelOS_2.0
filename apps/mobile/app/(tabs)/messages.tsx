@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActionSheetIOS, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '../../src/design/appearance';
 import { router, useFocusEffect } from 'expo-router';
@@ -16,7 +16,7 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Card, EmptyState, Skeleton, ui, screenHeader } from '../../src/components/ui';
 import { toFriendly } from '../../src/lib/friendly-error';
-import { listConnections, listMessageThreads, syncMessages, updateThread, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
+import { listComments, listConnections, listMessageThreads, searchMessages, syncMessages, updateThread, timeLabel, type ConnectionStatus, type MessageThreadSummary, type SearchResult, type SocialComment } from '../../src/lib/messaging';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
 const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
@@ -105,9 +105,25 @@ export default function MessagesScreen() {
     } finally { setReBusy(false); }
   }
   const toast = useToast();
-  async function patch(thread: MessageThreadSummary, change: Partial<MessageThreadSummary>, body: { status?: string; unread?: boolean; archived?: boolean }, undo?: { label: string; body: { status?: string; unread?: boolean; archived?: boolean } }) {
+  // M07: server search over all message text once 2+ characters are typed.
+  const [found, setFound] = useState<SearchResult[] | null>(null);
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setFound(null); return; }
+    const timer = setTimeout(() => { void getActiveWorkspace().then((ws) => searchMessages(ws.id, q)).then((r) => setFound(r.results)).catch(() => setFound(null)); }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+  // M05: live Instagram/Facebook comments.
+  const [comments, setComments] = useState<{ list: SocialComment[]; unavailable: Array<{ platform: string; reason: string }> } | null>(null);
+  const [commentsErr, setCommentsErr] = useState(false);
+  useEffect(() => {
+    if (seg !== 'comments' || comments) return;
+    void getActiveWorkspace().then((ws) => listComments(ws.id)).then((r) => setComments({ list: r.comments, unavailable: r.unavailable })).catch(() => setCommentsErr(true));
+  }, [seg, comments]);
+  type Patch = { status?: string; unread?: boolean; archived?: boolean; pinned?: boolean; muted?: boolean; deleted?: boolean };
+  async function patch(thread: MessageThreadSummary, change: Partial<MessageThreadSummary>, body: Patch, undo?: { label: string; body: Patch }) {
     const before = threads;
-    setThreads((rows) => body.archived ? rows.filter((r) => r.id !== thread.id) : rows.map((r) => r.id === thread.id ? { ...r, ...change } : r));
+    setThreads((rows) => body.archived || body.deleted ? rows.filter((r) => r.id !== thread.id) : rows.map((r) => r.id === thread.id ? { ...r, ...change } : r));
     try {
       const ws = await getActiveWorkspace();
       await updateThread(ws.id, thread.id, body);
@@ -124,7 +140,10 @@ export default function MessagesScreen() {
       [th.unread ? t('messages.markRead', { defaultValue: 'Mark as read' }) : t('messages.markUnread', { defaultValue: 'Mark as unread' }), () => void patch(th, { unread: !th.unread }, { unread: !th.unread })],
       ...(th.needs_reply ? [[t('messages.markDone', { defaultValue: 'Mark as done' }), () => markDone(th)] as [string, () => void]] : []),
       ...(th.client ? [[t('messages.openClient'), () => router.push(`/clients/${th.client!.id}` as any)] as [string, () => void]] : []),
-      [t('messages.archive', { defaultValue: 'Archive' }), () => void patch(th, {}, { archived: true }, { label: t('messages.archived', { defaultValue: 'Archived' }), body: { archived: false } })]
+      [th.pinned ? t('messages.unpin') : t('messages.pin'), () => void patch(th, { pinned: !th.pinned }, { pinned: !th.pinned })],
+      [th.muted ? t('messages.unmute') : t('messages.mute'), () => void patch(th, { muted: !th.muted }, { muted: !th.muted })],
+      [t('messages.archive', { defaultValue: 'Archive' }), () => void patch(th, {}, { archived: true }, { label: t('messages.archived', { defaultValue: 'Archived' }), body: { archived: false } })],
+      [t('messages.deleteChat'), () => void patch(th, {}, { deleted: true }, { label: t('messages.deleted'), body: { deleted: false } })]
     ];
     const cancel = t('common.cancel', { defaultValue: 'Cancel' });
     if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options: [...acts.map((a) => a[0]), cancel], cancelButtonIndex: acts.length, title: th.client?.display_name ?? th.contact_display_name ?? undefined }, (i) => acts[i]?.[1]());
@@ -175,7 +194,29 @@ export default function MessagesScreen() {
         : <Button label={reBusy ? '…' : t('messages.reconnect')} disabled={reBusy} onPress={() => void reconnect(platError.provider as SocialPlatform)} />}
     </View></Card> : null}
 
-    {seg === 'comments' && state === 'ready' ? <EmptyState title={t('messages.commentsEmpty', 'No comments to show yet')} message={t('messages.commentsMsg', 'Instagram and Facebook comments will appear here once comment sync is connected.')} /> : null}
+    {seg === 'messages' && found ? <View style={styles.list}>
+      <Text style={[safe.menuHead, { paddingHorizontal: 16, paddingTop: 8 }]}>{t('messages.searchAll', { count: found.length })}</Text>
+      {found.map((r) => <Pressable key={`${r.kind}-${r.messageId ?? r.threadId}`} accessibilityRole="button" onPress={() => router.push(`/messages/${r.threadId}` as any)} style={[styles.row, { backgroundColor: palette.bg, minHeight: 56 }]}>
+        <View style={styles.rowBody}>
+          <Text numberOfLines={2} style={[styles.preview, { color: palette.text }, JP_FONT(r.snippet)]}>{r.snippet}</Text>
+          <Text style={[styles.time, { color: palette.muted }]}>{r.kind === 'contact' ? t('messages.contact') : rel(r.at)}</Text>
+        </View>
+      </Pressable>)}
+    </View> : null}
+    {seg === 'comments' && !comments && !commentsErr ? <Skeleton rows={4} height={64} /> : null}
+    {seg === 'comments' && commentsErr ? <ErrorState title={t('messages.commentsFail')} message={t('messages.commentsFailMsg')} onRetry={() => { setCommentsErr(false); setComments(null); }} /> : null}
+    {seg === 'comments' && comments && comments.list.length === 0 ? <EmptyState title={t('messages.commentsEmpty', 'No comments to show yet')} message={comments.unavailable.length ? comments.unavailable.map((u) => u.reason).join('\n') : t('messages.commentsNone')} /> : null}
+    {seg === 'comments' && comments && comments.list.length ? <View style={styles.list}>
+      {comments.list.map((c) => <View key={c.id} accessible accessibilityLabel={`${c.author ?? ''}: ${c.text}`} style={[styles.row, { backgroundColor: palette.bg }]}>
+        <ContactAvatar name={c.author ?? '?'} uri={null} platform={c.platform} size={44} />
+        <View style={styles.rowBody}>
+          <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{c.author ?? t('messages.unknown')}</Text>
+          <Text numberOfLines={2} style={[styles.preview, { color: palette.text }, JP_FONT(c.text)]}>{c.text}</Text>
+          {c.postCaption ? <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>{t('messages.onPost', { caption: c.postCaption })}</Text> : null}
+        </View>
+        <Text style={[styles.time, { color: palette.muted }]}>{rel(c.at)}</Text>
+      </View>)}
+    </View> : null}
     {state === 'loading' ? <Skeleton rows={4} height={72} /> : null}
     {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'error' ? <ErrorState title={errorText.title} message={errorText.message} onRetry={() => { setState('loading'); void load(); }} /> : null}
@@ -184,7 +225,7 @@ export default function MessagesScreen() {
     {seg === 'messages' && plat === 'tiktok' && state === 'ready' ? <EmptyState title={t('messages.tiktokEmpty')} message={t('messages.tiktokMsg')} /> : null}
     {seg === 'messages' && plat !== 'tiktok' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /> : null}
 
-    {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
+    {seg === 'messages' && !found && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
@@ -194,10 +235,10 @@ export default function MessagesScreen() {
           { key: 'done', label: t('messages.done'), icon: <Check size={24} color={fg} />, onPress: () => markDone(thread) },
           { key: 'unread', label: t('messages.unreadA', { defaultValue: 'Unread' }), icon: <EnvelopeSimple size={24} color={fg} />, onPress: () => void patch(thread, { unread: true }, { unread: true }) },
           { key: 'follow', label: t('messages.followUp', { defaultValue: 'Follow up' }), icon: <Star size={24} color={fg} weight={thread.status === 'follow_up_due' ? 'fill' : 'regular'} />, onPress: () => void patch(thread, { status: 'follow_up_due' }, { status: 'follow_up_due' }) }
-        ]}><Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, { backgroundColor: palette.bg }, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+        ]}><Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} onLongPress={() => more(thread)} delayLongPress={350} style={({ pressed }) => [styles.row, { backgroundColor: palette.bg }, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
-            <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
+            <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}{thread.pinned ? <Text accessibilityLabel={t('messages.pinned')} style={{ color: palette.muted }}>{'  '}{t('messages.pinnedMark')}</Text> : null}{thread.muted ? <Text accessibilityLabel={t('messages.muted')} style={{ color: palette.muted }}>{'  '}{t('messages.mutedMark')}</Text> : null}</Text>
             <View style={styles.rowTop}>
               <Text numberOfLines={1} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }, JP_FONT(thread.last_preview)]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
               <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>{rel(thread.last_message_at)}</Text>

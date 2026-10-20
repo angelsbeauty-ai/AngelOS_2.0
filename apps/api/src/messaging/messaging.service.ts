@@ -143,7 +143,8 @@ export class MessagingService {
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) throw new InternalServerErrorException(error.message);
-    const threads = (data ?? []).filter((row: any) => view === 'all' ? true : view === 'archived' ? Boolean(row.archived_at) : !row.archived_at);
+    const threads = (data ?? []).filter((row: any) => !row.deleted_at).filter((row: any) => view === 'all' ? true : view === 'archived' ? Boolean(row.archived_at) : !row.archived_at)
+      .sort((a: any, b: any) => (b.pinned_at ? 1 : 0) - (a.pinned_at ? 1 : 0));
     const ids = threads.map((row: any) => row.id);
     const latest = new Map<string, any>();
     if (ids.length) {
@@ -189,7 +190,12 @@ export class MessagingService {
       lineReplyFree: provider === 'line' ? Boolean((latestInbound as any)?.metadata?.reply_token && !(latestInbound as any)?.metadata?.reply_token_used && replyTokenFresh(lastInboundAt)) : null,
       lineQuota
     };
+    const reactions: Record<string, string[]> = {};
+    const reactionRows = await supabase.from('message_reactions').select('message_id,emoji').eq('workspace_id', workspaceId).in('message_id', list.map((m: any) => m.id).slice(0, 500));
+    for (const r of (reactionRows.error ? [] : reactionRows.data ?? []) as any[]) (reactions[r.message_id] ??= []).push(r.emoji);
+    const attachments = await this.attachmentViews(workspaceId, list);
     return {
+      reactions, attachments, reactionsAvailable: !reactionRows.error,
       thread: { ...decorated, reply_language: chooseReplyLanguage(latestInbound?.body, (thread as any).client?.language), send_window: sendWindow },
       messages: list.map((m: any) => m.metadata?.reply_token ? { ...m, metadata: { ...m.metadata, reply_token: undefined } } : m),
       internalNotes: notes.data ?? []
@@ -432,13 +438,24 @@ export class MessagingService {
     const detail = await this.getThread(user, workspaceId, threadId);
     const client = (detail.thread as any).client;
     const body = dto.body.trim();
-    if (!body) throw new BadRequestException('Write a reply first.');
+    if (!body && !dto.attachmentAssetId) throw new BadRequestException('Write a reply first.');
     const sensitive = isSensitive(body, (detail.thread as any).intent);
+    const quoted = dto.replyToMessageId ? (detail.messages as any[]).find((m) => m.id === dto.replyToMessageId) : null;
+    if (dto.replyToMessageId && !quoted) throw new BadRequestException('The quoted message is not in this chat.');
+    let attachment: { asset_id: string; mime_type: string } | null = null;
+    if (dto.attachmentAssetId) {
+      const { data: asset } = await createUserSupabaseClient(user.accessToken).from('media_assets').select('id,mime_type,media_type,upload_status').eq('workspace_id', workspaceId).eq('id', dto.attachmentAssetId).maybeSingle();
+      if (!asset || asset.upload_status !== 'uploaded') throw new BadRequestException('That photo has not finished uploading.');
+      if (asset.media_type !== 'image') throw new BadRequestException('Only photos can be sent in chat for now.');
+      attachment = { asset_id: asset.id, mime_type: asset.mime_type };
+    }
+    // Stored in metadata so it works before 0028; 0028 adds proper columns.
+    const extra = { ...(quoted ? { reply_to: { id: quoted.id, body: String(quoted.body ?? '').slice(0, 140), direction: quoted.direction } } : {}), ...(attachment ? { attachment } : {}) };
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase.from('client_messages').insert({
       workspace_id: workspaceId, thread_id: threadId, client_id: client?.id ?? null,
       direction: 'outbound', sender_type: 'owner', body, original_language: detectLanguage(body),
-      status: dto.sendNow ? 'queued' : 'draft', sensitive,
+      status: dto.sendNow ? 'queued' : 'draft', sensitive, metadata: extra,
       routine_category: dto.routineCategory ?? null, created_by: user.id
     }).select('*').single();
     if (error) throw new InternalServerErrorException(error.message);
@@ -514,8 +531,12 @@ export class MessagingService {
     if (dto.needsOwner !== undefined) updates.needs_owner = dto.needsOwner;
     if (dto.archived !== undefined) updates.archived_at = dto.archived ? new Date().toISOString() : null;
     if (dto.unread !== undefined) updates.owner_unread = dto.unread;
+    const v1028 = dto.pinned !== undefined || dto.muted !== undefined || dto.deleted !== undefined;
+    if (dto.pinned !== undefined) updates.pinned_at = dto.pinned ? new Date().toISOString() : null;
+    if (dto.muted !== undefined) updates.muted_until = dto.muted ? '9999-12-31T00:00:00Z' : null;
+    if (dto.deleted !== undefined) updates.deleted_at = dto.deleted ? new Date().toISOString() : null;
     const { data, error } = await supabase.from('message_threads').update(updates).eq('workspace_id', workspaceId).eq('id', threadId).select('*').single();
-    if (error && isMissingRelation(error)) throw migrationNeeded('0015_v1_messaging_inbox.sql');
+    if (error && isMissingRelation(error)) throw migrationNeeded(v1028 ? '0028_messages_v1.sql' : '0015_v1_messaging_inbox.sql');
     if (error || !data) throw new NotFoundException('Message thread not found');
     return data;
   }
@@ -572,7 +593,9 @@ export class MessagingService {
     }
 
     const inbound = await this.lastInbound(workspaceId, thread.id);
-    const result = await adapter.send({ externalThreadId: thread.external_thread_id, body: message.body, idempotencyKey, replyToken: inbound.replyToken, lastInboundAt: inbound.at });
+    const imageUrl = await this.attachmentUrl(workspaceId, (message as any).metadata?.attachment?.asset_id);
+    if ((message as any).metadata?.attachment?.asset_id && !imageUrl) throw new ConflictException('The photo could not be opened, so nothing was sent.');
+    const result = await adapter.send({ externalThreadId: thread.external_thread_id, body: message.body, idempotencyKey, replyToken: inbound.replyToken, lastInboundAt: inbound.at, imageUrl });
     if ((result.raw as any)?.transport === 'line-reply') {
       // Single use: mark it so a second reply falls back to push.
       const { data: last } = await service.from('client_messages').select('id,metadata').eq('workspace_id', workspaceId).eq('thread_id', thread.id).eq('direction', 'inbound').order('created_at', { ascending: false }).limit(1);
@@ -595,6 +618,101 @@ export class MessagingService {
     return { message: sentMessage, sent: true, duplicatePrevented: false, delivery: 'sent' };
   }
 
+  /** Signed https URL (1 h) for a chat photo; platforms fetch it once when delivering. */
+  private async attachmentUrl(workspaceId: string, assetId?: string): Promise<string | null> {
+    if (!assetId) return null;
+    const service = createServiceSupabaseClient();
+    const { data: asset } = await service.from('media_assets').select('storage_bucket,storage_path,upload_status').eq('workspace_id', workspaceId).eq('id', assetId).maybeSingle();
+    if (!asset || asset.upload_status !== 'uploaded') return null;
+    const signed = await service.storage.from(asset.storage_bucket).createSignedUrl(asset.storage_path, 3600);
+    return signed.data?.signedUrl ?? null;
+  }
+
+  /** Short-lived view URLs for photos in a thread (owner's own view). */
+  private async attachmentViews(workspaceId: string, messages: any[]): Promise<Record<string, string>> {
+    const out: Record<string, string> = {};
+    for (const m of messages) {
+      const id = m.metadata?.attachment?.asset_id;
+      if (id && !out[m.id]) { const url = await this.attachmentUrl(workspaceId, id).catch(() => null); if (url) out[m.id] = url; }
+    }
+    return out;
+  }
+
+  /** M07 server search: message text and contact names, newest first. */
+  async search(user: AuthUser, workspaceId: string, q: string) {
+    const term = (q ?? '').trim().slice(0, 100);
+    if (term.length < 2) return { results: [] };
+    const like = `%${term.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const [msgs, threads] = await Promise.all([
+      supabase.from('client_messages').select('id,thread_id,body,direction,created_at').eq('workspace_id', workspaceId).neq('status', 'cancelled').ilike('body', like).order('created_at', { ascending: false }).limit(50),
+      supabase.from('message_threads').select('id,contact_display_name,last_message_at,client:clients(display_name)').eq('workspace_id', workspaceId).ilike('contact_display_name', like).limit(20)
+    ]);
+    if (msgs.error) throw new InternalServerErrorException(msgs.error.message);
+    const results: Array<{ threadId: string; messageId: string | null; snippet: string; at: string | null; kind: 'message' | 'contact' }> = [];
+    for (const t of threads.data ?? []) results.push({ threadId: (t as any).id, messageId: null, snippet: (t as any).contact_display_name ?? '', at: (t as any).last_message_at, kind: 'contact' });
+    for (const m of msgs.data ?? []) results.push({ threadId: m.thread_id, messageId: m.id, snippet: snippetAround(m.body, term), at: m.created_at, kind: 'message' });
+    return { results };
+  }
+
+  /**
+   * M05 comments: live read of recent Instagram/Facebook comments through the Graph API with the
+   * studio's own Page token. Nothing stored. A platform that can't be read says why.
+   */
+  async comments(user: AuthUser, workspaceId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: member } = await supabase.from('workspace_memberships').select('workspace_id').eq('workspace_id', workspaceId).eq('user_id', user.id).maybeSingle();
+    if (!member) throw new NotFoundException('Workspace not found');
+    const c = await metaConfigForWorkspace(workspaceId);
+    const out: { comments: Array<{ id: string; platform: 'instagram' | 'facebook'; author: string | null; text: string; at: string | null; postId: string; postCaption: string | null; permalink: string | null }>; unavailable: Array<{ platform: string; reason: string }> } = { comments: [], unavailable: [] };
+    if (!c.pageToken) { out.unavailable.push({ platform: 'meta', reason: 'Instagram and Facebook are not connected.' }); return out; }
+    const get = async (path: string) => {
+      const r = await fetch(`${c.graphBase}/${path}`, { headers: { Authorization: `Bearer ${c.pageToken}` } });
+      const j = (await r.json().catch(() => ({}))) as any;
+      if (!r.ok) throw new Error(j?.error?.message ?? `HTTP ${r.status}`);
+      return j;
+    };
+    if (c.igUserId) {
+      try {
+        const j = await get(`${c.igUserId}/media?fields=id,caption,permalink,comments.limit(20){id,text,username,timestamp}&limit=10`);
+        for (const media of j.data ?? []) for (const cm of media.comments?.data ?? []) out.comments.push({ id: `ig:${cm.id}`, platform: 'instagram', author: cm.username ?? null, text: String(cm.text ?? ''), at: cm.timestamp ?? null, postId: media.id, postCaption: media.caption ? String(media.caption).slice(0, 80) : null, permalink: media.permalink ?? null });
+      } catch (e) { out.unavailable.push({ platform: 'instagram', reason: e instanceof Error ? e.message : 'Could not read comments.' }); }
+    }
+    if (c.pageId) {
+      try {
+        const j = await get(`${c.pageId}/posts?fields=id,message,permalink_url,comments.limit(20){id,message,from,created_time}&limit=10`);
+        for (const post of j.data ?? []) for (const cm of post.comments?.data ?? []) out.comments.push({ id: `fb:${cm.id}`, platform: 'facebook', author: cm.from?.name ?? null, text: String(cm.message ?? ''), at: cm.created_time ?? null, postId: post.id, postCaption: post.message ? String(post.message).slice(0, 80) : null, permalink: post.permalink_url ?? null });
+      } catch (e) { out.unavailable.push({ platform: 'facebook', reason: e instanceof Error ? e.message : 'Could not read comments.' }); }
+    }
+    out.comments.sort((x, y) => String(y.at ?? '').localeCompare(String(x.at ?? '')));
+    return out;
+  }
+
+  /** Checklist 3/4: toggle the owner's reaction on a message. Needs 0028. */
+  async toggleReaction(user: AuthUser, workspaceId: string, messageId: string, emoji: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: msg } = await supabase.from('client_messages').select('id').eq('workspace_id', workspaceId).eq('id', messageId).maybeSingle();
+    if (!msg) throw new NotFoundException('Message not found');
+    const existing = await supabase.from('message_reactions').select('id').eq('message_id', messageId).eq('user_id', user.id).eq('emoji', emoji).maybeSingle();
+    if (existing.error && isMissingRelation(existing.error)) throw migrationNeeded('0028_messages_v1.sql');
+    if (existing.data) {
+      const del = await supabase.from('message_reactions').delete().eq('id', existing.data.id);
+      if (del.error) throw new InternalServerErrorException(del.error.message);
+      return { messageId, emoji, on: false };
+    }
+    const ins = await supabase.from('message_reactions').insert({ workspace_id: workspaceId, message_id: messageId, user_id: user.id, emoji });
+    if (ins.error) throw isMissingRelation(ins.error) ? migrationNeeded('0028_messages_v1.sql') : new InternalServerErrorException(ins.error.message);
+    return { messageId, emoji, on: true };
+  }
+
+  /** M48: remember this phone's Expo push token. Needs 0028. */
+  async savePushToken(user: AuthUser, workspaceId: string, token: string, platform: 'ios' | 'android') {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { error } = await supabase.from('push_tokens').upsert({ token, workspace_id: workspaceId, user_id: user.id, platform, updated_at: new Date().toISOString() }, { onConflict: 'token' });
+    if (error) throw isMissingRelation(error) ? migrationNeeded('0028_messages_v1.sql') : new InternalServerErrorException(error.message);
+    return { saved: true };
+  }
+
   /** Every approval feeds the slow learning loop (runs in the background, never blocks the reply). */
   private async afterOwnerApproval(workspaceId: string): Promise<void> {
     void this.style.maybeLearn(workspaceId);
@@ -613,6 +731,14 @@ export function threadPlatform(row: { external_thread_id?: string | null; channe
   return match?.[1] ?? 'other';
 }
 
+export function snippetAround(body: string, term: string, span = 60) {
+  const text = String(body ?? '');
+  const at = text.toLowerCase().indexOf(term.toLowerCase());
+  if (at < 0) return text.slice(0, span * 2);
+  const start = Math.max(0, at - span);
+  return `${start > 0 ? '…' : ''}${text.slice(start, at + term.length + span)}${at + term.length + span < text.length ? '…' : ''}`;
+}
+
 function decorateThread(row: any, latest: any) {
   const platform = threadPlatform(row);
   const delivery = row.channel?.provider && row.channel.provider !== 'manual' ? 'live' : 'manual';
@@ -626,6 +752,8 @@ function decorateThread(row: any, latest: any) {
     last_direction: latest?.direction ?? null,
     unread: typeof row.owner_unread === 'boolean' ? row.owner_unread : lastFromClient,
     archived: Boolean(row.archived_at),
+    pinned: Boolean(row.pinned_at),
+    muted: Boolean(row.muted_until && Date.parse(row.muted_until) > Date.now()),
     needs_reply: lastFromClient && !['done', 'spam_scam'].includes(row.status) && !row.archived_at
   };
 }

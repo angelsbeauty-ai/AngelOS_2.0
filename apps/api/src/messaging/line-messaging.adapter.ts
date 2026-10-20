@@ -98,7 +98,9 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
   async send(input: MessagingSendInput): Promise<MessagingSendResult> {
     if (!this.status().ready) return { status: 'failed', error: 'LINE is not connected.' };
     const to = input.externalThreadId.startsWith('line:') ? input.externalThreadId.slice(5) : input.externalThreadId;
-    const messages = [{ type: 'text', text: input.body.slice(0, 5000) }];
+    const messages: Array<Record<string, string>> = [];
+    if (input.imageUrl) messages.push({ type: 'image', originalContentUrl: input.imageUrl, previewImageUrl: input.imageUrl });
+    if (input.body.trim()) messages.push({ type: 'text', text: input.body.slice(0, 5000) });
     // Reply API is free (no monthly quota) but the token is single use and expires about a minute after the client wrote.
     if (input.replyToken && replyTokenFresh(input.lastInboundAt)) {
       const reply = await this.fetchImpl(`${this.config.apiBase}/v2/bot/message/reply`, {

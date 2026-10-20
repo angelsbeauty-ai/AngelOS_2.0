@@ -13,6 +13,7 @@ import { StartConversationDto } from './dto/start-conversation.dto';
 import { AddInboundDto } from './dto/add-inbound.dto';
 import { ApproveReplyDto } from './dto/approve-reply.dto';
 import { CreateSavedReplyDto, UpdateSavedReplyDto } from './dto/saved-reply.dto';
+import { PushTokenDto, ReactionDto } from './dto/messages-v1.dto';
 
 @Controller('workspaces/:workspaceId/messaging')
 @UseGuards(SupabaseAuthGuard)
@@ -27,6 +28,10 @@ export class MessagingController {
   @Get('connections') connections(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.connections(user, workspaceId); }
   @Post('connections/line') connectLine(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.connectLine(user, workspaceId); }
 
+  @Get('search') search(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('q') q?: string) { return this.messaging.search(user, workspaceId, q ?? ''); }
+  @Get('comments') comments(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.comments(user, workspaceId); }
+  @Post('messages/:messageId/reactions') react(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('messageId') messageId: string, @Body() dto: ReactionDto) { return this.messaging.toggleReaction(user, workspaceId, messageId, dto.emoji); }
+  @Post('push-token') pushToken(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: PushTokenDto) { return this.messaging.savePushToken(user, workspaceId, dto.token, dto.platform); }
   @Get('threads') listThreads(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('view') view?: string) {
     return this.messaging.listThreads(user, workspaceId, view === 'archived' || view === 'all' ? view : 'active');
   }

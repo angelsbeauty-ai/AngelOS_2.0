@@ -14,6 +14,8 @@ export interface MessagingSendInput {
   replyToken?: string | null;
   /** When the client last wrote in this thread (Meta 24h window, LINE reply token age). */
   lastInboundAt?: string | null;
+  /** M20: https URL of a photo to send (signed, short-lived). */
+  imageUrl?: string | null;
 }
 
 export interface MessagingSendResult {

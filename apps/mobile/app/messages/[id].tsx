@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { importMedia } from '../../src/lib/media';
+import { enqueueReply, isOnlineNow, useOnline, useOutbox } from '../../src/lib/offline';
 import { useToast } from '../../src/components/Toast';
+import { Skeleton } from '../../src/components/ui';
 import { ChatBar } from '../../src/components/ChatBar';
 import { useDictation } from '../../src/lib/dictation';
 import { ChatTools } from '../../src/components/ChatTools';
@@ -18,13 +23,14 @@ import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import {
   approveReply, createAiReplyDraft, createMessageReply, fillName, getMessageThread, isJapanese,
-  listSavedReplies, markThreadRead, timeLabel, translateText, type ClientMessage, type MessageThreadDetail, type SavedReply
+  listSavedReplies, markThreadRead, timeLabel, toggleReaction, translateText, type ClientMessage, type MessageThreadDetail, type SavedReply
 } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { useAppearance } from '../../src/design/appearance';
 
 /** Japanese text uses the system font (Manrope has no kana; web would fall back to a handwriting face). */
 const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
+const REACTIONS = ['❤️', '👍', '😂', '😮', '🙏', '✨'];
 const APP_NAME: Record<string, string> = { line: 'LINE', instagram: 'Instagram', facebook: 'Messenger', other: 'the app' };
 
 export default function MessageThreadScreen() {
@@ -50,6 +56,9 @@ export default function MessageThreadScreen() {
   const [draftHidden, setDraftHidden] = useState(false);
   const [replyTo, setReplyTo] = useState<ClientMessage | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [menuFor, setMenuFor] = useState<ClientMessage | null>(null);
+  const online = useOnline();
+  const outbox = useOutbox(id);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -89,7 +98,7 @@ export default function MessageThreadScreen() {
     dictation.clearError();
   }, [dictation.error]);
   if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('messages.tryAgain')}</Text></Pressable></View>;
-  if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.muted }]}>{t('messages.loading')}</Text></View>;
+  if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><View style={{ padding: 16, paddingTop: 70 }}><Skeleton rows={6} height={48} /></View></View>;
 
   const thread = detail.thread;
   const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
@@ -108,9 +117,16 @@ export default function MessageThreadScreen() {
     const message = meaning ? t('messages.confirmMeaning', { text, meaning }) : live ? t('messages.confirmLive', { name, app: appName }) : t('messages.confirmManual', { app: appName });
     const ok = await dialog.confirm({ title: t('messages.send'), message, confirmText: t('messages.send') });
     if (!ok) return;
+    if (!(await isOnlineNow())) {
+      // Approved while offline: it waits on the phone and goes out on reconnect.
+      await enqueueReply({ workspaceId: workspaceId!, threadId: thread.id, body: text, replyToMessageId: replyTo?.id });
+      setReply(''); setDraftOpen(false); setReplyTo(null);
+      toast.show({ tone: 'info', title: t('messages.queued') });
+      return;
+    }
     await run('send', async () => {
-      if (pendingDraft && text === pendingDraft.body) await approveReply(workspaceId!, pendingDraft.id);
-      else await createMessageReply(workspaceId!, thread.id, text, true);
+      if (pendingDraft && text === pendingDraft.body && !replyTo) await approveReply(workspaceId!, pendingDraft.id);
+      else await createMessageReply(workspaceId!, thread.id, text, true, replyTo ? { replyToMessageId: replyTo.id } : undefined);
       setReply(''); setDraftOpen(false); setReplyTo(null);
     });
   }
@@ -127,25 +143,41 @@ export default function MessageThreadScreen() {
     setReply(fillName((useJa ? item.body_ja : item.body_en ?? item.body_ja) ?? '', firstName));
     setShowSaved(false);
   }
-  function openPhoto() {
+  // M20: pick a photo, store it in the studio media library, then send it only after the confirm tap.
+  async function openPhoto() {
     setShowPlus(false);
-    router.push({ pathname: '/media/import', params: { clientId: thread.client?.id, role: 'other' } } as any);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { void dialog.notify(t('imp.photosPerm'), t('imp.photosPermMsg')); return; }
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
+    if (picked.canceled || !picked.assets[0]) return;
+    const a = picked.assets[0];
+    const ok = await dialog.confirm({ title: t('messages.sendPhoto'), message: live ? t('messages.confirmLive', { name, app: appName }) : t('messages.photoManual', { app: appName }), confirmText: t('messages.send') });
+    if (!ok) return;
+    await run('photo', async () => {
+      const asset = await importMedia(workspaceId!, { uri: a.uri, filename: a.fileName || `chat_${Date.now()}.jpg`, mimeType: a.mimeType || 'image/jpeg', sizeBytes: a.fileSize, width: a.width, height: a.height, source: 'phone_photos' }, { clientId: thread.client?.id, role: 'other', marketingPermission: 'private' });
+      await createMessageReply(workspaceId!, thread.id, reply.trim(), true, { attachmentAssetId: asset.id, ...(replyTo ? { replyToMessageId: replyTo.id } : {}) });
+      setReply(''); setReplyTo(null);
+    });
+  }
+  async function react(message: ClientMessage, emoji: string) {
+    setMenuFor(null);
+    void Haptics.selectionAsync().catch(() => undefined);
+    await run(`react-${message.id}`, () => toggleReaction(workspaceId!, message.id, emoji));
   }
 
   function onLongPress(message: ClientMessage) {
-    if (!message.body) return;
-    const options = [t('messages.translate'), t('common.copy', { defaultValue: 'Copy' }), t('messages.reply', { defaultValue: 'Reply' }), t('messages.openClient'), t('common.cancel', { defaultValue: 'Cancel' })];
-    const runIndex = (index: number) => {
-      if (index === 0) void run(`tr-${message.id}`, async () => {
-        const result = await translateText(workspaceId!, message.body, appLang);
-        if (result?.translation) setTranslations((prev) => ({ ...prev, [message.id]: { text: result.translation, shown: true } }));
-      }, false);
-      else if (index === 1) void Clipboard.setStringAsync(message.body).then(() => toast.show({ title: t('common.copied'), tone: 'success' })).catch(() => undefined);
-      else if (index === 2) setReplyTo(message);
-      else if (index === 3 && thread.client) router.push(`/clients/${thread.client.id}` as any);
-    };
-    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options, cancelButtonIndex: 4 }, runIndex);
-    else Alert.alert(t('messages.message'), undefined, [...options.slice(0, 4).map((label, i) => ({ text: label, onPress: () => runIndex(i) })), { text: options[4], style: 'cancel' as const }]);
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+    setMenuFor(message);
+  }
+  function menuAction(kind: 'translate' | 'copy' | 'reply') {
+    const message = menuFor; setMenuFor(null);
+    if (!message) return;
+    if (kind === 'translate') void run(`tr-${message.id}`, async () => {
+      const result = await translateText(workspaceId!, message.body, appLang);
+      if (result?.translation) setTranslations((prev) => ({ ...prev, [message.id]: { text: result.translation, shown: true } }));
+    }, false);
+    else if (kind === 'copy') void Clipboard.setStringAsync(message.body).then(() => toast.show({ title: t('common.copied'), tone: 'success' })).catch(() => undefined);
+    else setReplyTo(message);
   }
 
   const showChip = pendingDraft && !draftHidden;
@@ -188,7 +220,7 @@ export default function MessageThreadScreen() {
           <Pressable accessibilityRole="button" accessibilityLabel={t('messages.aiDraft', { defaultValue: 'AI draft' })} disabled={Boolean(busy)} onPress={() => { setDraftHidden(false); if (pendingDraft) setDraftOpen(true); else void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id); setDraftOpen(true); }); }} style={styles.back}>
             <Sparkle size={24} color={palette.text} />
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} disabled={!thread.client} onPress={() => thread.client && router.push(`/clients/${thread.client.id}` as any)} style={[styles.back, !thread.client && { opacity: 0.4 }]}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('messages.contactInfo')} onPress={() => router.push(`/messages/info/${thread.id}` as any)} style={styles.back}>
             <DotsThree size={26} color={palette.text} weight="bold" />
           </Pressable>
         </View>
@@ -209,9 +241,12 @@ export default function MessageThreadScreen() {
             return <SwipeReply key={message.id} night={night} label={t('messages.reply', { defaultValue: 'Reply' })} onReply={() => setReplyTo(message)}><View style={[styles.line, out && styles.lineOut]}>
               {!out ? (x.first ? <View style={[styles.inAvatar, { backgroundColor: night ? '#3A3A3D' : '#D1D1D6' }]}>{thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.inAvatarImg} /> : <Text style={[styles.inAvatarText, { color: palette.text }]}>{initials}</Text>}</View> : <View style={styles.inAvatarGap} />) : null}
               <Pressable onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
-                <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }]}>
-                  <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text>
+                <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }, detail.attachments?.[message.id] && !message.body && { padding: 4 }]}>
+                  {message.metadata?.reply_to ? <View style={[styles.inQuote, { borderLeftColor: out ? outText : incText }]}><Text numberOfLines={2} style={[styles.inQuoteText, { color: out ? '#3A3A3D' : night ? '#B8B8BD' : '#6C6C70' }]}>{message.metadata.reply_to.body}</Text></View> : null}
+                  {detail.attachments?.[message.id] ? <Image accessibilityLabel={t('messages.photo')} source={{ uri: detail.attachments[message.id] }} style={styles.photo} resizeMode="cover" /> : message.metadata?.attachment ? <Text style={[styles.body, { color: out ? outText : incText }]}>{t('messages.photoUnavailable')}</Text> : null}
+                  {message.body ? <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text> : null}
                 </View>
+                {detail.reactions?.[message.id]?.length ? <Text accessibilityLabel={t('messages.reactions', { list: detail.reactions[message.id].join(' ') })} style={[styles.reacts, { backgroundColor: night ? '#2C2C2E' : '#FFFFFF' }]}>{detail.reactions[message.id].join(' ')}</Text> : null}
                 {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{tr.text}</Text> : null}
                 {out && message.status === 'failed' ? (
                   <Pressable accessibilityRole="button" accessibilityLabel={t('messages.retryA11y')} onPress={() => void retry(message)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }} style={styles.failRow}>
@@ -223,6 +258,10 @@ export default function MessageThreadScreen() {
               </Pressable>
             </View></SwipeReply>;
           })}
+          {outbox.map((q) => <View key={q.key} style={[styles.line, styles.lineOut]}><View style={[styles.row, styles.rowOut]}>
+            <View style={[styles.bubble, { backgroundColor: outBg, opacity: 0.6 }]}><Text style={[styles.body, { color: outText }, JP_FONT(q.body)]}>{q.body}</Text></View>
+            <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{t('messages.stWaiting')}</Text>
+          </View></View>)}
         </ScrollView>;
       })()}
 
@@ -264,15 +303,27 @@ export default function MessageThreadScreen() {
           {chips.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('messages.useSaved', { title: item.title })} onPress={() => insertSaved(item)} style={[styles.suggestChip, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{item.title}</Text></Pressable>)}
         </ScrollView>
       ) : null}
+      {!online ? <Text accessibilityLiveRegion="polite" style={[styles.banner, { color: palette.text, backgroundColor: night ? '#1C1C1E' : '#E4E4E6' }]}>{t('messages.offline')}</Text> : null}
       {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: night ? '#9A9A9F' : '#6C6C70', backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>{banner}</Text> : null}
       {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, fontSize: 13, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
       <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
+
+      <Modal visible={Boolean(menuFor)} transparent animationType="fade" onRequestClose={() => setMenuFor(null)}>
+        <Pressable accessibilityLabel={t('common.close', { defaultValue: 'Close' })} style={styles.menuBackdrop} onPress={() => setMenuFor(null)}>
+          <View style={[styles.menuCard, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF' }]}>
+            {detail.reactionsAvailable !== false ? <View style={styles.reactBar} accessibilityRole="toolbar">
+              {REACTIONS.map((e) => { const on = Boolean(menuFor && detail.reactions?.[menuFor.id]?.includes(e)); return <Pressable key={e} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={t('messages.reactWith', { emoji: e })} onPress={() => menuFor && void react(menuFor, e)} style={[styles.reactBtn, on && { backgroundColor: night ? '#3A3A3D' : '#E4E4E6' }]}><Text style={styles.reactEmoji}>{e}</Text></Pressable>; })}
+            </View> : null}
+            {(['reply', 'copy', 'translate'] as const).map((k) => <Pressable key={k} accessibilityRole="button" onPress={() => menuAction(k)} style={styles.menuRow}><Text style={[styles.plusTitle, { color: palette.text }]}>{k === 'reply' ? t('messages.reply', { defaultValue: 'Reply' }) : k === 'copy' ? t('common.copy', { defaultValue: 'Copy' }) : t('messages.translate')}</Text></Pressable>)}
+          </View>
+        </Pressable>
+      </Modal>
 
       <ChatTools visible={showPlus} onClose={() => setShowPlus(false)} night={night}>
         <Pressable accessibilityRole="button"  accessibilityLabel={t('messages.savedReplies')} onPress={() => void openSaved()} style={styles.plusRow}>
           <Text style={[styles.plusTitle, { color: palette.text }]}>{t('messages.savedReplies')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('messages.photo')} onPress={openPhoto} style={styles.plusRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('messages.photo')} onPress={() => void openPhoto()} style={styles.plusRow}>
           <Text style={[styles.plusTitle, { color: palette.text }]}>{t('messages.photo')}</Text>
         </Pressable>
       </ChatTools>
@@ -338,5 +389,15 @@ const styles = StyleSheet.create({
   draftHit: { minHeight: 44, justifyContent: 'center', paddingRight: 8 },
   suggest: { gap: 8, paddingHorizontal: 12, paddingBottom: 6 },
   suggestChip: { minHeight: 36, maxWidth: 220, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
+  inQuote: { borderLeftWidth: 2, paddingLeft: 8, marginBottom: 6, opacity: 0.85 },
+  inQuoteText: { fontSize: 13, lineHeight: 17 },
+  photo: { width: 220, height: 220, borderRadius: 16, marginBottom: 2 },
+  reacts: { alignSelf: 'flex-start', overflow: 'hidden', marginTop: -6, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10, fontSize: 13 },
+  menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 24 },
+  menuCard: { borderRadius: 16, paddingVertical: 8, overflow: 'hidden' },
+  reactBar: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 8, paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(127,127,127,0.25)' },
+  reactBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  reactEmoji: { fontSize: 24 },
+  menuRow: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 20 },
   banner: { fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 16, paddingVertical: 8 }
 });

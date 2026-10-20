@@ -55,7 +55,14 @@ export class MetaGraphMessagingAdapter implements MessagingProviderAdapter {
     const window = input.lastInboundAt === undefined ? 'open' : metaWindow(input.lastInboundAt);
     if (window === 'closed') return { status: 'failed', error: 'The client last wrote more than 7 days ago, so Meta will not deliver a reply. Wait for them to message again.', raw: { transport: 'meta', window } };
     const routing = window === 'open' ? { messaging_type: 'RESPONSE' } : { messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT' };
-    const r = await this.fetchImpl(`${this.c.graphBase}/${node}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.c.pageToken}` }, body: JSON.stringify({ recipient: { id }, ...routing, message: { text: input.body.slice(0, 1000) } }) });
+    const post = (message: Record<string, unknown>) => this.fetchImpl(`${this.c.graphBase}/${node}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.c.pageToken}` }, body: JSON.stringify({ recipient: { id }, ...routing, message }) });
+    if (input.imageUrl) {
+      const img = await post({ attachment: { type: 'image', payload: { url: input.imageUrl } } });
+      const ij = (await img.json().catch(() => ({}))) as any;
+      if (!img.ok || !ij.message_id) return { status: 'failed', error: `${this.provider} photo send failed (${img.status})`, raw: { transport: 'meta', httpStatus: img.status, error: ij?.error?.message } };
+      if (!input.body.trim()) return { status: 'sent', externalMessageId: `${this.provider}:${ij.message_id}`, raw: { transport: 'meta', httpStatus: img.status, window } };
+    }
+    const r = await post({ text: input.body.slice(0, 1000) });
     const json = (await r.json().catch(() => ({}))) as any;
     if (r.ok && json.message_id) return { status: 'sent', externalMessageId: `${this.provider}:${json.message_id}`, raw: { transport: 'meta', httpStatus: r.status, window } };
     return { status: 'failed', error: `${this.provider} send failed (${r.status})`, raw: { transport: 'meta', httpStatus: r.status, error: json?.error?.message } };

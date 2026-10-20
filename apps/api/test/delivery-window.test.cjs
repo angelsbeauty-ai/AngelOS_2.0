@@ -51,3 +51,21 @@ test('Meta uses HUMAN_AGENT tag after 24h and refuses after 7 days', async () =>
   const r2 = await b.send({ externalThreadId: 'facebook:1', body: 'hi', idempotencyKey: 'k', lastInboundAt: new Date(Date.now() - 9 * 24 * 3_600_000).toISOString() });
   assert.equal(r2.status, 'failed'); assert.equal(calls2.length, 0);
 });
+
+test('LINE sends the photo before the text', async () => {
+  const calls = []; const a = new LineMessagingAdapter(lineCfg, fakeFetch([{ ok: true, status: 200 }], calls));
+  await a.send({ externalThreadId: 'line:U1', body: 'see', idempotencyKey: 'k', imageUrl: 'https://x/y.jpg' });
+  assert.equal(calls[0].body.messages[0].type, 'image'); assert.equal(calls[0].body.messages[1].text, 'see');
+});
+
+test('Meta sends a photo attachment, then text', async () => {
+  const calls = []; const a = new MetaGraphMessagingAdapter('instagram', metaCfg, fakeFetch([{ ok: true, status: 200, json: { message_id: 'a' } }, { ok: true, status: 200, json: { message_id: 'b' } }], calls));
+  const r = await a.send({ externalThreadId: 'instagram:1', body: 'hi', idempotencyKey: 'k', imageUrl: 'https://x/y.jpg' });
+  assert.equal(r.status, 'sent'); assert.equal(calls[0].body.message.attachment.type, 'image'); assert.equal(calls[1].body.message.text, 'hi');
+});
+
+test('search snippet centres on the term', () => {
+  const { snippetAround } = require('../dist/messaging/messaging.service');
+  const s = snippetAround('a'.repeat(100) + 'healing time' + 'b'.repeat(100), 'healing', 10);
+  assert.match(s, /^….*healing.*…$/);
+});

@@ -6,4 +6,7 @@ export class UpdateThreadDto {
   @IsOptional() @IsBoolean() needsOwner?: boolean;
   @IsOptional() @IsBoolean() archived?: boolean;
   @IsOptional() @IsBoolean() unread?: boolean;
+  @IsOptional() @IsBoolean() pinned?: boolean;
+  @IsOptional() @IsBoolean() muted?: boolean;
+  @IsOptional() @IsBoolean() deleted?: boolean;
 }
