@@ -12,7 +12,7 @@
       [
         "@config-plugins/react-native-webrtc",
         {
-          "microphonePermission": "AngelOS uses the microphone only while you talk to your assistant. Nothing is recorded.",
+          "microphonePermission": "AngelOS uses the microphone only while you talk to your assistant or hold the button to dictate a message. Nothing is recorded.",
           "cameraPermission": "Allow AngelOS to use the camera only when you choose to take a photo for your studio."
         }
       ],
@@ -22,6 +22,21 @@
           "photosPermission": "Allow AngelOS to access your photos only when you choose a photo to post or to save to your studio media.",
           "cameraPermission": "Allow AngelOS to use the camera only when you choose to take a photo for your studio.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "AngelOS uses the microphone only while you talk to your assistant or hold the button to dictate a message. Nothing is recorded.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "AngelOS uses the microphone only while you talk to your assistant or hold the button to dictate a message. Nothing is recorded.",
+          "speechRecognitionPermission": "AngelOS turns your speech into text only while you hold the button to dictate. The text stays as a draft until you tap send."
         }
       ]
     ],
@@ -43,7 +58,9 @@
       "bundleIdentifier": "com.angelos.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSMicrophoneUsageDescription": "AngelOS uses the microphone only while you talk to your assistant. Nothing is recorded."
+        "NSMicrophoneUsageDescription": "AngelOS uses the microphone only while you talk to your assistant or hold the button to dictate a message. Nothing is recorded.",
+        "NSSpeechRecognitionUsageDescription": "AngelOS turns your speech into text only while you hold the button to dictate. The text stays as a draft until you tap send.",
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
@@ -58,6 +75,10 @@
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0D0D0E"
+    },
+    "locales": {
+      "en": "./locales/en.json",
+      "ja": "./locales/ja.json"
     }
   }
 }
