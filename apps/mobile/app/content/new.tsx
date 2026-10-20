@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { ScreenTitle, SupportText } from '../../src/components/ui';
@@ -10,7 +10,7 @@ import { useToast } from '../../src/components/Toast';
 import { tokens } from '../../src/design/theme';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { ApiError } from '../../src/lib/api';
-import { approveContentPost, scheduleContentVariant, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
+import { approveContentPost, publishContentVariant, scheduleContentVariant, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
@@ -30,7 +30,7 @@ const GOALS: { label: string; objective: ContentObjective; goal: string }[] = [
   { label: 'Engagement', objective: 'engagement', goal: 'engagement' },
 ];
 
-/** LINE is not a post platform. TikTok posts automatically once Postiz is wired. */
+/** LINE is not a post platform. */
 const PLATFORMS: { id: ContentPlatform; label: string }[] = [
   { id: 'instagram', label: 'Instagram' },
   { id: 'facebook', label: 'Facebook' },
@@ -84,6 +84,7 @@ export default function NewPostScreen() {
   const [captionNote, setCaptionNote] = useState<string | null>(null);
   const [captionBusy, setCaptionBusy] = useState(false);
   const [seed, setSeed] = useState(0);
+  const [review, setReview] = useState<'now' | 'schedule' | null>(null);
 
   useEffect(() => { void loadMedia(); }, []);
   useEffect(() => { if (params.date) setDay(parseDayParam(params.date)); }, [params.date]);
@@ -220,11 +221,19 @@ export default function NewPostScreen() {
         plannedFor: when.toISOString(),
         mediaAssetIds: selectedMedia.length ? selectedMedia : undefined,
       });
+      await approveContentPost(workspaceId, draft.id);
       if (mode === 'schedule') {
-        await approveContentPost(workspaceId, draft.id);
         for (const v of draft.variants ?? []) await scheduleContentVariant(workspaceId, v.id, when.toISOString());
+        toast.show({ title: t('sml.scheduled'), message: t('sml.onCalendar', { when: `${when.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}` }), tone: 'success' });
+      } else {
+        let posted = 0; let failed: string | null = null;
+        for (const v of draft.variants ?? []) {
+          try { const r = await publishContentVariant(workspaceId, v.id); if (r.published) posted += 1; }
+          catch (e) { failed = e instanceof ApiError && e.message ? e.message : t('cnew.postFailed'); }
+        }
+        if (failed) { void dialog.notify(posted ? t('cnew.postedSome', { count: posted }) : t('cnew.notPosted'), `${failed}\n${t('cnew.keptApproved')}`); }
+        else toast.show({ title: t('cnew.posted'), message: t('cnew.postedN', { count: posted }), tone: 'success' });
       }
-      toast.show({ title: mode === 'now' ? t('cnew.savedHere') : t('sml.scheduled'), message: mode === 'now' ? t('cnew.notSent') : t('sml.onCalendar', { when: `${when.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} ${time}` }), tone: 'success' });
       if (router.canGoBack()) router.back();
       else router.replace('/social');
     } catch (error) {
@@ -340,13 +349,43 @@ export default function NewPostScreen() {
       </View> : null}
 
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.postNow')} disabled={!canSave} onPress={() => void save('now')} style={[styles.primaryBtn, !canSave && styles.disabled]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.postNow')} disabled={!canSave} onPress={() => setReview('now')} style={[styles.primaryBtn, !canSave && styles.disabled]}>
           <Text style={styles.primaryText}>{busy ? t('cnew.saving') : t('cnew.postNow')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedule')} disabled={!canSave} onPress={() => void save('schedule')} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedule')} disabled={!canSave} onPress={() => setReview('schedule')} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
           <Text style={styles.secondaryText}>{t('cnew.schedule')}</Text>
         </Pressable>
       </View>
+      <Modal visible={review !== null} transparent animationType="slide" onRequestClose={() => setReview(null)}>
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <View style={styles.grabber} />
+            <View style={styles.sheetHead}>
+              <Text style={styles.sheetTitle}>{review === 'now' ? t('cnew.reviewNow') : t('cnew.reviewSchedule')}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('common.close', 'Close')} onPress={() => setReview(null)} style={styles.sheetClose}><Text style={styles.sheetCloseText}>✕</Text></Pressable>
+            </View>
+            <View style={styles.sheetPreview}>
+              {selectedMedia[0] && previews[selectedMedia[0]] ? <View><Image source={{ uri: previews[selectedMedia[0]] }} style={styles.sheetThumb} />{selectedMedia.length > 1 ? <Text style={styles.sheetCount}>{t('cnew.ofN', { count: selectedMedia.length })}</Text> : null}</View> : null}
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text numberOfLines={3} style={styles.sheetCaption}>{caption.trim() || postedCaption.trim()}</Text>
+                {language === 'both' && captionEn.trim() ? <Text numberOfLines={2} style={styles.sheetSub}>EN: {captionEn.trim()}</Text> : null}
+                {hashtags.length ? <Text numberOfLines={1} style={styles.sheetSub}>{hashtags.slice(0, 2).join(' ')}{hashtags.length > 2 ? ` +${hashtags.length - 2}` : ''}</Text> : null}
+              </View>
+            </View>
+            <View style={styles.sheetList}>
+              {platforms.map((id) => <View key={id} style={styles.sheetRow}>
+                <BrandLogo platform={id} size={22} />
+                <Text style={styles.sheetPlat}>{PLATFORMS.find((x) => x.id === id)?.label ?? id}</Text>
+                <Text style={styles.sheetWhen}>{review === 'now' ? t('cnew.now') : `${plannedAt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`}</Text>
+              </View>)}
+            </View>
+            <SupportText>{review === 'now' ? t('cnew.reviewNowNote') : t('cnew.reviewScheduleNote')}</SupportText>
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => { const m = review; setReview(null); if (m) void save(m); }} style={[styles.primaryBtn, { flex: 0 }]}>
+              <Text style={styles.primaryText}>{review === 'now' ? t('cnew.confirmNow', { count: platforms.length }) : t('cnew.confirmSchedule', { count: platforms.length })}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -365,11 +404,11 @@ const styles = StyleSheet.create({
   plat: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)' },
   platOn: { borderColor: '#151515', backgroundColor: 'rgba(0,0,0,0.04)' },
   platText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
-  captionInput: { minHeight: 100, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', padding: 12, fontFamily: tokens.font.ui, fontSize: 16, color: '#151515', backgroundColor: '#FFFFFF' },
+  captionInput: { minHeight: 100, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', padding: 12, fontFamily: tokens.font.ui, fontSize: 16, color: '#151515', backgroundColor: '#FFFFFF' },
   link: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
-  input: { height: 44, borderRadius: radius.md, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: 12, fontFamily: tokens.font.ui, fontSize: 15, color: '#151515', backgroundColor: '#FFFFFF' },
+  input: { height: 44, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', paddingHorizontal: 12, fontFamily: tokens.font.ui, fontSize: 15, color: '#151515', backgroundColor: '#FFFFFF' },
   dayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   dayNav: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   dayNavText: { fontSize: 22, color: '#151515' },
@@ -386,5 +425,21 @@ const styles = StyleSheet.create({
   primaryText: { color: '#FFFFFF', fontFamily: tokens.font.uiSemibold, fontSize: 15 },
   secondaryBtn: { flex: 1, height: 44, borderRadius: 22, borderWidth: 1, borderColor: '#151515', justifyContent: 'center', alignItems: 'center' },
   secondaryText: { color: '#151515', fontFamily: tokens.font.uiSemibold, fontSize: 15 },
-  disabled: { opacity: 0.4 }
+  disabled: { opacity: 0.4 },
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, paddingBottom: 40, gap: 14 },
+  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.2)' },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
+  sheetClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  sheetCloseText: { fontSize: 20, color: '#151515' },
+  sheetPreview: { flexDirection: 'row', gap: 12 },
+  sheetThumb: { width: 104, height: 128, borderRadius: 12, backgroundColor: '#F2F2F2' },
+  sheetCount: { position: 'absolute', left: 8, bottom: 8, color: '#FFFFFF', fontSize: 12 },
+  sheetCaption: { fontFamily: tokens.font.ui, fontSize: 16, lineHeight: 22, color: '#151515' },
+  sheetSub: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
+  sheetList: { borderRadius: 12, backgroundColor: 'rgba(0,0,0,0.04)' },
+  sheetRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14 },
+  sheetPlat: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  sheetWhen: { fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' }
 });
