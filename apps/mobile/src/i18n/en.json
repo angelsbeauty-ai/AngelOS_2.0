@@ -398,7 +398,11 @@
     "holdToDictate": "Hold to dictate",
     "dictating": "Listening… release to stop. Nothing is sent until you tap send.",
     "dictatePerm": "Allow the microphone and speech recognition in Settings to dictate.",
-    "dictateFail": "Dictation didn't work. Try again."
+    "dictateFail": "Dictation didn't work. Try again.",
+    "comments": "Comments",
+    "commentsEmpty": "No comments to show yet",
+    "commentsMsg": "Instagram and Facebook comments will appear here once comment sync is connected.",
+    "broadcast": "Broadcast"
   },
   "booking": {
     "newTitle": "New booking",

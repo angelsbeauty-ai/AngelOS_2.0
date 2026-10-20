@@ -1,7 +1,6 @@
 import { useMemo, useRef, type ReactNode } from 'react';
 import { Dimensions, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { motion, tokens } from '../design/theme';
 
@@ -44,17 +43,18 @@ export function SwipeRow({ children, actions, onFullSwipe, night, height = 80 }:
     onPanResponderTerminate: () => { x.value = withSpring(0, motion.snap); }
   }), [openW, fullAt, onFullSwipe]);
 
-  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  // Row slides fully left (304pt open); its content fades so nothing spills beside the tray.
+  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }], opacity: interpolate(x.value, [-160, -40, 0], [0, 1, 1], 'clamp') }));
   const trayStyle = useAnimatedStyle(() => ({ width: Math.max(0, -x.value) }));
-  const grad = night ? ['#3A3A3D', '#202023'] as const : ['#CCCCCE', '#EFEFF1'] as const;
+  // Stepped neutral greys, one solid tile per action (F02): Night #3A3A3D→#202023, Day #CCCCCE→#EFEFF1.
+  const tiles = night ? ['#3A3A3D', '#323235', '#29292C', '#202023'] : ['#CCCCCE', '#D7D7D9', '#E3E3E5', '#EFEFF1'];
   const fg = night ? '#F4F4F5' : '#151515';
 
   return <View style={{ height, overflow: 'hidden' }}
     accessibilityActions={actions.map((a) => ({ name: a.key, label: a.label }))}
     onAccessibilityAction={(e) => actions.find((a) => a.key === e.nativeEvent.actionName)?.onPress()}>
     <Animated.View style={[styles.tray, trayStyle]}>
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%"><Defs><LinearGradient id="swg" x1="0" y1="0" x2="1" y2="0"><Stop offset="0" stopColor={grad[0]} /><Stop offset="1" stopColor={grad[1]} /></LinearGradient></Defs><Rect width="100%" height="100%" fill="url(#swg)" /></Svg>
-      {actions.map((a) => <Pressable key={a.key} accessibilityRole="button" accessibilityLabel={a.label} onPress={() => fire(a)} style={styles.action}>
+      {actions.map((a, i) => <Pressable key={a.key} accessibilityRole="button" accessibilityLabel={a.label} onPress={() => fire(a)} style={[styles.action, { backgroundColor: tiles[i % 4] }]}>
         {a.icon}
         <Text numberOfLines={1} style={[styles.label, { color: fg }]}>{a.label}</Text>
       </Pressable>)}
@@ -64,7 +64,7 @@ export function SwipeRow({ children, actions, onFullSwipe, night, height = 80 }:
 }
 
 const styles = StyleSheet.create({
-  tray: { position: 'absolute', right: 0, top: 0, bottom: 0, flexDirection: 'row', justifyContent: 'flex-end', overflow: 'hidden' },
-  action: { width: ACTION_W, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  tray: { position: 'absolute', right: 0, top: 0, bottom: 0, height: '100%', flexDirection: 'row', justifyContent: 'flex-start', overflow: 'hidden' },
+  action: { width: ACTION_W, height: '100%', alignItems: 'center', justifyContent: 'center', gap: 6 },
   label: { fontFamily: tokens.font.uiMedium, fontSize: 13 }
 });

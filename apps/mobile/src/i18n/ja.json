@@ -398,7 +398,11 @@
     "holdToDictate": "長押しで音声入力",
     "dictating": "聞いています…指を離すと止まります。送信ボタンを押すまで送られません。",
     "dictatePerm": "音声入力には、設定でマイクと音声認識を許可してください。",
-    "dictateFail": "音声入力ができませんでした。もう一度お試しください。"
+    "dictateFail": "音声入力ができませんでした。もう一度お試しください。",
+    "comments": "コメント",
+    "commentsEmpty": "表示できるコメントはまだありません",
+    "commentsMsg": "コメント同期を接続すると、InstagramとFacebookのコメントがここに表示されます。",
+    "broadcast": "一斉配信"
   },
   "booking": {
     "newTitle": "新しい予約",

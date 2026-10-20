@@ -7,7 +7,7 @@ import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizo
 import { Button } from '../../src/components/ui';
 import { getSocialAccounts, PLATFORM_NAME, type SocialAccount, type SocialPlatform } from '../../src/lib/social';
 import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
-import { Bell } from 'phosphor-react-native/src/icons/Bell';
+import { Megaphone } from 'phosphor-react-native/src/icons/Megaphone';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
 import { ContactAvatar, BrandLogo } from '../../src/components/BrandBadge';
@@ -28,6 +28,8 @@ import { Star } from 'phosphor-react-native/src/icons/Star';
 
 type Seg = 'messages' | 'comments' | 'mentions';
 type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
+type ChipKey = 'facebook' | 'instagram' | 'line' | 'unread' | 'tiktok';
+const CHIPS: Array<[ChipKey, string]> = [['facebook', 'Messenger'], ['instagram', 'Instagram'], ['line', 'LINE'], ['unread', ''], ['tiktok', 'TikTok']];
 type Filter = 'unread' | 'unanswered' | 'booked' | 'follow_up' | 'done';
 const PLATS: Array<[Plat, string]> = [['all', ''], ['instagram', 'Instagram'], ['facebook', 'Facebook'], ['line', 'LINE'], ['tiktok', 'TikTok']];
 const PROBLEM = /needs permission|needs reconnect|could not read|meta said|permission|error|expired/i;
@@ -51,7 +53,7 @@ export default function MessagesScreen() {
   const safe = useNightSafe();
   const [threads, setThreads] = useState<MessageThreadSummary[]>([]);
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
-  const seg = 'messages' as Seg;
+  const [seg, setSeg] = useState<Seg>('messages');
   const [plat, setPlat] = useState<Plat>('all');
   const [filter, setFilter] = useState<Filter | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,18 +132,24 @@ export default function MessagesScreen() {
   return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)} header={<View style={styles.pinned}>
     <View style={screenHeader.row}>
       <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('messages.title')}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}>
-        <Bell size={24} color={palette.icon} />{threads.some((x) => x.unread) ? <View style={styles.bellDot} /> : null}</Pressable>
+      
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
         <SlidersHorizontal size={24} color={palette.icon} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('messages.broadcast', 'Broadcast')} hitSlop={6} onPress={() => router.push('/content/campaigns' as any)} style={styles.icon}><Megaphone size={24} color={palette.icon} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color={palette.icon} weight="bold" /></Pressable>
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist" style={styles.tabsWrap} contentContainerStyle={styles.chips}>
-      {PLATS.map(([k, name]) => { const on = plat === k; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} accessibilityLabel={k === 'all' ? t('messages.all') : name} onPress={() => setPlat(k)} style={[styles.chip, styles.tab, safe.chip, on && styles.chipOn, on && mode === 'night' && { backgroundColor: '#F4F4F5', borderColor: '#F4F4F5' }]}>
-        {k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={18} /> : null}
-        <Text numberOfLines={1} style={[styles.chipText, safe.chipText, on && { color: mode === 'night' ? '#151515' : '#FFFFFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>; })}
-    </ScrollView>
+    <View accessibilityRole="tablist" style={styles.segRow}>
+      {(['messages', 'comments'] as const).map((k) => { const on = seg === k; const n = k === 'messages' ? threads.filter((x) => x.unread).length : null; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setSeg(k)} style={[styles.seg, on && { borderBottomColor: palette.text }]}>
+        <Text style={[styles.segText, { color: on ? palette.text : palette.muted }]}>{k === 'messages' ? t('messages.title') : t('messages.comments', 'Comments')}</Text>
+        {n ? <View style={[styles.segBadge, { backgroundColor: mode === 'night' ? '#2C2C2E' : '#E4E4E6' }]}><Text style={[styles.segBadgeText, { color: palette.text }]}>{n}</Text></View> : null}
+      </Pressable>; })}
+    </View>
+    {seg === 'messages' ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsWrap} contentContainerStyle={styles.chips}>
+      {CHIPS.map(([k, name]) => { const on = k === 'unread' ? filter === 'unread' : plat === k; return <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={k === 'unread' ? t('messages.unreadA', 'Unread') : name} onPress={() => k === 'unread' ? setFilter(on ? null : 'unread') : setPlat(on ? 'all' : k)} style={[styles.chip, styles.tab, { backgroundColor: mode === 'night' ? '#1C1C1E' : '#E9E9EB', borderColor: 'transparent' }, on && { backgroundColor: palette.text }]}>
+        {k !== 'unread' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={20} /> : null}
+        <Text numberOfLines={1} style={[styles.chipText, { color: on ? (mode === 'night' ? '#151515' : '#FFFFFF') : palette.text }]}>{k === 'unread' ? t('messages.unreadA', 'Unread') : name}</Text></Pressable>; })}
+    </ScrollView> : null}
     </View>}>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor={palette.muted} style={safe.search} /> : null}
     {filter ? <Pressable onPress={() => setFilter(null)}><Text style={[styles.link, { color: palette.text }]}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
@@ -163,12 +171,12 @@ export default function MessagesScreen() {
         : <Button label={reBusy ? '…' : t('messages.reconnect')} disabled={reBusy} onPress={() => void reconnect(platError.provider as SocialPlatform)} />}
     </View></Card> : null}
 
+    {seg === 'comments' && state === 'ready' ? <EmptyState title={t('messages.commentsEmpty', 'No comments to show yet')} message={t('messages.commentsMsg', 'Instagram and Facebook comments will appear here once comment sync is connected.')} /> : null}
     {state === 'loading' ? <Skeleton rows={4} height={72} /> : null}
     {state === 'nostudio' ? <NoStudio /> : null}
     {state === 'error' ? <ErrorState title={errorText.title} message={errorText.message} onRetry={() => { setState('loading'); void load(); }} /> : null}
 
     {seg === 'messages' && noAccounts ? <EmptyState title={t('inbox.connectTitle')} message={t('inbox.connectMsg')} action={{ label: t('inbox.connectBtn'), onPress: () => router.push('/content/accounts' as any) }} /> : null}
-    {state === 'ready' && lastSync ? <Text style={[styles.updated, { color: palette.muted }]}>{t('messages.updated', { time: rel(lastSync.toISOString()) })} · {t('messages.updatedHint')}</Text> : null}
     {seg === 'messages' && plat === 'tiktok' && state === 'ready' ? <EmptyState title={t('messages.tiktokEmpty')} message={t('messages.tiktokMsg')} /> : null}
     {seg === 'messages' && plat !== 'tiktok' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /> : null}
 
@@ -234,7 +242,7 @@ const styles = StyleSheet.create({
   unread: { width: 8, height: 8, borderRadius: 4 },
   previewRead: { fontFamily: tokens.font.ui },
   chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
-  chip: { flexShrink: 0, height: 38, paddingHorizontal: 14, borderRadius: 19, justifyContent: 'center', backgroundColor: 'transparent', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
+  chip: { flexShrink: 0, height: 36, marginVertical: 4, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', backgroundColor: 'transparent', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
@@ -243,8 +251,13 @@ const styles = StyleSheet.create({
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, paddingVertical: 6 },
   list: { marginHorizontal: -16 },
   pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  segRow: { flexDirection: 'row', gap: 24, height: 44 },
+  seg: { flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 2, borderBottomColor: 'transparent', paddingHorizontal: 4 },
+  segText: { fontFamily: tokens.font.uiMedium, fontSize: 17 },
+  segBadge: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  segBadgeText: { fontFamily: tokens.font.uiSemibold, fontSize: 13 },
   row: { height: 80, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
-  rowBody: { flex: 1, gap: 2 },
+  rowBody: { flex: 1, minWidth: 0, gap: 2 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   name: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
   preview: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 15 },
