@@ -7,7 +7,9 @@ import { useAppearance } from '../design/appearance';
 const PLATFORM_COLORS: Record<string, string> = { line: '#151515', instagram: '#151515', facebook: '#151515', other: '#6B645B', manual: '#6B645B', tiktok: '#151515' };
 
 export function PlatformBadge({ platform, label }: { platform: string; label: string }) {
-  return <View style={[styles.badge, { borderColor: PLATFORM_COLORS[platform] ?? ui.colors.border }]}><Text style={[styles.badgeText, { color: PLATFORM_COLORS[platform] ?? ui.colors.secondaryText }]}>{label}</Text></View>;
+  const { mode, palette } = useAppearance();
+  const night = mode === 'night';
+  return <View style={[styles.badge, { borderColor: night ? palette.border : (PLATFORM_COLORS[platform] ?? ui.colors.border) }]}><Text style={[styles.badgeText, { color: night ? palette.muted : (PLATFORM_COLORS[platform] ?? ui.colors.secondaryText) }]}>{label}</Text></View>;
 }
 
 export function Avatar({ name }: { name: string }) {
@@ -38,14 +40,18 @@ export function ActionButton({ label, onPress, kind = 'secondary', disabled, acc
 
 /** Japanese text Angel must approve, with the English meaning right next to it. */
 export function BilingualBlock({ ja, en, labelJa = '日本語 (sent to client)', labelEn = 'English meaning (for you)' }: { ja: string; en: string | null; labelJa?: string; labelEn?: string }) {
+  const { mode, palette } = useAppearance();
+  const night = mode === 'night';
   return <View style={styles.bilingual}>
-    <View style={styles.bilingualCol}><Text style={styles.bilingualLabel}>{labelJa}</Text><Text style={styles.bilingualBody}>{ja}</Text></View>
-    <View style={[styles.bilingualCol, styles.bilingualEn]}><Text style={styles.bilingualLabel}>{labelEn}</Text><Text style={styles.bilingualBody}>{en ?? 'Translation not ready yet. Tap "Translate" before approving.'}</Text></View>
+    <View style={[styles.bilingualCol, night && { backgroundColor: palette.glass, borderColor: palette.border }]}><Text style={[styles.bilingualLabel, night && { color: palette.muted }]}>{labelJa}</Text><Text style={[styles.bilingualBody, night && { color: palette.text }]}>{ja}</Text></View>
+    <View style={[styles.bilingualCol, styles.bilingualEn, night && { backgroundColor: palette.glass, borderColor: palette.border }]}><Text style={[styles.bilingualLabel, night && { color: palette.muted }]}>{labelEn}</Text><Text style={[styles.bilingualBody, night && { color: palette.text }]}>{en ?? 'Translation not ready yet. Tap "Translate" before approving.'}</Text></View>
   </View>;
 }
 
 export function Banner({ children, tone = 'info' }: PropsWithChildren<{ tone?: 'info' | 'warning' }>) {
-  return <View style={[styles.banner, tone === 'warning' && styles.bannerWarning]}>{children}</View>;
+  const { mode, palette } = useAppearance();
+  const night = mode === 'night';
+  return <View style={[styles.banner, night && { backgroundColor: palette.glass, borderColor: palette.border }, tone === 'warning' && styles.bannerWarning]}>{children}</View>;
 }
 
 const styles = StyleSheet.create({
