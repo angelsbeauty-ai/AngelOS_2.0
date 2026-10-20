@@ -1,4 +1,6 @@
 import { router } from 'expo-router';
+import { Pressable, Text } from 'react-native';
+import { tokens } from '../../src/design/theme';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../src/components/Screen';
@@ -42,6 +44,13 @@ export default function AccountSettings() {
     await dialog.notify(t('account.passwordDone'));
   }
 
+  async function signOut() {
+    if (!(await dialog.confirm({ title: t('settings.signOutTitle'), message: t('settings.signOutMsg'), confirmText: t('settings.signOut') }))) return;
+    clearMe();
+    await supabase.auth.signOut();
+    router.replace('/login');
+  }
+
   const [delOpen, setDelOpen] = useState(false);
   const [wsId, setWsId] = useState<string | null>(null);
   useEffect(() => { void getActiveWorkspace().then((w) => setWsId(w?.id ?? null)).catch(() => undefined); }, []);
@@ -51,7 +60,11 @@ export default function AccountSettings() {
     <Card><Field label={t('account.name')} value={name} onChangeText={setName} autoComplete="name" /><ActionButton kind="primary" label={t('common.save')} disabled={busy || !name.trim()} onPress={() => void saveName()} /></Card>
     <Card><SectionTitle>{t('account.language')}</SectionTitle><Tabs<Lang> value={i18n.language === 'ja' ? 'ja' : 'en'} options={[{ id: 'en', label: 'English' }, { id: 'ja', label: '日本語' }]} onChange={(l) => void setLang(l)} /></Card>
     <Card><Field label={t('account.password')} hint={t('account.passwordHint')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" /><ActionButton kind="primary" label={t('account.changePassword')} disabled={busy || !password} onPress={() => void changePassword()} /></Card>
-    {founder ? null : <Card><SectionTitle>{t('account.danger')}</SectionTitle><BodyText>{t('pf.delBody')}</BodyText><ActionButton label={t('pf.delete')} onPress={() => setDelOpen(true)} /></Card>}
+    <Card>
+      <ActionButton kind="secondary" label={t('settings.signOut')} onPress={() => void signOut()} />
+      {founder ? null : <Pressable accessibilityRole="button" onPress={() => setDelOpen(true)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#B3261E' }}>{t('pf.deleteRow')}</Text></Pressable>}
+    </Card>
+    {founder ? null : <SupportText>{t('pf.delFoot')}</SupportText>}
     <DeleteAccountSheet visible={delOpen} onClose={() => setDelOpen(false)} workspaceId={wsId} email={email || null} />
   </Screen>;
 }
