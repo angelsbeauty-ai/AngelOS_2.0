@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { createServiceSupabaseClient } from '../config/supabase';
 import { isMarketingEligible } from '../content/content.service';
+import { PostizPublishingAdapter, postizReady } from '../content/postiz-publishing.adapter';
 import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
 import { SocialAccountsService } from './social-accounts.service';
 
@@ -12,6 +13,7 @@ const NAMES: Record<string, string> = { instagram: 'Instagram', facebook: 'Faceb
 export function notConnectedReason(platform: string): string {
   if (platform === 'line') return 'LINE isn\'t connected. Connect LINE in Social › Accounts, then tap Try again.';
   if (platform === 'instagram' || platform === 'facebook') return `${NAMES[platform]} isn't connected yet, so AngelOS didn't post. Post it by hand and tap Mark as posted, or connect ${NAMES[platform]} and tap Try again.`;
+  if (platform === 'tiktok') return 'TikTok posts automatically once Postiz is connected. Set the Postiz key, then tap Try again.';
   return `AngelOS can't post to ${NAMES[platform] ?? platform} automatically. Post it by hand and tap Mark as posted.`;
 }
 
@@ -25,10 +27,10 @@ export function rollupStatus(statuses: string[]): string {
 }
 
 /**
- * Auto-publish: every 5 minutes, posts whose time has come go out through the existing adapters
- * (Meta when its flags are on, LINE broadcast when the studio connected LINE). Anything that can't go out
- * is marked Failed with a reason. Never marks a post Posted without the platform's answer.
- * Off in tests, or with SOCIAL_AUTOPUBLISH_CRON=off.
+ * Auto-publish: every 5 minutes, posts whose time has come go out.
+ * Instagram, Facebook and TikTok go through Postiz when POSTIZ_API_KEY is set.
+ * The direct Meta path is skipped for those platforms so nothing posts twice.
+ * LINE still uses its own adapter. Off in tests, or with SOCIAL_AUTOPUBLISH_CRON=off.
  */
 @Injectable()
 export class SocialPublisherService {
@@ -48,7 +50,6 @@ export class SocialPublisherService {
       let processed = 0;
       for (const variant of data ?? []) {
         if (!['scheduled', 'approved'].includes((variant as any).post?.status)) continue;
-        // Claim it: only one worker moves scheduled -> publishing.
         const { data: claimed } = await service.from('content_variants').update({ status: 'publishing', updated_at: new Date().toISOString() }).eq('id', variant.id).eq('status', 'scheduled').select('id');
         if (!claimed?.length) continue;
         try { await this.publishOne(variant); } catch (e) { await this.finish(variant, { status: 'failed', reason: e instanceof Error ? e.message : 'Publishing stopped unexpectedly.' }); }
@@ -75,7 +76,19 @@ export class SocialPublisherService {
       const r = await adapter.broadcast(text, key);
       return this.finish(variant, r.status === 'sent' ? { status: 'published', providerPostId: r.externalMessageId, raw: r.raw } : { status: 'failed', reason: r.error ?? 'LINE broadcast failed. Nothing was sent.', raw: r.raw });
     }
-    if (platform === 'instagram' || platform === 'facebook') {
+    if (platform === 'instagram' || platform === 'facebook' || platform === 'tiktok') {
+      // Postiz replaces direct Meta. When the key is set, Meta is not called for these platforms.
+      if (postizReady()) {
+        const { data: media } = await service.from('content_post_media').select('position,asset:media_assets(*)').eq('content_post_id', variant.content_post_id).order('position');
+        const assets = (media ?? []).map((m: any) => m.asset).filter(Boolean);
+        if (assets.some((a: any) => !isMarketingEligible(a))) return this.finish(variant, { status: 'failed', reason: 'Stopped: a photo no longer has marketing permission.' });
+        const photo = assets.find((a: any) => a.media_type === 'image' && a.storage_path);
+        const imageUrl = photo ? (await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, 3600)).data?.signedUrl : undefined;
+        const r = await new PostizPublishingAdapter().publish({ platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey: key, imageUrl });
+        return this.finish(variant, r.status === 'published' ? { status: 'published', providerPostId: r.providerPostId, liveUrl: r.liveUrl, raw: r.raw } : { status: 'failed', reason: r.error ?? 'Postiz failed.', raw: r.raw });
+      }
+      // Fallback only when Postiz is not configured. TikTok has no Meta path.
+      if (platform === 'tiktok') return this.finish(variant, { status: 'failed', reason: notConnectedReason('tiktok') });
       const cfg = await this.accounts.metaConfigFor(ws);
       if (!metaPublishingReady(platform, cfg)) return this.finish(variant, { status: 'failed', reason: notConnectedReason(platform) });
       const { data: media } = await service.from('content_post_media').select('position,asset:media_assets(*)').eq('content_post_id', variant.content_post_id).order('position');
