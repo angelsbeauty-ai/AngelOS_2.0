@@ -24,7 +24,7 @@ export function FounderAiUsage() {
         <Text style={styles.nSm}>{usd(d.credit.availableUsd)}</Text>
         <Text style={styles.l}>{t('founderBill.left', 'Credit left')}</Text>
         <Text style={styles.note}>{t('founderBill.of', { used: usd(d.credit.usedUsd), granted: usd(d.credit.grantedUsd), defaultValue: '{{used}} used of {{granted}} added' })}</Text>
-      </> : <Text style={styles.note}>{d.creditReason ?? t('founderBill.noCredit', 'OpenAI did not share how much credit is left.')}</Text>}
+      </> : <Text style={styles.note}>{d.creditReason ?? t('founderBill.noCredit', 'The AI service did not share how much credit is left.')}</Text>}
       {d.youUsd != null && d.othersUsd != null ? <>
         <View style={styles.totals}>
           <View style={styles.t}><Text style={styles.nSm}>{usd(d.youUsd)}</Text><Text style={styles.l}>{t('founderBill.you')}</Text></View>

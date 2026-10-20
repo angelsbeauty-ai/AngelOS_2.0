@@ -39,7 +39,7 @@ function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
   const credit = bill?.credit;
   const reason = err ? t('founderBill.loadFail') : bill?.available === false ? (bill?.reason ?? t('founderBill.loadFail')) : spent == null ? (bill?.bill?.reason ?? null) : null;
   return <View style={styles.box}>
-    <Text style={styles.title}>{t('founderBill.profileTitle', 'OpenAI')}</Text>
+    <Text style={styles.title}>{t('founderBill.profileTitle', 'AI usage')}</Text>
     {!bill && !err ? <Text style={styles.muted}>…</Text> : <>
       {spent != null ? <>
         <Text style={styles.money}>{usd(spent)}</Text>
@@ -49,8 +49,8 @@ function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
         <Text style={styles.moneySm}>{usd(credit.availableUsd)}</Text>
         <Text style={styles.label}>{t('founderBill.left', 'Credit left')}</Text>
         <Text style={styles.muted}>{t('founderBill.of', { used: usd(credit.usedUsd), granted: usd(credit.grantedUsd), defaultValue: '{{used}} used of {{granted}} added' })}</Text>
-      </> : bill ? <Text style={styles.muted}>{bill.creditReason ?? t('founderBill.noCredit', 'OpenAI did not share how much credit is left.')}</Text> : null}
-      <Text style={styles.muted}>{t('founderBill.usdNote', 'OpenAI charges in US dollars. AngelOS does not convert this into yen.')}</Text>
+      </> : bill ? <Text style={styles.muted}>{bill.creditReason ?? t('founderBill.noCredit', 'The AI service did not share how much credit is left.')}</Text> : null}
+      <Text style={styles.muted}>{t('founderBill.usdNote', 'The AI service charges in US dollars. AngelOS does not convert this into yen.')}</Text>
     </>}
   </View>;
 }

@@ -1803,19 +1803,19 @@
     "practiceStorySub": "Start a draft toward this week's three."
   },
   "founderBill": {
-    "title": "OpenAI this month",
-    "profileTitle": "OpenAI",
+    "title": "AI usage this month",
+    "profileTitle": "AI usage",
     "spent": "Spent this month",
     "left": "Credit left",
     "of": "{{used}} used of {{granted}} added",
-    "noCredit": "OpenAI did not share how much credit is left.",
-    "usdNote": "OpenAI charges in US dollars. AngelOS does not convert this into yen.",
-    "total": "Your OpenAI bill",
+    "noCredit": "The AI service did not share how much credit is left.",
+    "usdNote": "The AI service charges in US dollars. AngelOS does not convert this into yen.",
+    "total": "Your AI bill",
     "you": "You",
     "others": "People you invited",
     "shareNote": "Each amount is that person's share of this bill, based on how many times AngelOS used the assistant.",
     "noSplit": "AngelOS has no assistant uses this month, so this bill is not split.",
-    "loadFail": "Your OpenAI bill could not load right now.",
+    "loadFail": "Your AI bill could not load right now.",
     "uses": "{{n}} uses"
   },
   "acs": {

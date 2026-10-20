@@ -1803,19 +1803,19 @@
     "practiceStorySub": "今週の3本に向けて、下書きを始めます。"
   },
   "founderBill": {
-    "title": "今月のOpenAI",
-    "profileTitle": "OpenAI",
+    "title": "今月のAI利用",
+    "profileTitle": "AI利用",
     "spent": "今月の使用額",
     "left": "残りのクレジット",
     "of": "追加した {{granted}} のうち {{used}} を使用",
-    "noCredit": "OpenAIは残りのクレジットを共有しませんでした。",
-    "usdNote": "OpenAIの請求は米ドルです。AngelOSはこれを円に換算しません。",
-    "total": "あなたのOpenAIの請求",
+    "noCredit": "AIサービスは残りのクレジットを共有しませんでした。",
+    "usdNote": "AIサービスの請求は米ドルです。AngelOSはこれを円に換算しません。",
+    "total": "あなたのAIの請求",
     "you": "あなた",
     "others": "招待した人",
     "shareNote": "金額は、AngelOSがアシスタントを使った回数に応じた、この請求の分担です。",
     "noSplit": "今月、AngelOSにアシスタントの利用記録がないため、この請求は分けていません。",
-    "loadFail": "OpenAIの請求を今は読み込めませんでした。",
+    "loadFail": "AIの請求を今は読み込めませんでした。",
     "uses": "{{n}}回"
   },
   "acs": {

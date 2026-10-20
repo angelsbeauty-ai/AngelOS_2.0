@@ -28,10 +28,10 @@ export function shareBill(totalUsd: number, counts: number[]): number[] {
 
 export async function fetchOpenAiMonthUsd(startIso: string, end = new Date()): Promise<{ usd: number } | { error: string }> {
   const key = process.env.OPENAI_ADMIN_KEY?.trim() || process.env.OPENAI_API_KEY?.trim();
-  if (!key) return { error: 'OpenAI is not connected, so the bill cannot be read.' };
+  if (!key) return { error: 'The AI service is not connected, so the bill cannot be read.' };
   const start = Math.floor(new Date(startIso).getTime() / 1000);
   const endSec = Math.floor(end.getTime() / 1000);
-  if (!Number.isFinite(start) || endSec <= start) return { error: 'Your OpenAI bill could not be read right now.' };
+  if (!Number.isFinite(start) || endSec <= start) return { error: 'Your AI bill could not be read right now.' };
   let page: string | null = null;
   let usd = 0;
   for (let i = 0; i < 6; i += 1) {
@@ -43,12 +43,12 @@ export async function fetchOpenAiMonthUsd(startIso: string, end = new Date()): P
     if (page) url.searchParams.set('page', page);
     let res: Response;
     try { res = await fetch(url, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) }); }
-    catch { return { error: 'Your OpenAI bill could not be read right now.' }; }
-    if (res.status === 401 || res.status === 403) return { error: 'OpenAI did not share the bill. The real amount needs an admin key. AngelOS will not guess it.' };
-    if (!res.ok) return { error: 'Your OpenAI bill could not be read right now.' };
+    catch { return { error: 'Your AI bill could not be read right now.' }; }
+    if (res.status === 401 || res.status === 403) return { error: 'The AI service did not share the bill. The real amount needs an admin key. AngelOS will not guess it.' };
+    if (!res.ok) return { error: 'Your AI bill could not be read right now.' };
     const body = await res.json().catch(() => null);
     const part = sumCostUsd(body);
-    if (part == null) return { error: 'Your OpenAI bill could not be read right now.' };
+    if (part == null) return { error: 'Your AI bill could not be read right now.' };
     usd += part;
     page = body?.has_more && body?.next_page ? String(body.next_page) : null;
     if (!page) break;
@@ -78,7 +78,7 @@ const CREDIT_URLS = [
 /** Remaining prepaid credit. OpenAI does not document this, so a refusal is reported, never guessed. */
 export async function fetchOpenAiCredit(): Promise<{ credit: { grantedUsd: number; usedUsd: number; availableUsd: number } } | { error: string }> {
   const key = process.env.OPENAI_ADMIN_KEY?.trim() || process.env.OPENAI_API_KEY?.trim();
-  if (!key) return { error: 'OpenAI is not connected, so the credit left cannot be read.' };
+  if (!key) return { error: 'The AI service is not connected, so the credit left cannot be read.' };
   let denied = false;
   for (const url of CREDIT_URLS) {
     let res: Response;
@@ -89,6 +89,6 @@ export async function fetchOpenAiCredit(): Promise<{ credit: { grantedUsd: numbe
     const credit = readCredit(await res.json().catch(() => null));
     if (credit) return { credit };
   }
-  if (denied) return { error: 'OpenAI did not share the credit left. A project key cannot read it. An admin key is required. AngelOS will not guess it.' };
-  return { error: 'OpenAI does not share how much credit is left.' };
+  if (denied) return { error: 'The AI service did not share the credit left. A project key cannot read it. An admin key is required. AngelOS will not guess it.' };
+  return { error: 'The AI service does not share how much credit is left.' };
 }

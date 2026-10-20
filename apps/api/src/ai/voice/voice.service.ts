@@ -70,7 +70,7 @@ export class VoiceService {
       available: live,
       mode: live ? 'live' as const : 'mock' as const,
       provider,
-      reason: live ? null : 'Live voice is off until the server has an OpenAI key or LiveKit keys.',
+      reason: live ? null : 'Live voice is not set up on the server yet.',
       stored: false as const
     };
   }
