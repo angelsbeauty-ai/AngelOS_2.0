@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   warn: { alignSelf: 'center', width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(168,67,44,0.12)' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 24, color: '#151515' },
   body: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 22, color: '#3A3632' },
-  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#6B645B', marginTop: 6 },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#6C6C70', marginTop: 6 },
   input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.15)', backgroundColor: '#FFFFFF', paddingHorizontal: 14, fontSize: 16, color: '#151515' },
   danger: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   dangerText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#B3261E' }

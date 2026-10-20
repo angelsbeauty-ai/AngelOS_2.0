@@ -1,3 +1,4 @@
+import { toFriendly } from '../../src/lib/friendly-error';
 import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -59,10 +60,11 @@ export default function NewBookingScreen() {
       const startAt = new Date(`${date}T${time}:00`).toISOString();
       await createAppointment(workspaceId, { clientId, serviceId, startAt, source: 'owner', overrideSoftConflict });
       void dialog.notify(t('booking.created'), `${selectedClient?.display_name ?? ''} · ${selectedService?.name ?? ''}`);
-      router.replace('/bookings/week' as any);
+      // O10: back to the calendar on the booked day, at its time.
+      router.replace({ pathname: '/calendar', params: { day: date, at: time } } as any);
     } catch (error) {
       if (error instanceof ApiError && error.status === 409 && typeof error.payload === 'object' && error.payload && (error.payload as any).code === 'SOFT_CONFLICT') { setSoftConflict(true); return; }
-      void dialog.notify(t('booking.createFail'), error instanceof Error ? error.message : '');
+      void dialog.notify(t('booking.createFail'), toFriendly(error, { action: 'save' }).message);
     } finally { setBusy(false); }
   }
 

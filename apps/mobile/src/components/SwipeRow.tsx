@@ -1,8 +1,10 @@
 import { useMemo, useRef, type ReactNode } from 'react';
 import { Dimensions, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { ReduceMotion, interpolate, runOnJS, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { motion, tokens } from '../design/theme';
+// M39: springs and the full-swipe slide follow the system Reduce Motion setting.
+const SNAP = { ...motion.snap, reduceMotion: ReduceMotion.System };
 
 export type SwipeAction = { key: string; label: string; icon: ReactNode; onPress: () => void; danger?: boolean };
 
@@ -21,7 +23,7 @@ export function SwipeRow({ children, actions, onFullSwipe, night, height, keepTe
   const start = useRef(0);
   const armed = useRef(false);
 
-  const close = () => { x.value = withSpring(0, motion.snap); };
+  const close = () => { x.value = withSpring(0, SNAP); };
   const fire = (a: SwipeAction) => { close(); a.onPress(); };
 
   const responder = useMemo(() => PanResponder.create({
@@ -36,11 +38,11 @@ export function SwipeRow({ children, actions, onFullSwipe, night, height, keepTe
     },
     onPanResponderRelease: (_e, g) => {
       const pos = Math.min(0, start.current + g.dx);
-      if (-pos >= fullAt) { x.value = withTiming(-SCREEN_W, { duration: motion.quick }, (done) => { if (done) runOnJS(onFullSwipe)(); }); return; }
+      if (-pos >= fullAt) { x.value = withTiming(-SCREEN_W, { duration: motion.quick, reduceMotion: ReduceMotion.System }, (done) => { if (done) runOnJS(onFullSwipe)(); }); return; }
       const open = -pos > openW / 3 || g.vx < -0.5;
-      x.value = withSpring(open && g.vx < 0.5 ? -openW : 0, motion.snap);
+      x.value = withSpring(open && g.vx < 0.5 ? -openW : 0, SNAP);
     },
-    onPanResponderTerminate: () => { x.value = withSpring(0, motion.snap); }
+    onPanResponderTerminate: () => { x.value = withSpring(0, SNAP); }
   }), [openW, fullAt, onFullSwipe]);
 
   // Row slides fully left (304pt open); its content fades so nothing spills beside the tray.

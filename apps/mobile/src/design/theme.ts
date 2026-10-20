@@ -5,20 +5,20 @@ const charcoal = '#151515';
 export const tokens = {
   color: {
     charcoal,
-    charcoal2: '#6B645B',
+    charcoal2: '#6C6C70',
     charcoal3: 'rgba(42,39,37,0.45)',
     ivory: '#FFFFFF',
     ivorySolid: '#FFFFFF',
     raised: '#FFFFFF',
     pearl: '#FFFFFF',
     tide: '#151515',
-    accentPressed: '#4F4A44',
+    accentPressed: '#3A3A3C',
     coral: '#B3261E',
-    success: '#4F4A44',
-    warning: '#4F4A44',
+    success: '#3A3A3C',
+    warning: '#3A3A3C',
     error: '#B3261E',
     glassTint: '#FFFFFF',
-    seaGlass: '#6B645B',
+    seaGlass: '#6C6C70',
     hairline: '#EDEDED',
     onCharcoal: '#FFFFFF'
   },
@@ -43,7 +43,7 @@ export const tokens = {
     uiBold: 'Manrope_700Bold'
   },
   numerals: ['lining-nums', 'tabular-nums'] as const,
-  icon: { weight: 'duotone' as const, duotoneColor: '#766E64', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
+  icon: { weight: 'duotone' as const, duotoneColor: '#76767A', duotoneOpacity: 0.45, activeDuotoneOpacity: 0.6, size: 24 },
   space: { screen: 16, tap: 44 },
   radius: { pill: 999, block: 20, card: 28 }
 } as const;
@@ -98,7 +98,7 @@ void _P;
 /** final-D2 tokens (TOKENS.md). */
 export const D = {
   bg: '#FFFFFF', surface: '#FFFFFF', bgTab: '#FFFFFF', fill: '#F2F2F2', fill2: '#EDEDED',
-  text: '#151515', text2: '#4F4A44', muted: '#6B645B', faint: '#766E64', disabled: '#BDB6AC',
+  text: '#151515', text2: '#3A3A3C', muted: '#6C6C70', faint: '#76767A', disabled: '#C7C7CC',
   hairline: '#EDEDED', accent: '#B8A48A', accentDeep: '#8C7A64', accentTint: '#F5F5F5',
   pendingRule: '#8A8379', danger: '#B3261E', listening: '#75654F',
 } as const;

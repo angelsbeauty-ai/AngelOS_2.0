@@ -14,5 +14,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   disc: { width: 200, height: 200, borderRadius: 100, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)', marginBottom: 28 },
   name: { fontFamily: 'Manrope_700Bold', fontSize: 40, color: '#151515' },
-  tag: { fontSize: 14, color: '#6B645B' }
+  tag: { fontSize: 14, color: '#6C6C70' }
 });

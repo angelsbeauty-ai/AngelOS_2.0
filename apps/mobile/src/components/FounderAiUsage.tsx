@@ -50,11 +50,11 @@ const styles = StyleSheet.create({
   t: { flex: 1, gap: 2 },
   n: { fontFamily: tokens.font.uiBold, fontSize: 32, color: '#151515', fontVariant: ['tabular-nums'] },
   nSm: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#151515', fontVariant: ['tabular-nums'] },
-  l: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
-  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6B645B' },
+  l: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6C6C70' },
+  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6C6C70' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#F2F2F2' },
   email: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
-  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6B645B' },
+  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70' },
   cell: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515', fontVariant: ['tabular-nums'] },
-  muted: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' }
+  muted: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6C6C70' }
 });

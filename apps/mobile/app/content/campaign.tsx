@@ -20,7 +20,7 @@ export default function PlanCampaign() {
   const night = mode === 'night';
   const card = night ? { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderRadius: 20 } : null;
   const ink = night ? '#F4F4F5' : '#151515';
-  const muted = night ? '#C7C7CC' : '#6B645B';
+  const muted = night ? '#C7C7CC' : '#6C6C70';
   const field = night ? { backgroundColor: '#161618', color: '#F4F4F5', borderColor: 'rgba(255,255,255,0.14)' } : null;
   const today = dayString(new Date());
   const [ws, setWs] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export default function PlanCampaign() {
 
 const styles = StyleSheet.create({
   card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2' },
-  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#6B645B' },
+  label: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#6C6C70' },
   input: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)', backgroundColor: '#FFF', paddingHorizontal: 14, fontSize: 16, color: '#151515', fontFamily: tokens.font.ui },
   chips: { flexDirection: 'row', gap: 8, paddingVertical: 2 },
   pill: { height: 36, paddingHorizontal: 14, borderRadius: 18, justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)', backgroundColor: '#FFFFFF' },

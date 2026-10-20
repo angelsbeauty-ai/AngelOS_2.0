@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   tileNa: { fontFamily: tokens.font.uiSemibold, fontSize: 18, lineHeight: 34 },
   pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 12 },
   hello: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#6B645B' },
+  hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#6C6C70' },
   welcome: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
   big: { fontFamily: tokens.font.uiBold, fontSize: 34, lineHeight: 41, color: '#151515', letterSpacing: -0.5 },
   sub: { fontFamily: tokens.font.ui, fontSize: 17, lineHeight: 22, color: '#151515' },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   boxTitle: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
   value: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, color: '#151515' },
-  unit: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#6B645B' },
+  unit: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#6C6C70' },
   line: { fontFamily: tokens.font.ui, fontSize: 13.5, lineHeight: 18, color: '#151515' },
   arrow: { alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F2F2' },
   card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F2F2F2' },
@@ -194,6 +194,6 @@ const styles = StyleSheet.create({
   practice: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
   practiceLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F2F2F2' },
   practiceTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
-  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6B645B' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B' }
+  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6C6C70' },
+  muted: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6C6C70' }
 });

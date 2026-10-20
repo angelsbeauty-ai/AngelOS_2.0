@@ -1,9 +1,11 @@
 import { useMemo, useRef, type ReactNode } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
-import Animated, { interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { ReduceMotion, interpolate, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowBendUpLeft } from 'phosphor-react-native/src/icons/ArrowBendUpLeft';
 import { motion } from '../design/theme';
+// M39: springs follow the system Reduce Motion setting (instant when it is on).
+const SNAP = { ...motion.snap, reduceMotion: ReduceMotion.System };
 
 const TRIGGER = 56;
 const MAX = 72;
@@ -21,8 +23,8 @@ export function SwipeReply({ children, onReply, night, label }: { children: Reac
       const past = d >= TRIGGER;
       if (past !== armed.current) { armed.current = past; if (past) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined); }
     },
-    onPanResponderRelease: () => { if (armed.current) onReply(); x.value = withSpring(0, motion.snap); },
-    onPanResponderTerminate: () => { x.value = withSpring(0, motion.snap); }
+    onPanResponderRelease: () => { if (armed.current) onReply(); x.value = withSpring(0, SNAP); },
+    onPanResponderTerminate: () => { x.value = withSpring(0, SNAP); }
   }), [onReply]);
   const moving = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
   const icon = useAnimatedStyle(() => ({ opacity: interpolate(x.value, [0, TRIGGER], [0, 1], 'clamp'), transform: [{ scale: interpolate(x.value, [0, TRIGGER], [0.6, 1], 'clamp') }] }));

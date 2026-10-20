@@ -2,7 +2,7 @@ import { useEffect, useRef, type PropsWithChildren, type ReactNode } from 'react
 import { STUDENT_ALLOWED, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { showsAppTabBar } from './AppTabBar';
@@ -41,7 +41,10 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
     <View style={[styles.safe, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
     {header ? <View style={[styles.pinned, { backgroundColor: palette.bg }]}>{header}</View> : null}
     {!online && !ownBanner ? <Text accessibilityLiveRegion="polite" accessibilityRole="alert" style={[styles.offline, { color: palette.text, backgroundColor: mode === 'night' ? '#1C1C1E' : '#E4E4E6' }]}>{t('sched.offlineBar')}</Text> : null}
+    {/* O06: the focused field and its button stay above the keyboard on every form screen. */}
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView ref={scrollRef} onContentSizeChange={() => { if (scrollY != null && scrollY !== didY.current) { didY.current = scrollY; scrollRef.current?.scrollTo({ y: scrollY, animated: false }); } }} scrollEnabled={scrollEnabled} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, Platform.OS === 'web' && !LOCKED.has(pathname) && styles.webTop]} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
+    </KeyboardAvoidingView>
     {showAsk ? <AskButton pathname={pathname} bottom={askBottom} right={askRight} /> : null}
   </View></View>;
 }

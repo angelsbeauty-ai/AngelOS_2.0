@@ -37,10 +37,10 @@ export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
 const styles = StyleSheet.create({
   card: { gap: 10, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
-  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' },
+  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6C6C70' },
   row: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   name: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515', flexShrink: 0, minWidth: 90 },
   vals: { flex: 1, alignItems: 'flex-end', gap: 2 },
   val: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
-  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6B645B' }
+  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70' }
 });

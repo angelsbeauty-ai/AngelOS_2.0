@@ -14,8 +14,8 @@ function useInk() {
   return {
     night,
     text: night ? '#F4F4F5' : '#151515',
-    secondary: night ? '#C7C7CC' : '#4F4A44',
-    muted: night ? '#9A9A9F' : '#6B645B',
+    secondary: night ? '#C7C7CC' : '#3A3A3C',
+    muted: night ? '#9A9A9F' : '#6C6C70',
     card: night ? '#161618' : '#FFFFFF',
     border: night ? 'rgba(255,255,255,0.14)' : '#EDEDED',
     primaryBg: night ? '#F4F4F5' : '#151515',

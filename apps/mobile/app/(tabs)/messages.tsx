@@ -1,3 +1,4 @@
+import i18n from '../../src/i18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActionSheetIOS, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '../../src/design/appearance';
@@ -271,12 +272,14 @@ export default function MessagesScreen() {
 
 function rel(iso?: string | null) {
   if (!iso) return '';
+  // M16: relative times follow the app language (JA 今/5分/2時間/3日/2週).
+  const ja = i18n.language?.startsWith('ja');
   const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (mins < 1) return 'now';
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60); if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24); if (d < 7) return `${d}d`;
-  return `${Math.floor(d / 7)}w`;
+  if (mins < 1) return ja ? '今' : 'now';
+  if (mins < 60) return ja ? `${mins}分` : `${mins}m`;
+  const h = Math.floor(mins / 60); if (h < 24) return ja ? `${h}時間` : `${h}h`;
+  const d = Math.floor(h / 24); if (d < 7) return ja ? `${d}日` : `${d}d`;
+  return ja ? `${Math.floor(d / 7)}週` : `${Math.floor(d / 7)}w`;
 }
 
 const styles = StyleSheet.create({

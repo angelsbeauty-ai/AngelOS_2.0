@@ -93,7 +93,7 @@ export default function MessageThreadScreen() {
   }
 
   // Hold the waveform to dictate. Speech only fills the draft; sending is still her tap on send.
-  const dictation = useDictation(() => replyRef.current, setReply, (detail as any)?.thread?.reply_language === 'ja' ? 'ja' : appLang);
+  const dictation = useDictation(() => replyRef.current, setReply, appLang) /* M31: dictate in Angel's app language, not the client's */;
   useEffect(() => {
     if (!dictation.error) return;
     toast.show({ title: dictation.error === 'permission' ? t('messages.dictatePerm') : t('messages.dictateFail'), tone: 'error' });

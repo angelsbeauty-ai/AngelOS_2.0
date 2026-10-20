@@ -23,7 +23,7 @@ export function BrandLogo({ platform, size = 20 }: { platform: string; size?: nu
     <Path d="M12 5.2c-4.1 0-7.4 2.6-7.4 5.9 0 2.9 2.6 5.3 6.2 5.8.3.1.6.2.6.4l-.1 1.2c0 .3.2.6.6.4 2.6-1.4 6.6-4.3 7.2-6.6.2-.4.3-.8.3-1.2 0-3.3-3.3-5.9-7.4-5.9z" fill="#FFF" /></Svg>;
   if (platform === 'tiktok') return <Svg width={size} height={size} viewBox="0 0 24 24"><Circle cx="12" cy="12" r="12" fill="#000" />
     <Path d="M15.6 5.5c.4 1.6 1.5 2.7 3.1 2.9v2.4c-1.1 0-2.2-.3-3.1-.9v4.7c0 2.6-2.1 4.6-4.7 4.6s-4.6-2-4.6-4.6 2.3-4.8 5-4.5v2.5c-1.2-.4-2.6.5-2.6 2 0 1.2.9 2.1 2.2 2.1 1.2 0 2.2-.9 2.2-2.2V5.5z" fill="#FFF" /></Svg>;
-  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#766E64' }} />;
+  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#76767A' }} />;
 }
 
 /** Brand logo with a thin white ring, for the bottom-right of avatars. Facebook threads are Messenger conversations. */

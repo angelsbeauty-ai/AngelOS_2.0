@@ -57,7 +57,7 @@ function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
 
 function Bar({ label, n, max }: { label: string; n: number; max: number }) {
   const pct = max ? Math.min(1, n / max) : 0;
-  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#4F4A44' : GREEN;
+  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#3A3A3C' : GREEN;
   return <View style={{ gap: 6 }}>
     <View style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.count}>{n} / {max}</Text></View>
     <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: color }]} /></View>
@@ -75,5 +75,5 @@ const styles = StyleSheet.create({
   track: { height: 8, borderRadius: 4, backgroundColor: '#F2F2F2', overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
   limit: { fontFamily: tokens.font.uiSemibold, fontSize: 14, lineHeight: 20, color: '#B3261E' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' }
+  muted: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6C6C70' }
 });

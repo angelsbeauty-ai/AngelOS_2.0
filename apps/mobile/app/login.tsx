@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View, KeyboardAvoidingView } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Button, TextField, ui } from '../src/components/ui';
@@ -33,7 +33,7 @@ export default function LoginScreen() {
     } catch { router.replace('/onboarding'); }
   }
 
-  return <SilkBackground><SafeAreaView style={{ flex: 1 }}>
+  return <SilkBackground><SafeAreaView style={{ flex: 1 }}><KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" bounces={false}>
       <View style={styles.col}>
         <BrandMark size={96} variant="rose" />
@@ -48,7 +48,7 @@ export default function LoginScreen() {
         <Pressable accessibilityRole="link" onPress={() => router.push('/signup')} style={styles.signup}><Text style={[styles.signupText, { color: titleC }]}>{t('auth.newHereLink')}</Text></Pressable>
       </View>
     </ScrollView>
-  </SafeAreaView></SilkBackground>;
+  </KeyboardAvoidingView></SafeAreaView></SilkBackground>;
 }
 
 const styles = StyleSheet.create({

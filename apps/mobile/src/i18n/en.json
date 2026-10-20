@@ -2158,5 +2158,12 @@
     "bookingsSub": "When a booking is made or changed",
     "ai": "AI suggestions",
     "aiSub": "When the assistant has something for you"
+  },
+  "an2": {
+    "analytics": "Analytics",
+    "profilePages": "Profile pages",
+    "feedNote": "Newest first. This is your AngelOS feed, not the live Instagram or Facebook feed.",
+    "noPosts": "No posts yet. Create one and it will appear here.",
+    "post": "Post"
   }
 }

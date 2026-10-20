@@ -10,7 +10,7 @@ import { useNightFix } from '../src/design/night-web';
 import { PLATFORM_NAME } from '../src/lib/social';
 import { tokens } from '../src/design/theme';
 
-const GREEN = '#151515'; const GREY = '#6B645B'; const LINE = '#F2F2F2';
+const GREEN = '#151515'; const GREY = '#6C6C70'; const LINE = '#F2F2F2';
 
 /** Full report of the four Home sections, for today / this week / this month. Real data only. */
 export default function Reports() {
@@ -108,6 +108,6 @@ const styles = StyleSheet.create({
   time: { width: 76, fontFamily: tokens.font.uiSemibold, fontSize: 13, color: '#151515' },
   rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
   rowSub: { fontFamily: tokens.font.ui, fontSize: 13, color: GREY },
-  note: { fontFamily: tokens.font.ui, fontSize: 12, color: '#766E64' },
+  note: { fontFamily: tokens.font.ui, fontSize: 12, color: '#76767A' },
   muted: { fontFamily: tokens.font.ui, fontSize: 15, color: GREY }
 });

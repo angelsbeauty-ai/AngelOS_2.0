@@ -4,7 +4,7 @@ import { ui } from './ui';
 import { tokens } from '../design/theme';
 import { useAppearance } from '../design/appearance';
 
-const PLATFORM_COLORS: Record<string, string> = { line: '#151515', instagram: '#151515', facebook: '#151515', other: '#6B645B', manual: '#6B645B', tiktok: '#151515' };
+const PLATFORM_COLORS: Record<string, string> = { line: '#151515', instagram: '#151515', facebook: '#151515', other: '#6C6C70', manual: '#6C6C70', tiktok: '#151515' };
 
 export function PlatformBadge({ platform, label }: { platform: string; label: string }) {
   const { mode, palette } = useAppearance();

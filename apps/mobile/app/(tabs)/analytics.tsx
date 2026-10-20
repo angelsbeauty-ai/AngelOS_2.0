@@ -60,19 +60,19 @@ export default function AnalyticsScreen() {
   return <Screen onRefresh={() => load()}>
     <View style={[styles.seg, look === 'night' && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
       {(['analytics', 'profile'] as const).map((v) => <Pressable key={v} accessibilityRole="tab" accessibilityState={{ selected: view === v }} onPress={() => setView(v)} style={[styles.segItem, view === v && styles.segOn, view === v && look === 'night' && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
-        <Text style={[styles.segText, look === 'night' && { color: palette.text }, view !== v && { color: look === 'night' ? palette.muted : D.text2 }]}>{v === 'analytics' ? 'Analytics' : 'Profile pages'}</Text></Pressable>)}
+        <Text style={[styles.segText, look === 'night' && { color: palette.text }, view !== v && { color: look === 'night' ? palette.muted : D.text2 }]}>{v === 'analytics' ? t('an2.analytics') : t('an2.profilePages')}</Text></Pressable>)}
     </View>
 
     {view === 'profile' ? (
       <View style={{ gap: 12, paddingTop: 8 }}>
-        <Text style={[styles.headline, nt]}>Profile pages</Text>
-        <SupportText>Newest first. This is your AngelOS feed, not the live Instagram or Facebook feed.</SupportText>
+        <Text style={[styles.headline, nt]}>{t('an2.profilePages')}</Text>
+        <SupportText>{t('an2.feedNote')}</SupportText>
         {state === 'loading' ? <Skeleton rows={2} height={80} /> : null}
-        {!posts.length && state === 'ready' ? <SupportText>No posts yet. Create one and it will appear here.</SupportText> : null}
+        {!posts.length && state === 'ready' ? <SupportText>{t('an2.noPosts')}</SupportText> : null}
         {posts.slice(0, 12).map((p) => <Pressable key={p.id} onPress={() => router.push(`/content/${p.id}` as any)} style={[styles.card, { width: '100%', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }, nc]}>
           <PostThumb workspaceId={ws} post={p} size={56} radius={12} />
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[styles.cardTitle, nt, { minHeight: 0 }]}>{p.title || p.variants?.[0]?.caption || 'Post'}</Text>
+            <Text numberOfLines={1} style={[styles.cardTitle, nt, { minHeight: 0 }]}>{p.title || p.variants?.[0]?.caption || t('an2.post')}</Text>
             <Text style={[styles.muted, nm]}>{contentPostDate(p)?.toLocaleDateString(locale) ?? ''}</Text>
           </View>
         </Pressable>)}

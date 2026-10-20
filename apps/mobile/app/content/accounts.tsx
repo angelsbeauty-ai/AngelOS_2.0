@@ -136,12 +136,12 @@ const styles = StyleSheet.create({
   avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.12)' },
   avatarText: { fontFamily: tokens.font.uiBold, fontSize: 18, color: '#151515' },
   title: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
-  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6B645B' },
+  body: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6C6C70' },
   choice: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 18, backgroundColor: '#FFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   chev: { fontSize: 24, color: '#151515' },
   dot: { width: 10, height: 10, borderRadius: 5 },
   ok: { fontFamily: tokens.font.uiSemibold, fontSize: 13, color: tokens.color.success },
-  soon: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#6B645B' },
+  soon: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#6C6C70' },
   step: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#151515' },
   input: { minHeight: 46, borderWidth: 1, borderColor: 'rgba(42,39,37,0.14)', borderRadius: 14, paddingHorizontal: 14, fontFamily: tokens.font.ui, fontSize: 16, color: '#151515', backgroundColor: '#FFF' }
 });

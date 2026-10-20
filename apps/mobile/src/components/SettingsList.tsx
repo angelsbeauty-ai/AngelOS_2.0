@@ -30,21 +30,21 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'rose' | 'success' | 'danger' }) {
-  const c = { neutral: ['#F2F2F2', '#4F4A44'], rose: ['#151515', '#FFFFFF'], success: ['#F2F2F2', '#4F4A44'], danger: ['#F2F2F2', '#151515'] }[tone];
+  const c = { neutral: ['#F2F2F2', '#3A3A3C'], rose: ['#151515', '#FFFFFF'], success: ['#F2F2F2', '#3A3A3C'], danger: ['#F2F2F2', '#151515'] }[tone];
   return <View style={[styles.chip, { backgroundColor: c[0] }]}><Text style={[styles.chipText, { color: c[1] }]}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8 },
-  groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#6B645B' },
-  onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#4F4A44', backgroundColor: '#F2F2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
+  groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#6C6C70' },
+  onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#3A3A3C', backgroundColor: '#F2F2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
   group: { borderRadius: 24, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
   sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EDEDED' },
   icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   title: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },
-  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6B645B' },
-  value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B', maxWidth: 170 },
+  sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70' },
+  value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6C6C70', maxWidth: 170 },
   chip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 8, paddingVertical: 3 },
   chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 12 }
 });

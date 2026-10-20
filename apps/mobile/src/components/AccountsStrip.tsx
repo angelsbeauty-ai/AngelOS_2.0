@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   avatarEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.12)' },
   avatarText: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
   title: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
-  body: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6B645B' },
+  body: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6C6C70' },
   warn: { fontFamily: tokens.font.uiMedium, fontSize: 13, lineHeight: 18, color: tokens.color.warning }
 });
