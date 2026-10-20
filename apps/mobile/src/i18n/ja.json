@@ -1815,7 +1815,26 @@
     "practicePersonality": "アシスタントの話し方を選ぶ",
     "practicePersonalitySub": "文章を書くときの声のトーンを決めます。",
     "practiceStory": "ストーリーズを書く",
-    "practiceStorySub": "今週の3本に向けて、下書きを始めます。"
+    "practiceStorySub": "今週の3本に向けて、下書きを始めます。",
+    "today": "今日",
+    "upNext": "次の予定",
+    "unavailable": "取得できません",
+    "bookingsToday": "今日の予約",
+    "confirmed": "確定",
+    "pendingShort": "保留",
+    "booked": "予約額",
+    "thisWeek": "今週",
+    "unreadTitle": "未読",
+    "chatsWaiting": "件のチャット",
+    "scheduled": "予約投稿",
+    "postToday": "件（今日）",
+    "postsTodayS": "件（今日）",
+    "st": {
+      "confirmed": "確定",
+      "pending": "保留",
+      "completed": "完了",
+      "no_show": "無断キャンセル"
+    }
   },
   "founderBill": {
     "title": "今月のAI利用",

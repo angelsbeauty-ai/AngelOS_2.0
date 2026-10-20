@@ -1815,7 +1815,26 @@
     "practicePersonality": "Choose your assistant's personality",
     "practicePersonalitySub": "Set how it sounds when it writes for you.",
     "practiceStory": "Write a story",
-    "practiceStorySub": "Start a draft toward this week's three."
+    "practiceStorySub": "Start a draft toward this week's three.",
+    "today": "Today",
+    "upNext": "Up next",
+    "unavailable": "Unavailable",
+    "bookingsToday": "Bookings today",
+    "confirmed": "confirmed",
+    "pendingShort": "pending",
+    "booked": "Booked",
+    "thisWeek": "this week",
+    "unreadTitle": "Unread",
+    "chatsWaiting": "chats waiting",
+    "scheduled": "Scheduled",
+    "postToday": "post today",
+    "postsTodayS": "posts today",
+    "st": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "completed": "Done",
+      "no_show": "No-show"
+    }
   },
   "founderBill": {
     "title": "AI usage this month",

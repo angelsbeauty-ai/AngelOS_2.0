@@ -8,6 +8,8 @@ import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
 import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
 import { ShareNetwork } from 'phosphor-react-native/src/icons/ShareNetwork';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
+import { Plus } from 'phosphor-react-native/src/icons/Plus';
+import { Bell } from 'phosphor-react-native/src/icons/Bell';
 import { Screen } from '../../src/components/Screen';
 import { NoStudio } from '../../src/components/NoStudio';
 import { BusinessSwitcher } from '../../src/components/BusinessSwitcher';
@@ -65,36 +67,57 @@ export default function HomeScreen() {
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
   const tasks = imp?.tasks ?? (a ? a.pendingApprovals + a.suggestions.length : null);
 
+  const dateLine = now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+  const upcoming = (s?.items ?? []).filter((it) => it.status !== 'cancelled' && new Date(it.end_at).getTime() > now.getTime()).slice(0, 4);
+  const confirmed = (s?.items ?? []).filter((it) => it.status === 'confirmed').length;
+  const statusLabel = (st: string) => t(`home.st.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : st === 'pending' ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : '' });
+  const na = t('home.unavailable', 'Unavailable');
+
   return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()}>
-    <BusinessSwitcher onChanged={() => void load()} />
-    <View style={styles.hello}>
-      <View style={{ flex: 1, gap: 14 }}>
-        <View style={{ gap: 2 }}>
-          <Text style={[styles.hi, { color: palette.muted }]} numberOfLines={1}>{name ? t('home.hiName', { defaultValue: 'Hi, {{name}}', name }) : t('home.hi', 'Hi')}</Text>
-          <Text style={[styles.welcome, { color: palette.text }]}>{t('home.welcome', 'Welcome back')}</Text>
-          <View style={[styles.rule, { backgroundColor: palette.border }]} />
-        </View>
-        <View style={{ gap: 4 }}>
-          <Text style={[styles.big, { color: palette.text }]}>{hello}</Text>
-          <Text style={[styles.sub, { color: palette.muted }]}>{t('home.todaysReport', "Here's today's report.")}</Text>
-        </View>
+    <View style={styles.top}>
+      <View style={{ flex: 1 }}><BusinessSwitcher onChanged={() => void load()} /></View>
+      <View style={[styles.actions, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('nav.newBooking', 'New booking')} onPress={() => router.push('/bookings/new' as any)} style={styles.actionHit}><Plus size={24} color={palette.text} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', 'Notifications')} onPress={() => router.push('/notifications' as any)} style={styles.actionHit}><Bell size={24} color={palette.text} /></Pressable>
       </View>
+    </View>
+    <View style={{ gap: 6 }}>
+      <Text accessibilityRole="header" style={[styles.big, { color: palette.text }]}>{t('home.today', 'Today')}</Text>
+      <Text style={[styles.sub, { color: palette.muted }]} numberOfLines={1}>{dateLine}{name ? ` · ${t('home.hiName', { defaultValue: 'Hi, {{name}}', name })}` : ''}</Text>
     </View>
 
     {noStudio ? <NoStudio /> : <>
-      {sumErr && !sum ? <Text style={styles.muted}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
+      {sumErr && !sum ? <Text style={[styles.muted, { color: palette.muted }]}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
+      <Text style={[styles.section, { color: palette.text }]}>{t('home.upNext', 'Up next')}</Text>
+      <View style={[styles.list, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+        {!s ? <Text style={[styles.empty, { color: palette.muted }]}>{sumErr ? na : t('today.loading')}</Text> : null}
+        {s && !upcoming.length ? <Text style={[styles.empty, { color: palette.muted }]}>{t('home.noMore', 'Nothing else booked today')}</Text> : null}
+        {upcoming.map((it, i) => <Pressable key={it.id} accessibilityRole="button" onPress={() => router.push(`/bookings/${it.id}` as any)} style={({ pressed }) => [styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text numberOfLines={1} style={[styles.itemTitle, { color: palette.text }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
+            <Text style={[styles.itemSub, { color: palette.muted }]}>{time(it.start_at)} – {time(it.end_at)}</Text>
+          </View>
+          <Text style={[styles.itemStatus, { color: palette.muted }]}>{statusLabel(it.status)}</Text>
+          <CaretRight size={16} color={palette.muted} />
+        </Pressable>)}
+      </View>
       <View style={styles.grid}>
-        <Box icon={<CalendarBlank {...icon} />} title={t('home.scheduleShort', 'Today')} value={s ? n(s.total, t('home.booking1', 'booking'), t('home.bookings', 'bookings')) : '–'} onPress={() => openReport('schedule')}
-          lines={s ? [s.next ? `${t('home.next', 'Next')} ${time(s.next.start_at)}${s.next.service ? ` · ${s.next.service}` : ''}` : t('home.noMore', 'Nothing else booked today'), s.pending ? `${s.pending} ${t('home.pending', 'waiting to confirm')}` : '', s.cancelled ? `${s.cancelled} ${t('home.cancelled', 'cancelled')}` : '', s.total ? `${s.newClients} ${t('home.new', 'new')} · ${s.returningClients} ${t('home.returning', 'returning')}` : ''] : []} />
-        <Box icon={<ChatCircleDots {...icon} />} title={t('home.messages', 'Messages')} value={m ? `${m.unread} ${t('home.unread', 'unread')}` : '–'} onPress={() => router.push('/messages' as any)}
-          lines={m ? [`${m.needsReply} ${t('home.needReply', 'need a reply')}`, m.important ? `${m.important} ${t('home.important', 'important')}` : '', m.booking.inProgress ? `${m.booking.inProgress} ${t('home.bookingInProgress', 'booking in progress')}` : ''] : []} />
-        <Box icon={<ListChecks {...icon} />} title={t('home.importantTitle', 'Important')} value={tasks != null ? n(tasks, t('home.task1', 'task'), t('home.tasks', 'tasks')) : '–'} onPress={() => openReport('assistant')}
-          lines={[imp?.scheduledPosts != null ? n(imp.scheduledPosts, t('home.schedPost1', 'scheduled post'), t('home.schedPosts', 'scheduled posts')) : '', a?.pendingApprovals ? `${a.pendingApprovals} ${t('home.approvals', 'waiting for approval')}` : '', s?.touchUpsDue ? `${s.touchUpsDue} ${t('home.touchUps', 'touch-ups due')}` : '']} />
-        <Box icon={<ShareNetwork {...icon} />} title={t('home.social', 'Social media')} value={so?.followers != null ? `${so.followers.toLocaleString(locale)}` : '–'} unit={so?.followers != null ? t('home.followers', 'followers') : ''} onPress={() => openReport('social')}
-          lines={so ? (so.connected.length ? [so.followersChange7d != null ? `${so.followersChange7d > 0 ? '+' : ''}${so.followersChange7d} ${t('home.in7d', 'this week')}` : '', so.engagement != null ? `${so.engagement.toLocaleString(locale)} ${t('home.interactionsShort', 'interactions')}` : '', `${so.postsInPeriod} ${t('home.postsToday', 'posted today')}`] : [t('home.noSocial', 'No accounts connected yet')]) : []} />
+        <Tile title={t('home.bookingsToday', 'Bookings today')} value={s ? String(s.total) : na} line={s ? `${confirmed} ${t('home.confirmed', 'confirmed')} · ${s.pending} ${t('home.pendingShort', 'pending')}` : ''} onPress={() => router.push('/calendar' as any)} />
+        <Tile title={t('home.booked', 'Booked')} value={na} line={t('home.thisWeek', 'this week')} onPress={() => openReport('schedule')} />
+        <Tile title={t('home.unreadTitle', 'Unread')} value={m ? String(m.unread) : na} line={t('home.chatsWaiting', 'chats waiting')} onPress={() => router.push('/messages' as any)} />
+        <Tile title={t('home.scheduled', 'Scheduled')} value={imp?.scheduledPosts != null ? String(imp.scheduledPosts) : na} line={imp?.scheduledPosts === 1 ? t('home.postToday', 'post today') : t('home.postsTodayS', 'posts today')} onPress={() => openReport('social')} />
       </View>
     </>}
   </Screen>;
+}
+
+function Tile({ title, value, line, onPress }: { title: string; value: string; line: string; onPress: () => void }) {
+  const { palette } = useAppearance();
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value}`} onPress={onPress} style={({ pressed }) => [styles.tile, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
+    <Text numberOfLines={1} style={[styles.tileTitle, { color: palette.muted }]}>{title}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.tileValue, { color: palette.text }]}>{value}</Text>
+    {line ? <Text numberOfLines={1} style={[styles.tileLine, { color: palette.muted }]}>{line}</Text> : null}
+  </Pressable>;
 }
 
 function Box({ icon, title, value, unit, lines, onPress }: { icon: ReactNode; title: string; value: string; unit?: string; lines: string[]; onPress: () => void }) {
@@ -126,12 +149,25 @@ function Practice({ title, sub, onPress, last }: { title: string; sub: string; o
 }
 
 const styles = StyleSheet.create({
-  rule: { width: 32, height: 1.5, marginTop: 10, backgroundColor: '#B8A48A' },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  actions: { flexDirection: 'row', borderRadius: 26, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 4 },
+  actionHit: { width: 48, height: 52, alignItems: 'center', justifyContent: 'center' },
+  section: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, marginTop: 4 },
+  list: { borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64, paddingHorizontal: 16, paddingVertical: 10 },
+  itemTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17 },
+  itemSub: { fontFamily: tokens.font.ui, fontSize: 15 },
+  itemStatus: { fontFamily: tokens.font.ui, fontSize: 16 },
+  empty: { fontFamily: tokens.font.ui, fontSize: 15, padding: 16 },
+  tile: { width: '48.4%', minHeight: 128, padding: 16, gap: 6, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth },
+  tileTitle: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
+  tileValue: { fontFamily: tokens.font.uiBold, fontSize: 28, lineHeight: 34 },
+  tileLine: { fontFamily: tokens.font.ui, fontSize: 14 },
   hello: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#6B645B' },
   welcome: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
-  big: { fontFamily: tokens.font.uiBold, fontSize: 32, lineHeight: 38, color: '#151515', letterSpacing: -0.5 },
-  sub: { fontFamily: tokens.font.uiMedium, fontSize: 20, lineHeight: 26, color: '#151515' },
+  big: { fontFamily: tokens.font.uiBold, fontSize: 34, lineHeight: 41, color: '#151515', letterSpacing: -0.5 },
+  sub: { fontFamily: tokens.font.ui, fontSize: 17, lineHeight: 22, color: '#151515' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   box: { width: '48.4%', minHeight: 196, padding: 16, gap: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EDEDED', shadowColor: '#151515', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
