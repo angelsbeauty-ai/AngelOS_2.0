@@ -7,17 +7,15 @@ Goal: normal chat box like Instagram or Messenger.
 - Header: back, avatar, name, platform
 - Scroll: only message bubbles + day labels
 - Bottom: ChatBar (text input + send)
-- Tools (AI draft, notes, paste inbound, mark done, archive) behind a tools menu, not stacked cards
+- Tools (AI draft, notes, paste inbound, mark done, archive) in ChatTools sheet
 
-## Done
+## Ready
 
-- ChatBar component created (apps/mobile/src/components/ChatBar.tsx)
+- ChatBar (apps/mobile/src/components/ChatBar.tsx)
+- ChatTools (apps/mobile/src/components/ChatTools.tsx)
 - NightMenu for bubble actions
 - Banner follows Night
 
 ## Next
 
-- Wire ChatBar into messages/[id].tsx
-- Move the three Cards (paste, AI draft, private notes) out of the main scroll into a tools sheet
-- Keep approve-before-send, but trigger it from the send button
-- Rebuild and confirm on device
+Wire ChatBar + ChatTools into messages/[id].tsx and rebuild.
