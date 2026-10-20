@@ -1,4 +1,5 @@
 import { saveContactAvatar } from './contact-avatar';
+import { notifyNewClientMessage } from '../push/expo-push';
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { AuthUser } from '../auth/auth-user';
@@ -271,11 +272,17 @@ export class MessagingService {
     const { data: known } = await service.from('client_channel_identities').select('client_id').eq('workspace_id', channel.workspace_id).eq('channel_id', channel.id).eq('external_user_id', event.externalUserId).maybeSingle();
     const contactDisplayName = known ? undefined : await resolveName?.(event.externalUserId);
     try {
-      return await this.recordInbound(service, {
+      const recorded = await this.recordInbound(service, {
         workspaceId: channel.workspace_id, channel, externalThreadId: event.externalThreadId, externalUserId: event.externalUserId,
         externalMessageId: event.externalMessageId, body: event.body, replyToken: event.replyToken, contactDisplayName: contactDisplayName ?? null,
         clientId: known?.client_id ?? null, language: detectLanguage(event.body), matchConfidence: 'unverified', source: `webhook:${event.provider}`
       });
+      if (!recorded.phishing && recorded.threadId) {
+        const { data: who } = await service.from('message_threads').select('contact_display_name,client:clients(display_name)').eq('id', recorded.threadId).maybeSingle();
+        const name = (who as any)?.client?.display_name ?? (who as any)?.contact_display_name ?? channel.display_name ?? 'AngelOS';
+        void notifyNewClientMessage(channel.workspace_id, recorded.threadId, name, event.body);
+      }
+      return recorded;
     } catch (caught) {
       if (caught instanceof ConflictException) return { duplicate: true }; // provider retry of an event we already stored
       throw caught;

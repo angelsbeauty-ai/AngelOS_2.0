@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
 import { useNightCss } from './night-web';
 
@@ -70,9 +70,13 @@ const Ctx = createContext<{ mode: AppearanceMode; palette: Palette; setMode: (mo
 
 export function AppearanceProvider({ children }: PropsWithChildren) {
   useNightCss();
-  const [mode, setModeState] = useState<AppearanceMode>('day');
-  useEffect(() => { void AsyncStorage.getItem(KEY).then((v) => { if (v === 'night' || v === 'day') setModeState(v); }); }, []);
-  function setMode(next: AppearanceMode) { setModeState(next); void AsyncStorage.setItem(KEY, next); }
+  // O03: Day/Night follows the system (Settings › Display). There is no in-app switch.
+  // The web proof harness alone may pin a mode via localStorage so both modes can be shot.
+  const system = useColorScheme();
+  const [pinned, setPinned] = useState<AppearanceMode | null>(null);
+  useEffect(() => { if (Platform.OS === 'web') void AsyncStorage.getItem(KEY).then((v) => { if (v === 'night' || v === 'day') setPinned(v); }); else void AsyncStorage.removeItem(KEY); }, []);
+  const mode: AppearanceMode = pinned ?? (system === 'dark' ? 'night' : 'day');
+  function setMode(_next: AppearanceMode) { /* system-driven */ }
   return <Ctx.Provider value={{ mode, palette: mode === 'night' ? night : day, setMode }}>{children}</Ctx.Provider>;
 }
 

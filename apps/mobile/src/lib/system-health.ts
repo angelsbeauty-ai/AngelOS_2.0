@@ -64,3 +64,8 @@ export function getNotificationPrefs(workspaceId: string) {
 export function updateNotificationPrefs(workspaceId: string, input: { messages?: boolean; bookings?: boolean; ai?: boolean }) {
   return apiFetch<{ workspace_id: string; messages: boolean; bookings: boolean; ai: boolean }>(`/workspaces/${workspaceId}/system-health/notification-prefs`, { method: 'PATCH', body: JSON.stringify(input) });
 }
+
+export type ActivityItem = { id: string; kind: 'message' | 'booking' | 'post'; at: string; title: string; detail: string; status?: string; target: string };
+export function getActivity(workspaceId: string) {
+  return apiFetch<ActivityItem[]>(`/workspaces/${workspaceId}/system-health/activity`);
+}

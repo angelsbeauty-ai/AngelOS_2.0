@@ -11,6 +11,7 @@ import { useAppearance } from '../design/appearance';
 import { useNightFix } from '../design/night-web';
 import { GlassBackdrop } from './GlassBackdrop';
 import { useInsets } from '../lib/insets';
+import { useOnline } from '../lib/offline';
 
 const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
 const LOCKED = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/ai', '/voice']);
@@ -32,10 +33,14 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   const nightFix = mode === 'night' && !LOCKED.has(pathname);
   useNightFix(nightFix);
   const insets = useInsets();
+  const online = useOnline();
+  // O02: one offline banner on every screen; Calendar and the chat show their own, richer one.
+  const ownBanner = pathname === '/calendar' || /^\/messages\/./.test(pathname);
   return <View style={[styles.bg, { backgroundColor: palette.bg }]}>
     <GlassBackdrop />
     <View style={[styles.safe, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
     {header ? <View style={[styles.pinned, { backgroundColor: palette.bg }]}>{header}</View> : null}
+    {!online && !ownBanner ? <Text accessibilityLiveRegion="polite" accessibilityRole="alert" style={[styles.offline, { color: palette.text, backgroundColor: mode === 'night' ? '#1C1C1E' : '#E4E4E6' }]}>{t('sched.offlineBar')}</Text> : null}
     <ScrollView ref={scrollRef} onContentSizeChange={() => { if (scrollY != null && scrollY !== didY.current) { didY.current = scrollY; scrollRef.current?.scrollTo({ y: scrollY, animated: false }); } }} scrollEnabled={scrollEnabled} keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, Platform.OS === 'web' && !LOCKED.has(pathname) && styles.webTop]} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} bottom={askBottom} right={askRight} /> : null}
   </View></View>;
@@ -56,6 +61,7 @@ function AskButton({ pathname, bottom, right }: { pathname: string; bottom?: num
 }
 
 const styles = StyleSheet.create({
+  offline: { marginHorizontal: 20, marginTop: 8, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, overflow: 'hidden', fontFamily: tokens.font.uiSemibold, fontSize: 14, textAlign: 'center' },
   bg: { flex: 1, backgroundColor: '#F3F4F6' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   pinned: { zIndex: 2 },

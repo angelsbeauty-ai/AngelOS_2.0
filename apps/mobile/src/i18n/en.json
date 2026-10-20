@@ -907,7 +907,12 @@
     "checkedD": "Checked {{d}} days ago",
     "delBusy": "Deleting…",
     "deleteRow": "Delete account…",
-    "delFoot": "Deleting removes your studio, clients, bookings and posts from AngelOS. Your Instagram, Facebook and LINE accounts stay as they are."
+    "delFoot": "Deleting removes your studio, clients, bookings and posts from AngelOS. Your Instagram, Facebook and LINE accounts stay as they are.",
+    "delFailBody": "We couldn't delete your account just now. Check your connection and try again.",
+    "tasks": "Tasks",
+    "newBusiness": "New business",
+    "notifications": "Notifications",
+    "automations": "Automations"
   },
   "s3": {
     "week": "Week view",
@@ -2112,5 +2117,28 @@
     "statsUnavailable": "Views and likes: Unavailable",
     "viewOn": "View on {{p}}",
     "noLink": "Link: Unavailable"
+  },
+  "nt": {
+    "activity": "Activity",
+    "alerts": "Alerts",
+    "client": "Client",
+    "photo": "Photo",
+    "booking": "Booking · {{name}}",
+    "bookingCancelled": "Booking cancelled · {{name}}",
+    "postPosted": "Post is live",
+    "postFailed": "Post didn't go out",
+    "permTitle": "Turn on notifications",
+    "permBody": "Get an alert when a client messages you. You can change this any time.",
+    "permDenied": "Notifications are off for AngelOS. Turn them on in Settings.",
+    "openSettings": "Open Settings",
+    "allow": "Turn on",
+    "emptyTitle": "All caught up",
+    "emptyBody": "New messages, bookings and posts from the last two weeks show here.",
+    "messages": "New messages",
+    "messagesSub": "When a client messages you",
+    "bookings": "Bookings",
+    "bookingsSub": "When a booking is made or changed",
+    "ai": "AI suggestions",
+    "aiSub": "When the assistant has something for you"
   }
 }

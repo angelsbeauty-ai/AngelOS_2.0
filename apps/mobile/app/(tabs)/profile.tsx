@@ -34,8 +34,6 @@ import { clearMe, getMe, updateMe, type Me } from '../../src/lib/me';
 import { getActiveWorkspace, type WorkspaceSummary } from '../../src/lib/workspace';
 import { AiMeter } from '../../src/components/AiMeter';
 import { useAppearance, type AppearanceMode } from '../../src/design/appearance';
-import { Sun } from 'phosphor-react-native/src/icons/Sun';
-import { Moon } from 'phosphor-react-native/src/icons/Moon';
 import { listServices } from '../../src/lib/bookings';
 import { listConnections } from '../../src/lib/messaging';
 import { getSubscription } from '../../src/lib/subscription';
@@ -56,8 +54,7 @@ export default function ProfileScreen() {
   const [health, setHealth] = useState<SystemHealthOverview | null | 'error'>(null);
   const [newFeedback, setNewFeedback] = useState<number | null>(null);
   const [langOpen, setLangOpen] = useState(false);
-  const [lookOpen, setLookOpen] = useState(false);
-  const { mode, setMode, palette } = useAppearance();
+  const { mode, palette } = useAppearance();
   const ink = { size: 18, color: palette.icon, weight: 'duotone' as const };
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -113,15 +110,14 @@ export default function ProfileScreen() {
     <SettingsGroup title={t('pf.account')}>
       <SettingsRow icon={<User {...ink} />} title={t('pf.account')} value={me?.email ?? ''} onPress={() => router.push('/profile/edit' as any)} />
       <SettingsRow icon={<Lock {...ink} />} title={t('pf.password')} onPress={() => router.push('/settings/account')} />
-      <SettingsRow icon={<Translate {...ink} />} title={t('pf.language')} value={i18n.language === 'ja' ? '日本語' : 'English'} onPress={() => setLangOpen(true)} />
-      <SettingsRow last icon={mode === 'night' ? <Moon {...ink} /> : <Sun {...ink} />} title={t('pf.look', 'Appearance')} value={mode === 'night' ? t('pf.night', 'Night') : t('pf.day', 'Daylight')} onPress={() => setLookOpen(true)} />
+      <SettingsRow last icon={<Translate {...ink} />} title={t('pf.language')} value={i18n.language === 'ja' ? '日本語' : 'English'} onPress={() => setLangOpen(true)} />
     </SettingsGroup>
 
     {owner ? <SettingsGroup title={t('pf.business')}>
       <SettingsRow icon={<Users {...ink} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
       <SettingsRow icon={<CurrencyJpy {...ink} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
-      <SettingsRow icon={<ListChecks {...ink} />} title="Tasks" onPress={() => router.push('/tasks' as any)} />
-      <SettingsRow icon={<Plus {...ink} />} title="New business" onPress={() => router.push('/workspaces/new' as any)} />
+      <SettingsRow icon={<ListChecks {...ink} />} title={t('pf.tasks')} onPress={() => router.push('/tasks' as any)} />
+      <SettingsRow icon={<Plus {...ink} />} title={t('pf.newBusiness')} onPress={() => router.push('/workspaces/new' as any)} />
       <SettingsRow last icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
     </SettingsGroup> : null}
 
@@ -130,8 +126,8 @@ export default function ProfileScreen() {
       <SettingsRow icon={<Scissors {...ink} />} title={t('pf.services')} value={services} onPress={() => router.push('/services')} />
       <SettingsRow icon={<Clock {...ink} />} title={t('pf.hours')} onPress={() => router.push('/business-hours' as any)} />
       <SettingsRow icon={<Clock {...ink} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
-      <SettingsRow icon={<Bell {...ink} />} title="Notifications" onPress={() => router.push('/notifications' as any)} />
-      <SettingsRow last icon={<Pause {...ink} />} title="Automations" onPress={() => router.push('/automations' as any)} />
+      <SettingsRow icon={<Bell {...ink} />} title={t('pf.notifications')} onPress={() => router.push('/notifications' as any)} />
+      <SettingsRow last icon={<Pause {...ink} />} title={t('pf.automations')} onPress={() => router.push('/automations' as any)} />
     </SettingsGroup> : null}
     {/* Academy is off in V1 */}
 
@@ -164,12 +160,6 @@ export default function ProfileScreen() {
       <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)}><View style={styles.sheet}>
         <Text style={styles.sheetTitle}>{t('pf.langTitle')}</Text>
         {(['ja', 'en'] as const).map((l) => <Pressable key={l} accessibilityRole="button" onPress={() => void setLang(l)} style={[styles.option, i18n.language === l && styles.optionOn]}><Text style={[styles.optionText, i18n.language === l && { color: '#FFFFFF' }]}>{l === 'ja' ? '日本語' : 'English'}</Text></Pressable>)}
-      </View></Pressable>
-    </Modal>
-    <Modal visible={lookOpen} transparent animationType="fade" onRequestClose={() => setLookOpen(false)}>
-      <Pressable style={styles.backdrop} onPress={() => setLookOpen(false)}><View style={[styles.sheet, { backgroundColor: palette.bg }]}>
-        <Text style={[styles.sheetTitle, { color: palette.text }]}>{t('pf.look', 'Appearance')}</Text>
-        {(['day', 'night'] as AppearanceMode[]).map((m) => <Pressable key={m} accessibilityRole="button" onPress={() => { setMode(m); setLookOpen(false); }} style={[styles.option, { borderColor: palette.border }, mode === m && styles.optionOn]}><Text style={[styles.optionText, { color: palette.text }, mode === m && { color: '#FFFFFF' }]}>{m === 'night' ? t('pf.night', 'Night') : t('pf.day', 'Daylight')}</Text></Pressable>)}
       </View></Pressable>
     </Modal>
     <DeleteAccountSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} workspaceId={ws?.id ?? null} email={me?.email ?? null} />

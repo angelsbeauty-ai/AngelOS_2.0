@@ -907,7 +907,12 @@
     "checkedD": "{{d}}日前に確認",
     "delBusy": "削除中…",
     "deleteRow": "アカウントを削除…",
-    "delFoot": "削除すると、スタジオ・顧客・予約・投稿がAngelOSから消えます。Instagram、Facebook、LINEのアカウントはそのまま残ります。"
+    "delFoot": "削除すると、スタジオ・顧客・予約・投稿がAngelOSから消えます。Instagram、Facebook、LINEのアカウントはそのまま残ります。",
+    "delFailBody": "今はアカウントを削除できませんでした。接続を確認して、もう一度お試しください。",
+    "tasks": "タスク",
+    "newBusiness": "新しいビジネス",
+    "notifications": "通知",
+    "automations": "自動化"
   },
   "s3": {
     "week": "週表示",
@@ -2112,5 +2117,28 @@
     "statsUnavailable": "表示回数といいね：利用できません",
     "viewOn": "{{p}}で見る",
     "noLink": "リンク：利用できません"
+  },
+  "nt": {
+    "activity": "アクティビティ",
+    "alerts": "通知の種類",
+    "client": "お客様",
+    "photo": "写真",
+    "booking": "予約 · {{name}}",
+    "bookingCancelled": "予約キャンセル · {{name}}",
+    "postPosted": "投稿が公開されました",
+    "postFailed": "投稿できませんでした",
+    "permTitle": "通知をオンにする",
+    "permBody": "お客様からメッセージが届いたらお知らせします。いつでも変更できます。",
+    "permDenied": "AngelOSの通知がオフです。設定でオンにしてください。",
+    "openSettings": "設定を開く",
+    "allow": "オンにする",
+    "emptyTitle": "新しいお知らせはありません",
+    "emptyBody": "過去2週間のメッセージ・予約・投稿がここに表示されます。",
+    "messages": "新しいメッセージ",
+    "messagesSub": "お客様からメッセージが届いたとき",
+    "bookings": "予約",
+    "bookingsSub": "予約が入った・変更されたとき",
+    "ai": "AIの提案",
+    "aiSub": "アシスタントから提案があるとき"
   }
 }

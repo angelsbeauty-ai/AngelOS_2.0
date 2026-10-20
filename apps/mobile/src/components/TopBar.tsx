@@ -61,7 +61,7 @@ export function TopBar() {
       { label: t('nav.assistant'), href: '/ai-settings' },
       { label: t('nav.money'), href: '/finance' },
       { label: t('account.language'), href: '/settings/account' },
-      { label: t('top.profileSettings', { defaultValue: 'Profile & settings' }), href: '/settings' },
+      { label: t('top.profileSettings', { defaultValue: 'Profile & settings' }), href: '/profile' },
     ]} /> : null}
   </View>;
 }

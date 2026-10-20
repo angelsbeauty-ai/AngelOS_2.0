@@ -26,7 +26,7 @@ export function DeleteAccountSheet({ visible, onClose }: { visible: boolean; onC
     try {
       await deleteMe();
       setText(''); setSent(true);
-    } catch (e) { await dialog.notify(t('pf.delFail'), e instanceof Error ? e.message : ''); }
+    } catch (e) { await dialog.notify(t('pf.delFail'), t('pf.delFailBody')); }
     finally { setBusy(false); }
   }
 

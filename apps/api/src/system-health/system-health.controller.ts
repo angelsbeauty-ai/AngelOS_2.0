@@ -38,6 +38,10 @@ export class SystemHealthController {
     return this.health.updateNotificationPrefs(user, workspaceId, body);
   }
 
+  @Get('activity') activity(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
+    return this.health.getActivity(user, workspaceId);
+  }
+
   @Get('notification-prefs') getNotificationPrefs(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string

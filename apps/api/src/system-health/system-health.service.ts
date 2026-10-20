@@ -182,6 +182,29 @@ export class SystemHealthService {
     return data;
   }
 
+  /** O05 Activity: what happened lately (new messages, bookings, posts), newest first. Real rows only. */
+  async getActivity(user: AuthUser, workspaceId: string) {
+    const userClient = createUserSupabaseClient(user.accessToken);
+    await this.assertWorkspaceAccess(userClient, workspaceId);
+    const since = new Date(Date.now() - 14 * 86400000).toISOString();
+    const [msgs, appts, posts] = await Promise.all([
+      userClient.from('client_messages').select('id,thread_id,body,created_at,client:clients(display_name),thread:message_threads(contact_display_name)').eq('workspace_id', workspaceId).eq('direction', 'inbound').gte('created_at', since).order('created_at', { ascending: false }).limit(30),
+      userClient.from('appointments').select('id,service_name,start_at,status,created_at,updated_at,client:clients(display_name)').eq('workspace_id', workspaceId).gte('updated_at', since).order('updated_at', { ascending: false }).limit(20),
+      userClient.from('content_variants').select('id,platform,status,published_at,updated_at,live_url').eq('workspace_id', workspaceId).in('status', ['published', 'failed']).gte('updated_at', since).order('updated_at', { ascending: false }).limit(20)
+    ]);
+    if (msgs.error && appts.error && posts.error) throw new InternalServerErrorException(msgs.error.message);
+    const items: { id: string; kind: 'message' | 'booking' | 'post'; at: string; title: string; detail: string; status?: string; target: string }[] = [];
+    // One row per chat: the newest message.
+    const seen = new Set<string>();
+    for (const m of (msgs.data ?? []) as any[]) {
+      if (seen.has(m.thread_id)) continue; seen.add(m.thread_id);
+      items.push({ id: `m:${m.id}`, kind: 'message', at: m.created_at, title: m.client?.display_name ?? m.thread?.contact_display_name ?? '', detail: String(m.body ?? '').slice(0, 140), target: m.thread_id });
+    }
+    for (const a of (appts.data ?? []) as any[]) items.push({ id: `b:${a.id}`, kind: 'booking', at: a.updated_at ?? a.created_at, title: a.client?.display_name ?? '', detail: a.service_name, status: a.status, target: a.id });
+    for (const v of (posts.data ?? []) as any[]) items.push({ id: `p:${v.id}`, kind: 'post', at: v.published_at ?? v.updated_at, title: v.platform, detail: v.live_url ?? '', status: v.status, target: v.id });
+    return items.sort((x, y) => Date.parse(y.at) - Date.parse(x.at)).slice(0, 50);
+  }
+
   async getNotificationPrefs(user: AuthUser, workspaceId: string) {
     const userClient = createUserSupabaseClient(user.accessToken);
     await this.assertWorkspaceAccess(userClient, workspaceId);

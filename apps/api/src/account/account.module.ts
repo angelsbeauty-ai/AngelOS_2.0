@@ -67,8 +67,9 @@ export class AccountService {
 
   /** Deletes the user's OWN studios (all their data, by cascade) and then the login. Student memberships elsewhere just end. */
   async deleteMe(user: AuthUser) {
-    if (await this.beta.isFounder(user.id)) throw new ForbiddenException('Founder accounts cannot be deleted from the app.');
+    // Founders delete like everyone else (Apple 5.1.1, FIX_ORDER #9); their founder flag goes too.
     const service = createServiceSupabaseClient();
+    await service.from('platform_founders').delete().eq('user_id', user.id);
     const { data: owned, error } = await service.from('workspace_memberships').select('workspace_id').eq('user_id', user.id).eq('role', 'owner');
     if (error) throw new InternalServerErrorException(error.message);
     for (const row of owned ?? []) {
