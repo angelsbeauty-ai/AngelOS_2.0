@@ -74,6 +74,14 @@ export class ContentController {
     return this.content.scheduleVariant(user, workspaceId, variantId, dto.scheduledFor);
   }
 
+  @Delete('variants/:variantId/schedule')
+  cancelSchedule(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('variantId') variantId: string) {
+    return this.content.cancelSchedule(user, workspaceId, variantId);
+  }
+
+  @Get('scheduling/status')
+  schedulingStatus() { return this.content.schedulingStatus(); }
+
   @Post('variants/:variantId/publish')
   publishNow(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('variantId') variantId: string) {
     return this.content.publishNow(user, workspaceId, variantId);

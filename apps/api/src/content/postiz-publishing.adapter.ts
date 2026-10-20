@@ -1,14 +1,20 @@
 import type { PublishContentInput, PublishContentResult, SocialPublishingAdapter } from './publishing-adapter';
 
-/** Postiz public API. Docs: https://docs.postiz.com/public-api */
-const BASE = 'https://api.postiz.com/public/v1';
+/** Postiz public API. Docs: https://docs.postiz.com/public-api
+ * Self-hosted: set POSTIZ_API_URL to https://<host>/api/public/v1. */
+const CLOUD = 'https://api.postiz.com/public/v1';
+export function postizBase(env: NodeJS.ProcessEnv = process.env) { return (env.POSTIZ_API_URL?.trim() || CLOUD).replace(/\/+$/, ''); }
+export const POSTIZ_PLATFORMS = ['instagram', 'facebook', 'tiktok', 'threads'];
+
+export interface ScheduleResult { ok: boolean; providerPostId?: string; error?: string; code?: 'not_configured' | 'no_channel' | 'auth' | 'provider'; raw?: unknown }
 
 type Integration = { id: string; identifier: string; disabled?: boolean };
 
 const TYPE: Record<string, string> = {
   instagram: 'instagram',
   facebook: 'facebook',
-  tiktok: 'tiktok'
+  tiktok: 'tiktok',
+  threads: 'threads'
 };
 
 export function postizReady(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -16,10 +22,10 @@ export function postizReady(env: NodeJS.ProcessEnv = process.env): boolean {
 }
 
 export class PostizPublishingAdapter implements SocialPublishingAdapter {
-  constructor(private readonly key = process.env.POSTIZ_API_KEY?.trim() ?? '', private readonly fetchImpl: typeof fetch = fetch) {}
+  constructor(private readonly key = process.env.POSTIZ_API_KEY?.trim() ?? '', private readonly fetchImpl: typeof fetch = fetch, private readonly base = postizBase()) {}
 
   private async call(path: string, init: RequestInit = {}) {
-    const r = await this.fetchImpl(`${BASE}${path}`, {
+    const r = await this.fetchImpl(`${this.base}${path}`, {
       ...init,
       headers: { Authorization: this.key, ...(init.headers ?? {}) }
     });
@@ -38,25 +44,53 @@ export class PostizPublishingAdapter implements SocialPublishingAdapter {
       ?? null;
   }
 
+  private body(type: 'now' | 'schedule', date: string, integration: Integration, platform: string, input: PublishContentInput) {
+    const caption = [input.hook, input.caption, input.cta, (input.hashtags ?? []).join(' ')].filter(Boolean).join('\n\n').slice(0, 2200);
+    const image = input.imageUrl ? [{ path: input.imageUrl }] : [];
+    const settings: Record<string, unknown> = { __type: integration.identifier };
+    if (platform === 'instagram') settings.post_type = input.format === 'story' ? 'story' : 'post';
+    if (platform === 'tiktok') Object.assign(settings, { privacy_level: 'PUBLIC_TO_EVERYONE', duet: false, stitch: false, comment: true, autoAddMusic: 'no', brand_content_toggle: false, brand_organic_toggle: false, content_posting_method: 'DIRECT_POST' });
+    return { type, date, shortLink: false, tags: [], posts: [{ integration: { id: integration.id }, value: [{ content: caption, image }], settings }] };
+  }
+
+  /** Schedule at `date` (ISO). Called only after Angel taps Approve. */
+  async schedule(input: PublishContentInput & { scheduledFor: string }): Promise<ScheduleResult> {
+    if (!this.key) return { ok: false, code: 'not_configured', error: 'Auto-posting is not connected yet.' };
+    const platform = input.platform.replace(/^instagram_.*/, 'instagram');
+    const list = await this.call('/integrations');
+    if (list.status === 401) return { ok: false, code: 'auth', error: 'The posting service key was refused.' };
+    const integration = await this.integrationFor(platform);
+    if (!integration) return { ok: false, code: 'no_channel', error: `No connected ${platform} account yet.` };
+    const r = await this.call('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.body('schedule', input.scheduledFor, integration, platform, input)) });
+    if (!r.ok) return { ok: false, code: r.status === 401 ? 'auth' : 'provider', error: `Scheduling failed (${r.status})`, raw: r.json };
+    const first = Array.isArray(r.json) ? r.json[0] : r.json;
+    const id = String(first?.postId ?? first?.id ?? '');
+    return id ? { ok: true, providerPostId: id, raw: { integration: integration.id } } : { ok: false, code: 'provider', error: 'Scheduling returned no post id', raw: r.json };
+  }
+
+  /** Delete a scheduled post (and its group). 404 = already gone. */
+  async cancel(providerPostId: string): Promise<{ ok: boolean; error?: string }> {
+    if (!this.key) return { ok: false, error: 'Auto-posting is not connected yet.' };
+    const r = await this.call(`/posts/${encodeURIComponent(providerPostId)}`, { method: 'DELETE' });
+    if (r.ok || r.status === 404) return { ok: true };
+    return { ok: false, error: `Cancel failed (${r.status})` };
+  }
+
+  /** Is the key valid, and which channels are connected? */
+  async status(): Promise<{ configured: boolean; keyValid: boolean; channels: string[] }> {
+    if (!this.key) return { configured: false, keyValid: false, channels: [] };
+    const r = await this.call('/integrations');
+    if (!r.ok) return { configured: true, keyValid: false, channels: [] };
+    return { configured: true, keyValid: true, channels: (r.json as Integration[]).filter((x) => !x.disabled).map((x) => x.identifier) };
+  }
+
   async publish(input: PublishContentInput): Promise<PublishContentResult> {
     if (!this.key) return { status: 'failed', error: 'Postiz key is not set.' };
     const platform = input.platform.replace(/^instagram_.*/, 'instagram');
     const integration = await this.integrationFor(platform);
     if (!integration) return { status: 'failed', error: `Postiz has no connected ${platform} account.` };
 
-    const caption = [input.hook, input.caption, input.cta, (input.hashtags ?? []).join(' ')].filter(Boolean).join('\n\n').slice(0, 2200);
-    const image = input.imageUrl ? [{ path: input.imageUrl }] : [];
-    const body = {
-      type: 'now',
-      date: new Date().toISOString(),
-      shortLink: false,
-      tags: [],
-      posts: [{
-        integration: { id: integration.id },
-        value: [{ content: caption, image }],
-        settings: { __type: integration.identifier, ...(platform === 'instagram' ? { post_type: 'post' } : {}) }
-      }]
-    };
+    const body = this.body('now', new Date().toISOString(), integration, platform, input);
     const r = await this.call('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!r.ok) return { status: 'failed', error: `Postiz failed (${r.status})`, raw: r.json };
     const first = Array.isArray(r.json) ? r.json[0] : r.json;

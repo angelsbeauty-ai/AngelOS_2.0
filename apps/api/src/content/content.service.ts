@@ -7,6 +7,7 @@ import type { CreateContentDraftDto } from './dto/create-content-draft.dto';
 import type { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
 import { ManualDemoPublishingAdapter } from './publishing-adapter';
+import { PostizPublishingAdapter, POSTIZ_PLATFORMS, postizReady } from './postiz-publishing.adapter';
 import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
 
 @Injectable()
@@ -254,19 +255,63 @@ export class ContentService {
     return this.get(user, workspaceId, contentPostId);
   }
 
-  async scheduleVariant(user: AuthUser, workspaceId: string, variantId: string, scheduledFor: string) {
+  /** Approve tap → schedule. Sends to the posting service as `schedule`; rescheduling replaces the old one. */
+  async scheduleVariant(user: AuthUser, workspaceId: string, variantId: string, scheduledFor: string, postiz = new PostizPublishingAdapter()) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data: variant, error } = await supabase.from('content_variants').select('*,post:content_posts(id,status)').eq('workspace_id', workspaceId).eq('id', variantId).single();
     if (error || !variant) throw new NotFoundException('Content variant not found');
     if (!['approved', 'scheduled', 'failed'].includes((variant as any).post?.status)) throw new ConflictException('Approve the content post before scheduling it');
     if (new Date(scheduledFor).getTime() <= Date.now()) throw new BadRequestException('Scheduled time must be in the future');
     const service = createServiceSupabaseClient();
+    const platform = String(variant.platform).replace(/^instagram_.*/, 'instagram');
+    let providerPostId: string | null = variant.status === 'scheduled' ? variant.provider_post_id ?? null : null;
+    let delivery: 'auto' | 'calendar' = 'calendar';
+    let reason: string | undefined;
+    if (POSTIZ_PLATFORMS.includes(platform) && postizReady()) {
+      if (providerPostId) {
+        const gone = await postiz.cancel(providerPostId);
+        if (!gone.ok) throw new InternalServerErrorException(gone.error ?? 'Could not move the scheduled post');
+        providerPostId = null;
+      }
+      let imageUrl: string | undefined;
+      const { data: media } = await service.from('content_post_media').select('asset:media_assets(media_type,storage_path,storage_bucket)').eq('content_post_id', variant.content_post_id);
+      const photo = (media ?? []).map((m: any) => m.asset).find((a: any) => a?.media_type === 'image' && a.storage_path);
+      if (photo) {
+        const ttl = Math.max(3600, Math.ceil((new Date(scheduledFor).getTime() - Date.now()) / 1000) + 86400);
+        imageUrl = (await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, ttl)).data?.signedUrl;
+      }
+      const r = await postiz.schedule({ platform: variant.platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor, idempotencyKey: `content:${variant.id}`, imageUrl });
+      if (r.ok) { delivery = 'auto'; providerPostId = r.providerPostId ?? null; }
+      else if (r.code === 'auth' || r.code === 'provider') throw new InternalServerErrorException(r.error ?? 'Scheduling failed');
+      else reason = r.error;
+    } else reason = POSTIZ_PLATFORMS.includes(platform) ? 'Auto-posting is not connected yet.' : undefined;
     const now = new Date().toISOString();
-    const { data: updated, error: updateError } = await service.from('content_variants').update({ scheduled_for: scheduledFor, status: 'scheduled', updated_at: now }).eq('workspace_id', workspaceId).eq('id', variantId).select('*').single();
+    const { data: updated, error: updateError } = await service.from('content_variants').update({ scheduled_for: scheduledFor, status: 'scheduled', provider_post_id: providerPostId, updated_at: now }).eq('workspace_id', workspaceId).eq('id', variantId).select('*').single();
     if (updateError || !updated) throw new InternalServerErrorException(updateError?.message ?? 'Could not schedule content');
     await service.from('content_posts').update({ status: 'scheduled', updated_at: now }).eq('workspace_id', workspaceId).eq('id', (variant as any).content_post_id);
-    return updated;
+    return { ...updated, delivery, reason };
   }
+
+  /** Cancel a scheduled post: deletes it from the posting service, keeps the approved draft in AngelOS. */
+  async cancelSchedule(user: AuthUser, workspaceId: string, variantId: string, postiz = new PostizPublishingAdapter()) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data: variant, error } = await supabase.from('content_variants').select('*').eq('workspace_id', workspaceId).eq('id', variantId).single();
+    if (error || !variant) throw new NotFoundException('Content variant not found');
+    if (variant.status !== 'scheduled') throw new ConflictException('Only a scheduled post can be cancelled');
+    if (variant.provider_post_id) {
+      const r = await postiz.cancel(variant.provider_post_id);
+      if (!r.ok) throw new InternalServerErrorException(r.error ?? 'Could not cancel the post');
+    }
+    const service = createServiceSupabaseClient();
+    const now = new Date().toISOString();
+    const { data: updated, error: e2 } = await service.from('content_variants').update({ status: 'approved', provider_post_id: null, updated_at: now }).eq('workspace_id', workspaceId).eq('id', variantId).select('*').single();
+    if (e2 || !updated) throw new InternalServerErrorException(e2?.message ?? 'Could not cancel');
+    const { data: rest } = await service.from('content_variants').select('status').eq('content_post_id', variant.content_post_id).eq('status', 'scheduled');
+    if (!rest?.length) await service.from('content_posts').update({ status: 'approved', updated_at: now }).eq('workspace_id', workspaceId).eq('id', variant.content_post_id);
+    return { ...updated, previousScheduledFor: variant.scheduled_for };
+  }
+
+  async schedulingStatus() { return new PostizPublishingAdapter().status(); }
 
   async publishNow(user: AuthUser, workspaceId: string, variantId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
