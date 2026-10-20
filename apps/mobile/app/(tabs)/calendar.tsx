@@ -50,7 +50,7 @@ const addD = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.g
 type PostItem = { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date; end: Date } | PostItem;
 const FS = Math.min(1.6, Math.max(1, PixelRatio.getFontScale()));
-const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); const HOUR_H = Math.round(52 * FS); const GUTTER = 48;
+const HOURS = Array.from({ length: 24 }, (_, i) => i); const HOUR_H = Math.round(52 * FS); const GUTTER = 48;
 const PENDING = /pending|request|tentative|unconfirmed/i;
 const MAXF = 1.6;
 function glyph(p: ContentPost) {
@@ -399,7 +399,7 @@ export default function CalendarTab() {
           </Pressable>;
           if (it.kind !== 'post') return <View key={`b-${it.a.id}`}>{row}</View>;
           const ic = palette.text;
-          return <SwipeRow key={`p-${it.p.id}`} night={night} onFullSwipe={() => undefined} actions={[
+          return <SwipeRow key={`p-${it.p.id}`} night={night} keepText onFullSwipe={() => undefined} actions={[
             { key: 'reschedule', label: t('sched.reschedule', 'Reschedule'), icon: <ArrowsClockwise size={20} color={ic} />, onPress: () => void openItem(it, { edit: true }) },
             { key: 'duplicate', label: t('sched.duplicate', 'Duplicate'), icon: <Copy size={20} color={ic} />, onPress: () => router.push({ pathname: '/content/new', params: { title: it.p.title ?? '', caption: it.p.variants?.[0]?.caption ?? '', date: ymd(addD(it.at, 7)), time: hhmm(it.at) } } as any) },
             { key: 'cancel', label: t('sched.cancel', 'Cancel'), danger: true, icon: <X size={20} color={RED} />, onPress: () => void openItem(it, { cancel: true }) }
