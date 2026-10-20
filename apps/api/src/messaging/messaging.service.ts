@@ -6,8 +6,6 @@ import { AiProviderService } from '../ai/ai-provider.service';
 import { StyleLearningService } from '../ai/style/style-learning.service';
 import { BrainService } from '../ai/brain/brain.service';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
-import type { CreateDemoChannelDto } from './dto/create-demo-channel.dto';
-import type { IngestMessageDto } from './dto/ingest-message.dto';
 import type { CreateReplyDto } from './dto/create-reply.dto';
 import type { UpdateThreadDto } from './dto/update-thread.dto';
 import type { StartConversationDto } from './dto/start-conversation.dto';
@@ -121,20 +119,6 @@ export class MessagingService {
     return data;
   }
 
-  async createDemoChannel(user: AuthUser, workspaceId: string, dto: CreateDemoChannelDto) {
-    const supabase = createUserSupabaseClient(user.accessToken);
-    const { data, error } = await supabase.from('messaging_channels').insert({
-      workspace_id: workspaceId,
-      provider: 'manual',
-      display_name: dto.displayName?.trim() || 'AngelOS Demo Inbox',
-      status: 'connected',
-      capabilities: { inbound: true, outbound: true, demo: true },
-      created_by: user.id
-    }).select('*').single();
-    if (error) throw new InternalServerErrorException(error.message);
-    return data;
-  }
-
   async listThreads(user: AuthUser, workspaceId: string, view: 'active' | 'archived' | 'all' = 'active') {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase
@@ -233,19 +217,6 @@ export class MessagingService {
       externalMessageId: `manual_in_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       body, contactDisplayName: thread.contact_display_name, clientId: thread.client?.id ?? null,
       language: detectLanguage(body) ?? thread.client?.language, source: `manual-paste:${thread.platform}`, createdBy: user.id
-    });
-  }
-
-  async ingestDemoMessage(user: AuthUser, workspaceId: string, dto: IngestMessageDto) {
-    const supabase = createUserSupabaseClient(user.accessToken);
-    const { data: channel, error: channelError } = await supabase.from('messaging_channels').select('*').eq('workspace_id', workspaceId).eq('id', dto.channelId).single();
-    if (channelError || !channel) throw new NotFoundException('Messaging channel not found');
-    if (channel.provider !== 'manual') throw new BadRequestException('Manual ingest is only available for the demo transport. Live providers use verified webhooks.');
-    return this.recordInbound(supabase, {
-      workspaceId, channel, externalThreadId: dto.externalThreadId, externalUserId: dto.externalUserId,
-      externalMessageId: dto.externalMessageId?.trim() || `demo_in_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      body: dto.body, contactDisplayName: dto.contactDisplayName, clientId: dto.clientId ?? null, language: dto.language ?? null,
-      matchConfidence: dto.matchConfidence, source: 'manual-demo', createdBy: user.id
     });
   }
 

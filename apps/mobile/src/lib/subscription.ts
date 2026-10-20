@@ -10,5 +10,4 @@ export interface SubscriptionStatus {
 export const getSubscription = (workspaceId: string) => apiFetch<SubscriptionStatus>(`/workspaces/${workspaceId}/subscription`);
 export const requestCheckout = (workspaceId: string, billingInterval: 'monthly'|'yearly') => apiFetch<any>(`/workspaces/${workspaceId}/subscription/checkout`, { method: 'POST', body: JSON.stringify({ billingInterval }) });
 export const cancelSubscription = (workspaceId: string) => apiFetch<any>(`/workspaces/${workspaceId}/subscription/cancel`, { method: 'POST' });
-export const reactivateDemo = (workspaceId: string, billingInterval: 'monthly'|'yearly') => apiFetch<any>(`/workspaces/${workspaceId}/subscription/reactivate-demo`, { method: 'POST', body: JSON.stringify({ billingInterval }) });
 export const redeemStudentDiscount = (workspaceId: string, token: string) => apiFetch<any>(`/workspaces/${workspaceId}/subscription/student-discount`, { method: 'POST', body: JSON.stringify({ token }) });

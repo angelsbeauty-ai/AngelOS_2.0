@@ -56,24 +56,6 @@ export class SubscriptionsService {
     return data;
   }
 
-  async reactivateDemo(user: AuthUser, workspaceId: string, billingInterval: 'monthly' | 'yearly') {
-    if (process.env.BILLING_DEMO_MODE !== 'true' || process.env.NODE_ENV === 'production') {
-      throw new ConflictException('Demo billing activation is disabled. Connect a real billing provider for production subscriptions.');
-    }
-    await this.assertWorkspaceAccess(user, workspaceId);
-    const service = createServiceSupabaseClient();
-    const now = new Date();
-    const periodEnd = new Date(now);
-    if (billingInterval === 'yearly') periodEnd.setUTCFullYear(periodEnd.getUTCFullYear() + 1);
-    else periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1);
-    const { data, error } = await service.from('workspace_subscriptions').update({
-      status: 'active', billing_interval: billingInterval, provider: 'demo', current_period_ends_at: periodEnd.toISOString(), cancelled_at: null, read_only_started_at: null, read_only_until: null, grace_ends_at: null, updated_at: now.toISOString()
-    }).eq('workspace_id', workspaceId).select('*').single();
-    if (error) throw new InternalServerErrorException(error.message);
-    await this.logEvent(workspaceId, user.id, 'demo_subscription_activated', { billingInterval, currentPeriodEndsAt: periodEnd.toISOString() });
-    return data;
-  }
-
   async redeemStudentDiscount(user: AuthUser, workspaceId: string, token: string) {
     await this.assertWorkspaceAccess(user, workspaceId);
     const service = createServiceSupabaseClient();

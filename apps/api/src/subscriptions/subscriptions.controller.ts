@@ -13,6 +13,5 @@ export class SubscriptionsController {
   @Get() status(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.subscriptions.getStatus(user, workspaceId); }
   @Post('checkout') checkout(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: ChangePlanDto) { return this.subscriptions.selectPlan(user, workspaceId, dto.billingInterval); }
   @Post('cancel') cancel(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.subscriptions.cancel(user, workspaceId); }
-  @Post('reactivate-demo') reactivateDemo(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: ChangePlanDto) { return this.subscriptions.reactivateDemo(user, workspaceId, dto.billingInterval); }
   @Post('student-discount') studentDiscount(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: RedeemStudentDiscountDto) { return this.subscriptions.redeemStudentDiscount(user, workspaceId, dto.token); }
 }

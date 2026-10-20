@@ -5,8 +5,6 @@ import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard';
 import { MessagingService } from './messaging.service';
 import { SocialSyncService } from '../sync/social-sync.service';
 import { SavedRepliesService } from './saved-replies.service';
-import { CreateDemoChannelDto } from './dto/create-demo-channel.dto';
-import { IngestMessageDto } from './dto/ingest-message.dto';
 import { CreateReplyDto } from './dto/create-reply.dto';
 import { UpdateThreadDto } from './dto/update-thread.dto';
 import { InternalNoteDto } from './dto/internal-note.dto';
@@ -28,7 +26,6 @@ export class MessagingController {
   @Get('channels') listChannels(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.listChannels(user, workspaceId); }
   @Get('connections') connections(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.connections(user, workspaceId); }
   @Post('connections/line') connectLine(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.connectLine(user, workspaceId); }
-  @Post('channels/demo') createDemoChannel(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: CreateDemoChannelDto) { return this.messaging.createDemoChannel(user, workspaceId, dto); }
 
   @Get('threads') listThreads(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('view') view?: string) {
     return this.messaging.listThreads(user, workspaceId, view === 'archived' || view === 'all' ? view : 'active');
@@ -37,7 +34,6 @@ export class MessagingController {
   @Get('threads/:threadId') getThread(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string) { return this.messaging.getThread(user, workspaceId, threadId); }
   @Post('threads/:threadId/read') markRead(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string) { return this.messaging.markRead(user, workspaceId, threadId); }
   @Post('threads/:threadId/inbound') addInbound(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string, @Body() dto: AddInboundDto) { return this.messaging.addInbound(user, workspaceId, threadId, dto.body); }
-  @Post('ingest-demo') ingestDemo(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: IngestMessageDto) { return this.messaging.ingestDemoMessage(user, workspaceId, dto); }
   @Post('threads/:threadId/ai-draft') draftReply(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string) { return this.messaging.draftReply(user, workspaceId, threadId); }
   @Post('threads/:threadId/replies') createReply(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string, @Body() dto: CreateReplyDto) { return this.messaging.createReply(user, workspaceId, threadId, dto); }
   @Post('messages/:messageId/translate') translateMessage(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('messageId') messageId: string, @Body() dto: TranslateMessageDto) { return this.messaging.translateMessage(user, workspaceId, messageId, dto.targetLanguage ?? 'en'); }
