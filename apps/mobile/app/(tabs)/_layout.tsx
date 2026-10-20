@@ -25,9 +25,11 @@ export default function TabsLayout() {
     tabBarInactiveTintColor: '#9A9A9F',
     tabBarStyle: [styles.tabBar, { height: 49 + Math.max(insets.bottom, 34), paddingBottom: Math.max(insets.bottom, 34), borderTopColor: palette.border, backgroundColor: palette.bg }],
     tabBarShowLabel: true,
-    tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14, paddingBottom: 0 },
-    tabBarItemStyle: { height: 49, paddingTop: 5, paddingBottom: 2 },
-    tabBarIconStyle: { height: 26, marginBottom: 0 },
+    tabBarLabelStyle: { fontFamily: 'Manrope_600SemiBold', fontSize: 11, lineHeight: 14, height: 14, paddingBottom: 0, flexShrink: 0 },
+    // The tab button already pads 5pt top/bottom inside the 49pt bar: 49 - 10 = 39 >= 24 icon + 14 label.
+    // Extra item padding (or a taller icon box) squeezed the label row to 6pt and clipped it on web and iOS.
+    tabBarItemStyle: { paddingTop: 0, paddingBottom: 0 },
+    tabBarIconStyle: { minHeight: 24 },
     // A1 .tab.on: raised white pill behind the active tab.
     tabBarActiveBackgroundColor: 'transparent',
   };
