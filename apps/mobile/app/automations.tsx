@@ -3,7 +3,7 @@ import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { ScreenTitle, SupportText } from '../src/components/ui';
-import { useAppearance } from '../design/appearance';
+import { useAppearance } from '../src/design/appearance';
 import { tokens } from '../design/theme';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getSystemHealth, updateOperationalControls } from '../src/lib/system-health';
