@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { router } from 'expo-router';
@@ -12,13 +12,13 @@ import { tokens } from '../design/theme';
 import { ApiError } from '../lib/api';
 import { dialog } from '../lib/dialog';
 import { useOnline } from '../lib/offline';
-import { bestTimes, BEST_TIME_SOURCE, cancelScheduledVariant, scheduleContentVariant, type ContentPost, type SchedulingStatus } from '../lib/content';
+import { bestTimes, BEST_TIME_SOURCE, cancelScheduledVariant, publishContentVariant, scheduleContentVariant, type ContentPost, type SchedulingStatus } from '../lib/content';
 
 export type SchedState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ok'; status: SchedulingStatus };
 
-const pad = (n: number) => String(n).padStart(2, '0');
-export const hhmm = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-export const dayText = (d: Date) => d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+import { fromJ, hhmm, dayText } from '../lib/jst';
+import { getInsights } from '../lib/social';
+export { hhmm, dayText };
 const haptic = (k: 'success' | 'error') => void Haptics.notificationAsync(k === 'success' ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error).catch(() => undefined);
 
 /** Human label for a post's state. Never a raw status key on screen. */
@@ -33,7 +33,7 @@ export function postStatusLabel(p: ContentPost, t: (k: string, d: string) => str
 }
 
 /** Calendar post sheet (P16/P17/P20/P22/P25): change time → Approve, Cancel → confirm → Undo. */
-export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onRetryStatus }: { ws: string; post: ContentPost; at: Date; sched: SchedState; onChanged: () => void; onClose: () => void; onRetryStatus: () => void }) {
+export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onRetryStatus, startEditing, startCancel }: { ws: string; post: ContentPost; at: Date; sched: SchedState; onChanged: () => void; onClose: () => void; onRetryStatus: () => void; startEditing?: boolean; startCancel?: boolean }) {
   const { t } = useTranslation();
   const { palette, mode } = useAppearance();
   const night = mode === 'night';
@@ -45,9 +45,17 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
   const scheduled = vs.filter((v) => v.status === 'scheduled');
   const movable = vs.filter((v) => ['scheduled', 'approved', 'failed'].includes(v.status));
   const failed = vs.some((v) => v.status === 'failed');
-  const live = vs.find((v) => v.live_url)?.live_url;
-  const [editing, setEditing] = useState(false);
-  const [when, setWhen] = useState<Date>(() => (at.getTime() > Date.now() ? at : new Date(Math.ceil((Date.now() + 3600000) / 900000) * 900000)));
+    const [editing, setEditing] = useState(Boolean(startEditing));
+  const [when, setWhen] = useState<Date>(() => (fromJ(at).getTime() > Date.now() ? at : new Date(Math.ceil((at.getTime() + Math.max(3600000, Date.now() - fromJ(at).getTime() + 3600000)) / 900000) * 900000)));
+  const posted = vs.filter((v) => v.status === 'published');
+  const [stats, setStats] = useState<string | null>(null);
+  useEffect(() => { if (!posted.length) return; let live = true;
+    void Promise.all(Array.from(new Set(posted.map((v) => v.platform.split('_')[0]))).map((p) => getInsights(ws, p).catch(() => null))).then((rs) => { if (!live) return;
+      const ids = new Set(posted.map((v) => v.id)); let views: number | null = null; let inter: number | null = null;
+      for (const r of rs) { if (!r) continue; for (const x of r.top?.views ?? []) if (ids.has(x.variantId)) views = (views ?? 0) + x.value; for (const x of r.top?.interactions ?? []) if (ids.has(x.variantId)) inter = (inter ?? 0) + x.value; }
+      setStats(views == null && inter == null ? null : [views != null ? t('sched.views', { defaultValue: '{{n}} views', n: views.toLocaleString('en-GB') }) : null, inter != null ? t('sched.interactions', { defaultValue: '{{n}} likes and comments', n: inter.toLocaleString('en-GB') }) : null].filter(Boolean).join(' · ')); });
+    return () => { live = false; }; // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post.id]);
   const [busy, setBusy] = useState(false);
   const [inline, setInline] = useState<string | null>(null);
 
@@ -72,13 +80,13 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
 
   async function scheduleAll(target: Date, ids: string[]) {
     let ok = 0; let msg: string | null = null;
-    for (const id of ids) { try { await scheduleContentVariant(ws, id, target.toISOString()); ok += 1; } catch (e) { msg = errText(e); } }
+    for (const id of ids) { try { await scheduleContentVariant(ws, id, fromJ(target).toISOString()); ok += 1; } catch (e) { msg = errText(e); } }
     return { ok, msg };
   }
 
   async function approveTime() {
     setInline(null);
-    if (when.getTime() <= Date.now() + 60000) { haptic('error'); setInline(t('sched.past', 'That time has passed. Pick a time later than now.')); return; }
+    if (fromJ(when).getTime() <= Date.now() + 60000) { haptic('error'); setInline(t('sched.past', 'That time has passed. Pick a time later than now.')); return; }
     if (!online) { setInline(t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
     const before = scheduled.map((v) => ({ id: v.id, at: v.scheduled_for }));
     setBusy(true);
@@ -94,7 +102,7 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
   }
 
   async function cancelPost() {
-    const yes = await dialog.confirm({ title: t('sched.cancelTitle', 'Cancel this post?'), message: t('sched.cancelBody', 'It will not be posted. The approved draft stays in Social.'), confirmText: t('sched.cancelPost', 'Cancel post'), cancelText: t('sched.keep', 'Keep'), destructive: true });
+    const yes = await dialog.confirm({ title: t('sched.cancelTitle', 'Cancel this post?'), message: t('sched.cancelBody2', { defaultValue: "It won't be posted on {{day}}. The draft stays in Drafts.", day: at.toLocaleDateString('en-GB', { weekday: 'long' }) }), confirmText: t('sched.cancelPost', 'Cancel post'), cancelText: t('sched.keepPost', 'Keep post'), destructive: true });
     if (!yes) return;
     setBusy(true);
     const done: Array<{ id: string; at: string | null }> = []; let msg: string | null = null;
@@ -109,12 +117,27 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
     })(); } } });
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (startCancel && scheduled.length) void cancelPost(); }, []);
+
   async function retry() {
-    const target = at.getTime() > Date.now() + 60000 ? at : null;
+    const target = fromJ(at).getTime() > Date.now() + 60000 ? at : null;
     if (!target) { setEditing(true); setInline(t('sched.pickNew', 'Pick a new time, then Approve.')); return; }
     setBusy(true); const r = await scheduleAll(target, vs.filter((v) => v.status === 'failed').map((v) => v.id)); setBusy(false);
     if (r.ok) { haptic('success'); onChanged(); onClose(); toast.show({ title: t('sched.savedToCalendar', 'Saved to calendar'), tone: 'success' }); }
     else { haptic('error'); setInline(r.msg); }
+  }
+
+  async function postNow() {
+    const yes = await dialog.confirm({ title: t('sched.postNowTitle', 'Post now?'), message: t('sched.postNowBody', { defaultValue: 'It goes out to {{p}} right away instead of at {{time}}.', p: platforms.map(name).join(', '), time: hhmm(at) }), confirmText: t('sched.postNow', 'Post now'), cancelText: t('sched.keepScheduled', 'Keep the time') });
+    if (!yes) return;
+    if (!online) { setInline(t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
+    setBusy(true); let ok = 0; let msg: string | null = null;
+    for (const v of vs.filter((x) => ['scheduled', 'approved', 'failed'].includes(x.status))) { try { const r = await publishContentVariant(ws, v.id); if (r.published) ok += 1; } catch (e) { msg = e instanceof ApiError && e.status && e.status < 500 && e.message ? e.message : t('sched.postFailed', "It didn't post. Tap Try again."); } }
+    setBusy(false);
+    if (!ok) { haptic('error'); setInline(msg ?? t('sched.postFailed', "It didn't post. Tap Try again.")); onChanged(); return; }
+    haptic('success'); onChanged(); onClose();
+    toast.show({ title: msg ? t('sched.postedSome', { defaultValue: 'Posted on {{ok}} of {{all}}', ok, all: movable.length }) : t('sched.postedNow', 'Posted'), message: msg ?? undefined, tone: msg ? 'info' : 'success' });
   }
 
   const best = bestTimes(platforms, when);
@@ -147,7 +170,12 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
       <Text style={[s.bTitle, { color: red }]}>{t('sched.stFailed', "Didn't post")}</Text>
       <Pressable accessibilityRole="button" disabled={busy} onPress={() => void retry()} style={s.link}><Text style={[s.linkText, txt]}>{t('sched.tryAgain', 'Try again')}</Text></Pressable>
     </View> : null}
-    {live ? <Pressable accessibilityRole="link" onPress={() => void Linking.openURL(live)} style={s.link}><Text style={[s.linkText, txt]}>{t('sched.viewLive', 'View the live post')}</Text></Pressable> : null}
+    {posted.length ? <View style={[s.banner, { backgroundColor: palette.fill }]}>
+      <Text style={[s.bTitle, txt]}>✓ {t('sched.postedOn', { defaultValue: 'Posted on {{p}}', p: Array.from(new Set(posted.map((v) => name(v.platform.split('_')[0])))).join(' and ') })}</Text>
+      <Text style={[s.sub, mut]}>{stats ?? t('sched.statsUnavailable', 'Views and likes: Unavailable')}</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{posted.filter((v) => v.live_url).map((v) => <Pressable key={v.id} accessibilityRole="link" onPress={() => void Linking.openURL(v.live_url!)} style={[s.chip, { borderColor: palette.border }]}><Text style={[s.chipText, txt]}>{t('sched.viewOn', { defaultValue: 'View on {{p}}', p: name(v.platform.split('_')[0]) })}</Text></Pressable>)}</View>
+      {!posted.some((v) => v.live_url) ? <Text style={[s.small, mut]}>{t('sched.noLink', 'Link: Unavailable')}</Text> : null}
+    </View> : null}
 
     {editing ? <View style={[s.card, line, { padding: 12, gap: 10 }]}>
       <View style={s.stepRow}>
@@ -170,11 +198,12 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
     </View> : null}
     {inline ? <Text accessibilityLiveRegion="assertive" style={[s.sub, { color: red }]}>{inline}</Text> : null}
 
-    <View style={{ flexDirection: 'row', gap: 10 }}>
+    <View style={{ flexDirection: 'row', gap: 8 }}>
       <Btn label={t('sched.edit', 'Edit')} onPress={() => { onClose(); router.push(`/content/${post.id}` as any); }} />
       {movable.length ? (editing
         ? <Btn primary label={busy ? t('sched.saving', 'Saving…') : t('sched.approveTime', 'Approve')} a11y={t('sched.approveA11y', { defaultValue: 'Approve and schedule for {{when}}', when: `${dayText(when)} ${hhmm(when)}` })} disabled={busy} onPress={() => void approveTime()} />
-        : <Btn label={t('sched.changeTime', 'Change time')} onPress={() => { setEditing(true); void Haptics.selectionAsync().catch(() => undefined); }} />) : null}
+        : <Btn label={t('sched.reschedule', 'Reschedule')} onPress={() => { setEditing(true); void Haptics.selectionAsync().catch(() => undefined); }} />) : null}
+      {movable.length && !editing ? <Btn primary label={t('sched.postNow', 'Post now')} disabled={busy} onPress={() => void postNow()} /> : null}
     </View>
     {scheduled.length ? <Pressable accessibilityRole="button" accessibilityLabel={t('sched.cancelPost', 'Cancel post')} disabled={busy} onPress={() => void cancelPost()} style={s.link}><Text style={[s.linkText, { color: red }]}>{t('sched.cancelPost', 'Cancel post')}</Text></Pressable> : null}
   </View>;
