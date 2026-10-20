@@ -20,6 +20,7 @@ import { getHomeSummary, type HomeSummary } from '../../src/lib/home';
 import { PLATFORM_NAME } from '../../src/lib/social';
 import { tokens } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
+import { timeJst } from '../../src/lib/jst';
 
 export const GREEN = '#151515';
 
@@ -61,7 +62,7 @@ export default function HomeScreen() {
   const h = now.getHours();
   const hello = h < 5 ? t('home.evening2', 'Good evening!') : h < 12 ? t('home.morning2', 'Good morning!') : h < 18 ? t('home.afternoon2', 'Good afternoon!') : t('home.evening2', 'Good evening!');
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
-  const time = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const time = (iso: string) => timeJst(iso);
   const s = sum?.schedule; const m = sum?.messages; const so = sum?.social; const imp = sum?.important; const a = sum?.assistant;
   const openReport = (section?: string) => router.push({ pathname: '/reports', params: section ? { section } : {} } as any);
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
@@ -96,9 +97,11 @@ export default function HomeScreen() {
         {!s ? <Text style={[styles.empty, { color: palette.muted }]}>{sumErr ? t('home.sumError', 'Your numbers could not load right now. Pull down to try again.') : t('today.loading')}</Text> : null}
         {s && !upcoming.length ? <Text style={[styles.empty, { color: palette.muted }]}>{t('home.noMore', 'Nothing else booked today')}</Text> : null}
         {upcoming.map((it, i) => <Pressable key={it.id} accessibilityRole="button" onPress={() => router.push(`/bookings/${it.id}` as any)} style={({ pressed }) => [styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
-          <Text style={[styles.itemSub, { color: palette.muted, minWidth: 44 }]}>{time(it.start_at)}</Text>
-          <Text numberOfLines={1} style={[styles.itemTitle, { color: palette.text, flex: 1 }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
-          {statusLabel(it.status) ? <Text numberOfLines={1} style={[styles.itemSub, { color: palette.muted, textAlign: 'right' }]}>{statusLabel(it.status)}</Text> : null}
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={[styles.itemTitle, { color: palette.text }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
+            <Text style={[styles.itemSub, { color: palette.muted }]}>{time(it.start_at)} – {time(it.end_at)}</Text>
+          </View>
+          {statusLabel(it.status) ? <Text style={[styles.itemSub, { color: palette.muted, textAlign: 'right' }]}>{statusLabel(it.status)}</Text> : null}
           <CaretRight size={16} color={palette.muted} />
         </Pressable>)}
       </View>

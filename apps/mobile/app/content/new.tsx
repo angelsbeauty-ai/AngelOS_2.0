@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Screen } from '../../src/components/Screen';
 import { ScreenTitle, SupportText } from '../../src/components/ui';
@@ -12,6 +12,7 @@ import { BrandLogo } from '../../src/components/BrandBadge';
 import { ApiError } from '../../src/lib/api';
 import * as Haptics from 'expo-haptics';
 import { useOnline } from '../../src/lib/offline';
+import { fromJ, ymd } from '../../src/lib/jst';
 import { approveContentPost, publishContentVariant, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
@@ -88,6 +89,7 @@ export default function NewPostScreen() {
   const [captionBusy, setCaptionBusy] = useState(false);
   const [seed, setSeed] = useState(0);
   const [review, setReview] = useState<'now' | 'schedule' | null>(null);
+  const [inlineErr, setInlineErr] = useState<string | null>(null);
 
   useEffect(() => { void loadMedia(); }, []);
   useEffect(() => { if (params.date) setDay(parseDayParam(params.date)); }, [params.date]);
@@ -129,6 +131,8 @@ export default function NewPostScreen() {
     return new Date(day.getFullYear(), day.getMonth(), day.getDate(), hours, minutes);
   }, [day, time]);
   const today = startOfDay(new Date());
+  // P23: files the platforms won't take (Instagram: photos up to 8 MB, videos up to 650 MB).
+  const tooLarge = media.filter((m) => selectedMedia.includes(m.id) && (m.size_bytes ?? 0) > (m.media_type === 'video' ? 650 : 8) * 1024 * 1024);
   const savable = kind === 'post' || kind === 'story' || kind === 'carousel' || kind === 'reel';
   const canSave = Boolean(workspaceId && savable && platforms.length && (postedCaption.trim() || selectedMedia.length) && !busy && !captionBusy);
 
@@ -203,16 +207,17 @@ export default function NewPostScreen() {
     }
   }
 
-  async function save(mode: 'now' | 'schedule') {
+  async function save(mode: 'now' | 'schedule' | 'draft') {
     const fmt: ContentFormat | null = kind === 'post' ? 'photo' : kind === 'story' || kind === 'carousel' || kind === 'reel' ? kind : null;
     if (!workspaceId || !fmt || !platforms.length) return;
     const goal = GOALS[goalIndex ?? 0];
-    const when = mode === 'now' ? new Date() : plannedAt;
+    const when = mode === 'now' ? new Date() : fromJ(plannedAt);
     const text = postedCaption.trim() || ' ';
-    setBusy(true);
+    if (!online) { void dialog.notify(t('sched.offlineTitle', "You're offline"), t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
+    if (mode === 'schedule' && when.getTime() <= Date.now() + 60000) { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined); setInlineErr(t('sched.past', 'That time has passed. Pick a time later than now.')); return; }
+    if (tooLarge.length && mode !== 'draft') { setInlineErr(t('sched.tooLargeFirst', 'Remove the file that is too large first.')); return; }
+    setBusy(true); setInlineErr(null);
     try {
-      if (!online) { void dialog.notify(t('sched.offlineTitle', "You're offline"), t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
-      if (mode === 'schedule' && when.getTime() <= Date.now() + 60000) { void dialog.notify(t('sml.pastTitle'), t('sml.pastBody')); return; }
       const draft = await createComposerDraft(workspaceId, {
         title: title.trim() || undefined,
         objective: goal.objective,
@@ -225,42 +230,44 @@ export default function NewPostScreen() {
         plannedFor: when.toISOString(),
         mediaAssetIds: selectedMedia.length ? selectedMedia : undefined,
       });
+      if (mode === 'draft') {
+        setReview(null);
+        toast.show({ title: t('sched.draftSaved', 'Draft saved'), tone: 'success', action: { label: t('sched.open', 'Open'), onPress: () => router.push(`/content/${draft.id}` as any) } });
+        if (router.canGoBack()) router.back(); else router.replace('/social');
+        return;
+      }
       await approveContentPost(workspaceId, draft.id);
       if (mode === 'schedule') {
-        const ok: string[] = []; let auto = 0; let failedMsg: string | null = null;
+        const ok: string[] = []; let failedMsg: string | null = null;
         for (const v of draft.variants ?? []) {
-          try { const r = await scheduleContentVariant(workspaceId, v.id, when.toISOString()); ok.push(v.id); if (r.delivery === 'auto') auto += 1; }
-          catch (e) { failedMsg = e instanceof ApiError && e.status !== 0 && e.message ? e.message : t('sched.failedBody', "It couldn't be scheduled. Your post is kept as approved."); }
+          try { await scheduleContentVariant(workspaceId, v.id, when.toISOString()); ok.push(v.id); }
+          catch (e) { failedMsg = e instanceof ApiError && e.status !== 0 && e.status < 500 && e.message ? e.message : t('sched.failedBody', "It couldn't be scheduled. Your post is kept as approved."); }
         }
-        const whenText = `${when.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Tokyo' })}, ${time}`;
-        if (!ok.length) { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined); void dialog.notify(t('sched.failedTitle', 'Not scheduled'), failedMsg ?? ''); return; }
+        if (!ok.length) { void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => undefined); setInlineErr(failedMsg); return; }
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-        const note = failedMsg ? t('sched.partial', { defaultValue: '{{ok}} of {{all}} platforms scheduled. Open the post to try the rest again.', ok: ok.length, all: (draft.variants ?? []).length })
-          : auto === ok.length ? t('sched.willPost', { defaultValue: '{{when}} · Posts automatically', when: whenText })
-          : t('sched.calendarOnly', { defaultValue: "{{when}} · Scheduling isn't connected yet, so it won't post by itself", when: whenText });
+        const short = `${plannedAt.toLocaleDateString('en-GB', { weekday: 'short' })} ${time}`;
         const ws = workspaceId;
-        toast.show({ title: t('sched.savedToCalendar', 'Saved to calendar'), message: note, tone: failedMsg ? 'info' : 'success', action: { label: t('sched.undo', 'Undo'), onPress: () => { void (async () => {
+        setReview(null);
+        toast.show({ title: failedMsg ? t('sched.partialToast', { defaultValue: 'Scheduled {{ok}} of {{all}} for {{when}}', ok: ok.length, all: (draft.variants ?? []).length, when: short }) : t('sched.scheduledFor', { defaultValue: 'Scheduled for {{when}}', when: short }), tone: 'success', action: { label: t('sched.undo', 'Undo'), onPress: () => { void (async () => {
           let undone = 0; for (const id of ok) { try { await cancelScheduledVariant(ws, id); undone += 1; } catch { /* keep going */ } }
           toast.show(undone === ok.length ? { title: t('sched.undone', 'Schedule undone'), message: t('sched.keptApproved', 'Your post is kept as approved.'), tone: 'info' } : { title: t('sched.undoFailed', "Couldn't undo"), message: t('sched.undoFailedBody', 'Open the post in Calendar and cancel it there.'), tone: 'error' });
         })(); } } });
-      } else {
-        let posted = 0; let failed: string | null = null;
-        for (const v of draft.variants ?? []) {
-          try { const r = await publishContentVariant(workspaceId, v.id); if (r.published) posted += 1; }
-          catch (e) { failed = e instanceof ApiError && e.message ? e.message : t('cnew.postFailed'); }
-        }
-        if (failed) { void dialog.notify(posted ? t('cnew.postedSome', { count: posted }) : t('cnew.notPosted'), `${failed}\n${t('cnew.keptApproved')}`); }
-        else toast.show({ title: t('cnew.posted'), message: t('cnew.postedN', { count: posted }), tone: 'success' });
+        router.replace({ pathname: '/calendar', params: { day: ymd(plannedAt), at: `${String(plannedAt.getHours()).padStart(2, '0')}:00` } } as any);
+        return;
       }
+      let posted = 0; let failed: string | null = null;
+      for (const v of draft.variants ?? []) {
+        try { const r = await publishContentVariant(workspaceId, v.id); if (r.published) posted += 1; }
+        catch (e) { failed = e instanceof ApiError && e.message ? e.message : t('cnew.postFailed'); }
+      }
+      setReview(null);
+      if (failed) { void dialog.notify(posted ? t('cnew.postedSome', { count: posted }) : t('cnew.notPosted'), `${failed}\n${t('cnew.keptApproved')}`); }
+      else toast.show({ title: t('cnew.posted'), message: t('cnew.postedN', { count: posted }), tone: 'success' });
       if (router.canGoBack()) router.back();
       else router.replace('/social');
     } catch (error) {
-      if (error instanceof ApiError && (error.status === 400 || error.status === 409) && error.message) {
-        void dialog.notify("That didn't save", error.message);
-      } else {
-        const friendly = toFriendly(error, { action: 'save', thing: 'draft' });
-        void dialog.notify(friendly.title, friendly.message);
-      }
+      if (error instanceof ApiError && (error.status === 400 || error.status === 409) && error.message) setInlineErr(error.message);
+      else { const friendly = toFriendly(error, { action: 'save', thing: 'draft' }); setInlineErr(`${friendly.title}. ${friendly.message}`); }
     } finally {
       setBusy(false);
     }
@@ -371,41 +378,55 @@ export default function NewPostScreen() {
         })}</View> : null}
       </View> : null}
 
+      {tooLarge.map((m) => <View key={m.id} style={styles.tooBig} accessibilityLiveRegion="polite">
+        <Text style={styles.tooBigTitle}>{m.media_type === 'video' ? t('sched.videoTooLarge', 'Video is too large for Instagram') : t('sched.photoTooLarge', 'Photo is too large for Instagram')}</Text>
+        <SupportText>{t('sched.tooLargeBody', { defaultValue: '{{size}} MB. Instagram allows up to {{max}} MB. Remove it, or pick a smaller copy from your phone.', size: ((m.size_bytes ?? 0) / 1048576).toFixed(1), max: m.media_type === 'video' ? 650 : 8 })}</SupportText>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Pressable accessibilityRole="button" onPress={() => void fromAlbum()} style={[styles.secondaryBtn, { minHeight: 44 }]}><Text style={styles.secondaryText}>{t('sched.pickSmaller', 'Pick a smaller copy')}</Text></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => toggleMedia(m.id)} style={[styles.secondaryBtn, { minHeight: 44 }]}><Text style={styles.secondaryText}>{t('sched.remove', 'Remove')}</Text></Pressable>
+        </View>
+      </View>)}
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.postNow')} disabled={!canSave} onPress={() => setReview('now')} style={[styles.primaryBtn, !canSave && styles.disabled]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.postNow')} disabled={!canSave} onPress={() => { setInlineErr(null); setReview('now'); }} style={[styles.primaryBtn, !canSave && styles.disabled]}>
           <Text style={styles.primaryText}>{busy ? t('cnew.saving') : t('cnew.postNow')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedule')} disabled={!canSave} onPress={() => setReview('schedule')} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('cnew.schedule')} disabled={!canSave} onPress={() => { setInlineErr(null); setReview('schedule'); }} style={[styles.secondaryBtn, !canSave && styles.disabled]}>
           <Text style={styles.secondaryText}>{t('cnew.schedule')}</Text>
         </Pressable>
       </View>
-      <Modal visible={review !== null} transparent animationType="slide" onRequestClose={() => setReview(null)}>
+      <Modal visible={review !== null} transparent animationType="slide" onRequestClose={() => { if (!busy) setReview(null); }}>
         <View style={styles.sheetBackdrop}>
           <View style={styles.sheet}>
             <View style={styles.grabber} />
             <View style={styles.sheetHead}>
-              <Text style={styles.sheetTitle}>{review === 'now' ? t('cnew.reviewNow') : t('cnew.reviewSchedule')}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel={t('common.close', 'Close')} onPress={() => setReview(null)} style={styles.sheetClose}><Text style={styles.sheetCloseText}>✕</Text></Pressable>
+              <Text accessibilityRole="header" style={styles.sheetTitle}>{t('sched.reviewTitle', 'Review your post')}</Text>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('common.close', 'Close')} disabled={busy} onPress={() => setReview(null)} hitSlop={6} style={styles.sheetClose}><Text style={styles.sheetCloseText}>✕</Text></Pressable>
             </View>
-            <View style={styles.sheetPreview}>
-              {selectedMedia[0] && previews[selectedMedia[0]] ? <View><Image source={{ uri: previews[selectedMedia[0]] }} style={styles.sheetThumb} />{selectedMedia.length > 1 ? <Text style={styles.sheetCount}>{t('cnew.ofN', { count: selectedMedia.length })}</Text> : null}</View> : null}
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text numberOfLines={3} style={styles.sheetCaption}>{caption.trim() || postedCaption.trim()}</Text>
-                {language === 'both' && captionEn.trim() ? <Text numberOfLines={2} style={styles.sheetSub}>EN: {captionEn.trim()}</Text> : null}
-                {hashtags.length ? <Text numberOfLines={1} style={styles.sheetSub}>{hashtags.slice(0, 2).join(' ')}{hashtags.length > 2 ? ` +${hashtags.length - 2}` : ''}</Text> : null}
+            <View style={styles.revRow}>
+              <View style={{ flex: 1 }}><Text style={styles.revMain}>{platforms.map((id) => PLATFORMS.find((x) => x.id === id)?.label ?? id).join(', ')}</Text></View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>{platforms.map((id) => <BrandLogo key={id} platform={id} size={22} />)}</View>
+            </View>
+            <View style={styles.revRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.revMain}>{review === 'now' ? t('cnew.now') : `${plannedAt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}, ${time}`}</Text>
+                {review !== 'now' ? <Text style={styles.sheetSub}>{bestTimes(platforms, day).times.includes(time) ? `${t('sched.bestTime', 'Best time')} · JST` : 'JST · 24h'}</Text> : null}
               </View>
             </View>
-            <View style={styles.sheetList}>
-              {platforms.map((id) => <View key={id} style={styles.sheetRow}>
-                <BrandLogo platform={id} size={22} />
-                <Text style={styles.sheetPlat}>{PLATFORMS.find((x) => x.id === id)?.label ?? id}</Text>
-                <Text style={styles.sheetWhen}>{review === 'now' ? t('cnew.now') : `${plannedAt.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} ${time}`}</Text>
-              </View>)}
+            {selectedMedia.length ? <View style={styles.revRow}>
+              <Text style={[styles.revMain, { flex: 1 }]}>{t('sched.nPhotos', { defaultValue: '{{count}} photos', count: selectedMedia.length })}</Text>
+              <View style={{ flexDirection: 'row', gap: 4 }}>{selectedMedia.slice(0, 3).map((id) => previews[id] ? <Image key={id} accessibilityIgnoresInvertColors source={{ uri: previews[id] }} style={styles.revThumb} /> : <View key={id} style={[styles.revThumb, { backgroundColor: '#E4E4E6' }]} />)}</View>
+            </View> : null}
+            <View style={{ gap: 4 }}>
+              <Text numberOfLines={4} style={styles.sheetCaption}>{caption.trim() || postedCaption.trim()}</Text>
+              {captionEn.trim() && captionEn.trim() !== caption.trim() ? <Text numberOfLines={3} style={styles.sheetSub}>EN: {captionEn.trim()}</Text> : null}
+              {hashtags.length ? <Text numberOfLines={1} style={styles.sheetSub}>{hashtags.slice(0, 3).join(' ')}{hashtags.length > 3 ? ` +${hashtags.length - 3}` : ''}</Text> : null}
             </View>
-            <SupportText>{review === 'now' ? t('cnew.reviewNowNote') : t('cnew.reviewScheduleNote')}</SupportText>
-            <Pressable accessibilityRole="button" disabled={busy} onPress={() => { const m = review; setReview(null); if (m) void save(m); }} style={[styles.primaryBtn, { flex: 0 }]}>
-              <Text style={styles.primaryText}>{review === 'now' ? t('cnew.confirmNow', { count: platforms.length }) : t('cnew.confirmSchedule', { count: platforms.length })}</Text>
+            <SupportText>{review === 'now' ? t('cnew.reviewNowNote') : t('sched.reviewNote', { defaultValue: 'AngelOS will post this at {{time}} on {{day}}. You can edit or cancel until then.', time, day: plannedAt.toLocaleDateString('en-GB', { weekday: 'long' }) })}</SupportText>
+            {inlineErr ? <Text accessibilityLiveRegion="assertive" style={styles.inlineErr}>{inlineErr}</Text> : null}
+            <Pressable accessibilityRole="button" accessibilityState={{ busy }} disabled={busy} onPress={() => { if (review) void save(review); }} style={styles.approveBtn}>
+              {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryText}>{review === 'now' ? t('sched.postNow', 'Post now') : t('sched.approveSchedule', 'Approve & schedule')}</Text>}
             </Pressable>
+            <Pressable accessibilityRole="button" disabled={busy} onPress={() => void save('draft')} style={styles.draftBtn}><Text style={styles.secondaryText}>{t('sched.saveDraft', 'Save as draft')}</Text></Pressable>
           </View>
         </View>
       </Modal>
@@ -454,8 +475,16 @@ const styles = StyleSheet.create({
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.2)' },
   sheetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
-  sheetClose: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  sheetCloseText: { fontSize: 20, color: '#151515' },
+  sheetClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' },
+  sheetCloseText: { fontSize: 15, color: '#3A3A3C' },
+  revRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(0,0,0,0.08)', paddingVertical: 6 },
+  revMain: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
+  revThumb: { width: 36, height: 44, borderRadius: 6 },
+  inlineErr: { fontFamily: tokens.font.ui, fontSize: 15, color: '#D70015' },
+  approveBtn: { minHeight: 50, borderRadius: 25, backgroundColor: '#151515', alignItems: 'center', justifyContent: 'center' },
+  draftBtn: { minHeight: 50, borderRadius: 25, borderWidth: 1, borderColor: 'rgba(0,0,0,0.15)', alignItems: 'center', justifyContent: 'center' },
+  tooBig: { borderRadius: 14, padding: 12, gap: 8, backgroundColor: 'rgba(215,0,21,0.06)' },
+  tooBigTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#D70015' },
   sheetPreview: { flexDirection: 'row', gap: 12 },
   sheetThumb: { width: 104, height: 128, borderRadius: 12, backgroundColor: '#F2F2F2' },
   sheetCount: { position: 'absolute', left: 8, bottom: 8, color: '#FFFFFF', fontSize: 12 },
