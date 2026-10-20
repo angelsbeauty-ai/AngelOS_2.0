@@ -300,7 +300,7 @@ export default function CalendarTab() {
         <Text style={styles.sheetTitle}>{t('cal.newSchedule', 'New schedule')}</Text>
         {draft ? <Text style={styles.sheetSub}>{draft.day.toLocaleDateString(lang, { weekday: 'long', month: 'long', day: 'numeric' })}{allDay ? '' : ` · ${hourLabel(Math.floor(draft.startMin / 60), lang)}${draft.startMin % 60 ? `:${String(draft.startMin % 60).padStart(2, '0')}` : ''}`}</Text> : null}
         <ScrollView style={{ maxHeight: 520 }} keyboardShouldPersistTaps="handled">
-          <TextInput value={title} onChangeText={setTitle} placeholder={t('cal.scheduleTitle', 'Title')} placeholderTextColor="#766E64" style={styles.input} />
+          <TextInput value={title} onChangeText={setTitle} placeholder={t('cal.scheduleTitle', 'Title')} placeholderTextColor="#6C6C70" style={styles.input} />
           <View style={styles.switchRow}><Text style={styles.miText}>{t('cal.allDay', 'All day')}</Text><Switch value={allDay} onValueChange={setAllDay} /></View>
           {allDay ? null : <View style={styles.len} {...lengthPan.panHandlers}>
             <Text style={styles.miText}>{t('cal.howLong', 'How long')}</Text>
@@ -315,15 +315,15 @@ export default function CalendarTab() {
           <View style={styles.remindRow}>
             {COLORS.map((c) => <Pressable key={c} accessibilityRole="button" accessibilityLabel={c} onPress={() => setColor(c)} style={[styles.swatch, { backgroundColor: c }, color === c && styles.swatchOn]} />)}
           </View>
-          <TextInput value={desc} onChangeText={setDesc} placeholder={t('cal.description', 'Description')} placeholderTextColor="#766E64" style={[styles.input, styles.inputTall]} multiline />
-          <TextInput value={note} onChangeText={setNote} placeholder={t('cal.notes', 'Notes')} placeholderTextColor="#766E64" style={[styles.input, styles.inputTall]} multiline />
+          <TextInput value={desc} onChangeText={setDesc} placeholder={t('cal.description', 'Description')} placeholderTextColor="#6C6C70" style={[styles.input, styles.inputTall]} multiline />
+          <TextInput value={note} onChangeText={setNote} placeholder={t('cal.notes', 'Notes')} placeholderTextColor="#6C6C70" style={[styles.input, styles.inputTall]} multiline />
           <Text style={styles.fieldK}>{t('cal.client', 'Client')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 6 }}>
             <Pressable onPress={() => setClientId(null)} style={[styles.chipBtn, !clientId && styles.chipOn]}><Text style={[styles.chipBtnText, !clientId && { color: '#FFF' }]}>{t('cal.noClient', 'None')}</Text></Pressable>
             {clients.slice(0, 20).map((c) => <Pressable key={c.id} onPress={() => setClientId(c.id)} style={[styles.chipBtn, clientId === c.id && styles.chipOn]}><Text style={[styles.chipBtnText, clientId === c.id && { color: '#FFF' }]}>{c.display_name}</Text></Pressable>)}
           </ScrollView>
-          <TextInput value={link} onChangeText={setLink} placeholder={t('cal.link', 'Link')} placeholderTextColor="#766E64" autoCapitalize="none" style={styles.input} />
-          <TextInput value={place} onChangeText={setPlace} placeholder={t('cal.location', 'Location')} placeholderTextColor="#766E64" style={styles.input} />
+          <TextInput value={link} onChangeText={setLink} placeholder={t('cal.link', 'Link')} placeholderTextColor="#6C6C70" autoCapitalize="none" style={styles.input} />
+          <TextInput value={place} onChangeText={setPlace} placeholder={t('cal.location', 'Location')} placeholderTextColor="#6C6C70" style={styles.input} />
           <Text style={styles.fieldK}>{t('cal.reminder', 'Reminder')}</Text>
           <View style={styles.remindRow}>
             {([[null, 'Off'], [10, '10m'], [30, '30m'], [60, '1h'], [1440, '1d']] as const).map(([mins, name]) => <Pressable key={name} onPress={() => setRemind(mins)} style={[styles.chipBtn, remind === mins && styles.chipOn]}><Text style={[styles.chipBtnText, remind === mins && { color: '#FFF' }]}>{name}</Text></Pressable>)}
@@ -433,27 +433,27 @@ const styles = StyleSheet.create({
   legendKey: { width: 10, height: 12, borderRadius: 2 },
   legendText: { fontFamily: tokens.font.ui, fontSize: 13, color: D.muted },
   wkRow: { flexDirection: 'row', paddingVertical: 8, marginTop: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE, backgroundColor: D.bg },
-  wk: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#766E64' },
+  wk: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiSemibold, fontSize: 12, color: '#6C6C70' },
   week: { flexDirection: 'row', minHeight: 88, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   cell: { flex: 1, paddingTop: 6, paddingHorizontal: 2, gap: 3, overflow: 'hidden' },
   num: { alignSelf: 'center', width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   numToday: { backgroundColor: tokens.color.tide },
   numText: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
-  dim: { color: '#766E64' },
+  dim: { color: '#6C6C70' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 4, paddingHorizontal: 3, paddingVertical: 2 },
   chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 10, lineHeight: 13, color: D.text },
-  more: { fontFamily: tokens.font.uiSemibold, fontSize: 10, color: '#6B645B', paddingHorizontal: 3 },
-  err: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B', textAlign: 'center' },
+  more: { fontFamily: tokens.font.uiSemibold, fontSize: 10, color: '#6C6C70', paddingHorizontal: 3 },
+  err: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6C6C70', textAlign: 'center' },
   fab: { position: 'absolute', right: 16, bottom: 78, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#FFFFFF', padding: 16, paddingBottom: 32, gap: 8 },
   sheetTitle: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#151515' },
-  sheetSub: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6B645B', marginBottom: 4 },
-  empty: { fontFamily: tokens.font.ui, fontSize: 15, color: '#766E64', paddingVertical: 16 },
+  sheetSub: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6C6C70', marginBottom: 4 },
+  empty: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6C6C70', paddingVertical: 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
   bar: { width: 4, alignSelf: 'stretch', borderRadius: 2 },
   rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' },
-  rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6B645B' },
+  rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6C6C70' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4 },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.14)' },
   avatarText: { fontFamily: tokens.font.uiSemibold, fontSize: 22, color: '#151515' },
   field: { flexDirection: 'row', gap: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: LINE },
-  fieldK: { width: 90, fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#766E64' },
+  fieldK: { width: 90, fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#6C6C70' },
   fieldV: { flex: 1, fontFamily: tokens.font.ui, fontSize: 15, color: '#151515' },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   btn: { flex: 1, minHeight: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.2)' },
