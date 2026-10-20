@@ -32,7 +32,7 @@ function gloss(rim: string, sheen: string, shadow: string): Record<string, unkno
 const day: Palette = {
   bg: '#F3F3F3',
   text: '#151515',
-  muted: '#6B645B',
+  muted: '#6C6C70',
   glass: 'rgba(255,255,255,0.80)',
   border: 'rgba(0,0,0,0.06)',
   fill: 'rgba(255,255,255,0.38)',
@@ -50,7 +50,7 @@ const day: Palette = {
 const night: Palette = {
   bg: '#050505',
   text: '#F4F4F5',
-  muted: '#8E8E93',
+  muted: '#9A9A9F',
   glass: 'rgba(18,18,20,0.66)',
   border: 'rgba(255,255,255,0.11)',
   fill: 'rgba(255,255,255,0.05)',
