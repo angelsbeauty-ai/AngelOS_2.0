@@ -44,6 +44,7 @@ import {
 } from '../src/lib/ai';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { ChatBar } from '../src/components/ChatBar';
+import { useDictation } from '../src/lib/dictation';
 import { AnswerCard, type ToolCard } from '../src/components/AnswerCard';
 
 export default function AiScreen() {
@@ -75,6 +76,8 @@ export default function AiScreen() {
   const [rated, setRated] = useState<Record<string, 'up' | 'down'>>({});
   const [listening, setListening] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const composerRef = useRef(''); composerRef.current = composer;
+  const dictation = useDictation(() => composerRef.current, setComposer, i18n.language?.startsWith('ja') ? 'ja' : 'en');
 
   /** Dictation into the composer where the browser supports it; otherwise open voice. */
   function dictate() {
@@ -236,7 +239,7 @@ export default function AiScreen() {
         {chips.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
           {chips.map((tool) => <Pressable key={tool.key} accessibilityRole="button" onPress={() => setComposer(tool.example)} style={styles.chip}><Sparkle size={14} color={P.text} weight="fill" /><Text style={styles.chipText}>{tool.label}</Text></Pressable>)}
         </ScrollView> : null}
-        <ChatBar value={composer} onChangeText={setComposer} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy} onPlus={() => setShowAllTools(!showAllTools)} onVoice={() => router.push('/voice' as any)} />
+        <ChatBar value={composer} onChangeText={setComposer} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy} onPlus={() => setShowAllTools(!showAllTools)} onVoice={() => router.push('/voice' as any)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
         <Text style={styles.approvalNote}>{t('aip.stillNeedApproval', 'Changes and messages still need your approval.')}</Text>
       </View>
     </SafeAreaView></View>
