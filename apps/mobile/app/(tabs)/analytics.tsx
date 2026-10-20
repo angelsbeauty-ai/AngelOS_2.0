@@ -18,6 +18,7 @@ import { useNightSafe } from '../../src/components/NightSafe';
 
 const PLATS = ['all', 'instagram', 'facebook', 'line'] as const;
 type Plat = typeof PLATS[number];
+type View = 'analytics' | 'profile';
 
 export default function AnalyticsScreen() {
   const { palette, mode: look } = useAppearance();
@@ -27,6 +28,7 @@ export default function AnalyticsScreen() {
   const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0, ...palette.gloss } : null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
+  const [view, setView] = useState<View>('analytics');
   const [plat, setPlat] = useState<Plat>('all');
   const [ws, setWs] = useState<string | null>(null);
   const [data, setData] = useState<Insights | null>(null);
@@ -48,6 +50,17 @@ export default function AnalyticsScreen() {
   const noData = state === 'ready' && data && data.connected.length > 0 && h == null;
 
   return <Screen onRefresh={() => load()}>
+    <View style={[styles.seg, look === 'night' && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
+      {(['analytics', 'profile'] as const).map((v) => <Pressable key={v} accessibilityRole="tab" accessibilityState={{ selected: view === v }} onPress={() => setView(v)} style={[styles.segItem, view === v && styles.segOn, view === v && look === 'night' && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
+        <Text style={[styles.segText, look === 'night' && { color: palette.text }, view !== v && { color: look === 'night' ? palette.muted : D.text2 }]}>{v === 'analytics' ? 'Analytics' : 'Profile pages'}</Text></Pressable>)}
+    </View>
+
+    {view === 'profile' ? (
+      <View style={{ gap: 12, paddingTop: 8 }}>
+        <Text style={[styles.headline, nt]}>Profile pages</Text>
+        <SupportText>Your Instagram, Facebook and TikTok profile pages will appear here. Feed order is not set yet, so this view stays empty until you confirm it.</SupportText>
+      </View>
+    ) : <>
     <View style={screenHeader.row}>
       <Text accessibilityRole="header" style={[screenHeader.title, nt]}>{t('tabs.analytics')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('ins.platform', { defaultValue: 'Platform' })} onPress={() => setPickOpen(true)} style={[styles.picker, nc]}>
@@ -92,6 +105,7 @@ export default function AnalyticsScreen() {
         : <Text style={[styles.muted, nm]}>{tab === 'follows' ? t('ins.noFollowsPer', 'Follows per post are not available from the platforms yet.') : t('ins.noTop', 'No post numbers recorded in the last 30 days yet.')}</Text>}
 
     </> : null}
+    </>}
   </Screen>;
 }
 
@@ -119,6 +133,9 @@ function Spark({ lines }: { lines: InsightCard['lines'] }) {
 }
 
 const styles = StyleSheet.create({
+  seg: { flexDirection: 'row', height: 36, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.05)', padding: 2, marginBottom: 8 },
+  segItem: { flex: 1, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  segOn: { backgroundColor: '#FFFFFF' },
   picker: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 8, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: D.hairline },
   logos: { flexDirection: 'row' },
   logoRing: { borderRadius: 999, backgroundColor: '#FFFFFF', padding: 1 },
