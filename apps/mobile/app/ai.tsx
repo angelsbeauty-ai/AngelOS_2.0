@@ -41,16 +41,19 @@ import {
   type AiScreenContext
 } from '../src/lib/ai';
 import { getActiveWorkspace } from '../src/lib/workspace';
+import { ChatBar } from '../src/components/ChatBar';
+import { AnswerCard, type ToolCard } from '../src/components/AnswerCard';
 
 export default function AiScreen() {
   const { t, i18n } = useTranslation();
   const { palette: P, mode } = useAppearance(); const night = mode === 'night';
   const styles = useMemo(() => makeStyles(P, night), [P, night]);
-  const params = useLocalSearchParams<{ screen?: string; entityType?: string; entityId?: string; entityLabel?: string }>();
+  const params = useLocalSearchParams<{ screen?: string; entityType?: string; entityId?: string; entityLabel?: string; contextScreen?: string; contextEntityType?: string; contextEntityId?: string }>();
   const screenContext: AiScreenContext = {
-    screen: params.screen ?? 'ai',
-    entityType: params.entityType,
-    entityId: params.entityId,
+    // content/[id] sends contextEntityType/contextEntityId; accept both so post context is not lost.
+    screen: params.screen ?? params.contextScreen ?? 'ai',
+    entityType: params.entityType ?? params.contextEntityType,
+    entityId: params.entityId ?? params.contextEntityId,
     entityLabel: params.entityLabel
   };
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -197,6 +200,7 @@ export default function AiScreen() {
             <View style={styles.spark}><Sparkle size={16} color={night ? '#151515' : '#FFFFFF'} weight="fill" /></View>
             <View style={{ flex: 1, gap: 12 }}>
               <Text style={styles.body}>{message.id === 'welcome' && tasks.length ? t('aip.tasksIntro', { defaultValue: '{{n}} things are waiting for you, {{name}}:', n: tasks.length, name: owner ?? '' }).replace(', :', ':') : message.content}</Text>
+              {Array.isArray((message.metadata as any)?.cards) ? (message.metadata as any).cards.map((c: ToolCard, i: number) => <AnswerCard key={i} card={c} />) : null}
               {message.id === lastAssistant && tasks.length ? <View style={{ gap: 10 }}>{tasks.map((x) => <View key={x.key}>
                 <Pressable accessibilityRole="button" onPress={x.onPress} style={styles.task}>
                   {x.name ? <ContactAvatar name={x.name} platform={x.platform} size={44} /> : <View style={styles.taskIcon}><CheckSquare size={20} color={P.text} /></View>}
@@ -229,13 +233,7 @@ export default function AiScreen() {
         {chips.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
           {chips.map((tool) => <Pressable key={tool.key} accessibilityRole="button" onPress={() => setComposer(tool.example)} style={styles.chip}><Sparkle size={14} color={P.text} weight="fill" /><Text style={styles.chipText}>{tool.label}</Text></Pressable>)}
         </ScrollView> : null}
-        <View style={styles.composer}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('aip.more', 'More actions')} hitSlop={6} onPress={() => setShowAllTools(!showAllTools)}><Plus size={22} color={P.text} /></Pressable>
-          <TextInput placeholder={t('aip.ask', 'Ask anything')} placeholderTextColor={P.muted} value={composer} onChangeText={setComposer} onSubmitEditing={() => void send()} returnKeyType="send" style={styles.input} />
-          <Pressable accessibilityRole="button" accessibilityLabel={t('aip.dictate', 'Dictate')} hitSlop={6} onPress={dictate}><Microphone size={22} color={listening ? P.muted : P.text} /></Pressable>
-          {composer.trim() ? <Pressable disabled={busy} onPress={() => void send()} style={[styles.voiceBtn, busy && { opacity: 0.35 }]} accessibilityRole="button" accessibilityLabel={busy ? 'Working' : 'Send'}><ArrowUp size={20} color={night ? '#151515' : '#FFFFFF'} weight="bold" /></Pressable>
-            : <Pressable accessibilityRole="button" accessibilityLabel={t('home.voice', 'Talk to your assistant')} onPress={() => router.push('/voice' as any)} style={styles.voiceBtn}><Waveform size={22} color={night ? '#151515' : '#FFFFFF'} weight="bold" /></Pressable>}
-        </View>
+        <ChatBar value={composer} onChangeText={setComposer} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy} onPlus={() => setShowAllTools(!showAllTools)} onVoice={() => router.push('/voice' as any)} />
         <Text style={styles.approvalNote}>{t('aip.stillNeedApproval', 'Changes and messages still need your approval.')}</Text>
       </View>
     </SafeAreaView></View>
@@ -267,7 +265,7 @@ const makeStyles = (P: Palette, night: boolean) => StyleSheet.create({
   pillBtn: { flex: 1, minHeight: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   pillText: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: P.text },
   acts: { flexDirection: 'row', gap: 16, alignItems: 'center' },
-  bottom: { paddingBottom: Platform.OS === 'web' ? 76 : 72, gap: 10 },
+  bottom: { paddingBottom: Platform.OS === 'web' ? 76 : 64, gap: 6 },
   chips: { gap: 8, paddingHorizontal: 16 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 14, borderRadius: 19, backgroundColor: P.glass, borderColor: P.border, ...(P.gloss as object) },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: P.text },

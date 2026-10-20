@@ -1,3 +1,5 @@
+import { router } from 'expo-router';
+import { ListRow } from '../src/components/ui';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
@@ -83,6 +85,8 @@ export default function AiSettingsScreen() {
   return <Screen>
     <ScreenTitle>{t('aiset.s1')}</ScreenTitle>
     <SupportText>{t('aiset.s2')}</SupportText>
+
+    <ListRow title={t('aiAccess.title', 'What AngelOS can see')} subtitle={t('aiAccess.rowSub', 'Areas it can read in chat and voice')} onPress={() => router.push('/ai-access' as any)} />
 
     <Card premium>
       <SectionTitle>{t('aiset.s3')}</SectionTitle>

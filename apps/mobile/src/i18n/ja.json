@@ -1500,7 +1500,8 @@
     "s3": "キャンセル",
     "s4": "AngelOSに伝える",
     "s5": "ひとこと伝えるだけでOK。次にやることを整理するよ。",
-    "s6": "お店の今の様子を教えてね…"
+    "s6": "お店の今の様子を教えてね…",
+    "askAngelos": "AngelOSに聞く"
   },
   "stu": {
     "s0": "生徒",
@@ -1861,5 +1862,44 @@
     "friends": "友だち",
     "followers": "フォロワー",
     "posts": "投稿"
+  },
+  "aiAccess": {
+    "title": "AngelOSが見られる情報",
+    "rowSub": "チャットと音声で読める範囲",
+    "intro": "AngelOSはチャットと音声で答えるためにこれらを読みます。あなたのスタジオのデータだけで、他のアカウントは見ません。",
+    "bookings": "予約とカレンダー",
+    "bookingsSub": "休日、営業時間",
+    "clients": "お客様",
+    "clientsSub": "メモ、施術、フォーム",
+    "messages": "メッセージ",
+    "messagesSub": "LINE、Instagram、Messenger、コメント",
+    "posts": "投稿とメディア",
+    "postsSub": "下書き、予約投稿、ライブラリ",
+    "analytics": "分析",
+    "analyticsSub": "リーチ、フォロワー、媒体別",
+    "money": "お金",
+    "moneySub": "入金、未払い、経費",
+    "services": "メニューと料金",
+    "campaigns": "キャンペーンとタスク",
+    "never": "自分で送信や投稿はしません。",
+    "approve": "返信・投稿・変更は、あなたが「承認」をタップするまで待ちます。"
+  },
+  "ai": {
+    "card": {
+      "analytics": "分析",
+      "reach": "リーチ",
+      "vsBefore": "前期間 {{n}}",
+      "followers": "フォロワー",
+      "now": "現在 {{n}}",
+      "bookings": "予約",
+      "fromIg": "Instagramから",
+      "of": "{{n}}件中",
+      "weekly": "週ごとのリーチ・過去8週",
+      "unread": "{{n}}件の会話",
+      "draftOnly": "返信は下書きのみです。「承認」をタップするまで送信されません。",
+      "money": "お金",
+      "received": "入金",
+      "spent": "支出"
+    }
   }
 }

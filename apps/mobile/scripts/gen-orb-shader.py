@@ -14,6 +14,8 @@ body=f"""
 float sq(float x){{ return x*x; }}
 float hash(vec2 p){{ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }}
 float wrapA(float a){{ return atan(sin(a),cos(a)); }}
+// Rose-gold satin ramp (ASSISTANT_REVIEW 6b, sampled from the app icon)
+vec3 rg(float b){{ vec3 deep=vec3(0.212,0.125,0.086); vec3 sh=vec3(0.298,0.184,0.137); vec3 dm=vec3(0.424,0.275,0.212); vec3 md=vec3(0.659,0.451,0.357); vec3 ro=vec3(0.878,0.624,0.506); vec3 ch=vec3(0.992,0.929,0.808); vec3 sp=vec3(0.992,0.961,0.851); vec3 c=mix(deep,sh,smoothstep(0.0,0.2,b)); c=mix(c,dm,smoothstep(0.2,0.4,b)); c=mix(c,md,smoothstep(0.4,0.6,b)); c=mix(c,ro,smoothstep(0.6,0.8,b)); c=mix(c,ch,smoothstep(0.8,0.93,b)); return mix(c,sp,smoothstep(0.93,1.0,b)); }}
 vec4 orb(vec2 px){{
   vec2 q=(px-0.5*uRes)/uR; float rr=length(q); float th=atan(q.y,q.x);
   float t=uT; float ph=uPhase; float L=uL;
@@ -39,8 +41,9 @@ vec4 orb(vec2 px){{
   float dth=(hash(px)-hash(px+17.3))/255.0;
   float a=clamp(smoke,0.0,1.0);
   vec4 o;
-  if(uNight>0.5){{ vec3 col=vec3(0.97,0.97,0.955)*a+vec3(rimA+sheen); o=vec4(col+dth,clamp(0.92*a+rimA+sheen,0.0,1.0)); }}
-  else {{ float a2=0.72*pow(a,1.15); vec3 ink=vec3(0.23,0.22,0.21); float al=clamp(a2+0.55*rimA,0.0,1.0); vec3 col=ink*a2+vec3(0.08)*rimA+vec3(sheen*1.6); o=vec4(col+dth,clamp(al+sheen*0.0,0.0,1.0)); }}
+  float lb=0.5+0.5*cos(th+0.79); vec3 metal=rg(clamp(0.15+0.8*lb+0.25*sheen*10.0,0.0,1.0)); vec3 rimc=rg(clamp(0.55+0.45*ang,0.0,1.0));
+  if(uNight>0.5){{ vec3 col=metal*a+rimc*(rimA+sheen); o=vec4(col+dth,clamp(0.92*a+rimA+sheen,0.0,1.0)); }}
+  else {{ float a2=0.8*pow(a,1.1); float al=clamp(a2+0.55*rimA,0.0,1.0); vec3 col=rg(clamp(0.05+0.7*lb,0.0,1.0))*a2+rimc*0.55*rimA+vec3(sheen*1.2); o=vec4(col+dth,al); }}
   return o;
 }}
 """

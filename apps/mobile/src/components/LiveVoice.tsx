@@ -6,6 +6,8 @@ import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
 import { createVoiceSession, getVoiceStatus } from '../lib/ai';
 import { getHomeSummary } from '../lib/home';
+import { apiFetch } from '../lib/api';
+import type { ToolCard } from './AnswerCard';
 import { approveReply, createMessageReply } from '../lib/messaging';
 import { setLoudSpeaker, startVoiceAudio, stopVoiceAudio } from '../lib/livekit-globals';
 
@@ -20,7 +22,9 @@ function voiceToolCall(ev: any): { name: string; callId: string; args: string } 
 
 export type VoiceDraft = { messageId: string; threadId: string; body: string; state: 'ready' | 'sending' | 'sent' | 'manual' | 'error' };
 
-async function runVoiceTool(workspaceId: string, name: string, raw: string, onDraft?: (d: VoiceDraft) => void): Promise<string> {
+const READ_TOOLS = new Set(['get_bookings', 'search_clients', 'list_threads', 'list_posts', 'get_analytics', 'get_money', 'list_services_prices', 'list_campaigns_tasks']);
+
+async function runVoiceTool(workspaceId: string, name: string, raw: string, onDraft?: (d: VoiceDraft) => void, onCard?: (c: ToolCard) => void): Promise<string> {
   let args: any = {};
   try { args = raw ? JSON.parse(raw) : {}; } catch { args = {}; }
   try {
@@ -35,6 +39,12 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string, onDr
       }
       const conversations = home.messages.alerts.filter((item) => item.unread || item.needsReply).slice(0, 7).map((item) => ({ threadId: item.id, name: item.name, platform: item.platform, preview: item.preview, unread: item.unread, needsReply: item.needsReply }));
       return JSON.stringify({ unread: home.messages.unread, needsReply: home.messages.needsReply, conversations });
+    }
+    if (READ_TOOLS.has(name)) {
+      // Same shared read tools and switches as text chat. The card is drawn from this JSON, not from speech.
+      const data = await apiFetch<Record<string, any>>(`/workspaces/${workspaceId}/ai/tools/${name}`, { method: 'POST', body: JSON.stringify(args ?? {}) });
+      if (!data?.off) onCard?.({ tool: name, data });
+      return JSON.stringify(data);
     }
     if (name === 'draft_reply') {
       const threadId = String(args.threadId ?? '');
@@ -62,6 +72,8 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const levelRef = useRef(0); const meterRef = useRef<{ stop: () => void } | null>(null);
   const mutedRef = useRef(false);
   const [drafts, setDrafts] = useState<VoiceDraft[]>([]);
+  const [cards, setCards] = useState<ToolCard[]>([]);
+  const addCard = useCallback((c: ToolCard) => setCards((list) => [...list.slice(-2), c]), []);
   const addDraft = useCallback((d: VoiceDraft) => setDrafts((list) => [...list.filter((x) => x.messageId !== d.messageId), d]), []);
   const patchDraft = (id: string, state: VoiceDraft['state']) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, state } : x)));
   async function approveDraft(id: string) {
@@ -122,7 +134,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
         if (!call || !workspaceId || answered.has(call.callId)) return;
         answered.add(call.callId);
         const studioId = workspaceId;
-        void runVoiceTool(studioId, call.name, call.args, addDraft).then((output) => {
+        void runVoiceTool(studioId, call.name, call.args, addDraft, addCard).then((output) => {
           if (dc.readyState !== 'open') return;
           dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
           dc.send(JSON.stringify({ type: 'response.create' }));
@@ -166,7 +178,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop, muted, setMuted, caption, getLevel, drafts, approveDraft, dismissDraft };
+  return { status, state, error, start, stop, muted, setMuted, caption, getLevel, drafts, approveDraft, dismissDraft, cards };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {

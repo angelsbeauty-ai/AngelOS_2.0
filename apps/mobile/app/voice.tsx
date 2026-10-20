@@ -12,6 +12,7 @@ import { useLiveVoice } from '../src/components/LiveVoice';
 import { crumb, readCrumbs } from '../src/lib/crash-guard';
 void crumb('voice code loaded');
 import { VoiceOrb } from '../src/components/VoiceOrb';
+import { AnswerCard } from '../src/components/AnswerCard';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing } from '../src/lib/home';
 import { D, tokens } from '../src/design/theme';
@@ -56,6 +57,7 @@ export default function VoiceScreen() {
         </Pressable>
       ) : null}
       <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>
+      {voice.cards.length ? <View style={{ alignSelf: 'stretch', marginHorizontal: 16 }}><AnswerCard card={voice.cards[voice.cards.length - 1]} /></View> : null}
       {voice.drafts.map((d) => <View key={d.messageId} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
         <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftTitle', 'Reply draft. Not sent yet.')}</Text>
         <Text style={[styles.draftBody, { color: palette.text }]}>{d.body}</Text>

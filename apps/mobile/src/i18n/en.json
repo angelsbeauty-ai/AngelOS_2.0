@@ -1500,7 +1500,8 @@
     "s3": "Cancel",
     "s4": "Tell AngelOS",
     "s5": "One instruction is enough. It will organize the next step.",
-    "s6": "Tell me what's going on with your business..."
+    "s6": "Tell me what's going on with your business...",
+    "askAngelos": "Ask AngelOS"
   },
   "stu": {
     "s0": "Students",
@@ -1861,5 +1862,44 @@
     "friends": "Friends",
     "followers": "Followers",
     "posts": "Posts"
+  },
+  "aiAccess": {
+    "title": "What AngelOS can see",
+    "rowSub": "Areas it can read in chat and voice",
+    "intro": "AngelOS reads these to answer you in chat and voice. Only your studio's data. Never other accounts.",
+    "bookings": "Bookings & calendar",
+    "bookingsSub": "Days off, hours",
+    "clients": "Clients",
+    "clientsSub": "Notes, treatments, forms",
+    "messages": "Messages",
+    "messagesSub": "LINE, Instagram, Messenger, comments",
+    "posts": "Posts & media",
+    "postsSub": "Drafts, scheduled, library",
+    "analytics": "Analytics",
+    "analyticsSub": "Reach, followers, by platform",
+    "money": "Money",
+    "moneySub": "Paid, owed, expenses",
+    "services": "Services & prices",
+    "campaigns": "Campaigns & tasks",
+    "never": "It never sends or posts on its own.",
+    "approve": "Replies, posts and changes always wait for you to tap Approve."
+  },
+  "ai": {
+    "card": {
+      "analytics": "Analytics",
+      "reach": "Reach",
+      "vsBefore": "vs {{n}} before",
+      "followers": "Followers",
+      "now": "now {{n}}",
+      "bookings": "Bookings",
+      "fromIg": "From Instagram",
+      "of": "of {{n}}",
+      "weekly": "Reach per week · last 8 weeks",
+      "unread": "{{n}} conversations",
+      "draftOnly": "Replies are drafted only. Nothing is sent until you tap Approve.",
+      "money": "Money",
+      "received": "Received",
+      "spent": "Spent"
+    }
   }
 }
