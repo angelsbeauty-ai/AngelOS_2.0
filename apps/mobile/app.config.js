@@ -4,7 +4,7 @@ const appEnv = process.env.EXPO_PUBLIC_APP_ENV || 'development';
 const isProduction = appEnv === 'production';
 const isStaging = appEnv === 'staging';
 const suffix = isProduction ? '' : isStaging ? '.staging' : '.dev';
-const label = isProduction ? '' : isStaging ? ' Staging' : ' Dev';
+const label = isProduction ? '' : isStaging ? '' : ' Dev';
 const scheme = isProduction ? 'angelos' : isStaging ? 'angelos-staging' : 'angelos-dev';
 
 // Expo passes the static app.json "expo" object as `config`; fall back to
