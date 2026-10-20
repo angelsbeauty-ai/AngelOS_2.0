@@ -65,10 +65,18 @@ export function parseLineWebhook(payload: any): NormalizedInboundMessage[] {
       externalUserId: userId,
       externalMessageId: `line:${messageId}`,
       body: body.slice(0, 5000),
-      sentAt: new Date(Number(event.timestamp) || Date.now()).toISOString()
+      sentAt: new Date(Number(event.timestamp) || Date.now()).toISOString(),
+      ...(typeof event.replyToken === 'string' ? { replyToken: event.replyToken } : {})
     });
   }
   return out;
+}
+
+/** LINE reply tokens are valid for about one minute; keep a safety margin. */
+export function replyTokenFresh(lastInboundAt: string | null | undefined, now = Date.now()): boolean {
+  if (!lastInboundAt) return false;
+  const age = now - Date.parse(lastInboundAt);
+  return Number.isFinite(age) && age >= 0 && age < 50_000;
 }
 
 /** LINE's X-Line-Retry-Key must be a UUID; derive a stable one from our idempotency key. */
@@ -90,6 +98,18 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
   async send(input: MessagingSendInput): Promise<MessagingSendResult> {
     if (!this.status().ready) return { status: 'failed', error: 'LINE is not connected.' };
     const to = input.externalThreadId.startsWith('line:') ? input.externalThreadId.slice(5) : input.externalThreadId;
+    const messages = [{ type: 'text', text: input.body.slice(0, 5000) }];
+    // Reply API is free (no monthly quota) but the token is single use and expires about a minute after the client wrote.
+    if (input.replyToken && replyTokenFresh(input.lastInboundAt)) {
+      const reply = await this.fetchImpl(`${this.config.apiBase}/v2/bot/message/reply`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${this.config.channelAccessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ replyToken: input.replyToken, messages })
+      });
+      const replyRequestId = reply.headers.get('x-line-request-id') ?? undefined;
+      if (reply.ok) return { status: 'sent', externalMessageId: replyRequestId ? `line-req:${replyRequestId}` : undefined, raw: { transport: 'line-reply', httpStatus: reply.status, requestId: replyRequestId } };
+      // Expired/used token: fall through to push (counts toward quota).
+    }
     const response = await this.fetchImpl(`${this.config.apiBase}/v2/bot/message/push`, {
       method: 'POST',
       headers: {
@@ -97,7 +117,7 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
         'Content-Type': 'application/json',
         'X-Line-Retry-Key': retryKeyFor(input.idempotencyKey)
       },
-      body: JSON.stringify({ to, messages: [{ type: 'text', text: input.body.slice(0, 5000) }] })
+      body: JSON.stringify({ to, messages })
     });
     const requestId = response.headers.get('x-line-request-id') ?? undefined;
     // 409 = LINE already accepted a request with this retry key, so the message was delivered once.

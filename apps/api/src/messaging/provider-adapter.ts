@@ -10,6 +10,10 @@ export interface MessagingSendInput {
   externalThreadId: string;
   body: string;
   idempotencyKey: string;
+  /** LINE: reply token from the client's latest message (free, valid ~1 min, single use). */
+  replyToken?: string | null;
+  /** When the client last wrote in this thread (Meta 24h window, LINE reply token age). */
+  lastInboundAt?: string | null;
 }
 
 export interface MessagingSendResult {
@@ -29,6 +33,8 @@ export interface NormalizedInboundMessage {
   body: string;
   sentAt: string;
   contactDisplayName?: string;
+  /** LINE only: single-use reply token for this event. */
+  replyToken?: string;
 }
 
 export interface AdapterStatus {

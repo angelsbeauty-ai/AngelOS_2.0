@@ -26,6 +26,17 @@ export function parseMetaWebhook(payload: any): NormalizedInboundMessage[] {
   return out;
 }
 
+const HOUR = 3_600_000;
+/** Meta messaging window: 'open' <24h since the client wrote, 'human_agent' 24h-7d (HUMAN_AGENT tag), 'closed' after. */
+export function metaWindow(lastInboundAt: string | null | undefined, now = Date.now()): 'open' | 'human_agent' | 'closed' {
+  if (!lastInboundAt) return 'closed';
+  const age = now - Date.parse(lastInboundAt);
+  if (!Number.isFinite(age)) return 'closed';
+  if (age < 24 * HOUR) return 'open';
+  if (age < 7 * 24 * HOUR) return 'human_agent';
+  return 'closed';
+}
+
 export class MetaGraphMessagingAdapter implements MessagingProviderAdapter {
   constructor(readonly provider: 'instagram' | 'facebook', private readonly c: MetaConfig = readMetaConfig(), private readonly fetchImpl: typeof fetch = fetch) {}
 
@@ -41,9 +52,12 @@ export class MetaGraphMessagingAdapter implements MessagingProviderAdapter {
     if (!this.c.sendEnabled) return { status: 'manual', raw: { transport: 'meta-send-disabled', idempotencyKey: input.idempotencyKey } };
     const id = input.externalThreadId.replace(/^(instagram|facebook):/, '');
     const node = this.provider === 'instagram' ? this.c.igUserId : this.c.pageId;
-    const r = await this.fetchImpl(`${this.c.graphBase}/${node}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.c.pageToken}` }, body: JSON.stringify({ recipient: { id }, messaging_type: 'RESPONSE', message: { text: input.body.slice(0, 1000) } }) });
+    const window = input.lastInboundAt === undefined ? 'open' : metaWindow(input.lastInboundAt);
+    if (window === 'closed') return { status: 'failed', error: 'The client last wrote more than 7 days ago, so Meta will not deliver a reply. Wait for them to message again.', raw: { transport: 'meta', window } };
+    const routing = window === 'open' ? { messaging_type: 'RESPONSE' } : { messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT' };
+    const r = await this.fetchImpl(`${this.c.graphBase}/${node}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.c.pageToken}` }, body: JSON.stringify({ recipient: { id }, ...routing, message: { text: input.body.slice(0, 1000) } }) });
     const json = (await r.json().catch(() => ({}))) as any;
-    if (r.ok && json.message_id) return { status: 'sent', externalMessageId: `${this.provider}:${json.message_id}`, raw: { transport: 'meta', httpStatus: r.status } };
+    if (r.ok && json.message_id) return { status: 'sent', externalMessageId: `${this.provider}:${json.message_id}`, raw: { transport: 'meta', httpStatus: r.status, window } };
     return { status: 'failed', error: `${this.provider} send failed (${r.status})`, raw: { transport: 'meta', httpStatus: r.status, error: json?.error?.message } };
   }
 }

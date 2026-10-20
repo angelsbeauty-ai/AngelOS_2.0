@@ -48,7 +48,11 @@ export interface ClientMessage {
 }
 
 export interface MessageThreadDetail {
-  thread: MessageThreadSummary & { external_thread_id: string; reply_language: 'en' | 'ja' };
+  thread: MessageThreadSummary & {
+    external_thread_id: string; reply_language: 'en' | 'ja';
+    /** Delivery limits from the server: Meta 24h window, LINE free reply + monthly quota. */
+    send_window?: { lastInboundAt: string | null; metaWindow: 'open' | 'human_agent' | 'closed' | null; lineReplyFree: boolean | null; lineQuota: { quota: number | null; used: number | null } | null };
+  };
   messages: ClientMessage[];
   internalNotes: Array<{ id: string; content: string; created_at: string }>;
 }

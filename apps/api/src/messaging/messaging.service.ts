@@ -10,8 +10,9 @@ import type { CreateReplyDto } from './dto/create-reply.dto';
 import type { UpdateThreadDto } from './dto/update-thread.dto';
 import type { StartConversationDto } from './dto/start-conversation.dto';
 import { chooseReplyLanguage, detectLanguage, firstName, mixesLanguages, type ClientLanguage } from './language';
-import { LineMessagingAdapter, readLineConfig } from './line-messaging.adapter';
-import { MetaGraphMessagingAdapter } from '../meta/meta-messaging.adapter';
+import { LineMessagingAdapter, readLineConfig, replyTokenFresh } from './line-messaging.adapter';
+import { MetaGraphMessagingAdapter, metaWindow } from '../meta/meta-messaging.adapter';
+import { metaConfigForWorkspace } from '../meta/meta-workspace-config';
 import { ManualMessagingAdapter, type MessagingProviderAdapter, type NormalizedInboundMessage } from './provider-adapter';
 import { buildClientReplyInstructions, buildTranslateInstructions } from './reply-prompt';
 import { hasUnfilledPlaceholder, isMissingRelation, migrationNeeded } from './saved-replies.service';
@@ -22,6 +23,7 @@ const PLATFORM_LABEL: Record<string, string> = { line: 'LINE', instagram: 'Insta
 type Db = SupabaseClient<any, any, any>;
 
 interface InboundRecordInput {
+  replyToken?: string;
   workspaceId: string;
   channel: { id: string; provider: string; display_name: string };
   externalThreadId: string;
@@ -41,6 +43,19 @@ export class MessagingService {
   private readonly logger = new Logger('MessagingService');
   private readonly manualAdapter = new ManualMessagingAdapter();
   constructor(private readonly aiProvider: AiProviderService, private readonly style: StyleLearningService, private readonly brain: BrainService) {}
+
+  /** Send path: Meta uses the studio's own Page token (meta_connections), env keys only as the single-studio fallback. */
+  private async adapterForWorkspace(provider: string, workspaceId: string): Promise<MessagingProviderAdapter> {
+    if (provider === 'instagram' || provider === 'facebook') return new MetaGraphMessagingAdapter(provider, await metaConfigForWorkspace(workspaceId));
+    return this.adapterFor(provider);
+  }
+
+  /** Latest client message in the thread: drives the Meta 24h window and the LINE reply token. */
+  private async lastInbound(workspaceId: string, threadId: string): Promise<{ at: string | null; replyToken: string | null }> {
+    const { data } = await createServiceSupabaseClient().from('client_messages').select('id,created_at,metadata').eq('workspace_id', workspaceId).eq('thread_id', threadId).eq('direction', 'inbound').order('created_at', { ascending: false }).limit(1);
+    const row = data?.[0] as any;
+    return { at: row?.created_at ?? null, replyToken: typeof row?.metadata?.reply_token === 'string' && !row?.metadata?.reply_token_used ? row.metadata.reply_token : null };
+  }
 
   private adapterFor(provider: string): MessagingProviderAdapter {
     if (provider === 'line') return new LineMessagingAdapter(readLineConfig());
@@ -161,9 +176,22 @@ export class MessagingService {
     const latestVisible = [...list].reverse().find((m: any) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval'));
     const latestInbound = [...list].reverse().find((m: any) => m.direction === 'inbound');
     const decorated = decorateThread(thread, latestVisible);
+    const provider = (thread as any).channel?.provider;
+    const lastInboundAt: string | null = latestInbound?.created_at ?? null;
+    let lineQuota: { quota: number | null; used: number | null } | null = null;
+    if (provider === 'line') {
+      const estimate = await new LineMessagingAdapter(readLineConfig()).audienceEstimate().catch(() => null);
+      lineQuota = estimate ? { quota: estimate.quota, used: estimate.used } : null;
+    }
+    const sendWindow = {
+      lastInboundAt,
+      metaWindow: provider === 'instagram' || provider === 'facebook' ? metaWindow(lastInboundAt) : null,
+      lineReplyFree: provider === 'line' ? Boolean((latestInbound as any)?.metadata?.reply_token && !(latestInbound as any)?.metadata?.reply_token_used && replyTokenFresh(lastInboundAt)) : null,
+      lineQuota
+    };
     return {
-      thread: { ...decorated, reply_language: chooseReplyLanguage(latestInbound?.body, (thread as any).client?.language) },
-      messages: list,
+      thread: { ...decorated, reply_language: chooseReplyLanguage(latestInbound?.body, (thread as any).client?.language), send_window: sendWindow },
+      messages: list.map((m: any) => m.metadata?.reply_token ? { ...m, metadata: { ...m.metadata, reply_token: undefined } } : m),
       internalNotes: notes.data ?? []
     };
   }
@@ -239,7 +267,7 @@ export class MessagingService {
     try {
       return await this.recordInbound(service, {
         workspaceId: channel.workspace_id, channel, externalThreadId: event.externalThreadId, externalUserId: event.externalUserId,
-        externalMessageId: event.externalMessageId, body: event.body, contactDisplayName: contactDisplayName ?? null,
+        externalMessageId: event.externalMessageId, body: event.body, replyToken: event.replyToken, contactDisplayName: contactDisplayName ?? null,
         clientId: known?.client_id ?? null, language: detectLanguage(event.body), matchConfidence: 'unverified', source: `webhook:${event.provider}`
       });
     } catch (caught) {
@@ -302,7 +330,7 @@ export class MessagingService {
       workspace_id: workspaceId, thread_id: threadId, client_id: clientId,
       direction: 'inbound', sender_type: 'client', external_message_id: input.externalMessageId,
       body, original_language: input.language ?? detectLanguage(body), status: 'received', sensitive,
-      metadata: { source: input.source }
+      metadata: { source: input.source, ...(input.replyToken ? { reply_token: input.replyToken } : {}) }
     }).select('*').single();
     if (messageError) {
       if ((messageError as any).code === '23505') throw new ConflictException('That message was already added.');
@@ -522,7 +550,7 @@ export class MessagingService {
       return { message: ready, sent: false, delivery: 'manual', duplicatePrevented: false };
     }
 
-    const adapter = this.adapterFor(thread.channel.provider);
+    const adapter = await this.adapterForWorkspace(thread.channel.provider, workspaceId);
     const adapterStatus = adapter.status();
     if (!adapterStatus.ready || thread.channel.status !== 'connected') {
       throw new ConflictException(`${PLATFORM_LABEL[thread.channel.provider] ?? 'This app'} is not connected yet, so nothing was sent. ${adapterStatus.detail}`);
@@ -543,7 +571,13 @@ export class MessagingService {
       if (queued.error) throw new InternalServerErrorException(queued.error.message);
     }
 
-    const result = await adapter.send({ externalThreadId: thread.external_thread_id, body: message.body, idempotencyKey });
+    const inbound = await this.lastInbound(workspaceId, thread.id);
+    const result = await adapter.send({ externalThreadId: thread.external_thread_id, body: message.body, idempotencyKey, replyToken: inbound.replyToken, lastInboundAt: inbound.at });
+    if ((result.raw as any)?.transport === 'line-reply') {
+      // Single use: mark it so a second reply falls back to push.
+      const { data: last } = await service.from('client_messages').select('id,metadata').eq('workspace_id', workspaceId).eq('thread_id', thread.id).eq('direction', 'inbound').order('created_at', { ascending: false }).limit(1);
+      if (last?.[0]) await service.from('client_messages').update({ metadata: { ...((last[0] as any).metadata ?? {}), reply_token_used: true } }).eq('id', (last[0] as any).id);
+    }
     const attemptStatus = result.status === 'manual' ? 'unknown' : result.status;
     const { error: attemptError } = await service.from('message_send_attempts').update({
       status: attemptStatus, provider_response: result.raw ?? null, error_message: result.error ?? null

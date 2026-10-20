@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActionSheetIOS, Alert, Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -49,6 +49,7 @@ export default function MessageThreadScreen() {
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftHidden, setDraftHidden] = useState(false);
   const [replyTo, setReplyTo] = useState<ClientMessage | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -61,6 +62,11 @@ export default function MessageThreadScreen() {
     } catch { setState('error'); }
   }, [id, workspaceId]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+  // Saved replies power the suggestion chips (real, approved replies only).
+  useEffect(() => {
+    if (!workspaceId || saved !== null) return;
+    listSavedReplies(workspaceId).then((r) => setSaved(r.replies.filter((x) => (x.status ?? 'approved') === 'approved'))).catch(() => setSaved([]));
+  }, [workspaceId, saved]);
 
   const pendingDraft = useMemo(() => detail?.messages.slice().reverse().find((m) => m.sender_type === 'ai' && m.status === 'pending_approval') ?? null, [detail]);
   const visible = useMemo(() => (detail?.messages ?? []).filter((m) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval')), [detail]);
@@ -82,8 +88,8 @@ export default function MessageThreadScreen() {
     toast.show({ title: dictation.error === 'permission' ? t('messages.dictatePerm') : t('messages.dictateFail'), tone: 'error' });
     dictation.clearError();
   }, [dictation.error]);
-  if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>Could not open this chat.</Text><Pressable onPress={() => { setState('loading'); void load(); }}><Text style={{ color: palette.text }}>Try again</Text></Pressable></View>;
-  if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.muted }]}>Loading…</Text></View>;
+  if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('messages.tryAgain')}</Text></Pressable></View>;
+  if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.muted }]}>{t('messages.loading')}</Text></View>;
 
   const thread = detail.thread;
   const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
@@ -99,8 +105,8 @@ export default function MessageThreadScreen() {
     const text = reply.trim();
     if (!text) return;
     const meaning = isJapanese(text) && appLang === 'en' ? (await translateText(workspaceId!, text, 'en').catch(() => null))?.translation : null;
-    const message = meaning ? `You'll send: ${text}\n\nMeans: ${meaning}` : live ? `Send to ${name} on ${appName}?` : `This will be marked ready. Copy it into ${appName} yourself.`;
-    const ok = await dialog.confirm({ title: 'Send', message, confirmText: 'Send' });
+    const message = meaning ? t('messages.confirmMeaning', { text, meaning }) : live ? t('messages.confirmLive', { name, app: appName }) : t('messages.confirmManual', { app: appName });
+    const ok = await dialog.confirm({ title: t('messages.send'), message, confirmText: t('messages.send') });
     if (!ok) return;
     await run('send', async () => {
       if (pendingDraft && text === pendingDraft.body) await approveReply(workspaceId!, pendingDraft.id);
@@ -128,7 +134,7 @@ export default function MessageThreadScreen() {
 
   function onLongPress(message: ClientMessage) {
     if (!message.body) return;
-    const options = ['Translate', 'Copy', 'Reply', 'Link to client', 'Cancel'];
+    const options = [t('messages.translate'), t('common.copy', { defaultValue: 'Copy' }), t('messages.reply', { defaultValue: 'Reply' }), t('messages.openClient'), t('common.cancel', { defaultValue: 'Cancel' })];
     const runIndex = (index: number) => {
       if (index === 0) void run(`tr-${message.id}`, async () => {
         const result = await translateText(workspaceId!, message.body, appLang);
@@ -139,10 +145,33 @@ export default function MessageThreadScreen() {
       else if (index === 3 && thread.client) router.push(`/clients/${thread.client.id}` as any);
     };
     if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options, cancelButtonIndex: 4 }, runIndex);
-    else Alert.alert('Message', undefined, [...options.slice(0, 4).map((label, i) => ({ text: label, onPress: () => runIndex(i) })), { text: 'Cancel', style: 'cancel' as const }]);
+    else Alert.alert(t('messages.message'), undefined, [...options.slice(0, 4).map((label, i) => ({ text: label, onPress: () => runIndex(i) })), { text: options[4], style: 'cancel' as const }]);
   }
 
   const showChip = pendingDraft && !draftHidden;
+  const win = thread.send_window;
+  const quota = win?.lineQuota;
+  const quotaLeft = quota && quota.quota != null && quota.used != null ? Math.max(0, quota.quota - quota.used) : null;
+  // Locked: Meta refuses after 7 days; LINE has no free reply token and the monthly quota is used up.
+  const locked = live && (win?.metaWindow === 'closed' || (thread.platform === 'line' && quotaLeft === 0 && !win?.lineReplyFree));
+  const banner = !live ? null
+    : win?.metaWindow === 'closed' ? t('messages.windowClosed', { app: appName })
+    : win?.metaWindow === 'human_agent' ? t('messages.windowAgent')
+    : locked ? t('messages.lineQuotaOut')
+    : thread.platform === 'line' && win?.lineReplyFree ? t('messages.lineFreeReply')
+    : thread.platform === 'line' && quotaLeft != null && quotaLeft <= 50 ? t('messages.lineQuotaLeft', { count: quotaLeft })
+    : null;
+  const chips = (saved ?? []).slice(0, 3);
+  async function retry(message: ClientMessage) {
+    const ok = await dialog.confirm({ title: t('messages.retry'), message: t('messages.confirmLive', { name, app: appName }), confirmText: t('messages.send') });
+    if (ok) await run(`retry-${message.id}`, () => approveReply(workspaceId!, message.id));
+  }
+  function statusLabel(m: ClientMessage) {
+    if (m.status === 'sent') return t('messages.stSent');
+    if (m.status === 'queued' && m.metadata?.delivery === 'manual') return t('messages.stManual');
+    if (m.status === 'queued' || busy === `retry-${m.id}`) return t('messages.stSending');
+    return null;
+  }
 
   return (
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: night ? '#000000' : '#F3F3F3' }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -173,7 +202,7 @@ export default function MessageThreadScreen() {
           return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
         for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
         const initials = contactInitials(name);
-        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
           {items.map((x) => {
             if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: night ? '#2C2C2E' : '#E4E4E6', color: palette.text }]}>{x.label}</Text></View>;
             const message = x.m; const out = message.direction === 'outbound'; const tr = translations[message.id];
@@ -184,7 +213,13 @@ export default function MessageThreadScreen() {
                   <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text>
                 </View>
                 {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{tr.text}</Text> : null}
-                <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}</Text>
+                {out && message.status === 'failed' ? (
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('messages.retryA11y')} onPress={() => void retry(message)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }} style={styles.failRow}>
+                    <Text style={[styles.time, { color: palette.text, fontWeight: '600' }]}>{t('messages.stFailed')} · {t('messages.retry')}</Text>
+                  </Pressable>
+                ) : (
+                  <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}{out && statusLabel(message) ? ` · ${statusLabel(message)}` : ''}</Text>
+                )}
               </Pressable>
             </View></SwipeReply>;
           })}
@@ -194,19 +229,20 @@ export default function MessageThreadScreen() {
       {showChip ? (
         <View style={[styles.chip, night && { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.10)' }]}>
           <Pressable onPress={() => setDraftOpen((v) => !v)} style={{ flex: 1 }}>
-            <Text style={[styles.chipText, { color: palette.text }]}>{draftOpen ? 'Hide draft' : 'AI draft'}</Text>
+            <Text style={[styles.chipText, { color: palette.text }]}>{draftOpen ? t('messages.hideDraft') : t('messages.aiDraft', { defaultValue: 'AI draft' })}</Text>
           </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close draft" onPress={() => { setDraftHidden(true); setDraftOpen(false); }} hitSlop={8} style={styles.close}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('messages.closeDraft')} onPress={() => { setDraftHidden(true); setDraftOpen(false); }} hitSlop={8} style={styles.close}>
             <Text style={[styles.closeText, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>×</Text>
           </Pressable>
         </View>
       ) : null}
       {draftOpen && pendingDraft && !draftHidden ? (
         <View style={[styles.draft, night && { backgroundColor: '#161618' }]}>
-          <Text style={[styles.draftText, { color: palette.text }]}>{pendingDraft.body}</Text>
+          <Text style={[styles.draftText, { color: palette.text }, JP_FONT(pendingDraft.body)]}>{pendingDraft.body}</Text>
+          {pendingDraft.translated_body && isJapanese(pendingDraft.body) ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70', fontSize: 14, lineHeight: 19 }]}>{t('messages.means', { text: pendingDraft.translated_body })}</Text> : null}
           <View style={styles.draftRow}>
-            <Pressable onPress={() => { setReply(pendingDraft.body); setDraftOpen(false); }}><Text style={[styles.draftBtn, { color: palette.text }]}>Edit</Text></Pressable>
-            <Pressable onPress={() => void run('draft', () => createAiReplyDraft(workspaceId, thread.id))}><Text style={[styles.draftBtn, { color: palette.text }]}>New</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => { setReply(pendingDraft.body); setDraftOpen(false); }} style={styles.draftHit}><Text style={[styles.draftBtn, { color: palette.text }]}>{t('messages.useDraft')}</Text></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => void run('draft', () => createAiReplyDraft(workspaceId, thread.id))} style={styles.draftHit}><Text style={[styles.draftBtn, { color: palette.text }]}>{t('messages.newDraft')}</Text></Pressable>
           </View>
         </View>
       ) : null}
@@ -223,21 +259,27 @@ export default function MessageThreadScreen() {
           </Pressable>
         </View>
       ) : null}
+      {!replyTo && !reply && chips.length > 0 && !locked ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggest} keyboardShouldPersistTaps="handled">
+          {chips.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('messages.useSaved', { title: item.title })} onPress={() => insertSaved(item)} style={[styles.suggestChip, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{item.title}</Text></Pressable>)}
+        </ScrollView>
+      ) : null}
+      {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: night ? '#9A9A9F' : '#6C6C70', backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>{banner}</Text> : null}
       {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, fontSize: 13, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
-      <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
+      <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
 
       <ChatTools visible={showPlus} onClose={() => setShowPlus(false)} night={night}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Saved replies" onPress={() => void openSaved()} style={styles.plusRow}>
-          <Text style={[styles.plusTitle, { color: palette.text }]}>Saved replies</Text>
+        <Pressable accessibilityRole="button"  accessibilityLabel={t('messages.savedReplies')} onPress={() => void openSaved()} style={styles.plusRow}>
+          <Text style={[styles.plusTitle, { color: palette.text }]}>{t('messages.savedReplies')}</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Photo" onPress={openPhoto} style={styles.plusRow}>
-          <Text style={[styles.plusTitle, { color: palette.text }]}>Photo</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('messages.photo')} onPress={openPhoto} style={styles.plusRow}>
+          <Text style={[styles.plusTitle, { color: palette.text }]}>{t('messages.photo')}</Text>
         </Pressable>
       </ChatTools>
 
       <ChatTools visible={showSaved} onClose={() => setShowSaved(false)} night={night}>
-        {saved === null ? <Text style={{ color: palette.muted }}>Loading…</Text> : null}
-        {saved?.length === 0 ? <Text style={{ color: palette.muted }}>No saved replies yet.</Text> : null}
+        {saved === null ? <Text style={{ color: palette.muted }}>{t('messages.loading')}</Text> : null}
+        {saved?.length === 0 ? <Text style={{ color: palette.muted }}>{t('messages.noSaved')}</Text> : null}
         {saved?.map((item) => <Pressable key={item.id} onPress={() => insertSaved(item)} style={styles.saved}><Text style={[styles.savedTitle, { color: palette.text }]}>{item.title}</Text></Pressable>)}
       </ChatTools>
     </KeyboardAvoidingView>
@@ -290,5 +332,11 @@ const styles = StyleSheet.create({
   plusTitle: { fontSize: 16, fontWeight: '600' },
   saved: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
   savedTitle: { fontSize: 16 },
-  err: { fontSize: 16, textAlign: 'center', marginTop: 40 }
+  err: { fontSize: 16, textAlign: 'center', marginTop: 40 },
+  retryBig: { minHeight: 44, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  failRow: { minHeight: 22, justifyContent: 'center' },
+  draftHit: { minHeight: 44, justifyContent: 'center', paddingRight: 8 },
+  suggest: { gap: 8, paddingHorizontal: 12, paddingBottom: 6 },
+  suggestChip: { minHeight: 36, maxWidth: 220, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
+  banner: { fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 16, paddingVertical: 8 }
 });
