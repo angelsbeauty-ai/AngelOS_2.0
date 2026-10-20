@@ -25,8 +25,8 @@ INSTRUCTIONS = """You are the Angel OS studio assistant for a permanent-makeup s
 You are speaking with the owner by live voice. While voice is on, you run the studio for her.
 Do not send her away to type it somewhere else.
 Speak in short, warm sentences. Use her language. Ask one question at a time.
-When she asks for a fact, call look_up_studio first. Never invent a count, a name, a price, an hour, or a booking.
-Unread replies: call look_up_studio with topic unread. Say the number. Then take them one by one.
+When she asks for a fact, call the matching read tool first (get_bookings, list_threads, get_analytics, get_money, list_posts, list_services_prices). Never invent a count, a name, a price, an hour, or a booking.
+Unread replies: call list_threads with filter unread. Say the number. Then take them one by one.
 Read who it is from and the short preview. Propose one short reply in the client's language.
 When she likes it, call draft_reply with that thread id and the exact words. Tell her the draft is in AngelOS and she can tap Approve to send it. Then the next one.
 You can never send a message yourself, even if she says yes or send. Only her tap on Approve sends. Never claim a message was sent.
@@ -49,37 +49,42 @@ def studio_tools(api_base: str, token: str, workspace_id: str):
                     return json.dumps({"error": text[:500] or f"Request failed ({response.status})."})
                 return text[:8000]
 
-    @function_tool(name="look_up_studio", description="Read real studio records. topic is unread or today.")
-    async def look_up_studio(topic: str) -> str:
-        raw = await _request("GET", f"/workspaces/{workspace_id}/home/summary?period=day")
-        try:
-            home = json.loads(raw)
-        except json.JSONDecodeError:
-            return raw
-        if topic == "today":
-            schedule = home.get("schedule") or {}
-            nxt = schedule.get("next")
-            return json.dumps({
-                "bookings": schedule.get("total"),
-                "next": None if not nxt else {"client": nxt.get("client"), "service": nxt.get("service"), "start": nxt.get("start_at")},
-                "items": [{"client": item.get("client"), "service": item.get("service"), "start": item.get("start_at")} for item in (schedule.get("items") or [])[:8]],
-            })
-        messages = home.get("messages") or {}
-        conversations = [
-            {"threadId": item.get("id"), "name": item.get("name"), "platform": item.get("platform"), "preview": item.get("preview"), "unread": item.get("unread"), "needsReply": item.get("needsReply")}
-            for item in (messages.get("alerts") or []) if item.get("unread") or item.get("needsReply")
-        ][:7]
-        return json.dumps({"unread": messages.get("unread"), "needsReply": messages.get("needsReply"), "conversations": conversations})
+    # Same shared read tools and toggles as text chat, via the scoped voice token (read + draft only).
+    async def _tool(name: str, args: dict) -> str:
+        return await _request("POST", f"/voice-tools/{workspace_id}/tools/{name}", args)
+
+    @function_tool(name="get_bookings", description="Bookings between two dates (YYYY-MM-DD, max 92 days).")
+    async def get_bookings(date_from: str, date_to: str = "") -> str:
+        return await _tool("get_bookings", {"from": date_from, "to": date_to or date_from})
+
+    @function_tool(name="list_threads", description="Inbox conversations. filter is unread, needs_reply or all.")
+    async def list_threads(filter: str = "unread") -> str:
+        return await _tool("list_threads", {"filter": filter})
+
+    @function_tool(name="get_analytics", description="Reach, followers, bookings for a period: today, 7d, 30d, month, last_month, 90d.")
+    async def get_analytics(period: str = "30d") -> str:
+        return await _tool("get_analytics", {"period": period})
+
+    @function_tool(name="get_money", description="Money received, spent and net for a period.")
+    async def get_money(period: str = "30d") -> str:
+        return await _tool("get_money", {"period": period})
+
+    @function_tool(name="list_posts", description="Social posts by status: draft, scheduled or published.")
+    async def list_posts(status: str = "scheduled") -> str:
+        return await _tool("list_posts", {"status": status})
+
+    @function_tool(name="list_services_prices", description="Active services with duration and price.")
+    async def list_services_prices() -> str:
+        return await _tool("list_services_prices", {})
 
     @function_tool(name="draft_reply", description="Save one reply as a draft for her to approve in AngelOS. This never sends.")
     async def draft_reply(threadId: str, body: str) -> str:
         if not threadId or not body.strip():
             return json.dumps({"drafted": False, "error": "Missing the conversation or the reply."})
         # Voice may only draft. Sending happens only when she taps Approve in the app.
-        await _request("POST", f"/workspaces/{workspace_id}/messaging/threads/{threadId}/replies", {"body": body.strip(), "sendNow": False})
-        return json.dumps({"drafted": True, "sent": False, "note": "Draft saved. Not sent until she taps Approve."})
+        return await _request("POST", f"/voice-tools/{workspace_id}/draft-reply", {"threadId": threadId, "body": body.strip()})
 
-    return [look_up_studio, draft_reply]
+    return [get_bookings, list_threads, get_analytics, get_money, list_posts, list_services_prices, draft_reply]
 
 
 class StudioAssistant(Agent):
@@ -109,7 +114,7 @@ async def entrypoint(ctx: JobContext) -> None:
         data = {}
     if data.get("instructions"):
         instructions = str(data["instructions"])[:4000]
-    tools = studio_tools(str(data.get("apiBase") or ""), str(data.get("accessToken") or ""), str(data.get("workspaceId") or ""))
+    tools = studio_tools(str(data.get("apiBase") or ""), str(data.get("voiceToken") or ""), str(data.get("workspaceId") or ""))
     session = AgentSession(
         vad=ctx.proc.userdata["vad"],
         stt=deepgram.STT(model="nova-3"),

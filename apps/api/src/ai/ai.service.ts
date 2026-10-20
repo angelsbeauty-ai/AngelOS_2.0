@@ -1,3 +1,4 @@
+import { enabledAreas, functionTools, runReadTool } from './tools/read-tools';
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
@@ -181,9 +182,17 @@ export class AiService {
     // C1: tools registry. Read tools answer from her records (no AI cost); others become approval cards.
     const timeZone = (workspaceResult.data as any).timezone || 'Asia/Tokyo';
     const planned = planTool(message, new Date(), timeZone);
-    const providerResponse = planned?.kind === 'read'
+    // Real function calling over the shared read tools (same list voice uses). Write tools stay approval cards.
+    const enabled = await enabledAreas(supabase, workspaceId);
+    const withTools = planned && planned.kind !== 'read' ? null : await this.provider.generateWithTools(
+      { instructions: `${instructions}\nUse the read tools for any question about her studio. Numbers must come from tool results. If a tool returns null for a value, say it is unavailable. Never guess.`, input: transcript || `Owner: ${message}`, userId: user.id },
+      functionTools(enabled),
+      (name, args) => runReadTool(supabase, workspaceId, name, args as Record<string, any>, new Date(), enabled)
+    );
+    const providerResponse = withTools ?? (planned?.kind === 'read'
       ? { text: await this.tools.read(user, workspaceId, planned, timeZone), provider: 'angelos-tools', model: 'records' }
-      : await this.provider.generate({ instructions, input: transcript || `Owner: ${message}`, userId: user.id });
+      : await this.provider.generate({ instructions, input: transcript || `Owner: ${message}`, userId: user.id }));
+    const cards = (withTools?.toolResults ?? []).filter((r) => r.name === 'get_analytics' || r.name === 'list_threads' || r.name === 'get_money' || r.name === 'get_bookings').map((r) => ({ tool: r.name, data: r.result }));
 
     const plannedAction = planned && planned.kind !== 'read' ? { actionKey: planned.key, riskLevel: planned.risk, input: planned.input, summary: planned.summary, kind: planned.kind } : null;
     let actionRun: any = null;
@@ -209,7 +218,8 @@ export class AiService {
     const assistantMetadata = {
       provider: providerResponse.provider,
       model: providerResponse.model,
-      actionRunId: actionRun?.id ?? null
+      actionRunId: actionRun?.id ?? null,
+      ...(cards.length ? { cards } : {})
     };
     const serviceSupabaseForMessage = createServiceSupabaseClient();
     const { data: assistantMessage, error: assistantMessageError } = await serviceSupabaseForMessage

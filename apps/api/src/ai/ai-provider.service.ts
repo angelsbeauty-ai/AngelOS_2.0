@@ -64,6 +64,45 @@ export class AiProviderService {
     return { text, provider: 'openai', model };
   }
 
+  /**
+   * Real function calling (Responses API): model -> tool -> model, at most 4 tool calls.
+   * Returns null outside openai mode so callers fall back to the regex planner (mock / tests).
+   * Tool results are returned so cards are drawn from the data, never from model text.
+   */
+  async generateWithTools(request: AiProviderRequest, tools: Array<Record<string, unknown>>, runTool: (name: string, args: Record<string, unknown>) => Promise<Record<string, unknown>>): Promise<(AiProviderResponse & { toolResults: Array<{ name: string; result: Record<string, unknown> }> }) | null> {
+    if ((process.env.AI_PROVIDER_MODE ?? 'mock') !== 'openai' || !tools.length) return null;
+    await assertAiAllowed(request.userId ?? currentRequest().userId);
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new BadGatewayException('OPENAI_API_KEY is not configured');
+    const model = chooseModel(request.userId).model;
+    const input: any[] = [{ role: 'user', content: request.input }];
+    const toolResults: Array<{ name: string; result: Record<string, unknown> }> = [];
+    for (let round = 0; round < 5; round++) {
+      const response = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, instructions: request.instructions, input, tools: round < 4 ? tools : [], store: false })
+      });
+      if (!response.ok) throw new BadGatewayException(`AI provider error (${response.status}): ${(await response.text()).slice(0, 500)}`);
+      const payload = (await response.json()) as any;
+      const calls = (payload?.output ?? []).filter((o: any) => o?.type === 'function_call');
+      if (!calls.length) {
+        void recordAiUse(model);
+        const text = extractOutputText(payload);
+        if (!text) throw new BadGatewayException('AI provider returned no text output');
+        return { text, provider: 'openai', model, toolResults };
+      }
+      for (const call of calls) {
+        input.push(call);
+        let out: Record<string, unknown>;
+        try { out = await runTool(call.name, JSON.parse(call.arguments || '{}')); toolResults.push({ name: call.name, result: out }); }
+        catch (e) { out = { error: e instanceof Error ? e.message : 'failed', note: 'Say plainly this could not be loaded. Never guess numbers.' }; }
+        input.push({ type: 'function_call_output', call_id: call.call_id, output: JSON.stringify(out) });
+      }
+    }
+    throw new BadGatewayException('The assistant used too many tools.');
+  }
+
   private mockResponse(input: string): AiProviderResponse {
     const normalized = input.toLowerCase();
     let text = 'Tell me what you are trying to get done, even if you are not sure how to phrase it. I’ll help you turn it into the next useful step.';

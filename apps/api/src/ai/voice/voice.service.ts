@@ -4,10 +4,13 @@ import { BadGatewayException, HttpException, HttpStatus, Injectable } from '@nes
 import { AccessToken, AgentDispatchClient } from 'livekit-server-sdk';
 import type { AuthUser } from '../../auth/auth-user';
 import { createUserSupabaseClient } from '../../config/supabase';
+import { mintVoiceToken } from './voice-token';
+import { functionTools } from '../tools/read-tools';
 
 const AGENT_NAME = 'angelos-studio';
 
 const VOICE_TOOLS = [
+  ...functionTools(),
   {
     type: 'function',
     name: 'look_up_studio',
@@ -39,6 +42,7 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
     'You are talking with the owner by live voice. While voice is on, you run the studio for her. Do not send her away to type it somewhere else.',
     'Speak in short, warm sentences. Use her language. Ask one question at a time.',
+    'For any other fact use the read tools (get_bookings, list_threads, get_analytics, get_money, list_posts, list_services_prices, search_clients, list_campaigns_tasks). Numbers come only from tool results; a null value is unavailable.',
     'When she asks for a fact, call look_up_studio first. Never invent a count, a name, a price, an hour, or a booking.',
     'Unread replies: call look_up_studio with topic unread. Say the number. Then take them one by one. Read who it is from and the short preview. Propose one short reply in the client\'s language. When she likes it, call draft_reply with that thread id and the exact words. Tell her the draft is on her screen and she can tap Approve to send it. Then the next one.',
     'You can never send a message yourself, even if she says yes or send. Only her tap on Approve sends. Never claim a message was sent.',
@@ -110,7 +114,8 @@ export class VoiceService {
         context
       }),
       workspaceId,
-      accessToken: user.accessToken,
+      // Scoped 10-minute read+draft token. Angel's login token never leaves the API.
+      voiceToken: mintVoiceToken(user.id, workspaceId),
       apiBase
     });
     try {

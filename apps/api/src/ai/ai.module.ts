@@ -7,9 +7,10 @@ import { StyleLearningService } from './style/style-learning.service';
 import { BrainService } from './brain/brain.service';
 import { AssistantToolsService } from './tools/assistant-tools.service';
 import { VoiceService } from './voice/voice.service';
+import { VoiceToolsController } from './voice/voice-tools.controller';
 
 @Module({
-  controllers: [AiController],
+  controllers: [AiController, VoiceToolsController],
   providers: [AiService, AiProviderService, StyleLearningService, BrainService, AssistantToolsService, VoiceService, SupabaseAuthGuard],
   exports: [AiProviderService, StyleLearningService, BrainService]
 })
