@@ -19,6 +19,8 @@ import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { dialog } from '../src/lib/dialog';
+import * as Clipboard from 'expo-clipboard';
+import { useToast } from '../src/components/Toast';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ContactAvatar } from '../src/components/BrandBadge';
 import { getHomeSummary, type HomeSummary } from '../src/lib/home';
@@ -45,6 +47,7 @@ import { ChatBar } from '../src/components/ChatBar';
 import { AnswerCard, type ToolCard } from '../src/components/AnswerCard';
 
 export default function AiScreen() {
+  const toast = useToast();
   const { t, i18n } = useTranslation();
   const { palette: P, mode } = useAppearance(); const night = mode === 'night';
   const styles = useMemo(() => makeStyles(P, night), [P, night]);
@@ -218,7 +221,7 @@ export default function AiScreen() {
               {message.id === lastAssistant && message.id !== 'welcome' ? <>
                 <Text style={styles.note}>{t('aip.nothingSent', 'Nothing is sent until you approve it.')}</Text>
                 <View style={styles.acts}>
-                  <Pressable accessibilityRole="button" accessibilityLabel={t('aip.copy', 'Copy')} hitSlop={6} onPress={() => { try { (globalThis as any).navigator?.clipboard?.writeText?.(message.content); } catch { /* ignore */ } }}><Copy size={20} color={P.muted} /></Pressable>
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('aip.copy', 'Copy')} hitSlop={6} onPress={() => { void Clipboard.setStringAsync(message.content).then(() => toast.show({ title: t('common.copied'), tone: 'success' })).catch(() => undefined); }}><Copy size={20} color={P.muted} /></Pressable>
                   <Pressable accessibilityRole="button" accessibilityLabel={t('home.voice', 'Talk to your assistant')} hitSlop={6} onPress={() => router.push('/voice' as any)}><SpeakerHigh size={20} color={P.muted} /></Pressable>
                   <Pressable accessibilityRole="button" accessibilityLabel={t('aip.good', 'Good answer')} accessibilityState={{ selected: rated[message.id] === 'up' }} hitSlop={6} onPress={() => setRated({ ...rated, [message.id]: 'up' })}><ThumbsUp size={20} color={P.muted} weight={rated[message.id] === 'up' ? 'fill' : 'regular'} /></Pressable>
                   <Pressable accessibilityRole="button" accessibilityLabel={t('aip.bad', 'Not helpful')} accessibilityState={{ selected: rated[message.id] === 'down' }} hitSlop={6} onPress={() => setRated({ ...rated, [message.id]: 'down' })}><ThumbsDown size={20} color={P.muted} weight={rated[message.id] === 'down' ? 'fill' : 'regular'} /></Pressable>

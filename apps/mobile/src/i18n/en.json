@@ -16,7 +16,8 @@
     "saved": "Saved",
     "cancel": "Cancel",
     "error": "Something went wrong",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "copied": "Copied"
   },
   "settings": {
     "pill": "Owner Control",

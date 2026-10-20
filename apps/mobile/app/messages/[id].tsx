@@ -3,6 +3,8 @@ import { ActionSheetIOS, Alert, Image, KeyboardAvoidingView, Platform, Pressable
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import * as Clipboard from 'expo-clipboard';
+import { useToast } from '../../src/components/Toast';
 import { ChatBar } from '../../src/components/ChatBar';
 import { ChatTools } from '../../src/components/ChatTools';
 import { BrandLogo } from '../../src/components/BrandBadge';
@@ -24,6 +26,7 @@ const APP_NAME: Record<string, string> = { line: 'LINE', instagram: 'Instagram',
 
 export default function MessageThreadScreen() {
   const { t, i18n } = useTranslation();
+  const toast = useToast();
   const appLang: 'en' | 'ja' = i18n.language?.startsWith('ja') ? 'ja' : 'en';
   const { palette, mode } = useAppearance();
   const insets = useSafeAreaInsets();
@@ -120,7 +123,7 @@ export default function MessageThreadScreen() {
         const result = await translateText(workspaceId!, message.body, appLang);
         if (result?.translation) setTranslations((prev) => ({ ...prev, [message.id]: { text: result.translation, shown: true } }));
       }, false);
-      else if (index === 1) void dialog.notify('Copied', message.body);
+      else if (index === 1) void Clipboard.setStringAsync(message.body).then(() => toast.show({ title: t('common.copied'), tone: 'success' })).catch(() => undefined);
       else if (index === 2) setReplyTo(message);
       else if (index === 3 && thread.client) router.push(`/clients/${thread.client.id}` as any);
     };
