@@ -69,8 +69,10 @@ export default function HomeScreen() {
 
   const dateLine = now.toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   const upcoming = (s?.items ?? []).filter((it) => it.status !== 'cancelled' && new Date(it.end_at).getTime() > now.getTime()).slice(0, 4);
-  const confirmed = (s?.items ?? []).filter((it) => it.status === 'confirmed').length;
-  const statusLabel = (st: string) => t(`home.st.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : st === 'pending' ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : st ? st.charAt(0).toUpperCase() + st.slice(1).replace(/_/g, ' ') : '' });
+  const live = (s?.items ?? []).filter((it) => it.status !== 'cancelled');
+  const confirmed = live.filter((it) => it.status === 'confirmed').length;
+  const pendingN = live.filter((it) => /pending|request|tentative|unconfirmed/i.test(it.status)).length;
+  const statusLabel = (st: string) => t(`home.stShort.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : /pending|request|unconfirmed/i.test(st) ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : st ? st.charAt(0).toUpperCase() + st.slice(1).replace(/_/g, ' ') : '' });
   const na = t('home.unavailable', 'Unavailable');
 
   return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()} header={<View style={styles.pinned}>
@@ -91,19 +93,18 @@ export default function HomeScreen() {
       {sumErr && !sum ? <Text style={[styles.muted, { color: palette.muted }]}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
       <Text style={[styles.section, { color: palette.text }]}>{t('home.upNext', 'Up next')}</Text>
       <View style={[styles.list, { backgroundColor: palette.glass, borderColor: palette.border }]}>
-        {!s ? <Text style={[styles.empty, { color: palette.muted }]}>{sumErr ? na : t('today.loading')}</Text> : null}
+        {!s ? <Text style={[styles.empty, { color: palette.muted }]}>{sumErr ? t('home.sumError', 'Your numbers could not load right now. Pull down to try again.') : t('today.loading')}</Text> : null}
         {s && !upcoming.length ? <Text style={[styles.empty, { color: palette.muted }]}>{t('home.noMore', 'Nothing else booked today')}</Text> : null}
         {upcoming.map((it, i) => <Pressable key={it.id} accessibilityRole="button" onPress={() => router.push(`/bookings/${it.id}` as any)} style={({ pressed }) => [styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text numberOfLines={2} style={[styles.itemTitle, { color: palette.text }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
-            <Text numberOfLines={1} style={[styles.itemSub, { color: palette.muted }]}>{time(it.start_at)} – {time(it.end_at)}{statusLabel(it.status) ? ` · ${statusLabel(it.status)}` : ''}</Text>
-          </View>
+          <Text style={[styles.itemSub, { color: palette.muted, minWidth: 44 }]}>{time(it.start_at)}</Text>
+          <Text numberOfLines={1} style={[styles.itemTitle, { color: palette.text, flex: 1 }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
+          {statusLabel(it.status) ? <Text numberOfLines={1} style={[styles.itemSub, { color: palette.muted, textAlign: 'right' }]}>{statusLabel(it.status)}</Text> : null}
           <CaretRight size={16} color={palette.muted} />
         </Pressable>)}
       </View>
       <View style={styles.grid}>
-        <Tile title={t('home.bookingsToday', 'Bookings today')} value={s ? String(s.total) : na} line={s ? `${confirmed} ${t('home.confirmed', 'confirmed')} · ${s.pending} ${t('home.pendingShort', 'pending')}` : ''} oneLine onPress={() => router.push('/calendar' as any)} />
-        <Tile title={t('home.booked', 'Booked')} value={na} line={t('home.thisWeek', 'this week')} onPress={() => openReport('schedule')} />
+        <Tile title={t('home.bookingsToday', 'Bookings today')} value={s ? String(live.length) : '—'} line={s ? `${confirmed} ${t('home.confirmed', 'confirmed')} · ${pendingN} ${t('home.pendingShort', 'pending')}` : ''} oneLine onPress={() => router.push('/calendar' as any)} />
+        <Tile title={t('home.booked', 'Booked')} value={live.length ? '—' : '¥0'} line={live.length ? t('home.thisWeek', 'this week') : t('home.noBookingsYet', 'No bookings yet')} onPress={() => openReport('schedule')} />
         <Tile title={t('home.unreadTitle', 'Unread')} value={m ? String(m.unread) : na} line={t('home.chatsWaiting', 'chats waiting')} onPress={() => router.push('/messages' as any)} />
         <Tile title={t('home.scheduled', 'Scheduled')} value={imp?.scheduledPosts != null ? String(imp.scheduledPosts) : na} line={imp?.scheduledPosts === 1 ? t('home.postToday', 'post today') : t('home.postsTodayS', 'posts today')} onPress={() => openReport('social')} />
       </View>
@@ -116,7 +117,7 @@ function Tile({ title, value, line, onPress, oneLine }: { title: string; value: 
   const { t } = useTranslation();
   return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value}`} onPress={onPress} style={({ pressed }) => [styles.tile, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
     <Text numberOfLines={1} style={[styles.tileTitle, { color: palette.muted }]}>{title}</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[value === t('home.unavailable', 'Unavailable') ? styles.tileNa : styles.tileValue, { color: value === t('home.unavailable', 'Unavailable') ? palette.muted : palette.text }]}>{value}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[(value === t('home.unavailable', 'Unavailable') || value === '—') ? styles.tileNa : styles.tileValue, { color: value === t('home.unavailable', 'Unavailable') ? palette.muted : palette.text }]}>{value}</Text>
     {line ? <Text numberOfLines={oneLine ? 1 : 2} adjustsFontSizeToFit={oneLine} minimumFontScale={0.8} style={[styles.tileLine, oneLine && styles.tileLineTight, { color: palette.muted }]}>{line}</Text> : null}
   </Pressable>;
 }

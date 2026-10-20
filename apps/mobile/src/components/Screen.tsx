@@ -2,7 +2,7 @@ import { useEffect, useRef, type PropsWithChildren, type ReactNode } from 'react
 import { STUDENT_ALLOWED, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Platform, Pressable, RefreshControl, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { showsAppTabBar } from './AppTabBar';
@@ -10,6 +10,7 @@ import { colors, spacing, tokens } from '../design/theme';
 import { useAppearance } from '../design/appearance';
 import { useNightFix } from '../design/night-web';
 import { GlassBackdrop } from './GlassBackdrop';
+import { useInsets } from '../lib/insets';
 
 const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
 const LOCKED = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/ai', '/voice']);
@@ -29,13 +30,14 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   const { palette, mode } = useAppearance();
   const nightFix = mode === 'night' && !LOCKED.has(pathname);
   useNightFix(nightFix);
+  const insets = useInsets();
   return <View style={[styles.bg, { backgroundColor: palette.bg }]}>
     <GlassBackdrop />
-    <SafeAreaView style={styles.safe}>
+    <View style={[styles.safe, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
     {header ? <View style={[styles.pinned, { backgroundColor: palette.bg }]}>{header}</View> : null}
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, Platform.OS === 'web' && !LOCKED.has(pathname) && styles.webTop]} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} bottom={askBottom} right={askRight} /> : null}
-  </SafeAreaView></View>;
+  </View></View>;
 }
 
 /** AngelOS logo button on every main screen: a neutral frosted glass circle. Opens the assistant with this screen as context. */

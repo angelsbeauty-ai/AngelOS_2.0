@@ -2,7 +2,7 @@ import { label } from '../../src/lib/labels';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
 import { Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInsets as useSafeAreaInsets } from '../../src/lib/insets';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../src/components/Screen';

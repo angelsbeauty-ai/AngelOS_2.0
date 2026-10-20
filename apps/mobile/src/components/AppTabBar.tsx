@@ -1,6 +1,6 @@
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInsets as useSafeAreaInsets } from '../lib/insets';
 import { useTranslation } from 'react-i18next';
 import { GlassSurface } from './Glass';
 import { colors, D } from '../design/theme';

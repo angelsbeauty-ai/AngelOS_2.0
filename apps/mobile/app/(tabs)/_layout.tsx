@@ -7,7 +7,7 @@ import { GlassSurface } from '../../src/components/Glass';
 import { colors, D } from '../../src/design/theme';
 import { TabIcon } from '../../src/components/TabIcon';
 import { TabGlyph } from '../../src/components/TabGlyph';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInsets as useSafeAreaInsets } from '../../src/lib/insets';
 import { useUnreadCount } from '../../src/lib/unread';
 import { useAppearance } from '../../src/design/appearance';
 

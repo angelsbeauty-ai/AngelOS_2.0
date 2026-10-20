@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInsets as useSafeAreaInsets } from '../lib/insets';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Waveform } from 'phosphor-react-native/src/icons/Waveform';

@@ -1,7 +1,7 @@
 import { useCallback, useState, type ComponentType } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInsets as useSafeAreaInsets } from '../src/lib/insets';
 import { useTranslation } from 'react-i18next';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';

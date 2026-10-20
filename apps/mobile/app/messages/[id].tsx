@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInsets as useSafeAreaInsets } from '../../src/lib/insets';
 import { useTranslation } from 'react-i18next';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -55,6 +55,8 @@ export default function MessageThreadScreen() {
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftHidden, setDraftHidden] = useState(false);
   const [replyTo, setReplyTo] = useState<ClientMessage | null>(null);
+  // P05: the reply bar and chips shrink the list; keep the last bubble in view above them.
+  const [bottomH, setBottomH] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [menuFor, setMenuFor] = useState<ClientMessage | null>(null);
   const online = useOnline();
@@ -286,6 +288,7 @@ export default function MessageThreadScreen() {
         </View>
       ) : null}
 
+      <View onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h !== bottomH) { setBottomH(h); setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 30); } }}>
       {replyTo ? (
         <View style={[styles.quote, { backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>
           <View style={[styles.quoteLine, { backgroundColor: palette.text }]} />
@@ -307,6 +310,7 @@ export default function MessageThreadScreen() {
       {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: night ? '#9A9A9F' : '#6C6C70', backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>{banner}</Text> : null}
       {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, fontSize: 13, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
       <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
+      </View>
 
       <Modal visible={Boolean(menuFor)} transparent animationType="fade" onRequestClose={() => setMenuFor(null)}>
         <Pressable accessibilityLabel={t('common.close', { defaultValue: 'Close' })} style={styles.menuBackdrop} onPress={() => setMenuFor(null)}>
