@@ -1,4 +1,4 @@
-import { useEffect, useRef, type PropsWithChildren } from 'react';
+import { useEffect, useRef, type PropsWithChildren, type ReactNode } from 'react';
 import { STUDENT_ALLOWED, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ const LOCKED = new Set(['/', '/messages', '/calendar', '/analytics', '/profile',
 const logo = require('../../assets/brand/mark-charcoal.png');
 
 /** onRefresh: pull-to-refresh on native; a Refresh button on web. */
-export function Screen({ children, hideAsk, askBottom, askRight, onRefresh, onSwipeUpAtEnd }: PropsWithChildren<{ hideAsk?: boolean; /** Lift the assistant button above a screen's own floating button. */ askBottom?: number; askRight?: number; onRefresh?: () => Promise<unknown> | void; /** Deliberate upward swipe once the list is already at the bottom. */ onSwipeUpAtEnd?: () => void }>) {
+export function Screen({ children, header, hideAsk, askBottom, askRight, onRefresh, onSwipeUpAtEnd }: PropsWithChildren<{ /** Pinned above the scroll view (sticky header). */ header?: ReactNode; hideAsk?: boolean; /** Lift the assistant button above a screen's own floating button. */ askBottom?: number; askRight?: number; onRefresh?: () => Promise<unknown> | void; /** Deliberate upward swipe once the list is already at the bottom. */ onSwipeUpAtEnd?: () => void }>) {
   const atEnd = useRef(false); const touchY = useRef<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { t } = useTranslation();
@@ -32,6 +32,7 @@ export function Screen({ children, hideAsk, askBottom, askRight, onRefresh, onSw
   return <View style={[styles.bg, { backgroundColor: palette.bg }]}>
     <GlassBackdrop />
     <SafeAreaView style={styles.safe}>
+    {header ? <View style={[styles.pinned, { backgroundColor: palette.bg }]}>{header}</View> : null}
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, Platform.OS === 'web' && !LOCKED.has(pathname) && styles.webTop]} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd ? (e) => { const n = e.nativeEvent; atEnd.current = n.contentOffset.y + n.layoutMeasurement.height >= n.contentSize.height - 24; } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
     {showAsk ? <AskButton pathname={pathname} bottom={askBottom} right={askRight} /> : null}
   </SafeAreaView></View>;
@@ -54,6 +55,7 @@ function AskButton({ pathname, bottom, right }: { pathname: string; bottom?: num
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: '#F3F4F6' },
   safe: { flex: 1, backgroundColor: 'transparent' },
+  pinned: { zIndex: 2 },
   content: { padding: tokens.space.screen, paddingTop: 4, paddingBottom: 120, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
   webTop: { justifyContent: 'flex-start' },
   stack: { gap: spacing.md },

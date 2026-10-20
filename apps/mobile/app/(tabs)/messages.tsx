@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActionSheetIOS, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '../../src/design/appearance';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -16,10 +16,15 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Card, EmptyState, Skeleton, ui, screenHeader } from '../../src/components/ui';
 import { toFriendly } from '../../src/lib/friendly-error';
-import { listConnections, listMessageThreads, syncMessages, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
+import { listConnections, listMessageThreads, syncMessages, updateThread, type ConnectionStatus, type MessageThreadSummary } from '../../src/lib/messaging';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
 import { useNightSafe } from '../../src/components/NightSafe';
+import { SwipeRow } from '../../src/components/SwipeRow';
+import { useToast } from '../../src/components/Toast';
+import { Check } from 'phosphor-react-native/src/icons/Check';
+import { EnvelopeSimple } from 'phosphor-react-native/src/icons/EnvelopeSimple';
+import { Star } from 'phosphor-react-native/src/icons/Star';
 
 type Seg = 'messages' | 'comments' | 'mentions';
 type Plat = 'all' | 'instagram' | 'facebook' | 'line' | 'tiktok';
@@ -96,10 +101,33 @@ export default function MessagesScreen() {
       setReErr({ provider, kind, message: kind === 'login_off' ? t('messages.loginOff') : e instanceof Error ? e.message : String(e) });
     } finally { setReBusy(false); }
   }
+  const toast = useToast();
+  async function patch(thread: MessageThreadSummary, change: Partial<MessageThreadSummary>, body: { status?: string; unread?: boolean; archived?: boolean }, undo?: { label: string; body: { status?: string; unread?: boolean; archived?: boolean } }) {
+    const before = threads;
+    setThreads((rows) => body.archived ? rows.filter((r) => r.id !== thread.id) : rows.map((r) => r.id === thread.id ? { ...r, ...change } : r));
+    try {
+      const ws = await getActiveWorkspace();
+      await updateThread(ws.id, thread.id, body);
+      if (undo) toast.show({ tone: 'info', title: undo.label, action: { label: t('messages.undo', { defaultValue: 'Undo' }), onPress: () => { setThreads(before); void updateThread(ws.id, thread.id, undo.body).catch(() => undefined); } } });
+    } catch (e) {
+      setThreads(before);
+      const f = toFriendly(e, { action: 'save' }); toast.show({ tone: 'error', title: f.title, message: f.message });
+    }
+  }
+  const markDone = (th: MessageThreadSummary) => void patch(th, { status: 'done', needs_reply: false }, { status: 'done' }, { label: t('messages.markedDone', { defaultValue: 'Marked as done' }), body: { status: th.status } });
+  function more(th: MessageThreadSummary) {
+    const opts = [t('messages.archive', { defaultValue: 'Archive' }), th.unread ? t('messages.markRead', { defaultValue: 'Mark as read' }) : t('messages.markUnread', { defaultValue: 'Mark as unread' }), t('common.cancel', { defaultValue: 'Cancel' })];
+    const pick = (i: number) => {
+      if (i === 0) void patch(th, {}, { archived: true }, { label: t('messages.archived', { defaultValue: 'Archived' }), body: { archived: false } });
+      else if (i === 1) void patch(th, { unread: !th.unread }, { unread: !th.unread });
+    };
+    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options: opts, cancelButtonIndex: 2 }, pick);
+    else Alert.alert(t('top.more', { defaultValue: 'More' }), undefined, [{ text: opts[0], onPress: () => pick(0) }, { text: opts[1], onPress: () => pick(1) }, { text: opts[2], style: 'cancel' }]);
+  }
   const anyConnected = connections.some((c) => c.connected) || accounts.some((a) => a.state !== 'not_connected');
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
-  return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)}>
+  return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)} header={<View style={styles.pinned}>
     <View style={screenHeader.row}>
       <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('messages.title')}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', { defaultValue: 'Notifications' })} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}>
@@ -114,6 +142,7 @@ export default function MessagesScreen() {
         {k !== 'all' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={18} /> : null}
         <Text numberOfLines={1} style={[styles.chipText, safe.chipText, on && { color: mode === 'night' ? '#151515' : '#FFFFFF' }]}>{k === 'all' ? t('messages.all') : name}</Text></Pressable>; })}
     </ScrollView>
+    </View>}>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor={palette.muted} style={safe.search} /> : null}
     {filter ? <Pressable onPress={() => setFilter(null)}><Text style={[styles.link, { color: palette.text }]}>{t(`inbox.f.${filter}`)} · {t('inbox.clear')}</Text></Pressable> : null}
     {reErr ? <Card><View style={{ gap: 12 }}>
@@ -143,23 +172,27 @@ export default function MessagesScreen() {
     {seg === 'messages' && plat === 'tiktok' && state === 'ready' ? <EmptyState title={t('messages.tiktokEmpty')} message={t('messages.tiktokMsg')} /> : null}
     {seg === 'messages' && plat !== 'tiktok' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /> : null}
 
-    {seg === 'messages' && state === 'ready' && visible.length ? <View style={[styles.list, mode === 'night' && { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>
+    {seg === 'messages' && state === 'ready' && visible.length ? <View style={styles.list}>
       {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
-        return <Pressable key={thread.id} accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+        const fg = palette.text;
+        return <SwipeRow key={thread.id} night={mode === 'night'} onFullSwipe={() => markDone(thread)} actions={[
+          { key: 'more', label: t('top.more', { defaultValue: 'More' }), icon: <DotsThree size={24} color={fg} weight="bold" />, onPress: () => more(thread) },
+          { key: 'done', label: t('messages.done'), icon: <Check size={24} color={fg} />, onPress: () => markDone(thread) },
+          { key: 'unread', label: t('messages.unreadA', { defaultValue: 'Unread' }), icon: <EnvelopeSimple size={24} color={fg} />, onPress: () => void patch(thread, { unread: true }, { unread: true }) },
+          { key: 'follow', label: t('messages.followUp', { defaultValue: 'Follow up' }), icon: <Star size={24} color={fg} weight={thread.status === 'follow_up_due' ? 'fill' : 'regular'} />, onPress: () => void patch(thread, { status: 'follow_up_due' }, { status: 'follow_up_due' }) }
+        ]}><Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} style={({ pressed }) => [styles.row, { backgroundColor: palette.bg }, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
             <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
             <View style={styles.rowTop}>
               <Text numberOfLines={1} style={[styles.preview, { color: palette.text }, !thread.unread && !thread.needs_reply && styles.previewRead, !thread.unread && !thread.needs_reply && { color: palette.muted }]}>{thread.last_direction === 'outbound' ? t('messages.you') : ''}{thread.last_preview ?? ''}</Text>
-              <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>· {rel(thread.last_message_at)}</Text>
+              <Text numberOfLines={1} style={[styles.time, { color: palette.muted }]}>{rel(thread.last_message_at)}</Text>
             </View>
-            {thread.needs_reply ? <View style={styles.needsTag}><Text style={styles.needsTagText}>{t('messages.needsReplyTag')}</Text></View> : null}
-            {thread.status === 'done' ? <View style={styles.donePill}><Text style={styles.done}>{t('messages.done')}</Text></View> : null}
           </View>
           {thread.unread ? <View accessibilityLabel={t('messages.unreadF')} style={[styles.unread, { backgroundColor: palette.text }]} /> : <View style={{ width: 8 }} />}
-        </Pressable>;
+        </Pressable></SwipeRow>;
       })}
     </View> : null}
   </Screen>
@@ -185,19 +218,22 @@ export default function MessagesScreen() {
 
 function rel(iso?: string | null) {
   if (!iso) return '';
-  const d = new Date(iso); const now = new Date();
-  const same = d.toDateString() === now.toDateString();
-  return same ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const mins = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60); if (h < 24) return `${h}h`;
+  const d = Math.floor(h / 24); if (d < 7) return `${d}d`;
+  return `${Math.floor(d / 7)}w`;
 }
 
 const styles = StyleSheet.create({
-  tabsWrap: { marginHorizontal: 0, flexGrow: 0 },
+  tabsWrap: { marginHorizontal: -16, flexGrow: 0 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#8C7A64' },
+  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#151515' },
   unread: { width: 8, height: 8, borderRadius: 4 },
   previewRead: { fontFamily: tokens.font.ui },
-  chips: { flexDirection: 'row', gap: 8, paddingLeft: 20, paddingRight: 20 },
+  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
   chip: { flexShrink: 0, height: 38, paddingHorizontal: 14, borderRadius: 19, justifyContent: 'center', backgroundColor: 'transparent', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
   chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
   chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
@@ -205,16 +241,13 @@ const styles = StyleSheet.create({
   mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.08)' },
   miSep: { borderTopWidth: 6, borderTopColor: 'rgba(42,39,37,0.06)' },
   link: { fontFamily: tokens.font.uiBold, fontSize: 15, paddingVertical: 6 },
-  list: { borderRadius: 20, overflow: 'hidden' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EDEDED' },
+  list: { marginHorizontal: -16 },
+  pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
+  row: { height: 80, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16 },
   rowBody: { flex: 1, gap: 2 },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  name: { fontFamily: tokens.font.uiSemibold, fontSize: 16 },
-  preview: { flex: 1, fontFamily: tokens.font.ui, fontSize: 14 },
-  time: { fontFamily: tokens.font.ui, fontSize: 13 },
-  donePill: { alignSelf: 'flex-start', marginTop: 2 },
-  done: { fontFamily: tokens.font.uiMedium, fontSize: 12, color: '#8C7A64' },
-  updated: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, marginTop: 4 },
-  needsTag: { alignSelf: 'flex-start', marginTop: 2, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: 'rgba(184,164,138,0.16)' },
-  needsTagText: { fontFamily: tokens.font.uiMedium, fontSize: 12, color: '#8C7A64' }
+  name: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
+  preview: { flex: 1, fontFamily: tokens.font.uiBold, fontSize: 15 },
+  time: { fontFamily: tokens.font.ui, fontSize: 15, marginLeft: 6 },
+  updated: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, marginTop: 4 }
 });

@@ -378,7 +378,18 @@
     "updatedHint": "Instagram and Messenger refresh every 5 minutes.",
     "tiktokEmpty": "TikTok messages aren't connected yet",
     "tiktokMsg": "TikTok stays here, but AngelOS cannot read or send TikTok messages yet.",
-    "needsReplyTag": "Needs reply"
+    "needsReplyTag": "Needs reply",
+    "undo": "Undo",
+    "markedDone": "Marked as done",
+    "archive": "Archive",
+    "markRead": "Mark as read",
+    "markUnread": "Mark as unread",
+    "unreadA": "Unread",
+    "followUp": "Follow up",
+    "replyingTo": "Replying to {{name}}",
+    "voiceSoon": "Voice messages",
+    "send": "Send",
+    "aiDraft": "AI draft"
   },
   "booking": {
     "newTitle": "New booking",

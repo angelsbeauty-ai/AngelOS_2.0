@@ -378,7 +378,18 @@
     "updatedHint": "InstagramとMessengerは5分ごとに更新されます。",
     "tiktokEmpty": "TikTokのメッセージはまだつながっていません",
     "tiktokMsg": "TikTokのタブはそのままです。まだTikTokのメッセージは読めず、送れません。",
-    "needsReplyTag": "返信が必要"
+    "needsReplyTag": "返信が必要",
+    "undo": "元に戻す",
+    "markedDone": "完了にしました",
+    "archive": "アーカイブ",
+    "markRead": "既読にする",
+    "markUnread": "未読にする",
+    "unreadA": "未読",
+    "followUp": "フォローアップ",
+    "replyingTo": "{{name}}さんに返信",
+    "voiceSoon": "ボイスメッセージ",
+    "send": "送信",
+    "aiDraft": "AI下書き"
   },
   "booking": {
     "newTitle": "新しい予約",
