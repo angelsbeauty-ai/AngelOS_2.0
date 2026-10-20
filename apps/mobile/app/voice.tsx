@@ -17,7 +17,7 @@ import { getBriefing } from '../src/lib/home';
 import { D, tokens } from '../src/design/theme';
 import { useAppearance } from '../src/design/appearance';
 
-/** Voice (final-D2 07): top row, orb (placeholder), live caption, hint, mute + close. Same OpenAI/LiveKit voice logic. */
+/** Voice (final-D2 07): top row, orb (placeholder), live caption, hint, mute + close. Voice can only draft replies; sending needs her tap. */
 export default function VoiceScreen() {
   const { t } = useTranslation();
   const { palette } = useAppearance();
@@ -56,6 +56,16 @@ export default function VoiceScreen() {
         </Pressable>
       ) : null}
       <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>
+      {voice.drafts.map((d) => <View key={d.messageId} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+        <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftTitle', 'Reply draft. Not sent yet.')}</Text>
+        <Text style={[styles.draftBody, { color: palette.text }]}>{d.body}</Text>
+        {d.state === 'sent' ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftSent', 'Sent')}</Text>
+          : d.state === 'manual' ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftManual', 'Approved. Send it from the chat, this app is not connected yet.')}</Text>
+          : <View style={styles.draftRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('voice.draftDismiss', 'Not now')} onPress={() => voice.dismissDraft(d.messageId)} style={styles.draftBtn}><Text style={[styles.settingsText, { color: palette.text }]}>{t('voice.draftDismiss', 'Not now')}</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('voice.draftApprove', 'Approve and send')} disabled={d.state === 'sending'} onPress={() => void voice.approveDraft(d.messageId)} style={[styles.draftBtn, { backgroundColor: palette.text }]}><Text style={[styles.settingsText, { color: palette.bg }]}>{d.state === 'sending' ? t('voice.draftSending', 'Sending…') : d.state === 'error' ? t('voice.draftRetry', 'Try again') : t('voice.draftApprove', 'Approve and send')}</Text></Pressable>
+          </View>}
+      </View>)}
     </View>
     <View style={styles.buttons}>
       <Pressable accessibilityRole="button" accessibilityLabel={voice.muted ? t('voice.unmute', 'Unmute') : t('voice.mute', 'Mute')} accessibilityState={{ selected: voice.muted }} disabled={!live} onPress={() => voice.setMuted(!voice.muted)} style={[styles.round, styles.mute, { backgroundColor: palette.glass, borderColor: palette.border }, !live && { opacity: 0.5 }]}>
@@ -75,6 +85,11 @@ const styles = StyleSheet.create({
   caption: { fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 32, color: D.text, textAlign: 'center', maxWidth: 340, marginTop: 24 },
   hint: { fontFamily: tokens.font.ui, fontSize: 15, color: D.muted, textAlign: 'center' },
   settingsBtn: { minHeight: 44, paddingHorizontal: 24, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  draft: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 16, padding: 16, gap: 8 },
+  draftLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 13 },
+  draftBody: { fontFamily: tokens.font.ui, fontSize: 16, lineHeight: 22 },
+  draftRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
+  draftBtn: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   settingsText: { fontFamily: tokens.font.uiSemibold, fontSize: 16 },
   buttons: { flexDirection: 'row', justifyContent: 'center', gap: 40 },
   round: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },

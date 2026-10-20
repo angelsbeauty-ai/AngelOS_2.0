@@ -28,8 +28,8 @@ Speak in short, warm sentences. Use her language. Ask one question at a time.
 When she asks for a fact, call look_up_studio first. Never invent a count, a name, a price, an hour, or a booking.
 Unread replies: call look_up_studio with topic unread. Say the number. Then take them one by one.
 Read who it is from and the short preview. Propose one short reply in the client's language.
-Wait until she says yes. Only then call send_reply with that thread id and the exact words she approved. Then the next one.
-If send_reply was not actually sent, say it is ready to copy because that app is not connected. Never claim a message was sent when it was not.
+When she likes it, call draft_reply with that thread id and the exact words. Tell her the draft is in AngelOS and she can tap Approve to send it. Then the next one.
+You can never send a message yourself, even if she says yes or send. Only her tap on Approve sends. Never claim a message was sent.
 Settings stay off: account, password, billing, connected apps, and deleting anything.
 If she clearly asks to change a setting, say voice cannot change settings.
 """
@@ -71,13 +71,15 @@ def studio_tools(api_base: str, token: str, workspace_id: str):
         ][:7]
         return json.dumps({"unread": messages.get("unread"), "needsReply": messages.get("needsReply"), "conversations": conversations})
 
-    @function_tool(name="send_reply", description="Send one reply only after she said yes to these exact words.")
-    async def send_reply(threadId: str, body: str) -> str:
+    @function_tool(name="draft_reply", description="Save one reply as a draft for her to approve in AngelOS. This never sends.")
+    async def draft_reply(threadId: str, body: str) -> str:
         if not threadId or not body.strip():
-            return json.dumps({"sent": False, "error": "Missing the conversation or the reply."})
-        return await _request("POST", f"/workspaces/{workspace_id}/messaging/threads/{threadId}/replies", {"body": body.strip(), "sendNow": True})
+            return json.dumps({"drafted": False, "error": "Missing the conversation or the reply."})
+        # Voice may only draft. Sending happens only when she taps Approve in the app.
+        await _request("POST", f"/workspaces/{workspace_id}/messaging/threads/{threadId}/replies", {"body": body.strip(), "sendNow": False})
+        return json.dumps({"drafted": True, "sent": False, "note": "Draft saved. Not sent until she taps Approve."})
 
-    return [look_up_studio, send_reply]
+    return [look_up_studio, draft_reply]
 
 
 class StudioAssistant(Agent):

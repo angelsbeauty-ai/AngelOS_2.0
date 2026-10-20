@@ -6,7 +6,7 @@ import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
 import { createVoiceSession, getVoiceStatus } from '../lib/ai';
 import { getHomeSummary } from '../lib/home';
-import { createMessageReply } from '../lib/messaging';
+import { approveReply, createMessageReply } from '../lib/messaging';
 import { setLoudSpeaker, startVoiceAudio, stopVoiceAudio } from '../lib/livekit-globals';
 
 type State = 'idle' | 'connecting' | 'live' | 'error';
@@ -18,7 +18,9 @@ function voiceToolCall(ev: any): { name: string; callId: string; args: string } 
   return null;
 }
 
-async function runVoiceTool(workspaceId: string, name: string, raw: string): Promise<string> {
+export type VoiceDraft = { messageId: string; threadId: string; body: string; state: 'ready' | 'sending' | 'sent' | 'manual' | 'error' };
+
+async function runVoiceTool(workspaceId: string, name: string, raw: string, onDraft?: (d: VoiceDraft) => void): Promise<string> {
   let args: any = {};
   try { args = raw ? JSON.parse(raw) : {}; } catch { args = {}; }
   try {
@@ -34,12 +36,14 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string): Pro
       const conversations = home.messages.alerts.filter((item) => item.unread || item.needsReply).slice(0, 7).map((item) => ({ threadId: item.id, name: item.name, platform: item.platform, preview: item.preview, unread: item.unread, needsReply: item.needsReply }));
       return JSON.stringify({ unread: home.messages.unread, needsReply: home.messages.needsReply, conversations });
     }
-    if (name === 'send_reply') {
+    if (name === 'draft_reply') {
       const threadId = String(args.threadId ?? '');
       const body = String(args.body ?? '').trim();
-      if (!threadId || !body) return JSON.stringify({ sent: false, error: 'Missing the conversation or the reply.' });
-      const result = await createMessageReply(workspaceId, threadId, body, true);
-      return JSON.stringify({ sent: result.sent, delivery: result.delivery ?? (result.sent ? 'sent' : 'manual') });
+      if (!threadId || !body) return JSON.stringify({ drafted: false, error: 'Missing the conversation or the reply.' });
+      // Voice may only save a draft. Sending happens only when she taps Approve on the card.
+      const result = await createMessageReply(workspaceId, threadId, body, false);
+      onDraft?.({ messageId: result.message.id, threadId, body, state: 'ready' });
+      return JSON.stringify({ drafted: true, sent: false, note: 'Draft saved. It is on her screen with an Approve button. It is not sent until she taps Approve.' });
     }
     return JSON.stringify({ error: 'Unknown voice tool.' });
   } catch (error) {
@@ -47,7 +51,7 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string): Pro
   }
 }
 
-/** OpenAI Realtime voice over WebRTC. Nothing is recorded or saved by AngelOS. */
+/** Realtime voice over WebRTC. Nothing is recorded or saved by AngelOS. */
 export function useLiveVoice(workspaceId: string | null, screen?: string, context?: string) {
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [state, setState] = useState<State>('idle');
@@ -57,6 +61,15 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const pcRef = useRef<any>(null); const micRef = useRef<any>(null); const outRef = useRef<any>(null);
   const levelRef = useRef(0); const meterRef = useRef<{ stop: () => void } | null>(null);
   const mutedRef = useRef(false);
+  const [drafts, setDrafts] = useState<VoiceDraft[]>([]);
+  const addDraft = useCallback((d: VoiceDraft) => setDrafts((list) => [...list.filter((x) => x.messageId !== d.messageId), d]), []);
+  const patchDraft = (id: string, state: VoiceDraft['state']) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, state } : x)));
+  async function approveDraft(id: string) {
+    if (!workspaceId) return;
+    patchDraft(id, 'sending');
+    try { const r = await approveReply(workspaceId, id); patchDraft(id, r.sent ? 'sent' : 'manual'); } catch { patchDraft(id, 'error'); }
+  }
+  const dismissDraft = (id: string) => setDrafts((list) => list.filter((x) => x.messageId !== id));
   const getLevel = useCallback(() => levelRef.current, []);
 
   function stop() {
@@ -109,7 +122,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
         if (!call || !workspaceId || answered.has(call.callId)) return;
         answered.add(call.callId);
         const studioId = workspaceId;
-        void runVoiceTool(studioId, call.name, call.args).then((output) => {
+        void runVoiceTool(studioId, call.name, call.args, addDraft).then((output) => {
           if (dc.readyState !== 'open') return;
           dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
           dc.send(JSON.stringify({ type: 'response.create' }));
@@ -153,7 +166,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop, muted, setMuted, caption, getLevel };
+  return { status, state, error, start, stop, muted, setMuted, caption, getLevel, drafts, approveDraft, dismissDraft };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {
