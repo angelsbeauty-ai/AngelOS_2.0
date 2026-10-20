@@ -1,0 +1,7 @@
+ig_dm_thread.png  https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/01/84/02/0184026f-4a06-4f9b-16a0-2ea0b343af80/4_iOS_6.5.jpg/1290x2796bb.png  (App Store, Instagram id389801252)
+line_chatroom.png  https://is1-ssl.mzstatic.com/image/thumb/Purple221/v4/b3/68/8f/b3688f0f-bd9a-33bf-966e-ac6b5098aa94/778b38a2-a108-4081-902c-3591cb7f749c_Chat_02_5.8_EN.png/1290x2796bb.png  (App Store, LINE id443904275)
+line_chatlist.jpg  https://taisy0.com/wp-content/uploads/2026/08/lineLiquidGlass.jpg  (article https://taisy0.com/2026/08/06/225951.html, LINE 26.12.0)
+whatsapp_chats.png  https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/d8/95/88/d89588dd-ce20-0f5b-95bc-f99814bf9a6c/6.9__Display_1-en_US.png/1290x2796bb.png  (App Store, WhatsApp id310633997)
+whatsapp_thread.png  https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/dd/20/25/dd202528-ebb0-bd26-61a1-067ac97b5de2/6.9__Display_4-en_US.png/1290x2796bb.png  (App Store, WhatsApp id310633997)
+imessage_keyboard.png  https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/a1/13/14/a1131473-2f12-6f70-4edf-58c8650725d3/App_Store_Screenshot_2026_Template_-_iPhone_-_Messages.005.jpeg/600x1300bb.png  (App Store, Apple Messages id1146560473)
+imessage_details.png  https://is1-ssl.mzstatic.com/image/thumb/PurpleSource211/v4/45/97/d5/4597d5f0-1fa3-3294-b0c2-4bdfc7fa3f3b/App_Store_Screenshot_2026_Template_-_iPhone_-_Messages.003.jpeg/1290x2796bb.png  (App Store, Apple Messages id1146560473)
