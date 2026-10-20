@@ -5,7 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { ChatBar } from '../../src/components/ChatBar';
 import { ChatTools } from '../../src/components/ChatTools';
-import { PlatformBadge } from '../../src/components/MessagingBits';
+import { BrandLogo } from '../../src/components/BrandBadge';
+import { SwipeReply } from '../../src/components/SwipeReply';
+import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
+import { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
+import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
+import { X } from 'phosphor-react-native/src/icons/X';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import {
@@ -36,6 +41,7 @@ export default function MessageThreadScreen() {
   const [showSaved, setShowSaved] = useState(false);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftHidden, setDraftHidden] = useState(false);
+  const [replyTo, setReplyTo] = useState<ClientMessage | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -85,7 +91,7 @@ export default function MessageThreadScreen() {
     await run('send', async () => {
       if (pendingDraft && text === pendingDraft.body) await approveReply(workspaceId!, pendingDraft.id);
       else await createMessageReply(workspaceId!, thread.id, text, true);
-      setReply(''); setDraftOpen(false);
+      setReply(''); setDraftOpen(false); setReplyTo(null);
     });
   }
 
@@ -115,38 +121,33 @@ export default function MessageThreadScreen() {
         if (result?.translation) setTranslations((prev) => ({ ...prev, [message.id]: { text: result.translation, shown: true } }));
       }, false);
       else if (index === 1) void dialog.notify('Copied', message.body);
-      else if (index === 2) setReply((prev) => `> ${message.body}\n${prev}`);
+      else if (index === 2) setReplyTo(message);
       else if (index === 3 && thread.client) router.push(`/clients/${thread.client.id}` as any);
     };
     if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options, cancelButtonIndex: 4 }, runIndex);
-    else Alert.alert('Message', undefined, options.slice(0, 4).map((label, i) => ({ text: label, onPress: () => runIndex(i) })).concat({ text: 'Cancel', style: 'cancel' as const }));
+    else Alert.alert('Message', undefined, [...options.slice(0, 4).map((label, i) => ({ text: label, onPress: () => runIndex(i) })), { text: 'Cancel', style: 'cancel' as const }]);
   }
 
   const showChip = pendingDraft && !draftHidden;
 
   return (
-    <KeyboardAvoidingView style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3' }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.fill, { backgroundColor: night ? '#000000' : '#F3F3F3' }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.header, { paddingTop: insets.top, borderBottomColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}>
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: night ? '#0B0B0C' : '#F3F3F3', borderBottomColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}>
         <View style={styles.headerRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={styles.back}>
-            <Text style={[styles.chevron, { color: palette.text }]}>‹</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.back', { defaultValue: 'Back' })} onPress={() => router.back()} style={styles.back}>
+            <CaretLeft size={24} color={palette.text} />
           </Pressable>
-          <View style={[styles.avatar, night && { backgroundColor: '#2A2A2D' }]}>
-            {thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.avatarImg} /> : <Text style={[styles.avatarText, night && { color: '#F4F4F5' }]}>{name.slice(0, 1).toUpperCase()}</Text>}
-          </View>
-          <View style={{ flex: 1 }}>
+          <View style={styles.titleWrap}>
             <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
-            <View style={styles.sub}>
-              <PlatformBadge platform={thread.platform} label={thread.platform_label} />
-              <Text style={[styles.subText, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>{thread.reply_language === 'ja' ? 'Writes in Japanese' : 'Writes in English'}</Text>
-            </View>
+            {thread.platform !== 'other' ? <BrandLogo platform={thread.platform === 'facebook' ? 'messenger' : thread.platform as any} size={18} /> : null}
           </View>
-          {thread.client ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Open client" onPress={() => router.push(`/clients/${thread.client!.id}` as any)} style={styles.open}>
-              <Text style={[styles.openText, { color: palette.text }]}>···</Text>
-            </Pressable>
-          ) : null}
+          <Pressable accessibilityRole="button" accessibilityLabel={t('messages.aiDraft', { defaultValue: 'AI draft' })} disabled={Boolean(busy)} onPress={() => { setDraftHidden(false); if (pendingDraft) setDraftOpen(true); else void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id); setDraftOpen(true); }); }} style={styles.back}>
+            <Sparkle size={24} color={palette.text} />
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} disabled={!thread.client} onPress={() => thread.client && router.push(`/clients/${thread.client.id}` as any)} style={[styles.back, !thread.client && { opacity: 0.4 }]}>
+            <DotsThree size={26} color={palette.text} weight="bold" />
+          </Pressable>
         </View>
       </View>
 
@@ -155,13 +156,13 @@ export default function MessageThreadScreen() {
           const out = message.direction === 'outbound';
           const tr = translations[message.id];
           return (
-            <Pressable key={message.id} onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
+            <SwipeReply key={message.id} night={night} label={t('messages.reply', { defaultValue: 'Reply' })} onReply={() => setReplyTo(message)}><Pressable onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
               <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }]}>
                 <Text style={[styles.body, { color: out ? outText : incText }]}>{message.body}</Text>
               </View>
               {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6B6B70' }]}>{tr.text}</Text> : null}
-              <Text style={[styles.time, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>{timeLabel(message.created_at)}</Text>
-            </Pressable>
+              <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}</Text>
+            </Pressable></SwipeReply>
           );
         })}
       </ScrollView>
@@ -186,7 +187,19 @@ export default function MessageThreadScreen() {
         </View>
       ) : null}
 
-      <ChatBar value={reply} onChangeText={setReply} placeholder={thread.reply_language === 'ja' ? 'Write in Japanese' : 'Write a message'} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => setShowPlus(true)} />
+      {replyTo ? (
+        <View style={[styles.quote, { backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>
+          <View style={[styles.quoteLine, { backgroundColor: palette.text }]} />
+          <View style={{ flex: 1 }}>
+            <Text numberOfLines={1} style={[styles.quoteTitle, { color: palette.text }]}>{t('messages.replyingTo', { name: replyTo.direction === 'outbound' ? t('messages.yourself', { defaultValue: 'yourself' }) : name, defaultValue: 'Replying to {{name}}' })}</Text>
+            <Text numberOfLines={1} style={[styles.quoteBody, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{replyTo.body}</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('common.close', { defaultValue: 'Close' })} onPress={() => setReplyTo(null)} style={styles.back}>
+            <X size={20} color={night ? '#9A9A9F' : '#6C6C70'} />
+          </Pressable>
+        </View>
+      ) : null}
+      <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy)} onPlus={() => setShowPlus(true)} />
 
       <ChatTools visible={showPlus} onClose={() => setShowPlus(false)} night={night}>
         <Pressable accessibilityRole="button" accessibilityLabel="Saved replies" onPress={() => void openSaved()} style={styles.plusRow}>
@@ -209,19 +222,24 @@ export default function MessageThreadScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   header: { borderBottomWidth: StyleSheet.hairlineWidth },
-  headerRow: { height: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16 },
+  headerRow: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
+  titleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 44 },
+  quote: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 16, paddingVertical: 6 },
+  quoteLine: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
+  quoteTitle: { fontSize: 14, fontWeight: '600' },
+  quoteBody: { fontSize: 14 },
   back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   chevron: { fontSize: 28, lineHeight: 32 },
   avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E4E4E6', justifyContent: 'center', alignItems: 'center', marginRight: 8, overflow: 'hidden' },
   avatarImg: { width: 32, height: 32 },
   avatarText: { fontSize: 14, fontWeight: '600', color: '#151515' },
-  name: { fontSize: 17, lineHeight: 22, fontWeight: '600' },
+  name: { fontSize: 17, lineHeight: 22, fontWeight: '600', flexShrink: 1 },
   sub: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   subText: { fontSize: 12, lineHeight: 16 },
   open: { paddingHorizontal: 10, height: 32, justifyContent: 'center' },
   openText: { fontSize: 15, fontWeight: '600' },
   thread: { padding: 12, gap: 8, paddingBottom: 16 },
-  row: { alignItems: 'flex-start', gap: 2, maxWidth: '80%' },
+  row: { alignItems: 'flex-start', gap: 2, maxWidth: '80%', alignSelf: 'flex-start' },
   rowOut: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   bubble: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9 },
   body: { fontSize: 16, lineHeight: 22 },

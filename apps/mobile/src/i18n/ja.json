@@ -389,7 +389,11 @@
     "replyingTo": "{{name}}さんに返信",
     "voiceSoon": "ボイスメッセージ",
     "send": "送信",
-    "aiDraft": "AI下書き"
+    "aiDraft": "AI下書き",
+    "placeholder": "メッセージ",
+    "reply": "返信",
+    "yourself": "自分",
+    "add": "追加"
   },
   "booking": {
     "newTitle": "新しい予約",

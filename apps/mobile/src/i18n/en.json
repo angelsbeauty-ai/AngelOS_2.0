@@ -389,7 +389,11 @@
     "replyingTo": "Replying to {{name}}",
     "voiceSoon": "Voice messages",
     "send": "Send",
-    "aiDraft": "AI draft"
+    "aiDraft": "AI draft",
+    "placeholder": "Message",
+    "reply": "Reply",
+    "yourself": "yourself",
+    "add": "Add"
   },
   "booking": {
     "newTitle": "New booking",
