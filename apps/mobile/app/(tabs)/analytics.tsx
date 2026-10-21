@@ -19,7 +19,7 @@ import { useNightSafe } from '../../src/components/NightSafe';
 
 const PLATS = ['all', 'instagram', 'facebook', 'line'] as const;
 type Plat = typeof PLATS[number];
-type View = 'analytics' | 'profile';
+type Pane = 'analytics' | 'profile';
 
 export default function AnalyticsScreen() {
   const { palette, mode: look } = useAppearance();
@@ -29,7 +29,7 @@ export default function AnalyticsScreen() {
   const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0, ...palette.gloss } : null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
-  const [view, setView] = useState<View>('analytics');
+  const [view, setView] = useState<Pane>('analytics');
   const [plat, setPlat] = useState<Plat>('all');
   const [ws, setWs] = useState<string | null>(null);
   const [data, setData] = useState<Insights | null>(null);

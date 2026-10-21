@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { NEEDS_CHECK_REASON, publishErrorOf, retryDecision } from '../social/publish-logic';
 import type { AuthUser } from '../auth/auth-user';
 import { AiProviderService } from '../ai/ai-provider.service';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
@@ -9,6 +10,11 @@ import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
 import { PostizPublishingAdapter, postizReady, publishRoute } from './postiz-publishing.adapter';
 import { metaConfigForWorkspace } from '../meta/meta-workspace-config';
 import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
+
+/** Adds the plain failure reason (latest content_publish_attempts.error_message) and needs_check to each variant. */
+export function withPublishErrors<T extends { variants?: any[] | null }>(post: T): T {
+  return { ...post, variants: (post.variants ?? []).map((v: any) => ({ ...v, ...publishErrorOf(v) })) };
+}
 
 @Injectable()
 export class ContentService {
@@ -23,19 +29,19 @@ export class ContentService {
       .order('updated_at', { ascending: false })
       .limit(100);
     if (error) throw new InternalServerErrorException(error.message);
-    return data ?? [];
+    return (data ?? []).map(withPublishErrors);
   }
 
   async get(user: AuthUser, workspaceId: string, contentPostId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase
       .from('content_posts')
-      .select('*,media:content_post_media(id,position,role,asset:media_assets(*)),variants:content_variants(*)')
+      .select('*,media:content_post_media(id,position,role,asset:media_assets(*)),variants:content_variants(*,attempts:content_publish_attempts(status,error_message))')
       .eq('workspace_id', workspaceId)
       .eq('id', contentPostId)
       .single();
     if (error || !data) throw new NotFoundException('Content post not found');
-    return data;
+    return withPublishErrors(data);
   }
 
   async reviewMedia(user: AuthUser, workspaceId: string, dto: ReviewContentMediaDto) {
@@ -372,7 +378,7 @@ export class ContentService {
 
   async schedulingStatus() { return new PostizPublishingAdapter().status(); }
 
-  async publishNow(user: AuthUser, workspaceId: string, variantId: string) {
+  async publishNow(user: AuthUser, workspaceId: string, variantId: string, confirmNotPosted = false) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data: variant, error } = await supabase.from('content_variants').select('*,post:content_posts(*)').eq('workspace_id', workspaceId).eq('id', variantId).single();
     if (error || !variant) throw new NotFoundException('Content variant not found');
@@ -391,7 +397,10 @@ export class ContentService {
     const idempotencyKey = `content:${variant.id}`;
     const service = createServiceSupabaseClient();
     const { data: previous } = await service.from('content_publish_attempts').select('*').eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey).maybeSingle();
-    if (previous?.status === 'published') return { variant, published: true, duplicatePrevented: true, verification: previous.verification };
+    // Never double-post: a provider post id, or a Meta try that wasn't confirmed, means it may be live already.
+    const decision = retryDecision(variant, previous, confirmNotPosted);
+    if (decision === 'already_published') return { variant, published: true, duplicatePrevented: true, verification: previous?.verification ?? null };
+    if (decision === 'needs_check') throw new ConflictException({ statusCode: 409, code: 'needs_check', platform: variant.platform, message: NEEDS_CHECK_REASON(String(variant.platform).replace(/^instagram_.*/, 'instagram')) });
 
     const now = new Date().toISOString();
     const attemptNo = Number(previous?.attempt_no ?? 0) + 1;

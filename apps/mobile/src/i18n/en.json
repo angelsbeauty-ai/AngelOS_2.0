@@ -2095,5 +2095,16 @@
   },
   "composer": {
     "writeHere": "Write here…"
+  },
+  "pub": {
+    "why": "Why it didn't post",
+    "needsCheckTitle": "Check before trying again",
+    "needsCheckBody": "{{p}} didn't confirm the post, so it may already be live. Open {{p}} and look first.",
+    "markPosted": "It's live: Mark as posted",
+    "postAnyway": "It's not there: Post it",
+    "postAnywayTitle": "Post it now?",
+    "postAnywayBody": "Only do this if you checked {{p}} and the post isn't there. Otherwise it will post twice.",
+    "markedPosted": "Marked as posted",
+    "unknownReason": "The reason wasn't saved. Tap Try again."
   }
 }

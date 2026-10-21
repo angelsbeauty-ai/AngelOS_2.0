@@ -91,7 +91,7 @@ export class ContentController {
   schedulingStatus() { return this.content.schedulingStatus(); }
 
   @Post('variants/:variantId/publish')
-  publishNow(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('variantId') variantId: string) {
-    return this.content.publishNow(user, workspaceId, variantId);
+  publishNow(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('variantId') variantId: string, @Query('confirm_not_posted') confirm?: string) {
+    return this.content.publishNow(user, workspaceId, variantId, confirm === '1' || confirm === 'true');
   }
 }

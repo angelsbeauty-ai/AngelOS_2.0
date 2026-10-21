@@ -15,6 +15,7 @@ import {
 } from '../../src/lib/content';
 import { getMediaViewUrl } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { PublishFailureNote } from '../../src/components/PublishFailureNote';
 
 const STATUS: Record<string, string> = { draft: 'Draft', prepared: 'Draft', approved: 'Approved', scheduled: 'Scheduled', publishing: 'Posting…', published: 'Posted', failed: 'Needs attention', archived: 'Archived' };
 const errText = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Please try again.');
@@ -23,6 +24,7 @@ export default function ContentDetailScreen() {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  const [studioName, setStudioName] = useState<string | null>(null);
   const [post, setPost] = useState<ContentPost | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -34,7 +36,7 @@ export default function ContentDetailScreen() {
 
   const load = useCallback(async () => {
     try {
-      const ws = (await getActiveWorkspace()).id; setWorkspaceId(ws);
+      const active = await getActiveWorkspace(); const ws = active.id; setWorkspaceId(ws); setStudioName(active.name ?? null);
       const data = await getContentPost(ws, id); setPost(data);
       const first = data.media?.[0]?.asset?.id;
       if (first) getMediaViewUrl(ws, first).then((r) => setPreview(r.url)).catch(() => setPreview(null));
@@ -69,12 +71,13 @@ export default function ContentDetailScreen() {
       return <Card key={variant.id}>
         <View style={styles.head}><PlatformBadge platform={variant.platform.split('_')[0]} label={isLine ? 'LINE broadcast' : platformLabel(variant.platform)} /><Text style={styles.status}>{STATUS[variant.status] ?? variant.status}{variant.scheduled_for ? ` · ${new Date(variant.scheduled_for).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}</Text></View>
 
+        {variant.status === 'failed' ? <PublishFailureNote ws={workspaceId} variants={[variant]} onChanged={() => void load()} /> : null}
         {isLine ? <>
           <BilingualBlock ja={variant.caption} en={en ?? meaning[variant.id] ?? null} labelJa="日本語 (sent to LINE friends)" />
           <SupportText>To change the words, ask AngelOS for a new LINE draft (so the English meaning always matches).</SupportText>
         </> : <>
           <View style={styles.preview}>
-            <View style={styles.previewHead}><View style={styles.dot} /><Text style={styles.previewName}>your_studio</Text></View>
+            {studioName ? <View style={styles.previewHead}><View style={styles.dot} /><Text numberOfLines={1} style={styles.previewName}>{studioName}</Text></View> : null}
             {preview ? <Image source={{ uri: preview }} style={styles.previewImage} accessibilityLabel={t('post.s6')} /> : <View style={[styles.previewImage, styles.noPhoto]}><SupportText>{t('post.s1')}</SupportText></View>}
             <Text numberOfLines={3} style={styles.previewCaption}>{variant.caption}</Text>
             <Text style={styles.more}>{t('post.s2')}</Text>

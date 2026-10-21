@@ -16,6 +16,10 @@ export interface ContentVariant {
   scheduled_for: string | null;
   status: 'draft' | 'approved' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'archived';
   live_url?: string | null;
+  /** Latest publish attempt's plain failure reason (from the API). */
+  publish_error?: string | null;
+  /** The platform didn't confirm the last try; it may already be live. */
+  needs_check?: boolean;
 }
 
 export interface ContentPost {
@@ -125,8 +129,8 @@ export function ownBestTimes(rows: Array<{ published_at: string | null; value: n
   return { times, posts };
 }
 
-export function publishContentVariant(workspaceId: string, variantId: string) {
-  return apiFetch<{ variant: ContentVariant; published: boolean; duplicatePrevented: boolean }>(`/workspaces/${workspaceId}/content/variants/${variantId}/publish`, { method: 'POST' });
+export function publishContentVariant(workspaceId: string, variantId: string, opts: { confirmNotPosted?: boolean } = {}) {
+  return apiFetch<{ variant: ContentVariant; published: boolean; duplicatePrevented: boolean }>(`/workspaces/${workspaceId}/content/variants/${variantId}/publish${opts.confirmNotPosted ? '?confirm_not_posted=1' : ''}`, { method: 'POST' });
 }
 
 export interface ComposerDraftInput {

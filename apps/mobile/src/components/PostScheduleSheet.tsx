@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { BrandLogo } from './BrandBadge';
 import { PostThumb } from './PostThumb';
+import { PublishFailureNote } from './PublishFailureNote';
 import { useToast } from './Toast';
 import { useAppearance } from '../design/appearance';
 import { tokens } from '../design/theme';
@@ -143,7 +144,7 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
     if (!yes) return;
     if (!online) { setInline(t('sched.offlineBody', 'Nothing was scheduled or posted. Try again when you are back online.')); return; }
     setBusy(true); let ok = 0; let msg: string | null = null;
-    for (const v of vs.filter((x) => ['scheduled', 'approved', 'failed'].includes(x.status))) { try { const r = await publishContentVariant(ws, v.id); if (r.published) ok += 1; } catch (e) { if (isNotConnected(e)) { setBusy(false); setInline(t('sched.ncInline')); onChanged(); return; } msg = e instanceof ApiError && e.status && e.status < 500 && e.message ? e.message : t('sched.postFailed', "It didn't post. Tap Try again."); } }
+    for (const v of vs.filter((x) => ['scheduled', 'approved', 'failed'].includes(x.status) && !x.needs_check)) { try { const r = await publishContentVariant(ws, v.id); if (r.published) ok += 1; } catch (e) { if (isNotConnected(e)) { setBusy(false); setInline(t('sched.ncInline')); onChanged(); return; } msg = e instanceof ApiError && e.status && e.status < 500 && e.message ? e.message : t('sched.postFailed', "It didn't post. Tap Try again."); } }
     setBusy(false);
     if (!ok) { haptic('error'); setInline(msg ?? t('sched.postFailed', "It didn't post. Tap Try again.")); onChanged(); return; }
     haptic('success'); onChanged(); onClose();
@@ -176,10 +177,8 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
       {banner.body ? <Text style={[s.sub, mut]}>{banner.body}</Text> : null}
       {banner.action ? <Pressable accessibilityRole="button" onPress={banner.action.run} style={s.link}><Text style={[s.linkText, txt]}>{banner.action.label}</Text></Pressable> : null}
     </View> : null}
-    {failed ? <View style={[s.banner, { backgroundColor: palette.fill }]}>
-      <Text style={[s.bTitle, { color: red }]}>{t('sched.stFailed', "Didn't post")}</Text>
-      <Pressable accessibilityRole="button" disabled={busy} onPress={() => void retry()} style={s.link}><Text style={[s.linkText, txt]}>{t('sched.tryAgain', 'Try again')}</Text></Pressable>
-    </View> : null}
+    {failed ? <PublishFailureNote ws={ws} variants={vs} onChanged={() => { onChanged(); onClose(); }} /> : null}
+    {failed && !vs.some((v) => v.status === 'failed' && v.needs_check) ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => void retry()} style={s.link}><Text style={[s.linkText, txt]}>{t('sched.tryAgain', 'Try again')}</Text></Pressable> : null}
     {posted.length ? <View style={[s.banner, { backgroundColor: palette.fill }]}>
       <Text style={[s.bTitle, txt]}>✓ {t('sched.postedOn', { defaultValue: 'Posted on {{p}}', p: Array.from(new Set(posted.map((v) => name(v.platform.split('_')[0])))).join(' and ') })}</Text>
       <Text style={[s.sub, mut]}>{stats ?? t('sched.statsUnavailable', 'Views and likes: Unavailable')}</Text>
