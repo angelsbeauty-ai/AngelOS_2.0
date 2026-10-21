@@ -20,7 +20,10 @@ export const tokens = {
     glassTint: '#FFFFFF',
     seaGlass: '#6C6C70',
     hairline: '#EDEDED',
-    onCharcoal: '#FFFFFF'
+    onCharcoal: '#FFFFFF',
+    /** Rose-gold accent (PALETTES.md Greige & Rose Gold): selected states and primary actions on content screens. */
+    roseGold: '#8C5547',
+    roseGoldNight: '#C99484'
   },
   type: {
     largeTitle: { fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 40, lineHeight: 44 },

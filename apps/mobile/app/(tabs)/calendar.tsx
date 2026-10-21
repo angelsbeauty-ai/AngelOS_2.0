@@ -8,7 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Tray } from 'phosphor-react-native/src/icons/Tray';
 import { CalendarDots } from 'phosphor-react-native/src/icons/CalendarDots';
-import { InstagramLogo } from 'phosphor-react-native/src/icons/InstagramLogo';
+import { SatinGlyph } from '../../src/components/SatinGlyph';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
@@ -430,7 +430,7 @@ export default function CalendarTab() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.goToday', 'Go to today')} onPress={goToday} style={[styles.pill, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: palette.border }]}><Text style={[styles.pillText, { color: palette.text }]}>{t('cal.today', 'Today')}</Text></Pressable>
       <View style={[styles.pill, styles.pillPair, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: palette.border }]}>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.drafts', 'Drafts')} onPress={() => router.push('/content' as any)} style={styles.pillIcon}><Tray size={22} color={palette.icon} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('grid.preview')} onPress={() => router.push('/content/grid' as any)} style={styles.pillIcon}><InstagramLogo size={22} color={palette.icon} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('grid.preview')} onPress={() => router.push('/content/grid' as any)} style={styles.pillIcon}><SatinGlyph name="grid" size={22} color={palette.icon} /></Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel={t('cal.month', 'Month')} onPress={() => setView('month')} style={styles.pillIcon}><CalendarDots size={22} color={palette.icon} /></Pressable>
       </View>
     </View> : null}

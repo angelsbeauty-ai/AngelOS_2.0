@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { SquaresFour } from 'phosphor-react-native/src/icons/SquaresFour';
+import { SatinGlyph } from '../../src/components/SatinGlyph';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
@@ -326,7 +326,7 @@ export default function NewPostScreen() {
       </View>
       {acct && platforms.some((p) => acct[p.split('_')[0]] !== 'connected') ? <Pressable accessibilityRole="link" onPress={() => router.push('/settings/connections' as any)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[styles.link, { textDecorationLine: 'underline' }]}>{t('cnew.connectLink')}</Text></Pressable> : null}
       {platforms.some((p) => p.startsWith('instagram')) ? <Pressable accessibilityRole="button" accessibilityHint={t('grid.previewSub')} onPress={() => router.push({ pathname: '/content/grid', params: { ...(selectedMedia[0] ? { pendingAsset: selectedMedia[0] } : {}), pendingAt: plannedAt.toISOString(), pendingKind: kind } } as any)} style={styles.gridRow}>
-        <SquaresFour size={20} color={tokens.color.charcoal} />
+        <SatinGlyph name="grid" size={22} color={tokens.color.roseGold} />
         <View style={{ flex: 1 }}><Text style={styles.gridRowTitle}>{t('grid.preview')}</Text><Text style={styles.gridRowSub}>{t('grid.previewSub')}</Text></View>
         <CaretRight size={16} color={tokens.color.charcoal2} />
       </Pressable> : null}
