@@ -93,6 +93,11 @@ export class AiController {
     return this.ai.createConversation(user, workspaceId, dto);
   }
 
+  @Get('conversations')
+  listConversations(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
+    return this.ai.listConversations(user, workspaceId);
+  }
+
   @Get('conversations/:conversationId/messages')
   listMessages(
     @CurrentUser() user: AuthUser,

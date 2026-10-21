@@ -15,6 +15,9 @@ import { ThumbsDown } from 'phosphor-react-native/src/icons/ThumbsDown';
 import { ArrowsClockwise } from 'phosphor-react-native/src/icons/ArrowsClockwise';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Microphone } from 'phosphor-react-native/src/icons/Microphone';
+import { ClockCounterClockwise } from 'phosphor-react-native/src/icons/ClockCounterClockwise';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ChatHistorySheet } from '../src/components/ChatHistorySheet';
 import { useTranslation } from 'react-i18next';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -34,6 +37,7 @@ import {
   approveAiAction,
   cancelAiAction,
   createConversation,
+  listAiMessages,
   getAssistantProfile,
   listAiTools,
   type AiTool,
@@ -75,6 +79,7 @@ export default function AiScreen() {
   const [showAllTools, setShowAllTools] = useState(false);
   const [rated, setRated] = useState<Record<string, 'up' | 'down'>>({});
   const [listening, setListening] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const composerRef = useRef(''); composerRef.current = composer;
   const dictation = useDictation(() => composerRef.current, setComposer, i18n.language?.startsWith('ja') ? 'ja' : 'en');
@@ -92,19 +97,34 @@ export default function AiScreen() {
     void initialize();
   }, []);
 
-  async function initialize() {
+  /** Reopens her last chat (kept on the server) unless she asked for a new one or came from a record. */
+  async function openConversation(wsId: string, fresh: boolean, pick?: string): Promise<{ id: string; past: AiMessage[] }> {
+    const key = `angelos.ai.lastConversation.${wsId}`;
+    const wanted = pick ?? (fresh || screenContext.entityId ? null : await AsyncStorage.getItem(key).catch(() => null));
+    if (wanted) {
+      const past = await listAiMessages(wsId, wanted).catch(() => null);
+      if (past && past.length) { void AsyncStorage.setItem(key, wanted).catch(() => undefined); return { id: wanted, past }; }
+    }
+    const created = await createConversation(wsId, screenContext);
+    void AsyncStorage.setItem(key, created.id).catch(() => undefined);
+    return { id: created.id, past: [] };
+  }
+
+  async function initialize(fresh = false, pick?: string) {
     try {
       const workspace = await getActiveWorkspace();
       setWorkspaceId(workspace.id);
-      const [{ profile }, conversation] = await Promise.all([
+      const [{ profile }, opened] = await Promise.all([
         getAssistantProfile(workspace.id),
-        createConversation(workspace.id, screenContext)
+        openConversation(workspace.id, fresh, pick)
       ]);
+      const conversation = { id: opened.id };
       setAssistantName(profile.display_name);
       void listAiTools(workspace.id).then((r) => setTools(r.tools)).catch(() => undefined);
       void getHomeSummary(workspace.id, 'day').then((h) => { setAlerts(h.messages.alerts.filter((x) => x.needsReply || x.unread)); setApprovals(h.assistant.pendingApprovals); }).catch(() => setAlerts([]));
       void getMe().then((m: any) => setOwner(((m?.displayName ?? '') as string).trim().split(/\s+/)[0] || null)).catch(() => undefined);
       setConversationId(conversation.id);
+      if (opened.past.length) { setMessages(opened.past); return; }
       setMessages([
         {
           id: 'welcome',
@@ -195,7 +215,8 @@ export default function AiScreen() {
         <Pressable accessibilityRole="button" accessibilityLabel={t('aip.s1')} onPress={() => router.push('/ai-settings' as any)} style={styles.titleBtn}>
           <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { flex: undefined, flexShrink: 1, color: P.text }]}>{t('aip.assistant', 'Assistant')}</Text><CaretDown size={18} color={P.text} weight="bold" /></Pressable>
         <View style={{ flex: 1 }} />
-        <Pressable accessibilityRole="button" accessibilityLabel={t('aip.newChat', 'New chat')} hitSlop={8} disabled={busy} onPress={() => { setMessages([]); setAction(null); setBusy(true); void initialize(); }} style={styles.navBtn}><NotePencil size={24} color={P.text} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('aip.newChat', 'New chat')} hitSlop={8} disabled={busy} onPress={() => { setMessages([]); setAction(null); setBusy(true); void initialize(true); }} style={styles.navBtn}><NotePencil size={24} color={P.text} /></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('aip.pastChats', 'Past chats')} hitSlop={8} disabled={!workspaceId} onPress={() => setHistoryOpen(true)} style={styles.navBtn}><ClockCounterClockwise size={24} color={P.text} /></Pressable>
       </View>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.thread} keyboardShouldPersistTaps="handled" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
         {screenContext.entityLabel ? <Text style={styles.note}>{t('aip.workingWith', { defaultValue: 'Working with: {{name}}', name: screenContext.entityLabel })}</Text> : null}
@@ -242,7 +263,9 @@ export default function AiScreen() {
         <ChatBar value={composer} onChangeText={setComposer} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy} onPlus={() => setShowAllTools(!showAllTools)} onVoice={() => router.push('/voice' as any)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
         <Text style={styles.approvalNote}>{t('aip.stillNeedApproval', 'Changes and messages still need your approval.')}</Text>
       </View>
-    </SafeAreaView></View>
+    </SafeAreaView>
+    {workspaceId ? <ChatHistorySheet visible={historyOpen} workspaceId={workspaceId} currentId={conversationId} onClose={() => setHistoryOpen(false)} onPick={(id) => { setHistoryOpen(false); setMessages([]); setAction(null); setBusy(true); void initialize(false, id); }} /> : null}
+    </View>
   );
 }
 

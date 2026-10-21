@@ -93,6 +93,20 @@ export class AiService {
     return data;
   }
 
+  /** Her own past chats, newest first. Empty chats (no messages yet) are left out. */
+  async listConversations(user: AuthUser, workspaceId: string) {
+    const supabase = createUserSupabaseClient(user.accessToken);
+    const { data, error } = await supabase
+      .from('ai_conversations')
+      .select('id,title,updated_at,created_at,ai_messages(count)')
+      .eq('workspace_id', workspaceId)
+      .eq('created_by', user.id)
+      .order('updated_at', { ascending: false })
+      .limit(50);
+    if (error) throw new InternalServerErrorException(error.message);
+    return conversationSummaries(data ?? []);
+  }
+
   async listMessages(user: AuthUser, workspaceId: string, conversationId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase
@@ -118,6 +132,8 @@ export class AiService {
       .single();
     if (conversationError || !conversation) throw new NotFoundException('Conversation not found');
 
+    await supabase.from('ai_conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
+    await supabase.from('ai_conversations').update({ title: conversationTitle(message) }).eq('id', conversationId).in('title', ['New conversation', 'Assistant']);
     if (dto.context) {
       await supabase
         .from('ai_conversations')
@@ -516,4 +532,16 @@ export class AiService {
     if (actionKey === 'create_automation') return { verified: await check('automation_rules', result.ruleId), enabled: false };
     return { verified: false, reason: 'No verifier registered' };
   }
+}
+
+/** First words of her first message become the chat title. */
+export function conversationTitle(message: string) {
+  const line = message.replace(/\s+/g, ' ').trim();
+  return line.length > 48 ? `${line.slice(0, 47).trimEnd()}…` : line || 'New conversation';
+}
+
+export function conversationSummaries(rows: any[]) {
+  return rows
+    .map((r) => ({ id: String(r.id), title: String(r.title ?? 'New conversation'), updatedAt: r.updated_at ?? r.created_at, messageCount: Number(r.ai_messages?.[0]?.count ?? 0) }))
+    .filter((r) => r.messageCount > 0);
 }

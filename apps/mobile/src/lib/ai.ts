@@ -172,3 +172,7 @@ export type DataArea = 'bookings' | 'clients' | 'messages' | 'posts' | 'analytic
 /** What AngelOS can see: per-area read switches (all on until changed). */
 export const getDataAccess = (workspaceId: string) => apiFetch<{ areas: Array<{ area: DataArea; enabled: boolean }>; needsMigration: string | null }>(`/workspaces/${workspaceId}/ai/data-access`);
 export const setDataAccess = (workspaceId: string, area: DataArea, enabled: boolean) => apiFetch<{ area: DataArea; enabled: boolean }>(`/workspaces/${workspaceId}/ai/data-access`, { method: 'PUT', body: JSON.stringify({ area, enabled }) });
+
+export type AiConversationSummary = { id: string; title: string; updatedAt: string; messageCount: number };
+export const listConversations = (workspaceId: string) => apiFetch<AiConversationSummary[]>(`/workspaces/${workspaceId}/ai/conversations`);
+export const listAiMessages = (workspaceId: string, conversationId: string) => apiFetch<AiMessage[]>(`/workspaces/${workspaceId}/ai/conversations/${conversationId}/messages`);
