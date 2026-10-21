@@ -91,7 +91,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     if (outRef.current) { outRef.current.srcObject = null; outRef.current.remove?.(); }
     pcRef.current = null; micRef.current = null; outRef.current = null;
     void stopVoiceAudio().catch(() => undefined);
-    setMutedState(false);
+    setMutedState(false); mutedRef.current = false;
     setState('idle');
   }
 
@@ -118,8 +118,13 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
     if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }
+    // iOS: open the play-and-record audio session before asking for the mic, or the track comes back silent.
+    setLoudSpeaker(true);
     await crumb('mic');
-    const stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    let stream: any;
+    try { stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
+    catch { throw new Error('Microphone is off for AngelOS. Turn it on in Settings, then try again.'); }
+    if (mutedRef.current) stream.getTracks().forEach((t: any) => { t.enabled = false; });
     micRef.current = stream;
     await crumb('add track');
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));

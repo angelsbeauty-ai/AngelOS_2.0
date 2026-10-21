@@ -62,8 +62,12 @@ export class VoiceService {
 
   /** LiveKit when its keys are set; otherwise the direct OpenAI Realtime (WebRTC) path with a short-lived key. */
   provider(): 'livekit' | 'openai' | null {
-    if (process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) return 'livekit';
-    if (process.env.OPENAI_API_KEY && (process.env.AI_PROVIDER_MODE ?? 'openai') === 'openai') return 'openai';
+    // The phone app only speaks the OpenAI Realtime WebRTC path. LiveKit is used only when explicitly asked for
+    // (VOICE_PROVIDER=livekit); otherwise LiveKit keys alone made the session come back with no clientSecret.
+    const openai = !!process.env.OPENAI_API_KEY && (process.env.AI_PROVIDER_MODE ?? 'openai') === 'openai';
+    const livekit = !!(process.env.LIVEKIT_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET);
+    if (process.env.VOICE_PROVIDER === 'livekit' && livekit) return 'livekit';
+    if (openai) return 'openai';
     return null;
   }
 
