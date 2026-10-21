@@ -30,6 +30,14 @@ export class SystemHealthController {
     return this.health.acknowledgeAttention(user, workspaceId, attentionId);
   }
 
+  @Patch('controls') controls(
+    @CurrentUser() user: AuthUser,
+    @Param('workspaceId') workspaceId: string,
+    @Body() body: UpdateOperationalControlsDto
+  ) {
+    return this.health.updateControls(user, workspaceId, body);
+  }
+
   @Patch('notification-prefs') notificationPrefs(
     @CurrentUser() user: AuthUser,
     @Param('workspaceId') workspaceId: string,

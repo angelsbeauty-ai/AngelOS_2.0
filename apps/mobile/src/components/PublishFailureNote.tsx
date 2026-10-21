@@ -9,6 +9,14 @@ import { markVariantPosted, publishContentVariant, type ContentVariant } from '.
 const NAME: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', line: 'LINE', tiktok: 'TikTok', threads: 'Threads' };
 const nameOf = (p: string) => NAME[p.split('_')[0]] ?? p;
 
+const CODES = new Set(['needs_check', 'not_connected', 'manual_only', 'no_marketing_permission', 'line_broadcast_failed', 'token_expired', 'rate_limited', 'media_invalid', 'stopped_unexpectedly', 'generic']);
+/** Server failure code → translated text; unknown codes fall back to the server's plain text. */
+function reasonText(v: ContentVariant, p: string, t: (k: string, o?: Record<string, unknown>) => string) {
+  const code = v.publish_error_code;
+  if (code && CODES.has(code)) return t(`pub.err.${code}`, { p });
+  return v.publish_error || t('pub.unknownReason');
+}
+
 /**
  * Why a post didn't go out, in plain words, from the latest publish attempt.
  * An unconfirmed Meta post is "check first": the only actions are Mark as posted, or an explicit
@@ -32,7 +40,7 @@ export function PublishFailureNote({ ws, variants, onChanged, hideRetry }: { ws:
     }
     return <View key={v.id} accessibilityLiveRegion="polite" style={[styles.box, { backgroundColor: palette.fill }]}>
       <Text maxFontSizeMultiplier={1.6} style={[styles.title, { color: check ? palette.text : red }]}>{check ? t('pub.needsCheckTitle') : `${t('pub.why')} · ${p}`}</Text>
-      <Text maxFontSizeMultiplier={1.6} style={[styles.body, { color: palette.muted }]}>{check ? t('pub.needsCheckBody', { p }) : (v.publish_error || t('pub.unknownReason'))}</Text>
+      <Text maxFontSizeMultiplier={1.6} style={[styles.body, { color: palette.muted }]}>{check ? t('pub.needsCheckBody', { p }) : reasonText(v, p, t)}</Text>
       {check && !hideRetry ? <View style={styles.row}>
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void markPosted()} style={[styles.btn, { borderColor: palette.border }]}><Text style={[styles.btnText, { color: palette.text }]}>{t('pub.markPosted')}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void postAnyway()} style={[styles.btn, { borderColor: palette.border }]}><Text style={[styles.btnText, { color: palette.text }]}>{t('pub.postAnyway')}</Text></Pressable>

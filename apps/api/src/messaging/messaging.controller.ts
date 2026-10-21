@@ -32,11 +32,11 @@ export class MessagingController {
   @Get('comments') comments(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) { return this.messaging.comments(user, workspaceId); }
   @Post('messages/:messageId/reactions') react(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('messageId') messageId: string, @Body() dto: ReactionDto) { return this.messaging.toggleReaction(user, workspaceId, messageId, dto.emoji); }
   @Post('push-token') pushToken(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: PushTokenDto) { return this.messaging.savePushToken(user, workspaceId, dto.token, dto.platform); }
-  @Get('threads') listThreads(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('view') view?: string) {
-    return this.messaging.listThreads(user, workspaceId, view === 'archived' || view === 'all' ? view : 'active');
+  @Get('threads') listThreads(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('view') view?: string, @Query('before') before?: string, @Query('limit') limit?: string) {
+    return this.messaging.listThreads(user, workspaceId, view === 'archived' || view === 'all' ? view : 'active', { before, limit: limit ? Number(limit) : undefined });
   }
   @Post('conversations') startConversation(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() dto: StartConversationDto) { return this.messaging.startConversation(user, workspaceId, dto); }
-  @Get('threads/:threadId') getThread(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string) { return this.messaging.getThread(user, workspaceId, threadId); }
+  @Get('threads/:threadId') getThread(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string, @Query('before') before?: string, @Query('limit') limit?: string) { return this.messaging.getThread(user, workspaceId, threadId, { before, limit: limit ? Number(limit) : undefined }); }
   @Post('threads/:threadId/read') markRead(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string) { return this.messaging.markRead(user, workspaceId, threadId); }
   @Post('threads/:threadId/inbound') addInbound(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string, @Body() dto: AddInboundDto) { return this.messaging.addInbound(user, workspaceId, threadId, dto.body); }
   @Post('threads/:threadId/ai-draft') draftReply(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('threadId') threadId: string, @Body() body?: { intent?: string }) { return this.messaging.draftReply(user, workspaceId, threadId, typeof body?.intent === 'string' ? body.intent : undefined); }

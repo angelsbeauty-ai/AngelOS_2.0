@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useKeyboardOpen } from '../../src/lib/useKeyboardOpen';
-import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useInsets as useSafeAreaInsets } from '../../src/lib/insets';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +23,7 @@ import { X } from 'phosphor-react-native/src/icons/X';
 import { dialog } from '../../src/lib/dialog';
 import { toFriendly } from '../../src/lib/friendly-error';
 import {
-  approveReply, createAiReplyDraft, createMessageReply, fillName, getMessageThread, isJapanese,
+  approveReply, createAiReplyDraft, createMessageReply, fillName, getMessageThread, MESSAGE_PAGE, isJapanese,
   listSavedReplies, markThreadRead, timeLabel, toggleReaction, translateText, type ClientMessage, type MessageThreadDetail, type SavedReply
 } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
@@ -66,13 +66,43 @@ export default function MessageThreadScreen() {
   const online = useOnline();
   const outbox = useOutbox(id);
 
+  // M17: older history pages in with a created_at cursor when scrolled near the top; position is kept.
+  const olderMore = useRef(false);
+  const olderBusy = useRef(false);
+  const prepending = useRef(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const loadOlder = useCallback(async () => {
+    const before = detail?.messages[0]?.created_at;
+    if (!id || !workspaceId || !before || !olderMore.current || olderBusy.current) return;
+    olderBusy.current = true; setLoadingOlder(true);
+    try {
+      const page = await getMessageThread(workspaceId, id, { limit: MESSAGE_PAGE, before });
+      olderMore.current = Boolean(page.hasMoreMessages);
+      prepending.current = true;
+      setDetail((prev) => {
+        if (!prev) return prev;
+        const ids = new Set(prev.messages.map((m) => m.id));
+        return { ...prev, messages: [...page.messages.filter((m) => !ids.has(m.id)), ...prev.messages], reactions: { ...page.reactions, ...prev.reactions }, attachments: { ...page.attachments, ...prev.attachments } };
+      });
+    } catch { /* try again on the next scroll */ } finally { olderBusy.current = false; setLoadingOlder(false); }
+  }, [detail, id, workspaceId]);
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
       const ws = workspaceId ?? (await getActiveWorkspace()).id;
       setWorkspaceId(ws);
-      const next = await getMessageThread(ws, id);
-      setDetail(next); setState('ready');
+      const next = await getMessageThread(ws, id, { limit: MESSAGE_PAGE });
+      // M17: a reload replaces the newest page and keeps older pages already loaded (no duplicates).
+      setDetail((prev) => {
+        if (!prev || prev.thread.id !== next.thread.id) { olderMore.current = Boolean(next.hasMoreMessages); return next; }
+        const ids = new Set(next.messages.map((m) => m.id));
+        const first = next.messages[0]?.created_at;
+        const kept = first ? prev.messages.filter((m) => !ids.has(m.id) && m.created_at < first) : [];
+        if (!kept.length) olderMore.current = Boolean(next.hasMoreMessages);
+        return { ...next, messages: [...kept, ...next.messages], reactions: { ...prev.reactions, ...next.reactions }, attachments: { ...prev.attachments, ...next.attachments } };
+      });
+      setState('ready');
       if (next.thread.unread) {
         // M17: remember where the unread messages start so a "New messages" divider sits above them.
         if (firstUnread.current === undefined) { const ms = next.messages ?? []; let i = ms.length; while (i > 0 && ms[i - 1].direction === 'inbound') i -= 1; firstUnread.current = ms[i]?.id ?? null; }
@@ -245,7 +275,8 @@ export default function MessageThreadScreen() {
           return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
         for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } if (m.id === firstUnread.current) { items.push({ kind: 'day', key: 'unread', label: t('messages.newDivider') }); lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
         const initials = contactInitials(name);
-        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}>
+        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" maintainVisibleContentPosition={{ minIndexForVisible: 0 }} scrollEventThrottle={64} onScroll={(e) => { if (e.nativeEvent.contentOffset.y < 200) void loadOlder(); }} onContentSizeChange={() => { if (prepending.current) { prepending.current = false; return; } scrollRef.current?.scrollToEnd({ animated: false }); }}>
+          {loadingOlder ? <ActivityIndicator style={{ marginVertical: 12 }} color={palette.muted} /> : null}
           {items.map((x) => {
             if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: night ? '#2C2C2E' : '#E4E4E6', color: palette.text }]}>{x.label}</Text></View>;
             const message = x.m; const out = message.direction === 'outbound'; const tr = translations[message.id];

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import type { UpdateOperationalControlsDto } from './dto/update-operational-controls.dto';
@@ -233,6 +233,7 @@ export class SystemHealthService {
     const userClient = createUserSupabaseClient(user.accessToken);
     await this.assertWorkspaceAccess(userClient, workspaceId);
     const service = createServiceSupabaseClient();
+    await this.assertOwnerOrFounder(service, user, workspaceId);
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: user.id };
     if (dto.pauseAiActions !== undefined) updates.pause_ai_actions = dto.pauseAiActions;
     if (dto.pauseAutomations !== undefined) updates.pause_automations = dto.pauseAutomations;
@@ -316,6 +317,13 @@ export class SystemHealthService {
     if (known.includes('paused')) return 'paused';
     if (known.length && known.every((status) => status === 'healthy')) return 'healthy';
     return 'unknown';
+  }
+
+  private async assertOwnerOrFounder(service: ReturnType<typeof createServiceSupabaseClient>, user: AuthUser, workspaceId: string) {
+    const { data: founder } = await service.from('platform_founders').select('user_id').eq('user_id', user.id).maybeSingle();
+    if (founder) return;
+    const { data: member } = await service.from('workspace_memberships').select('role').eq('workspace_id', workspaceId).eq('user_id', user.id).maybeSingle();
+    if (!member || member.role !== 'owner') throw new ForbiddenException('Only the studio owner can change these controls.');
   }
 
   private async assertWorkspaceAccess(supabase: ReturnType<typeof createUserSupabaseClient>, workspaceId: string) {

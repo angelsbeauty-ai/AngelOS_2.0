@@ -1,6 +1,6 @@
 import i18n from '../../src/i18n';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActionSheetIOS, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActionSheetIOS, ActivityIndicator, Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAppearance } from '../../src/design/appearance';
 import { router, useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Card, EmptyState, Skeleton, ui, screenHeader } from '../../src/components/ui';
 import { toFriendly } from '../../src/lib/friendly-error';
-import { listComments, listConnections, listMessageThreads, searchMessages, syncMessages, updateThread, timeLabel, type ConnectionStatus, type MessageThreadSummary, type SearchResult, type SocialComment } from '../../src/lib/messaging';
+import { THREAD_PAGE, listComments, listConnections, listMessageThreads, searchMessages, syncMessages, updateThread, timeLabel, type ConnectionStatus, type MessageThreadSummary, type SearchResult, type SocialComment } from '../../src/lib/messaging';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { addTask } from '../../src/lib/tasks';
 import * as Notifications from 'expo-notifications';
@@ -51,6 +51,9 @@ function matches(thread: MessageThreadSummary, f: Filter | null) {
   }
 }
 
+const realThread = (r: MessageThreadSummary) => !(r.channel?.provider === 'manual' || (r.channel?.capabilities as any)?.demo === true);
+const oldestAt = (rows: MessageThreadSummary[]) => rows.reduce<string | null>((min, r) => !r.pinned && r.last_message_at && (!min || r.last_message_at < min) ? r.last_message_at : min, null);
+
 export default function MessagesScreen() {
   const { t } = useTranslation();
   const { palette, mode } = useAppearance();
@@ -76,11 +79,20 @@ export default function MessagesScreen() {
       const workspace = await getActiveWorkspace();
       if (pull) await syncMessages(workspace.id).catch(() => undefined);
       const [rows, conn, accs] = await Promise.all([
-        listMessageThreads(workspace.id, 'active'),
+        listMessageThreads(workspace.id, 'active', { limit: THREAD_PAGE }),
         listConnections(workspace.id).catch(() => [] as ConnectionStatus[]),
         getSocialAccounts(workspace.id).catch(() => [] as SocialAccount[])
       ]);
-      setThreads(rows.filter((r) => !(r.channel?.provider === 'manual' || (r.channel?.capabilities as any)?.demo === true)));
+      setThreads((prev) => {
+        // M17: a refresh replaces the first page but keeps older pages already loaded (no duplicates).
+        const first = rows.filter(realThread);
+        const ids = new Set(first.map((r) => r.id));
+        const cut = oldestAt(rows);
+        const older = cut ? prev.filter((r) => !ids.has(r.id) && !r.pinned && r.last_message_at && r.last_message_at < cut) : [];
+        return [...first, ...older];
+      });
+      if (cursor.current === null) { cursor.current = oldestAt(rows); hasMore.current = rows.length >= THREAD_PAGE; }
+      wsId.current = workspace.id;
       setConnections(conn); setAccounts(accs); setLastSync(new Date()); setState('ready');
     } catch (error) {
       if (isNoWorkspace(error)) { setState('nostudio'); return; }
@@ -89,6 +101,23 @@ export default function MessagesScreen() {
     }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+
+  // M17: older threads page in with a last_message_at cursor as the list nears its end.
+  const cursor = useRef<string | null>(null);
+  const hasMore = useRef(true);
+  const paging = useRef(false);
+  const wsId = useRef<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadMore = useCallback(async () => {
+    if (paging.current || !hasMore.current || !cursor.current || !wsId.current) return;
+    paging.current = true; setLoadingMore(true);
+    try {
+      const rows = await listMessageThreads(wsId.current, 'active', { before: cursor.current, limit: THREAD_PAGE });
+      if (rows.length < THREAD_PAGE) hasMore.current = false;
+      const next = oldestAt(rows); if (next) cursor.current = next; else hasMore.current = false;
+      setThreads((prev) => { const ids = new Set(prev.map((r) => r.id)); return [...prev, ...rows.filter((r) => realThread(r) && !ids.has(r.id))]; });
+    } catch { /* try again on the next scroll */ } finally { paging.current = false; setLoadingMore(false); }
+  }, []);
 
   const visible = useMemo(() => threads.filter((th) => (plat === 'all' || th.platform === plat) && matches(th, filter) && (!query.trim() || `${th.client?.display_name ?? ''} ${th.contact_display_name ?? ''} ${th.last_preview ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))), [threads, plat, filter, query]);
   // M46: when two accounts share a platform, each row names its account.
@@ -175,7 +204,7 @@ export default function MessagesScreen() {
   const anyConnected = connections.some((c) => c.connected) || accounts.some((a) => a.state !== 'not_connected');
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
-  return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)} header={<View style={styles.pinned}>
+  return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)} onEndReached={seg === 'messages' ? () => void loadMore() : undefined} header={<View style={styles.pinned}>
     <View style={screenHeader.row}>
       <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('messages.title')}</Text>
       
@@ -270,6 +299,7 @@ export default function MessagesScreen() {
           {thread.unread ? <View accessibilityLabel={t('messages.unreadN', { count: thread.unread_count ?? 1 })} style={[styles.badge, { backgroundColor: palette.text }]}><Text style={[styles.badgeText, { color: palette.bg }]}>{(thread.unread_count ?? 1) > 99 ? '99+' : thread.unread_count ?? 1}</Text></View> : <View style={{ width: 20 }} />}
         </Pressable></SwipeRow>;
       })}
+      {loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color={palette.muted} /> : null}
     </View> : null}
   </Screen>
 

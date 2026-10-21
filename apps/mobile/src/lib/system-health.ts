@@ -69,3 +69,8 @@ export type ActivityItem = { id: string; kind: 'message' | 'booking' | 'post'; a
 export function getActivity(workspaceId: string) {
   return apiFetch<ActivityItem[]>(`/workspaces/${workspaceId}/system-health/activity`);
 }
+
+export type OperationalControlsInput = { pauseAiActions?: boolean; pauseAutomations?: boolean; emergencyReadOnly?: boolean; reason?: string };
+export function updateOperationalControls(workspaceId: string, input: OperationalControlsInput) {
+  return apiFetch<OperationalControls>(`/workspaces/${workspaceId}/system-health/controls`, { method: 'PATCH', body: JSON.stringify(input) });
+}

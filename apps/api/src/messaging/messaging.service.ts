@@ -141,16 +141,25 @@ export class MessagingService {
     return data;
   }
 
-  async listThreads(user: AuthUser, workspaceId: string, view: 'active' | 'archived' | 'all' = 'active') {
+  /**
+   * M17 paging: without `before` this is the first page (pinned on top). With `before` (the oldest
+   * last_message_at the app has) it returns only older, unpinned threads, so pages never repeat.
+   */
+  async listThreads(user: AuthUser, workspaceId: string, view: 'active' | 'archived' | 'all' = 'active', page: { before?: string; limit?: number } = {}) {
     const supabase = createUserSupabaseClient(user.accessToken);
-    const { data, error } = await supabase
+    const before = page.before && !Number.isNaN(Date.parse(page.before)) ? new Date(page.before).toISOString() : null;
+    const pageSize = Math.min(Math.max(Math.floor(Number(page.limit) || 100), 1), 100);
+    let query = supabase
       .from('message_threads')
       .select('*,channel:messaging_channels(id,provider,display_name,status),client:clients(id,display_name,language,do_not_auto_message)')
-      .eq('workspace_id', workspaceId)
+      .eq('workspace_id', workspaceId);
+    if (before) query = query.lt('last_message_at', before);
+    const { data, error } = await query
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) throw new InternalServerErrorException(error.message);
     const threads = (data ?? []).filter((row: any) => !row.deleted_at).filter((row: any) => view === 'all' ? true : view === 'archived' ? Boolean(row.archived_at) : !row.archived_at)
+      .filter((row: any) => !before || !row.pinned_at)
       .sort((a: any, b: any) => (b.pinned_at ? 1 : 0) - (a.pinned_at ? 1 : 0));
     const ids = threads.map((row: any) => row.id);
     const latest = new Map<string, any>();
@@ -172,10 +181,11 @@ export class MessagingService {
         if (message.direction === 'inbound') unread.set(message.thread_id, (unread.get(message.thread_id) ?? 0) + 1);
       }
     }
-    return threads.slice(0, 100).map((row: any) => ({ ...decorateThread(row, latest.get(row.id)), unread_count: row.owner_unread ? Math.max(1, unread.get(row.id) ?? 1) : 0 }));
+    return threads.slice(0, pageSize).map((row: any) => ({ ...decorateThread(row, latest.get(row.id)), unread_count: row.owner_unread ? Math.max(1, unread.get(row.id) ?? 1) : 0 }));
   }
 
-  async getThread(user: AuthUser, workspaceId: string, threadId: string) {
+  /** M17 paging: with `limit` only the newest `limit` messages (older than `before`) come back, plus hasMoreMessages. */
+  async getThread(user: AuthUser, workspaceId: string, threadId: string, page: { before?: string; limit?: number } = {}) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data: thread, error: threadError } = await supabase
       .from('message_threads')
@@ -183,12 +193,13 @@ export class MessagingService {
       .eq('workspace_id', workspaceId).eq('id', threadId).single();
     if (threadError || !thread) throw new NotFoundException('Message thread not found');
     const [messages, notes] = await Promise.all([
-      supabase.from('client_messages').select('*').eq('workspace_id', workspaceId).eq('thread_id', threadId).order('created_at'),
+      this.messagePage(supabase, workspaceId, threadId, page),
       supabase.from('message_internal_notes').select('*').eq('workspace_id', workspaceId).eq('thread_id', threadId).order('created_at', { ascending: false })
     ]);
     if (messages.error) throw new InternalServerErrorException(messages.error.message);
     if (notes.error) throw new InternalServerErrorException(notes.error.message);
     const list = messages.data ?? [];
+    const hasMoreMessages = Boolean((messages as any).hasMore);
     const latestVisible = [...list].reverse().find((m: any) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval'));
     const latestInbound = [...list].reverse().find((m: any) => m.direction === 'inbound');
     const decorated = decorateThread(thread, latestVisible);
@@ -210,11 +221,25 @@ export class MessagingService {
     for (const r of (reactionRows.error ? [] : reactionRows.data ?? []) as any[]) (reactions[r.message_id] ??= []).push(r.emoji);
     const attachments = await this.attachmentViews(workspaceId, list);
     return {
-      reactions, attachments, reactionsAvailable: !reactionRows.error,
+      reactions, attachments, reactionsAvailable: !reactionRows.error, hasMoreMessages,
       thread: { ...decorated, reply_language: chooseReplyLanguage(latestInbound?.body, (thread as any).client?.language), send_window: sendWindow },
       messages: list.map((m: any) => m.metadata?.reply_token ? { ...m, metadata: { ...m.metadata, reply_token: undefined } } : m),
       internalNotes: notes.data ?? []
     };
+  }
+
+  private async messagePage(supabase: ReturnType<typeof createUserSupabaseClient>, workspaceId: string, threadId: string, page: { before?: string; limit?: number }) {
+    const limit = Number(page.limit);
+    if (!Number.isFinite(limit) || limit <= 0) {
+      const all = await supabase.from('client_messages').select('*').eq('workspace_id', workspaceId).eq('thread_id', threadId).order('created_at');
+      return { data: all.data, error: all.error, hasMore: false };
+    }
+    const size = Math.min(Math.floor(limit), 200);
+    let query = supabase.from('client_messages').select('*').eq('workspace_id', workspaceId).eq('thread_id', threadId);
+    if (page.before && !Number.isNaN(Date.parse(page.before))) query = query.lt('created_at', new Date(page.before).toISOString());
+    const res = await query.order('created_at', { ascending: false }).limit(size + 1);
+    const rows = (res.data ?? []) as any[];
+    return { data: rows.slice(0, size).reverse(), error: res.error, hasMore: rows.length > size };
   }
 
   /** Opening a conversation clears the unread dot (best effort before migration 0015 is applied). */

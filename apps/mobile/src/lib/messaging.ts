@@ -64,6 +64,8 @@ export interface MessageThreadDetail {
   /** Signed view URL per message id for chat photos. */
   attachments?: Record<string, string>;
   internalNotes: Array<{ id: string; content: string; created_at: string }>;
+  /** M17: older messages exist before the first one returned. */
+  hasMoreMessages?: boolean;
 }
 
 export interface SavedReply {
@@ -90,10 +92,14 @@ export interface ConnectionStatus {
 
 const base = (workspaceId: string) => `/workspaces/${workspaceId}/messaging`;
 
-export const listMessageThreads = (workspaceId: string, view: 'active' | 'archived' = 'active') =>
-  apiFetch<MessageThreadSummary[]>(`${base(workspaceId)}/threads?view=${view}`);
-export const getMessageThread = (workspaceId: string, threadId: string) =>
-  apiFetch<MessageThreadDetail>(`${base(workspaceId)}/threads/${threadId}`);
+export const THREAD_PAGE = 30;
+export const MESSAGE_PAGE = 40;
+/** M17: pass `before` (oldest last_message_at shown) to get the next, older page. */
+export const listMessageThreads = (workspaceId: string, view: 'active' | 'archived' = 'active', page?: { before?: string | null; limit?: number }) =>
+  apiFetch<MessageThreadSummary[]>(`${base(workspaceId)}/threads?view=${view}${page?.limit ? `&limit=${page.limit}` : ''}${page?.before ? `&before=${encodeURIComponent(page.before)}` : ''}`);
+/** M17: with `limit`, only the newest messages (older than `before`) come back; hasMoreMessages says if there are more. */
+export const getMessageThread = (workspaceId: string, threadId: string, page?: { before?: string | null; limit?: number }) =>
+  apiFetch<MessageThreadDetail>(`${base(workspaceId)}/threads/${threadId}${page?.limit ? `?limit=${page.limit}${page.before ? `&before=${encodeURIComponent(page.before)}` : ''}` : ''}`);
 export const markThreadRead = (workspaceId: string, threadId: string) =>
   apiFetch<{ read: boolean }>(`${base(workspaceId)}/threads/${threadId}/read`, { method: 'POST' });
 export const startConversation = (workspaceId: string, input: { clientId: string; platform: 'line' | 'instagram' | 'facebook' | 'other'; body: string }) =>

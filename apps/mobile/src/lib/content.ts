@@ -18,6 +18,7 @@ export interface ContentVariant {
   live_url?: string | null;
   /** Latest publish attempt's plain failure reason (from the API). */
   publish_error?: string | null;
+  publish_error_code?: string | null;
   /** The platform didn't confirm the last try; it may already be live. */
   needs_check?: boolean;
 }

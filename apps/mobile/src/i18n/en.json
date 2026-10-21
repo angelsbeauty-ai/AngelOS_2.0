@@ -2152,6 +2152,18 @@
     "postAnywayTitle": "Post it now?",
     "postAnywayBody": "Only do this if you checked {{p}} and the post isn't there. Otherwise it will post twice.",
     "markedPosted": "Marked as posted",
-    "unknownReason": "The reason wasn't saved. Tap Try again."
+    "unknownReason": "The reason wasn't saved. Tap Try again.",
+    "err": {
+      "needs_check": "It may already be live. Check first, then Mark as posted or Try again.",
+      "not_connected": "{{p}} isn't connected, so it didn't post. Post it by hand and tap Mark as posted, or connect {{p}} and tap Try again.",
+      "manual_only": "AngelOS can't post to {{p}} automatically. Post it by hand and tap Mark as posted.",
+      "no_marketing_permission": "Stopped: a photo no longer has marketing permission.",
+      "line_broadcast_failed": "LINE broadcast failed. Nothing was sent.",
+      "token_expired": "The {{p}} connection expired. Reconnect {{p}}, then tap Try again.",
+      "rate_limited": "{{p}} is busy right now. Wait a few minutes, then tap Try again.",
+      "media_invalid": "{{p}} didn't accept the photo or video. Check the media, then tap Try again.",
+      "stopped_unexpectedly": "Posting stopped unexpectedly. Tap Try again.",
+      "generic": "It didn't post. Tap Try again."
+    }
   }
 }
