@@ -328,7 +328,7 @@ export default function NewPostScreen() {
       <TextInput
         value={caption}
         onChangeText={setCaption}
-        placeholder={language === 'en' ? 'Write here…' : 'ここに書く…'}
+        placeholder={t('composer.writeHere')}
         placeholderTextColor={colors.charcoal3}
         multiline
         maxLength={5000}

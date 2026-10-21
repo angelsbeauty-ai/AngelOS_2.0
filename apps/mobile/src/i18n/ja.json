@@ -2181,5 +2181,8 @@
     "feedNote": "新しい順。AngelOS内のフィードで、Instagram・Facebookの実際のフィードではありません。",
     "noPosts": "まだ投稿はありません。作成するとここに表示されます。",
     "post": "投稿"
+  },
+  "composer": {
+    "writeHere": "ここに書く…"
   }
 }

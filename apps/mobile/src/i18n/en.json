@@ -2181,5 +2181,8 @@
     "feedNote": "Newest first. This is your AngelOS feed, not the live Instagram or Facebook feed.",
     "noPosts": "No posts yet. Create one and it will appear here.",
     "post": "Post"
+  },
+  "composer": {
+    "writeHere": "Write here…"
   }
 }
