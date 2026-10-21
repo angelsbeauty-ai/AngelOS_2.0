@@ -6,7 +6,8 @@ import type { CreateComposerDraftDto } from './dto/create-composer-draft.dto';
 import type { CreateContentDraftDto } from './dto/create-content-draft.dto';
 import type { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
-import { PostizPublishingAdapter, POSTIZ_PLATFORMS, postizReady } from './postiz-publishing.adapter';
+import { PostizPublishingAdapter, postizReady, publishRoute } from './postiz-publishing.adapter';
+import { metaConfigForWorkspace } from '../meta/meta-workspace-config';
 import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
 
 @Injectable()
@@ -279,7 +280,19 @@ export class ContentService {
     let providerPostId: string | null = variant.status === 'scheduled' ? variant.provider_post_id ?? null : null;
     let delivery: 'auto' | 'calendar' = 'calendar';
     let reason: string | undefined;
-    if (POSTIZ_PLATFORMS.includes(platform) && postizReady()) {
+    const route = publishRoute(platform);
+    // A post queued at Postiz before Instagram/Facebook moved to Meta is cleared first, so it can't post twice.
+    if (route === 'meta' && providerPostId) {
+      const gone = await postiz.cancel(providerPostId);
+      if (!gone.ok) throw new InternalServerErrorException(gone.error ?? 'Could not move the scheduled post');
+      providerPostId = null;
+    }
+    if (route === 'meta') {
+      // Instagram/Facebook: AngelOS's own Meta connection posts it at the time (publisher cron).
+      const cfg = await metaConfigForWorkspace(workspaceId);
+      if (metaPublishingReady(platform, cfg)) delivery = 'auto';
+      else reason = 'Auto-posting is not connected yet.';
+    } else if (route === 'postiz' && postizReady()) {
       if (providerPostId) {
         const gone = await postiz.cancel(providerPostId);
         if (!gone.ok) throw new InternalServerErrorException(gone.error ?? 'Could not move the scheduled post');
@@ -296,7 +309,7 @@ export class ContentService {
       if (r.ok) { delivery = 'auto'; providerPostId = r.providerPostId ?? null; }
       else if (r.code === 'auth' || r.code === 'provider') throw new InternalServerErrorException(r.error ?? 'Scheduling failed');
       else reason = r.error;
-    } else reason = POSTIZ_PLATFORMS.includes(platform) ? 'Auto-posting is not connected yet.' : undefined;
+    } else if (route === 'postiz') reason = 'Auto-posting is not connected yet.';
     const now = new Date().toISOString();
     const { data: updated, error: updateError } = await service.from('content_variants').update({ scheduled_for: scheduledFor, status: 'scheduled', provider_post_id: providerPostId, updated_at: now }).eq('workspace_id', workspaceId).eq('id', variantId).select('*').single();
     if (updateError || !updated) throw new InternalServerErrorException(updateError?.message ?? 'Could not schedule content');

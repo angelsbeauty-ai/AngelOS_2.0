@@ -45,3 +45,14 @@ test('LINE friend count; not ready = null', async () => {
   const off = await new LineMessagingAdapter({ enabled: false }).followers();
   assert.equal(off.followers, null);
 });
+
+test('publish routing: Instagram/Facebook via Meta, Threads/TikTok via Postiz', () => {
+  const { publishRoute, POSTIZ_PLATFORMS } = require('../dist/content/postiz-publishing.adapter.js');
+  assert.equal(publishRoute('instagram'), 'meta');
+  assert.equal(publishRoute('instagram_reel'), 'meta');
+  assert.equal(publishRoute('facebook'), 'meta');
+  assert.equal(publishRoute('threads'), 'postiz');
+  assert.equal(publishRoute('tiktok'), 'postiz');
+  assert.equal(publishRoute('line'), 'line');
+  assert.deepEqual(POSTIZ_PLATFORMS.filter((p) => p === 'instagram' || p === 'facebook'), []);
+});

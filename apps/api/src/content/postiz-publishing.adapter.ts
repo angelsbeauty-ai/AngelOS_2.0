@@ -4,7 +4,17 @@ import type { PublishContentInput, PublishContentResult, SocialPublishingAdapter
  * Self-hosted: set POSTIZ_API_URL to https://<host>/api/public/v1. */
 const CLOUD = 'https://api.postiz.com/public/v1';
 export function postizBase(env: NodeJS.ProcessEnv = process.env) { return (env.POSTIZ_API_URL?.trim() || CLOUD).replace(/\/+$/, ''); }
-export const POSTIZ_PLATFORMS = ['instagram', 'facebook', 'tiktok', 'threads'];
+/** Instagram and Facebook publish through AngelOS's own Meta connection; Postiz only carries Threads and TikTok. */
+export const POSTIZ_PLATFORMS = ['tiktok', 'threads'];
+export const META_PLATFORMS = ['instagram', 'facebook'];
+export type PublishRoute = 'meta' | 'postiz' | 'line' | 'manual';
+export function publishRoute(platform: string): PublishRoute {
+  const p = String(platform).replace(/^instagram_.*/, 'instagram');
+  if (META_PLATFORMS.includes(p)) return 'meta';
+  if (POSTIZ_PLATFORMS.includes(p)) return 'postiz';
+  if (p === 'line') return 'line';
+  return 'manual';
+}
 
 export interface ScheduleResult { ok: boolean; providerPostId?: string; error?: string; code?: 'not_configured' | 'no_channel' | 'auth' | 'provider'; raw?: unknown }
 
