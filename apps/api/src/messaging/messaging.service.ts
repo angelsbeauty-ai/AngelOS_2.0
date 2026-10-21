@@ -14,6 +14,7 @@ import { chooseReplyLanguage, detectLanguage, firstName, mixesLanguages, type Cl
 import { LineMessagingAdapter, readLineConfig, replyTokenFresh } from './line-messaging.adapter';
 import { MetaGraphMessagingAdapter, metaWindow } from '../meta/meta-messaging.adapter';
 import { metaConfigForWorkspace } from '../meta/meta-workspace-config';
+import { lineConfigForWorkspace } from './line-workspace-config';
 import { ManualMessagingAdapter, type MessagingProviderAdapter, type NormalizedInboundMessage } from './provider-adapter';
 import { buildClientReplyInstructions, buildTranslateInstructions } from './reply-prompt';
 import { hasUnfilledPlaceholder, isMissingRelation, migrationNeeded } from './saved-replies.service';
@@ -54,6 +55,7 @@ export class MessagingService {
   /** Send path: Meta uses the studio's own Page token (meta_connections), env keys only as the single-studio fallback. */
   private async adapterForWorkspace(provider: string, workspaceId: string): Promise<MessagingProviderAdapter> {
     if (provider === 'instagram' || provider === 'facebook') return new MetaGraphMessagingAdapter(provider, await metaConfigForWorkspace(workspaceId));
+    if (provider === 'line') return new LineMessagingAdapter(await lineConfigForWorkspace(workspaceId));
     return this.adapterFor(provider);
   }
 
