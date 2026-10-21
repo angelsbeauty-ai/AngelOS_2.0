@@ -100,7 +100,14 @@ export default function MessagesScreen() {
       setErrorText({ title: friendly.title, message: friendly.message }); setState('error');
     }
   }, []);
-  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  // First open this session: pull stored history in from Instagram, Messenger and LINE in the background, then refresh.
+  const backfilled = useRef(false);
+  useFocusEffect(useCallback(() => {
+    void load();
+    if (backfilled.current) return;
+    backfilled.current = true;
+    void getActiveWorkspace().then((w) => syncMessages(w.id)).then(() => load()).catch(() => undefined);
+  }, [load]));
 
   // M17: older threads page in with a last_message_at cursor as the list nears its end.
   const cursor = useRef<string | null>(null);

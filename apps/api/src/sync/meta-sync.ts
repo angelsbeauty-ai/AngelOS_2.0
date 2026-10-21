@@ -85,7 +85,7 @@ export function plainNote(note: string | null | undefined): string | null {
 
 /** /{page_id}/conversations (Messenger) or ?platform=instagram, with the last messages of each. */
 export async function fetchConversations(input: { graphBase: string; pageId: string; ownId: string; token: string; platform: 'facebook' | 'instagram' }, fetchImpl: Fetch = fetch): Promise<SyncedConversation[]> {
-  const params = new URLSearchParams({ fields: 'participants,updated_time,messages.limit(10){id,message,from,created_time}', limit: '10', access_token: input.token });
+  const params = new URLSearchParams({ fields: 'participants,updated_time,messages.limit(25){id,message,from,created_time}', limit: '25', access_token: input.token });
   if (input.platform === 'instagram') params.set('platform', 'instagram');
   const rows = await graphPaged(`${input.graphBase}/${input.pageId}/conversations?${params}`, fetchImpl, 3, undefined, 25);
   return rows.map((row) => toConversation(row, input.ownId, input.pageId)).filter((c): c is SyncedConversation => c !== null);
