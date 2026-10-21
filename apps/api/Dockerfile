@@ -1,3 +1,4 @@
+# Built by Railway via railway.json (builder DOCKERFILE); output lands in /app/dist.
 FROM node:22-alpine AS build
 WORKDIR /app
 
