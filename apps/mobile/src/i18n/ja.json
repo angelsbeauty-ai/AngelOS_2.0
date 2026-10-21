@@ -1713,7 +1713,49 @@
   "grid": {
     "title": "インスタのグリッド",
     "intro": "プロフィールの見え方をチェック。上が予約中、その下が投稿済みだよ。",
-    "empty": "予約中・投稿済みのインスタ投稿はまだありません。"
+    "empty": {
+      "grid": "まだ投稿はありません",
+      "reels": "まだリールはありません",
+      "stories": "まだストーリーズはありません"
+    },
+    "content": "コンテンツ",
+    "create": "作成",
+    "tab": {
+      "grid": "投稿",
+      "reels": "リール",
+      "stories": "ストーリーズ"
+    },
+    "f": {
+      "published": "公開済み",
+      "scheduled": "予約済み",
+      "drafts": "下書き",
+      "archive": "アーカイブ"
+    },
+    "filterA11y": "表示：{{name}}",
+    "showGrid": "グリッド表示",
+    "showList": "リスト表示",
+    "scheduledFor": "{{when}}に予約",
+    "carousel": "カルーセル",
+    "video": "動画",
+    "pendingA11y": "新しい投稿（{{when}}に予定）",
+    "st": {
+      "published": "投稿済み",
+      "scheduled": "予約済み",
+      "draft": "下書き",
+      "archived": "アーカイブ",
+      "failed": "投稿できませんでした"
+    },
+    "errTitle": "投稿を読み込めませんでした",
+    "errBody": "接続を確認して、もう一度お試しください。",
+    "retry": "再試行",
+    "emptyF": {
+      "published": "Instagramに公開した投稿がここに表示されます。",
+      "scheduled": "日時を決めて承認した投稿がここに表示されます。",
+      "drafts": "保存した下書きがここに表示されます。",
+      "archive": "アーカイブした投稿がここに表示されます。"
+    },
+    "preview": "グリッドプレビュー",
+    "previewSub": "この投稿がプロフィールのどこに並ぶか確認できます"
   },
   "sml": {
     "accountsTitle": "アカウント",

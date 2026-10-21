@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { SquaresFour } from 'phosphor-react-native/src/icons/SquaresFour';
+import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import * as ImagePicker from 'expo-image-picker';
 import { importMedia } from '../../src/lib/media';
 import { useEffect, useMemo, useState } from 'react';
@@ -323,6 +325,11 @@ export default function NewPostScreen() {
         ))}
       </View>
       {acct && platforms.some((p) => acct[p.split('_')[0]] !== 'connected') ? <Pressable accessibilityRole="link" onPress={() => router.push('/settings/connections' as any)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={[styles.link, { textDecorationLine: 'underline' }]}>{t('cnew.connectLink')}</Text></Pressable> : null}
+      {platforms.some((p) => p.startsWith('instagram')) ? <Pressable accessibilityRole="button" accessibilityHint={t('grid.previewSub')} onPress={() => router.push({ pathname: '/content/grid', params: { ...(selectedMedia[0] ? { pendingAsset: selectedMedia[0] } : {}), pendingAt: plannedAt.toISOString(), pendingKind: kind } } as any)} style={styles.gridRow}>
+        <SquaresFour size={20} color={tokens.color.charcoal} />
+        <View style={{ flex: 1 }}><Text style={styles.gridRowTitle}>{t('grid.preview')}</Text><Text style={styles.gridRowSub}>{t('grid.previewSub')}</Text></View>
+        <CaretRight size={16} color={tokens.color.charcoal2} />
+      </Pressable> : null}
       {platforms.includes('tiktok') ? <SupportText>{t('cnew.tiktokAuto')}</SupportText> : null}
 
       <TextInput
@@ -476,6 +483,9 @@ function useStyles() {
   return useMemo(() => makeStyles({ text: palette.text, muted: palette.muted, fill: night ? '#1C1C1E' : '#F2F2F2', border: palette.border, card: night ? '#161618' : '#FFFFFF', onText: palette.bg, red: night ? '#FF453A' : '#D70015', redBg: night ? 'rgba(255,69,58,0.12)' : 'rgba(215,0,21,0.06)' }), [mode, palette]);
 }
 const makeStyles = (c: Ink) => StyleSheet.create({
+  gridRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: tokens.color.hairline },
+  gridRowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: tokens.color.charcoal },
+  gridRowSub: { fontFamily: tokens.font.ui, fontSize: 13, color: tokens.color.charcoal2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap },
   chip: { minHeight: 38, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: c.border, justifyContent: 'center' },
   chipOn: { backgroundColor: c.text, borderColor: c.text },

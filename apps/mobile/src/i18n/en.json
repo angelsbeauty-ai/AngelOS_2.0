@@ -1713,7 +1713,49 @@
   "grid": {
     "title": "Instagram grid",
     "intro": "How your profile will look: scheduled posts on top, then what is already posted.",
-    "empty": "No scheduled or posted Instagram posts yet."
+    "empty": {
+      "grid": "No posts here yet",
+      "reels": "No reels here yet",
+      "stories": "No stories here yet"
+    },
+    "content": "Content",
+    "create": "Create",
+    "tab": {
+      "grid": "Posts",
+      "reels": "Reels",
+      "stories": "Stories"
+    },
+    "f": {
+      "published": "Published",
+      "scheduled": "Scheduled",
+      "drafts": "Drafts",
+      "archive": "Archive"
+    },
+    "filterA11y": "Show: {{name}}",
+    "showGrid": "Show as grid",
+    "showList": "Show as list",
+    "scheduledFor": "Scheduled for {{when}}",
+    "carousel": "Carousel",
+    "video": "Video",
+    "pendingA11y": "Your new post, planned for {{when}}",
+    "st": {
+      "published": "Posted",
+      "scheduled": "Scheduled",
+      "draft": "Draft",
+      "archived": "Archived",
+      "failed": "Didn't post"
+    },
+    "errTitle": "Couldn't load your posts",
+    "errBody": "Check your connection and try again.",
+    "retry": "Try again",
+    "emptyF": {
+      "published": "Posts you publish to Instagram show up here.",
+      "scheduled": "Approve a post with a time and it shows up here.",
+      "drafts": "Drafts you save show up here.",
+      "archive": "Posts you archive show up here."
+    },
+    "preview": "Grid preview",
+    "previewSub": "See where this post will sit on your profile"
   },
   "sml": {
     "accountsTitle": "Accounts",
