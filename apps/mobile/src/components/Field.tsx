@@ -36,7 +36,7 @@ export function Tabs<T extends string>({ value, options, onChange }: { value: T;
   })}</ScrollView>;
 }
 
-/** Simple progress bar (Academy). */
+/** Simple progress bar. */
 export function ProgressBar({ value }: { value: number }) {
   return <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: value }} style={{ height: 8, borderRadius: 4, backgroundColor: ui.colors.border, overflow: 'hidden' }}><View style={{ width: `${Math.max(0, Math.min(100, value))}%`, height: 8, backgroundColor: ui.colors.gold }} /></View>;
 }

@@ -129,7 +129,6 @@ export default function ProfileScreen() {
       <SettingsRow icon={<Bell {...ink} />} title={t('pf.notifications')} onPress={() => router.push('/notifications' as any)} />
       <SettingsRow last icon={<Pause {...ink} />} title={t('pf.automations')} onPress={() => router.push('/automations' as any)} />
     </SettingsGroup> : null}
-    {/* Academy is off in V1 */}
 
     <SettingsGroup title={t('pf.support')}>
       <SettingsRow icon={<ShieldCheck {...ink} />} title={t('pf.privacy')} onPress={() => router.push('/privacy')} />

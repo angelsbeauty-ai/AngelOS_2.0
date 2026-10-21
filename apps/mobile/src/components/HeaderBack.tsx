@@ -10,7 +10,6 @@ export function parentFor(name: string): string {
   if (/^(content|media)\//.test(name)) return '/calendar';
   if (/^(bookings|business-hours|time-off)/.test(name) || name === 'bookings/week') return '/calendar';
   if (/^messages\//.test(name)) return '/messages';
-  if (/^academy\//.test(name)) return '/academy';
   if (name === 'clients/index') return '/profile';
   if (/^clients\/\[id\]\/(edit|health)$/.test(name)) return '/clients';
   if (/^clients\//.test(name)) return '/clients';

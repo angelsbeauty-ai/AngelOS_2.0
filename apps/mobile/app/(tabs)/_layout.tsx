@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
-import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
 import { useRole } from '../../src/lib/me';
 import { GlassSurface } from '../../src/components/Glass';
 import { colors, D } from '../../src/design/theme';
@@ -12,7 +11,7 @@ import { useUnreadCount } from '../../src/lib/unread';
 import { useAppearance } from '../../src/design/appearance';
 
 export default function TabsLayout() {
-  // B9: students only get Academy + Settings. Studio tabs are hidden (and Screen redirects studio routes).
+  // B9: students only get Profile + Settings (Academy removed in V1). Studio tabs are hidden (and Screen redirects studio routes).
   const student = useRole() === 'student';
   const { t } = useTranslation();
   const unread = useUnreadCount();
@@ -40,7 +39,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="messages" options={{ ...studio, title: t('tabs.messages'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused} badge={unread}><TabGlyph name="messages" active={focused} color={focused ? palette.text : '#9A9A9F'} /></TabIcon> }} />
       <Tabs.Screen name="calendar" options={{ ...studio, title: t('tabs.calendar'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><TabGlyph name="calendar" active={focused} color={focused ? palette.text : '#9A9A9F'} /></TabIcon> }} />
       <Tabs.Screen name="analytics" options={{ ...studio, title: t('tabs.analytics'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><TabGlyph name="analytics" active={focused} color={focused ? palette.text : '#9A9A9F'} /></TabIcon> }} />
-      <Tabs.Screen name="academy" options={{ href: null, title: t('tabs.academy'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><GraduationCap size={24} color={color as string} weight="duotone" /></TabIcon> }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><TabGlyph name="profile" active={focused} color={focused ? palette.text : '#9A9A9F'} /></TabIcon> }} />
       {/* Moved out of the tab bar (NAV V1): Clients lives under Profile, Social posts under Calendar. Routes stay reachable. */}
       <Tabs.Screen name="clients" options={{ href: null, title: t('tabs.clients') }} />

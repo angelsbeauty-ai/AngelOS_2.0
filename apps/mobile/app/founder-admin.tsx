@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs } from '../src/components/Field';
 import { getActiveWorkspace } from '../src/lib/workspace';
-import { inviteLink } from '../src/lib/academy';
+import { inviteLink } from '../src/lib/invite';
 import { useEffect, useState } from 'react';
 import { FounderAiUsage } from '../src/components/FounderAiUsage';
 import { Platform, Pressable, Share, StyleSheet, Switch, Text, View } from 'react-native';
@@ -80,7 +80,7 @@ export default function FounderAdminScreen() {
       <TextField label={t('fadm.s34')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       <TextField label={t('fadm.s35')} value={inviteLabel} onChangeText={setInviteLabel} />
       <TextField label={t('fadm.s36')} value={inviteRegion} onChangeText={setInviteRegion} />
-      <Tabs value={inviteType} options={[{id:'business_owner',label:'Business owner'},{id:'student',label:'Student (joins my Academy)'}]} onChange={setInviteType} />
+      <Tabs value={inviteType} options={[{id:'business_owner',label:'Business owner'},{id:'student',label:'Student'}]} onChange={setInviteType} />
       <Tabs value={inviteCohort} options={(['outside','student','partner','angels_beauty'] as const).map((v)=>({id:v,label:humanize(v)}))} onChange={setInviteCohort} />
       <Button label={t('fadm.s37')} onPress={()=>void makeBetaInvite()} />
       {lastBetaToken ? <View style={styles.token}><Text style={styles.bold}>{t('fadm.s14')}</Text><Text selectable>{inviteLink(lastBetaToken)}</Text><Button small variant="secondary" label={t('fadm.s38')} onPress={()=>void shareInvite(lastBetaToken)} /></View>:null}

@@ -10,7 +10,7 @@ import { useUnreadCount } from '../lib/unread';
 import { useAppearance } from '../design/appearance';
 
 /** Paths that render the real Tabs bar themselves. */
-export const TAB_ROOTS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
+export const TAB_ROOTS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social']);
 const NO_BAR = /^\/(login|signup|sign-up|sign_up|register|onboarding|forgot-password|reset-password|voice)(\/|$)/;
 /** Chat thread is one full screen. No tab bar. */
 const NO_BAR_THREAD = /^\/messages\/[^/]+$/;

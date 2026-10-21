@@ -5,7 +5,6 @@
     "calendar": "Calendar",
     "social": "Social",
     "settings": "Settings",
-    "academy": "Academy",
     "profile": "Profile",
     "home": "Home",
     "messages": "Messages",
@@ -37,9 +36,7 @@
     "version": "Version {{v}}",
     "signOut": "Sign out",
     "signOutTitle": "Sign out?",
-    "signOutMsg": "You will need to sign in again to use AngelOS.",
-    "academy": "Academy",
-    "academyDetail": "Your courses and lessons"
+    "signOutMsg": "You will need to sign in again to use AngelOS."
   },
   "account": {
     "title": "Your account",
@@ -305,10 +302,6 @@
     "editService": "Edit service",
     "money": "Money",
     "reminders": "Reminders",
-    "course": "Course",
-    "lesson": "Lesson",
-    "students": "Students",
-    "practice": "Practice photos",
     "photo": "Photo",
     "media": "Media",
     "insights": "Insights",
@@ -768,7 +761,6 @@
     "terms": "Terms of use",
     "forgot": "Forgot password",
     "reset": "New password",
-    "academy": "Academy",
     "settingsBack": "Settings",
     "back": "Back",
     "posts": "Posts",
@@ -780,30 +772,6 @@
     "home": "Go home",
     "signup": "Create account",
     "accounts": "Accounts"
-  },
-  "acad": {
-    "eyebrow": "Courses & students",
-    "title": "Academy",
-    "students": "Students",
-    "reviews": "Practice photos",
-    "courses": "Courses",
-    "emptyOwner": "Your courses will live here",
-    "emptyOwnerMsg": "Create a course to add lessons and invite students.",
-    "emptyStudent": "No courses yet",
-    "emptyStudentMsg": "Your teacher will add you to a course.",
-    "lessons_one": "{{count}} lesson",
-    "lessons_other": "{{count}} lessons",
-    "studentsN_one": "{{count}} student",
-    "studentsN_other": "{{count}} students",
-    "published": "Published",
-    "draft": "Draft",
-    "done": "{{p}}% done",
-    "newCourse": "New course",
-    "courseTitle": "Course title",
-    "coursePh": "e.g. Powder brows basics",
-    "create": "Create course",
-    "createFail": "Could not create course",
-    "unavailable": "Academy is not available right now."
   },
   "social2": {
     "views": "Views",
@@ -879,7 +847,6 @@
     "booking": "Booking setup",
     "hours": "Business hours",
     "daysOff": "Days off",
-    "academy": "Academy",
     "langTitle": "Language",
     "status": {
       "healthy": "Normal",
@@ -1304,25 +1271,6 @@
     "s18": "Send now",
     "s19": "Not yet"
   },
-  "lsn": {
-    "s0": "Loading…",
-    "s1": "Edit lesson",
-    "s2": "Preview",
-    "s3": "Checklist",
-    "s4": "Send practice photo",
-    "s5": "Your teacher reviews it and replies here.",
-    "s6": "This is the student view.",
-    "s8": "Title",
-    "s9": "Video link (https)",
-    "s10": "YouTube, Vimeo or a video file link",
-    "s11": "Lesson text",
-    "s12": "Checklist (one step per line)",
-    "s13": "Save",
-    "s14": "Delete lesson",
-    "s15": "Note (optional)",
-    "s17": "Student progress and practice photos for it are deleted too.",
-    "s18": "Delete"
-  },
   "svcd": {
     "s0": "Loading…",
     "s1": "Edit service",
@@ -1571,22 +1519,6 @@
     "s23": "Bookings",
     "s24": "Business result"
   },
-  "crs": {
-    "s0": "Loading…",
-    "s1": "Edit course",
-    "s2": "Published",
-    "s3": "Enrolled students can only see published courses.",
-    "s4": "Lessons",
-    "s5": "No lessons yet.",
-    "s6": "Title",
-    "s7": "Description",
-    "s8": "Save",
-    "s9": "New lesson title",
-    "s10": "Add lesson",
-    "s11": "Delete course",
-    "s12": "All its lessons, student progress and practice photos are deleted too.",
-    "s13": "Delete"
-  },
   "aip": {
     "s0": "Your calm AI business partner.",
     "stillNeedApproval": "Changes and messages still need your approval.",
@@ -1597,15 +1529,6 @@
     "s5": "One instruction is enough. It will organize the next step.",
     "s6": "Tell me what's going on with your business...",
     "askAngelos": "Ask AngelOS"
-  },
-  "stu": {
-    "s0": "Students",
-    "s1": "Invite a student",
-    "s2": "The link adds them to your studio as a student. Students only see the Academy, never your clients, bookings or money.",
-    "s3": "Loading…",
-    "s4": "No students yet.",
-    "s5": "Make invite link",
-    "s6": "Join my Academy on AngelOS"
   },
   "sys": {
     "s0": "Safety Center",
@@ -1637,18 +1560,6 @@
     "s6": "Download the video and copy the caption. Direct posting needs a TikTok app audit.",
     "s7": "We couldn't load connections",
     "s8": "Check your connection and try again."
-  },
-  "subm": {
-    "s0": "Practice photos",
-    "s1": "Loading…",
-    "s2": "Nothing here.",
-    "s3": "Practice photo",
-    "s4": "Comment for the student",
-    "s5": "Needed for Try again.",
-    "s6": "Approve",
-    "s7": "Try again",
-    "s8": "To review",
-    "s9": "Approved"
   },
   "mkt": {
     "s0": "Marketing",

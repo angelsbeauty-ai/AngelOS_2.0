@@ -9,7 +9,7 @@ AngelOS is a tool for a beauty studio and its students. It covers the person who
 ## What is saved
 
 - Your sign-in email and password, kept by our sign-in provider.
-- Studio details you type in: clients, bookings, notes, photos, messages, posts and Academy work.
+- Studio details you type in: clients, bookings, notes, photos, messages and posts.
 - A record of which connected apps you turn on, such as Instagram, Facebook or LINE.
 
 We use this only to run AngelOS for you. We do not sell it, and we do not use it for advertising.
@@ -37,11 +37,11 @@ You can ask to see, correct or delete the personal information we hold about you
 
 ## What the app does
 
-AngelOS helps a beauty studio keep clients, bookings and a calendar, learn in the Academy, and draft messages and posts with an assistant. Some connections, such as LINE, Instagram and Facebook, only work after you connect your own account. Features can change while the app is in testing.
+AngelOS helps a beauty studio keep clients, bookings and a calendar, and draft messages and posts with an assistant. Some connections, such as LINE, Instagram and Facebook, only work after you connect your own account. Features can change while the app is in testing.
 
 ## Your account
 
-You are responsible for the email and password on the account, and for what you save about your clients. Do not share the account. Students only see the Academy areas their studio allows.
+You are responsible for the email and password on the account, and for what you save about your clients. Do not share the account.
 
 ## Messages, posts and photos
 
@@ -62,7 +62,7 @@ You can stop using AngelOS at any time and delete the account from Profile › A
 ## Liability
 
 The app is provided as it is, while it is still being built. We are not responsible for lost bookings, lost messages or decisions you make from a draft.`,
-  summary: `1. AngelOS stores your sign-in details and the client, booking, note, photo and Academy data you enter.
+  summary: `1. AngelOS stores your sign-in details and the client, booking, note and photo data you enter.
 2. We use that data only to run the app. We do not sell it or use it for ads.
 3. You own your clients' data. The assistant only drafts, and it is not medical advice.
 4. You can delete your account and data at any time from Profile › Account › Delete account. An Apple subscription must be cancelled in iPhone Settings.

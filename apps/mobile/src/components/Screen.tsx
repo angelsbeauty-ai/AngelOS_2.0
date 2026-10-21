@@ -13,7 +13,7 @@ import { GlassBackdrop } from './GlassBackdrop';
 import { useInsets } from '../lib/insets';
 import { useOnline } from '../lib/offline';
 
-const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social', '/academy']);
+const TAB_PATHS = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/clients', '/social']);
 const LOCKED = new Set(['/', '/messages', '/calendar', '/analytics', '/profile', '/ai', '/voice']);
 const logo = require('../../assets/brand/mark-charcoal.png');
 
@@ -26,7 +26,7 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   async function refresh() { setRefreshing(true); try { await onRefresh?.(); } finally { setRefreshing(false); } }
   const pathname = usePathname() ?? '/';
   const role = useRole();
-  // B9 route guard: students only reach the Academy and their own settings.
+  // B9 route guard: students only reach their own profile and settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/profile' as any); }, [role, pathname]);
   const showAsk = !hideAsk && role !== 'student' && TAB_PATHS.has(pathname);
   const { palette, mode } = useAppearance();
