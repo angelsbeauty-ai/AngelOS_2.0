@@ -30,6 +30,12 @@ export class AssistantToolsService {
     return this.moduleRef.get(map[name](), { strict: false });
   }
 
+  /** draft_reply tool: the messaging ai-draft logic. Saves a pending_approval draft; never sends. */
+  async draftReply(user: AuthUser, workspaceId: string, threadId: string, instructions?: string) {
+    const messaging: any = this.svc('messaging');
+    return messaging.draftReply(user, workspaceId, threadId, undefined, instructions);
+  }
+
   /** Read tools answer from her own records. No AI call, no cost. */
   async read(user: AuthUser, workspaceId: string, tool: PlannedTool, timeZone: string): Promise<string> {
     if (tool.key === 'today_schedule') {

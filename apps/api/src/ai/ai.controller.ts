@@ -1,7 +1,7 @@
 import { createUserSupabaseClient } from '../config/supabase';
 import { limitState, usageFor } from './ai-usage';
-import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
-import { AREAS, AreaOffError, READ_TOOLS, READ_TOOL_NAMES, runReadTool, type Area } from './tools/read-tools';
+import { BadRequestException, ForbiddenException, Body, Controller, Get, NotFoundException, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import { AREAS, AreaOffError, READ_TOOLS, READ_TOOL_NAMES, RoleNotAllowedError, memberRole, runReadTool, type Area } from './tools/read-tools';
 import { StyleLearningService } from './style/style-learning.service';
 import { BrainService } from './brain/brain.service';
 import { ApproveSuggestedReplyDto, UpdateReplyStyleDto } from './dto/update-reply-style.dto';
@@ -40,8 +40,9 @@ export class AiController {
   /** Shared read tools (text + phone voice), same toggles and studio scope. */
   @Post('tools/:name') async runTool(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('name') name: string, @Body() args: Record<string, unknown>) {
     if (!READ_TOOL_NAMES.has(name)) throw new NotFoundException('Unknown tool');
-    try { return await runReadTool(createUserSupabaseClient(user.accessToken), workspaceId, name, (args ?? {}) as Record<string, any>); }
-    catch (e) { if (e instanceof AreaOffError) return { off: e.area, message: `${e.area} is off in What AngelOS can see.` }; throw e; }
+    const db = createUserSupabaseClient(user.accessToken);
+    try { return await runReadTool(db, workspaceId, name, (args ?? {}) as Record<string, any>, new Date(), undefined, await memberRole(db, workspaceId, user.id)); }
+    catch (e) { if (e instanceof RoleNotAllowedError) throw new ForbiddenException(e.message); if (e instanceof AreaOffError) return { off: e.area, message: `${e.area} is off in What AngelOS can see.` }; throw e; }
   }
   /** What AngelOS can see: per-area switches (all on until changed). */
   @Get('data-access') async getAccess(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {

@@ -378,7 +378,7 @@ export class MessagingService {
     return { threadId, message, intent, sensitive, phishing, priority, clientId };
   }
 
-  async draftReply(user: AuthUser, workspaceId: string, threadId: string, intent?: string) {
+  async draftReply(user: AuthUser, workspaceId: string, threadId: string, intent?: string, ownerInstructions?: string) {
     const detail = await this.getThread(user, workspaceId, threadId);
     const latestInbound = [...detail.messages].reverse().find((item: any) => item.direction === 'inbound');
     if (!latestInbound) throw new BadRequestException('No client message to reply to yet. Paste their message first.');
@@ -393,6 +393,8 @@ export class MessagingService {
     // M27 suggestion chips: the owner's chosen intent steers the draft. Still a draft; she approves it.
     const goal = intent ? REPLY_INTENTS[intent] : undefined;
     if (goal) instructions = `${instructions}\nThe studio owner wants this reply to: ${goal}. Never invent times, prices or facts you were not given; ask or leave a clear gap instead.`;
+    // Text assistant (draft_reply tool): the owner's own words steer the draft. Still a draft; she approves it.
+    if (ownerInstructions?.trim()) instructions = `${instructions}\nThe studio owner's instructions for this reply: ${ownerInstructions.trim().slice(0, 500)}. Never invent times, prices or facts you were not given.`;
     const recent = detail.messages.filter((m: any) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval')).slice(-6)
       .map((m: any) => `${m.direction === 'inbound' ? 'Client' : 'Studio'}: ${m.body}`).join('\n');
     let response = await this.aiProvider.generate({ instructions, input: recent || `Client: ${latestInbound.body}` });

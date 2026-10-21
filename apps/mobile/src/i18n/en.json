@@ -1948,7 +1948,12 @@
       "draftOnly": "Replies are drafted only. Nothing is sent until you tap Approve.",
       "money": "Money",
       "received": "Received",
-      "spent": "Spent"
+      "spent": "Spent",
+      "draftFor": "Reply draft · {{name}}",
+      "notSent": "Not sent. It's waiting in the conversation for your Approve.",
+      "reviewApprove": "Review & approve",
+      "edit": "Edit in conversation",
+      "draftMissing": "I couldn't make that draft. Open the conversation and try again."
     }
   },
   "cal": {

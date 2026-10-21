@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Headers, NotFoundException, Param, Post, UnauthorizedException } from '@nestjs/common';
 import { createServiceSupabaseClient } from '../../config/supabase';
-import { AreaOffError, READ_TOOL_NAMES, runReadTool } from '../tools/read-tools';
+import { AreaOffError, READ_TOOL_NAMES, STUDIO_ROLES, memberRole, runReadTool } from '../tools/read-tools';
 import { verifyVoiceToken } from './voice-token';
 
 /**
@@ -13,8 +13,10 @@ export class VoiceToolsController {
     const c = verifyVoiceToken(auth?.startsWith('Bearer ') ? auth.slice(7) : undefined, workspaceId);
     if (!c) throw new UnauthorizedException('Voice token is missing or expired');
     const db = createServiceSupabaseClient();
-    const { data } = await db.from('workspace_memberships').select('user_id').eq('workspace_id', workspaceId).eq('user_id', c.sub).maybeSingle();
-    if (!data) throw new ForbiddenException('Not a member of this studio');
+    const role = await memberRole(db, workspaceId, c.sub);
+    if (!role) throw new ForbiddenException('Not a member of this studio');
+    // Students never get studio tools.
+    if (!STUDIO_ROLES.has(role)) throw new ForbiddenException('Studio tools are for the studio owner and staff only.');
     return { c, db };
   }
 

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useAppearance } from '../design/appearance';
 import { tokens } from '../design/theme';
@@ -51,6 +52,22 @@ export function AnswerCard({ card }: { card: ToolCard }) {
       <Text style={[styles.sub, { color: palette.muted }]}>{t('ai.card.draftOnly', 'Replies are drafted only. Nothing is sent until you tap Approve.')}</Text>
     </View>;
   }
+  if (card.tool === 'draft_reply') {
+    // Draft only: it waits in the conversation for Approve. Nothing was sent.
+    if (d.error || !d.thread_id || !d.draft) return <View style={[styles.card, { backgroundColor: bg, borderColor: palette.border }]}>
+      <Text style={[styles.sub, { color: palette.muted }]}>{t('ai.card.draftMissing')}</Text>
+    </View>;
+    const open = () => router.push(`/messages/${d.thread_id}` as any);
+    return <View style={[styles.card, { backgroundColor: bg, borderColor: palette.border }]}>
+      <Text style={[styles.over, { color: palette.muted }]}>{t('ai.card.draftFor', { name: d.name ?? '' })}</Text>
+      <View style={[styles.bubble, { backgroundColor: tile }]}><Text maxFontSizeMultiplier={1.6} style={[styles.draftText, { color: palette.text }]}>{String(d.draft)}</Text></View>
+      <Text style={[styles.sub, { color: palette.muted }]}>{t('ai.card.notSent')}</Text>
+      <View style={styles.actions}>
+        <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.primary, { backgroundColor: pressed ? '#72443A' : tokens.color.roseGold }]}><Text maxFontSizeMultiplier={1.4} style={styles.primaryText}>{t('ai.card.reviewApprove')}</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={open} style={[styles.secondary, { borderColor: palette.border }]}><Text maxFontSizeMultiplier={1.4} style={[styles.secondaryText, { color: palette.text }]}>{t('ai.card.edit')}</Text></Pressable>
+      </View>
+    </View>;
+  }
   if (card.tool === 'get_money') {
     return <View style={[styles.card, { backgroundColor: bg, borderColor: palette.border }]}>
       <Text style={[styles.over, { color: palette.muted }]}>{t('ai.card.money', 'Money')} · {String(d.period ?? '')}</Text>
@@ -71,5 +88,12 @@ const styles = StyleSheet.create({
   bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 52 },
   bar: { flex: 1, borderRadius: 6 },
   row: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, gap: 2 },
-  rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15 }
+  rowTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15 },
+  bubble: { borderRadius: 16, padding: 12 },
+  draftText: { ...tokens.type.subhead },
+  actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  primary: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, justifyContent: 'center' },
+  primaryText: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold, color: '#FFFFFF' },
+  secondary: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth },
+  secondaryText: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold }
 });

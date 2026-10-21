@@ -3,7 +3,8 @@
  * through the same runner and the same /ai/tools/:name endpoint. Every query is scoped to one studio with an
  * explicit workspace_id filter on top of RLS. Tools return structured JSON; answer cards are drawn from this JSON,
  * never from model text. A value we cannot measure is null (shown as "Unavailable"), never guessed.
- * Client data is minimised: names and the fields needed to answer, no phone, email, notes or message bodies.
+ * Client data is minimised: names and the fields needed to answer, no phone, email or notes. Message bodies only via
+ * read_thread (one conversation, 'messages' area on). Studio tools are for owner/staff only; students never get them.
  */
 export type Area = 'bookings' | 'clients' | 'messages' | 'posts' | 'analytics' | 'money' | 'services' | 'campaigns';
 export const AREAS: Area[] = ['bookings', 'clients', 'messages', 'posts', 'analytics', 'money', 'services', 'campaigns'];
@@ -16,6 +17,7 @@ export const READ_TOOLS: ReadToolDef[] = [
   { name: 'get_bookings', area: 'bookings', description: 'Bookings between two dates (max 92 days). Times in the studio time zone.', parameters: obj({ from: { type: 'string', description: 'YYYY-MM-DD' }, to: { type: 'string', description: 'YYYY-MM-DD, inclusive' } }, ['from']) },
   { name: 'search_clients', area: 'clients', description: 'Find clients by name or list new/inactive ones. Returns names and status only.', parameters: obj({ query: { type: 'string' }, filter: { type: 'string', enum: ['new', 'inactive', 'all'] } }) },
   { name: 'list_threads', area: 'messages', description: 'Inbox conversations: unread, needing a reply, or by platform (max 20).', parameters: obj({ filter: { type: 'string', enum: ['unread', 'needs_reply', 'all'] }, platform: { type: 'string', enum: ['line', 'instagram', 'facebook', 'tiktok'] } }) },
+  { name: 'read_thread', area: 'messages', description: 'Recent messages of one inbox conversation (oldest first, max 20). Use a thread id from list_threads.', parameters: obj({ thread_id: { type: 'string' }, limit: { type: 'integer', minimum: 1, maximum: 20 } }, ['thread_id']) },
   { name: 'list_posts', area: 'posts', description: 'Social posts by status: draft, scheduled or published.', parameters: obj({ status: { type: 'string', enum: ['draft', 'scheduled', 'published'] } }) },
   { name: 'get_analytics', area: 'analytics', description: 'Reach, follower change, bookings and booking value for a period, plus weekly reach for the last 8 weeks.', parameters: obj({ period, platform: { type: 'string', enum: ['instagram', 'facebook', 'tiktok', 'line'] } }) },
   { name: 'get_money', area: 'money', description: 'Money received, expenses and net for a period.', parameters: obj({ period }) },
@@ -23,10 +25,49 @@ export const READ_TOOLS: ReadToolDef[] = [
   { name: 'list_campaigns_tasks', area: 'campaigns', description: 'Active campaigns and open tasks.', parameters: obj({}) }
 ];
 export const READ_TOOL_NAMES = new Set(READ_TOOLS.map((t) => t.name));
-export const toolArea = (name: string) => READ_TOOLS.find((t) => t.name === name)?.area ?? null;
 
-/** OpenAI Responses API function-tool format. Voice (Realtime) uses the same shape. */
-export const functionTools = (enabled: Set<Area> = new Set(AREAS)) => READ_TOOLS.filter((t) => enabled.has(t.area)).map((t) => ({ type: 'function', name: t.name, description: t.description, parameters: t.parameters }));
+/** Draft-only tools for the text assistant. They save a draft that needs Approve; they NEVER send. */
+export const DRAFT_TOOLS: ReadToolDef[] = [
+  { name: 'draft_reply', area: 'messages', description: 'Write a reply DRAFT in one conversation. It is saved for the owner to approve in the thread; it is never sent by this tool.', parameters: obj({ thread_id: { type: 'string' }, instructions: { type: 'string', description: 'What the reply should say or do.' } }, ['thread_id']) }
+];
+export const DRAFT_TOOL_NAMES = new Set(DRAFT_TOOLS.map((t) => t.name));
+export const toolArea = (name: string) => [...READ_TOOLS, ...DRAFT_TOOLS].find((t) => t.name === name)?.area ?? null;
+
+/** Roles that may use studio tools. Students never get studio tools. */
+export const STUDIO_ROLES = new Set(['owner', 'staff']);
+export class RoleNotAllowedError extends Error { constructor(public role: string | null) { super('Studio tools are for the studio owner and staff only.'); } }
+
+/** The caller's role in this studio (null = not a member). */
+export async function memberRole(db: Db, workspaceId: string, userId: string): Promise<string | null> {
+  const { data } = await db.from('workspace_memberships').select('role').eq('workspace_id', workspaceId).eq('user_id', userId);
+  const roles = ((data ?? []) as Array<{ role: string }>).map((r) => r.role);
+  return roles.find((r) => STUDIO_ROLES.has(r)) ?? roles[0] ?? null;
+}
+
+const fn = (t: ReadToolDef) => ({ type: 'function', name: t.name, description: t.description, parameters: t.parameters });
+/** OpenAI Responses API function-tool format. Voice (Realtime) uses the same shape (read tools only). */
+export const functionTools = (enabled: Set<Area> = new Set(AREAS), opts: { role?: string | null; drafts?: boolean } = {}) => {
+  if (opts.role !== undefined && !STUDIO_ROLES.has(String(opts.role))) return [];
+  return [...READ_TOOLS, ...(opts.drafts ? DRAFT_TOOLS : [])].filter((t) => enabled.has(t.area)).map(fn);
+};
+
+/**
+ * Runs a draft tool. `draftReply` is the messaging ai-draft logic (MessagingService.draftReply); nothing else
+ * is reachable from here, so a draft tool can never send.
+ */
+export async function runDraftTool(ctx: { db: Db; workspaceId: string; role: string | null; enabled?: Set<Area>; draftReply: (threadId: string, instructions?: string) => Promise<{ message?: { id?: string; body?: string; status?: string } | null; reason?: string }> }, name: string, args: Record<string, any> = {}): Promise<Record<string, unknown>> {
+  if (!DRAFT_TOOL_NAMES.has(name)) throw new Error(`Unknown tool: ${name}`);
+  if (!STUDIO_ROLES.has(String(ctx.role))) throw new RoleNotAllowedError(ctx.role);
+  const on = ctx.enabled ?? await enabledAreas(ctx.db, ctx.workspaceId);
+  if (!on.has('messages')) throw new AreaOffError('messages');
+  const threadId = String(args.thread_id ?? '');
+  const { data: found } = await ctx.db.from('message_threads').select('id,contact_display_name,client:clients(display_name)').eq('workspace_id', ctx.workspaceId).eq('id', threadId).limit(1);
+  const thread = (found ?? [])[0] as any;
+  if (!thread) return { area: 'messages', error: 'not_found', thread_id: threadId };
+  const instructions = typeof args.instructions === 'string' ? args.instructions.slice(0, 500) : undefined;
+  const r = await ctx.draftReply(threadId, instructions);
+  return { area: 'messages', thread_id: threadId, name: shortName(thread.client?.display_name ?? thread.contact_display_name), message_id: r.message?.id ?? null, draft: r.message?.body ?? null, status: r.message?.status ?? 'pending_approval', requires_approval: true, sent: false, note: r.reason ?? null };
+}
 
 const DAY = 86400000;
 export function periodRange(p: unknown, now: Date): { start: Date; end: Date; days: number; label: string } {
@@ -54,9 +95,10 @@ export async function enabledAreas(db: Db, workspaceId: string): Promise<Set<Are
   return on;
 }
 
-export async function runReadTool(db: Db, workspaceId: string, name: string, args: Record<string, any> = {}, now = new Date(), enabled?: Set<Area>): Promise<Record<string, unknown>> {
-  const area = toolArea(name);
+export async function runReadTool(db: Db, workspaceId: string, name: string, args: Record<string, any> = {}, now = new Date(), enabled?: Set<Area>, role?: string | null): Promise<Record<string, unknown>> {
+  const area = READ_TOOL_NAMES.has(name) ? toolArea(name) : null;
   if (!area) throw new Error(`Unknown tool: ${name}`);
+  if (role !== undefined && !STUDIO_ROLES.has(String(role))) throw new RoleNotAllowedError(role);
   const on = enabled ?? await enabledAreas(db, workspaceId);
   if (!on.has(area)) throw new AreaOffError(area);
   const q = (t: string, cols: string) => db.from(t).select(cols).eq('workspace_id', workspaceId);
@@ -87,6 +129,19 @@ export async function runReadTool(db: Db, workspaceId: string, name: string, arg
     if (error) throw new Error(error.message);
     const rows = (data ?? []).filter((r: any) => !args.platform || r.channel?.provider === args.platform);
     return { area, count: rows.length, threads: rows.map((r: any) => ({ id: r.id, name: shortName(r.client?.display_name ?? r.contact_display_name), platform: r.channel?.provider ?? null, unread: Boolean(r.owner_unread), needs_reply: r.status === 'needs_reply', at: r.last_message_at })) };
+  }
+  if (name === 'read_thread') {
+    const threadId = String(args.thread_id ?? '');
+    const limit = Math.min(20, Math.max(1, Number(args.limit) || 10));
+    const { data: found, error: tErr } = await q('message_threads', 'id,contact_display_name,channel:messaging_channels(provider),client:clients(display_name)').eq('id', threadId).limit(1);
+    if (tErr) throw new Error(tErr.message);
+    const thread = (found ?? [])[0] as any;
+    if (!thread) return { area, error: 'not_found', thread_id: threadId };
+    const { data, error } = await q('client_messages', 'id,direction,sender_type,body,status,created_at').eq('thread_id', threadId).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(limit);
+    if (error) throw new Error(error.message);
+    const rows = [...(data ?? [])].reverse();
+    return { area, thread_id: threadId, name: shortName(thread.client?.display_name ?? thread.contact_display_name), platform: thread.channel?.provider ?? null, count: rows.length,
+      messages: rows.map((m: any) => ({ id: m.id, from: m.direction === 'inbound' ? 'client' : m.sender_type === 'ai' ? 'draft' : 'studio', text: String(m.body ?? '').slice(0, 1000), status: m.status, at: m.created_at })) };
   }
   if (name === 'list_posts') {
     const status = ['draft', 'scheduled', 'published'].includes(args.status) ? args.status : 'scheduled';

@@ -21,6 +21,7 @@ const rows = {
   services: [{ workspace_id: A, id: 's1', name: 'Brows', duration_minutes: 90, standard_price: 20000, currency: 'JPY', active: true }, { workspace_id: B, id: 's2', name: 'Leak', duration_minutes: 1, standard_price: 1, currency: 'JPY', active: true }],
   content_campaigns: [{ workspace_id: A, id: 'k1', name: 'Autumn', status: 'active' }, { workspace_id: B, id: 'k2', name: 'Leak', status: 'active' }],
   tasks: [{ workspace_id: A, id: 'x1', title: 'Order pigment', status: 'open' }, { workspace_id: B, id: 'x2', title: 'Leak', status: 'open' }],
+  client_messages: [{ workspace_id: A, thread_id: 't1', id: 'cm1', direction: 'inbound', body: 'Hi', status: 'received', created_at: '2026-10-20T06:00:00Z' }, { workspace_id: B, thread_id: 't1', id: 'cm2', direction: 'inbound', body: 'Leak', status: 'received', created_at: '2026-10-20T06:00:00Z' }],
   ai_data_access: []
 };
 
@@ -44,7 +45,7 @@ function fakeDb(data = rows) {
   } };
 }
 
-const ARGS = { get_bookings: { from: '2026-10-20' }, search_clients: { query: 'Mei' }, list_threads: { filter: 'unread' }, list_posts: { status: 'scheduled' }, get_analytics: { period: '30d' }, get_money: { period: '30d' }, list_services_prices: {}, list_campaigns_tasks: {} };
+const ARGS = { read_thread: { thread_id: 't1' }, get_bookings: { from: '2026-10-20' }, search_clients: { query: 'Mei' }, list_threads: { filter: 'unread' }, list_posts: { status: 'scheduled' }, get_analytics: { period: '30d' }, get_money: { period: '30d' }, list_services_prices: {}, list_campaigns_tasks: {} };
 
 for (const tool of rt.READ_TOOLS) {
   test(`${tool.name}: only sees its own studio`, async () => {

@@ -1,4 +1,4 @@
-import { enabledAreas, functionTools, runReadTool } from './tools/read-tools';
+import { DRAFT_TOOL_NAMES, enabledAreas, functionTools, memberRole, runDraftTool, runReadTool } from './tools/read-tools';
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
@@ -184,15 +184,18 @@ export class AiService {
     const planned = planTool(message, new Date(), timeZone);
     // Real function calling over the shared read tools (same list voice uses). Write tools stay approval cards.
     const enabled = await enabledAreas(supabase, workspaceId);
+    const role = await memberRole(supabase, workspaceId, user.id);
     const withTools = planned && planned.kind !== 'read' ? null : await this.provider.generateWithTools(
       { instructions: `${instructions}\nUse the read tools for any question about her studio. Numbers must come from tool results. If a tool returns null for a value, say it is unavailable. Never guess.`, input: transcript || `Owner: ${message}`, userId: user.id },
-      functionTools(enabled),
-      (name, args) => runReadTool(supabase, workspaceId, name, args as Record<string, any>, new Date(), enabled)
+      functionTools(enabled, { role, drafts: true }),
+      (name, args) => DRAFT_TOOL_NAMES.has(name)
+        ? runDraftTool({ db: supabase, workspaceId, role, enabled, draftReply: (threadId, ins) => this.tools.draftReply(user, workspaceId, threadId, ins) }, name, args as Record<string, any>)
+        : runReadTool(supabase, workspaceId, name, args as Record<string, any>, new Date(), enabled, role)
     );
     const providerResponse = withTools ?? (planned?.kind === 'read'
       ? { text: await this.tools.read(user, workspaceId, planned, timeZone), provider: 'angelos-tools', model: 'records' }
       : await this.provider.generate({ instructions, input: transcript || `Owner: ${message}`, userId: user.id }));
-    const cards = (withTools?.toolResults ?? []).filter((r) => r.name === 'get_analytics' || r.name === 'list_threads' || r.name === 'get_money' || r.name === 'get_bookings').map((r) => ({ tool: r.name, data: r.result }));
+    const cards = (withTools?.toolResults ?? []).filter((r) => r.name === 'get_analytics' || r.name === 'list_threads' || r.name === 'get_money' || r.name === 'get_bookings' || r.name === 'draft_reply').map((r) => ({ tool: r.name, data: r.result }));
 
     const plannedAction = planned && planned.kind !== 'read' ? { actionKey: planned.key, riskLevel: planned.risk, input: planned.input, summary: planned.summary, kind: planned.kind } : null;
     let actionRun: any = null;
