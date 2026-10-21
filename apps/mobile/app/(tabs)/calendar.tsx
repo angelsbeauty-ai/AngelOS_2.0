@@ -196,8 +196,8 @@ export default function CalendarTab() {
     })(); } } : undefined });
   }
 
-  const nav = useRef({ mode, shiftMonth, shiftView });
-  nav.current = { mode, shiftMonth, shiftView };
+  const nav = useRef({ mode, shiftMonth, shiftView, setView });
+  nav.current = { mode, shiftMonth, shiftView, setView };
   const swipe = useRef(PanResponder.create({
     onMoveShouldSetPanResponderCapture: (e, g) => {
       if (drag.current) return false;
@@ -211,6 +211,30 @@ export default function CalendarTab() {
       else if (Math.abs(g.dy) > 42) nav.current.shiftMonth(g.dy < 0 ? 1 : -1);
     }
   })).current;
+  // Pinch: spread two fingers to zoom in (Month -> Week -> Day with the time grid), pinch to zoom out.
+  // react-native-gesture-handler is not in this build, so this reads the two touches from the core responder.
+  const pinchScale = useSharedValue(1);
+  const pinchStart = useRef(0);
+  const spread = (e: any) => { const t = e.nativeEvent.touches; if (!t || t.length < 2) return 0; return Math.hypot(t[0].pageX - t[1].pageX, t[0].pageY - t[1].pageY); };
+  const pinch = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponderCapture: (e) => e.nativeEvent.touches?.length === 2,
+    onMoveShouldSetPanResponderCapture: (e) => e.nativeEvent.touches?.length === 2,
+    onPanResponderGrant: (e) => { pinchStart.current = spread(e); },
+    onPanResponderMove: (e) => {
+      const d = spread(e); if (!d) return;
+      if (!pinchStart.current) { pinchStart.current = d; return; }
+      if (!reduceMotion) pinchScale.value = Math.max(0.92, Math.min(1.08, d / pinchStart.current));
+      (pinch as any).last = d / pinchStart.current;
+    },
+    onPanResponderRelease: () => {
+      const scale = (pinch as any).last ?? 1; (pinch as any).last = 1; pinchStart.current = 0;
+      pinchScale.value = reduceMotion ? 1 : withTiming(1, { duration: 160 });
+      const next = pinchStep(nav.current.mode, scale);
+      if (next !== nav.current.mode) { nav.current.setView(next); void Haptics.selectionAsync().catch(() => undefined); }
+    },
+    onPanResponderTerminate: () => { pinchStart.current = 0; pinchScale.value = 1; }
+  }), [reduceMotion]);
+  const pinchStyle = useAnimatedStyle(() => ({ transform: [{ scale: pinchScale.value }] }));
   const reqId = useRef(0);
   async function loadSched(id = ws) { if (!id) return; setSched({ kind: 'loading' }); try { setSched({ kind: 'ok', status: await getSchedulingStatus(id) }); } catch { setSched({ kind: 'error' }); } }
   function openChoice(d: Date, min: number | null, long = false) { if (long) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined); setChoice({ day: d, min }); }
@@ -411,7 +435,7 @@ export default function CalendarTab() {
 
   return <View style={{ flex: 1 }}>
     <Screen onRefresh={load} scrollEnabled={!dragging} scrollY={state !== 'ready' ? undefined : mode === 'day' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') && tlDays.some((d) => key(d) === key(now)) ? Math.max(0, (now.getHours() - HOURS[0] - 2) * HOUR_H) : undefined} header={header}>
-      <View {...swipe.panHandlers}>
+      <Animated.View {...pinch.panHandlers} style={pinchStyle} accessibilityHint={t('cal.pinchHint', 'Pinch to switch between month, week and day')}><View {...swipe.panHandlers}>
       {!online && state === 'ready' ? <Text accessibilityLiveRegion="polite" style={[styles.offline, { color: palette.text, backgroundColor: palette.fill }]}>{t('sched.offlineBar', "You're offline · showing what was last loaded")}</Text> : null}
       {state === 'nostudio' ? <NoStudio /> : null}
       {state === 'loading' ? <Skeleton rows={5} height={80} /> : null}
@@ -422,7 +446,7 @@ export default function CalendarTab() {
         <Text style={[styles.err, { color: palette.muted }]}>{online ? t('s3.errBody') : t('sched.offlineCal', "You're offline. Your calendar will load when you're back online.")}</Text>
         <Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={[styles.btn, { flex: 0, paddingHorizontal: 24, borderColor: palette.border }]}><Text style={[styles.btnText, { color: palette.text }]}>{t('sched.tryAgain', 'Try again')}</Text></Pressable>
       </View> : null}
-      </View>
+      </View></Animated.View>
     </Screen>
 
     {dragHint ? <View pointerEvents="none" style={styles.hintWrap}><Text style={styles.hint}>{dragHint}</Text></View> : null}
@@ -669,3 +693,11 @@ const styles = StyleSheet.create({
   listTitle: { fontFamily: tokens.font.ui, fontSize: 17 },
   listTime: { fontFamily: tokens.font.ui, fontSize: 17, fontVariant: ['tabular-nums'] }
 });
+
+/** One pinch = one step. Spread (>1.15) zooms in Month -> Week -> Day; pinch (<0.87) zooms out. List zooms to Month. */
+export function pinchStep(mode: 'day' | 'week' | 'month' | 'list', scale: number): 'day' | 'week' | 'month' | 'list' {
+  const order = ['month', 'week', 'day'] as const;
+  if (mode === 'list') return scale > 1.15 || scale < 0.87 ? 'month' : 'list';
+  const cur = order.indexOf(mode);
+  return order[scale > 1.15 ? Math.min(2, cur + 1) : scale < 0.87 ? Math.max(0, cur - 1) : cur];
+}
