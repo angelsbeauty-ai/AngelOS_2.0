@@ -10,6 +10,8 @@ import { dialog } from '../../src/lib/dialog';
 import { connectLineChannel, disconnectMeta, getMetaPendingPages, getSocialAccounts, PLATFORM_NAME, selectMetaPage, type MetaPageChoice, type SocialAccount } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
+import { ProfilePostGrid } from '../../src/components/ProfilePostGrid';
+import { listContent, type ContentPost } from '../../src/lib/content';
 
 /** Social › Accounts: LINE guided one-time setup; IG/FB Connect when the Meta login is live on the server. */
 export default function SocialAccounts() {
@@ -23,8 +25,11 @@ export default function SocialAccounts() {
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [connErr, setConnErr] = useState<{ a: SocialAccount; message: string } | null>(null);
 
+  const [posts, setPosts] = useState<ContentPost[] | null>(null);
+  const [postsErr, setPostsErr] = useState(false);
+  const loadPosts = useCallback((id: string) => { setPostsErr(false); listContent(id).then(setPosts).catch(() => setPostsErr(true)); }, []);
   const load = useCallback(async () => {
-    try { const w = await getActiveWorkspace(); setWs(w.id); setItems(await getSocialAccounts(w.id)); setState('ready'); }
+    try { const w = await getActiveWorkspace(); setWs(w.id); loadPosts(w.id); setItems(await getSocialAccounts(w.id)); setState('ready'); }
     catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); setLoadErr(e instanceof Error ? e.message : null); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -124,7 +129,11 @@ export default function SocialAccounts() {
       {a.platform !== 'line' && a.state !== 'connected' ? (a.connectAvailable && a.connectPath
         ? <Button label={a.state === 'needs_reconnect' ? t('sml.reconnect') : t('sml.connectX', { name: PLATFORM_NAME[a.platform] })} onPress={() => void connectMeta(a)} />
         : <Text style={styles.soon}>{t('messages.loginOff')}</Text>) : null}
+      {a.platform !== 'line' && a.state !== 'not_connected' ? <ProfilePostGrid platform={a.platform} workspaceId={ws} posts={posts} failed={postsErr} onRetry={() => ws && loadPosts(ws)} inset={64} /> : null}
     </View>) : null}
+    {state === 'ready' ? <View style={styles.card}>
+      <ProfilePostGrid platform="tiktok" workspaceId={ws} posts={posts} failed={postsErr} onRetry={() => ws && loadPosts(ws)} inset={64} />
+    </View> : null}
   </Screen>;
 }
 

@@ -36,3 +36,13 @@ export function gridPosts(all: ContentPost[], tab: GridTab, filter: GridFilter):
   return all.filter((p) => igVariant(p) && tabOf(p) === tab && want.includes(stateOf(p)))
     .sort((a, b) => (gridDate(b)?.getTime() ?? 0) - (gridDate(a)?.getTime() ?? 0));
 }
+
+export type ProfilePlatform = 'instagram' | 'facebook' | 'tiktok';
+const onPlatform = (v: ContentVariant, p: ProfilePlatform) => v.platform === p || v.platform.startsWith(`${p}_`);
+/** Posts that went out (or are booked to go out) on one platform, newest first: the profile grid for that app. */
+export function platformPosts(all: ContentPost[], platform: ProfilePlatform): ContentPost[] {
+  const live = ['published', 'analyzed', 'scheduled', 'publishing'];
+  const at = (p: ContentPost) => { const v = (p.variants ?? []).find((x) => onPlatform(x, platform)) as (ContentVariant & { published_at?: string | null }) | undefined; const raw = v?.published_at ?? v?.scheduled_for ?? p.updated_at ?? p.created_at; return raw ? new Date(raw).getTime() || 0 : 0; };
+  return all.filter((p) => p.status !== 'archived' && (p.variants ?? []).some((v) => onPlatform(v, platform) && live.includes(v.status)))
+    .sort((a, b) => at(b) - at(a));
+}
