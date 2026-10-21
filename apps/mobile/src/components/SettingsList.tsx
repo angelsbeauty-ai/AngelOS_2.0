@@ -19,12 +19,13 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
   const { palette } = useAppearance();
   return <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={title} disabled={!onPress} onPress={onPress} style={({ pressed }) => [styles.row, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
     {icon ? <View style={[styles.icon, { backgroundColor: palette.fill }]}>{icon}</View> : null}
-    <View style={{ flex: 1, gap: 2 }}>
-      <Text numberOfLines={1} style={[styles.title, { color: danger ? '#B3261E' : palette.text }]}>{title}</Text>
+    <View style={{ flexShrink: 0, maxWidth: '70%', gap: 2 }}>
+      <Text style={[styles.title, { color: danger ? '#B3261E' : palette.text }]}>{title}</Text>
       {sub ? <Text numberOfLines={1} style={[styles.sub, { color: palette.muted }]}>{sub}</Text> : null}
     </View>
     {trailing}
-    {value != null && value !== '' ? <Text numberOfLines={1} style={[styles.value, { color: palette.muted }]}>{value}</Text> : null}
+    <View style={{ flex: 1 }} />
+    {value != null && value !== '' ? <Text numberOfLines={1} ellipsizeMode="middle" style={[styles.value, { flexShrink: 1, textAlign: 'right' }, { color: palette.muted }]}>{value}</Text> : null}
     {onPress && !danger ? <CaretRight size={16} color={palette.muted} /> : null}
   </Pressable>;
 }
@@ -39,12 +40,12 @@ const styles = StyleSheet.create({
   groupTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1, color: '#6C6C70' },
   onlyYou: { fontFamily: tokens.font.uiBold, fontSize: 11, color: '#3A3A3C', backgroundColor: '#F2F2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, overflow: 'hidden' },
   group: { borderRadius: 24, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, paddingVertical: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 14, flexWrap: 'nowrap', paddingVertical: 8 },
   sep: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EDEDED' },
   icon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
   title: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' },
   sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70' },
-  value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6C6C70', maxWidth: 170 },
+  value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6C6C70' },
   chip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 8, paddingVertical: 3 },
   chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 12 }
 });
