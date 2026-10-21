@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useKeyboardOpen } from '../../src/lib/useKeyboardOpen';
 import { Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useInsets as useSafeAreaInsets } from '../../src/lib/insets';
@@ -41,6 +42,9 @@ export default function MessageThreadScreen() {
   const insets = useSafeAreaInsets();
   const night = mode === 'night';
   const scrollRef = useRef<ScrollView>(null);
+  // M17/M25: keep the latest message visible as the keyboard opens.
+  const toEnd = useCallback(() => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50); }, []);
+  useKeyboardOpen(toEnd);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [detail, setDetail] = useState<MessageThreadDetail | null>(null);

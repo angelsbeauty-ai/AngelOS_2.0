@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useInsets as useSafeAreaInsets } from '../lib/insets';
+import { useKeyboardOpen } from '../lib/useKeyboardOpen';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Waveform } from 'phosphor-react-native/src/icons/Waveform';
@@ -34,6 +35,8 @@ export function ChatBar({
   const { t } = useTranslation();
   const { mode, palette } = useAppearance();
   const insets = useSafeAreaInsets();
+  // M25: the home-indicator inset is not needed while the keyboard covers it.
+  const keyboardOpen = useKeyboardOpen();
   const night = mode === 'night';
   const hasText = value.trim().length > 0;
   const canSend = hasText && !disabled;
@@ -45,7 +48,7 @@ export function ChatBar({
   const voiceOnly = !hasText || Boolean(recording);
   const active = voiceOnly ? (Boolean(onVoice) || Boolean(onHoldStart)) && !disabled : canSend;
   return (
-    <View style={[styles.wrap, { backgroundColor: night ? '#000000' : '#F3F3F3', paddingBottom: Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.wrap, { backgroundColor: night ? '#000000' : '#F3F3F3', paddingBottom: keyboardOpen ? 8 : Math.max(insets.bottom, 8) }]}>
       {onPlus ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('messages.add', { defaultValue: 'Add' })} onPress={onPlus} style={[styles.plus, { backgroundColor: fieldBg, borderColor: fieldBorder }]}>
           <Plus size={22} color={palette.text} />
