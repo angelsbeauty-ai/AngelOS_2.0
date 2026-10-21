@@ -27,4 +27,13 @@ export function useRole() {
 }
 
 /** Studio pages a student may open. Everything else redirects to Profile. */
-export const STUDENT_ALLOWED = /^\/(account|profile|settings|login|onboarding|forgot-password|reset-password|beta-feedback|privacy|terms|help)(\/|$)/;
+export const STUDENT_ALLOWED = /^\/(account|profile|settings|login|onboarding|forgot-password|reset-password|privacy|terms|help)(\/|$)/;
+
+/** Internal founder tools. Everyone else is sent to Profile and never sees the screen render. */
+export const FOUNDER_ONLY = /^\/(founder-admin|system-health|beta-feedback)(\/|$)/;
+
+export function useFounder() {
+  const [founder, setFounder] = useState<boolean | null>(null);
+  useEffect(() => { let live = true; void getMe().then((me) => { if (live) setFounder(Boolean(me.founder)); }).catch(() => { if (live) setFounder(false); }); return () => { live = false; }; }, []);
+  return founder;
+}

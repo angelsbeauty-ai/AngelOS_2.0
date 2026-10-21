@@ -1,5 +1,5 @@
 import { useEffect, useRef, type PropsWithChildren, type ReactNode } from 'react';
-import { STUDENT_ALLOWED, useRole } from '../lib/me';
+import { FOUNDER_ONLY, STUDENT_ALLOWED, useFounder, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -28,6 +28,10 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   const role = useRole();
   // B9 route guard: students only reach their own profile and settings.
   useEffect(() => { if (role === 'student' && !STUDENT_ALLOWED.test(pathname)) router.replace('/profile' as any); }, [role, pathname]);
+  const founder = useFounder();
+  const founderOnly = FOUNDER_ONLY.test(pathname);
+  useEffect(() => { if (founderOnly && founder === false) router.replace('/profile' as any); }, [founderOnly, founder]);
+  if (founderOnly && founder !== true) children = null;
   const showAsk = !hideAsk && role !== 'student' && TAB_PATHS.has(pathname);
   const { palette, mode } = useAppearance();
   const nightFix = mode === 'night' && !LOCKED.has(pathname);

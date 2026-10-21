@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Injectable, InternalServerErrorException, Module, NotFoundException, Param, Patch, UseGuards } from '@nestjs/common';
+import { purgeWorkspaceStorage } from './account-storage';
 import { Equals, IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 import type { AuthUser } from '../auth/auth-user';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -75,6 +76,7 @@ export class AccountService {
     for (const row of owned ?? []) {
       const { count } = await service.from('workspace_memberships').select('user_id', { count: 'exact', head: true }).eq('workspace_id', row.workspace_id).eq('role', 'owner').neq('user_id', user.id);
       if (!count) {
+        try { await purgeWorkspaceStorage(service as any, row.workspace_id); } catch (e) { throw new InternalServerErrorException(e instanceof Error ? e.message : 'Could not delete studio media'); }
         const del = await service.from('workspaces').delete().eq('id', row.workspace_id);
         if (del.error) throw new InternalServerErrorException(`Could not delete studio data: ${del.error.message}`);
       }

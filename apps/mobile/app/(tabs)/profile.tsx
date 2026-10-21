@@ -133,8 +133,7 @@ export default function ProfileScreen() {
     <SettingsGroup title={t('pf.support')}>
       <SettingsRow icon={<ShieldCheck {...ink} />} title={t('pf.privacy')} onPress={() => router.push('/privacy')} />
       <SettingsRow icon={<ShieldCheck {...ink} />} title={t('pf.terms')} onPress={() => router.push('/terms')} />
-      <SettingsRow icon={<Question {...ink} />} title={t('pf.help')} onPress={() => router.push('/help')} />
-      <SettingsRow last icon={<ChatText {...ink} />} title={t('pf.feedback')} onPress={() => router.push('/beta-feedback')} />
+      <SettingsRow last icon={<Question {...ink} />} title={t('pf.help')} onPress={() => router.push('/help')} />
     </SettingsGroup>
 
     {me?.founder ? <SettingsGroup highlight title={t('pf.founder')} badge={t('pf.onlyYou')} icon={<Crown size={14} color={ROSE} weight="duotone" />}>
