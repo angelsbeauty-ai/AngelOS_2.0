@@ -7,7 +7,6 @@ import {
   Card,
   Pill,
   PrimaryActionLabel,
-  Row,
   ScreenTitle,
   SecondaryActionLabel,
   SectionTitle,
@@ -38,20 +37,22 @@ export default function CalendarScreen() {
   }
 
   const items = [
-    ...appointments.map((item) => ({ id: `a-${item.id}`, start: item.start_at, kind: 'appointment', title: `${item.client?.display_name ?? 'Client'} | ${item.service_name}`, detail: item.status })),
-    ...blocks.map((item) => ({ id: `b-${item.id}`, start: item.start_at, kind: 'block', title: item.title, detail: `${item.block_type} block` }))
+    ...appointments.map((item) => ({ id: `a-${item.id}`, start: item.start_at, kind: 'appointment' as const, title: `${item.client?.display_name ?? 'Client'} · ${item.service_name}`, detail: item.status })),
+    ...blocks.map((item) => ({ id: `b-${item.id}`, start: item.start_at, kind: 'block' as const, title: item.title, detail: `${item.block_type} block` }))
   ].sort((a, b) => a.start.localeCompare(b.start));
+
+  const todayItems = items.filter((item) => isToday(item.start));
 
   return <Screen>
     <View style={styles.header}>
       <View style={styles.headerCopy}>
         <Pill tone="gold">Next 7 Days</Pill>
         <ScreenTitle>Calendar</ScreenTitle>
-        <SupportText>Appointments, model blocks, classes and conflict checks.</SupportText>
+        <SupportText>Appointments, blocks and conflicts in one view.</SupportText>
       </View>
       <Link href="/bookings/new" asChild>
         <Pressable style={styles.newBookingButton}>
-          <PrimaryActionLabel>New Booking</PrimaryActionLabel>
+          <PrimaryActionLabel>New</PrimaryActionLabel>
         </Pressable>
       </Link>
     </View>
@@ -64,12 +65,6 @@ export default function CalendarScreen() {
     ) : null}
 
     <Card>
-      <Row>
-        <View>
-          <SectionTitle>Calendar Controls</SectionTitle>
-          <SupportText>Services control duration, buffers and price snapshots.</SupportText>
-        </View>
-      </Row>
       <View style={styles.controlRow}>
         <Link href="/services" style={styles.serviceLink}>Manage Services</Link>
         <Pressable onPress={() => void load()} style={styles.refreshButton}>
@@ -79,6 +74,16 @@ export default function CalendarScreen() {
     </Card>
 
     {busy ? <Card><BodyText>Loading calendar...</BodyText></Card> : null}
+
+    {!busy && todayItems.length > 0 && (
+      <View>
+        <SectionTitle>Today</SectionTitle>
+        <View style={styles.timeline}>
+          {todayItems.map((item) => <CalendarItem key={item.id} item={item} />)}
+        </View>
+      </View>
+    )}
+
     {!busy && items.length === 0 ? (
       <Card>
         <SectionTitle>No bookings yet</SectionTitle>
@@ -86,22 +91,36 @@ export default function CalendarScreen() {
       </Card>
     ) : null}
 
-    <View style={styles.timeline}>
-      {items.map((item) => (
-        <Card key={item.id} premium={item.kind === 'appointment'}>
-          <View style={styles.itemHeader}>
-            <Pill tone={item.kind === 'appointment' ? 'gold' : 'secondary'}>{item.kind}</Pill>
-            <SupportText>{formatCalendarTime(item.start)}</SupportText>
-          </View>
-          <Text style={styles.itemTitle}>{item.title}</Text>
-          <SupportText>{item.detail.replaceAll('_', ' ')}</SupportText>
-        </Card>
-      ))}
-    </View>
+    {!busy && items.length > 0 && (
+      <View>
+        <SectionTitle>Upcoming</SectionTitle>
+        <View style={styles.timeline}>
+          {items.filter((item) => !isToday(item.start)).map((item) => <CalendarItem key={item.id} item={item} />)}
+        </View>
+      </View>
+    )}
   </Screen>;
 }
 
+function CalendarItem({ item }: { item: { id: string; start: string; kind: 'appointment' | 'block'; title: string; detail: string } }) {
+  return (
+    <Card premium={item.kind === 'appointment'}>
+      <View style={styles.itemHeader}>
+        <Pill tone={item.kind === 'appointment' ? 'gold' : 'secondary'}>{item.kind}</Pill>
+        <SupportText>{formatCalendarTime(item.start)}</SupportText>
+      </View>
+      <Text style={styles.itemTitle}>{item.title}</Text>
+      <SupportText>{item.detail.replaceAll('_', ' ')}</SupportText>
+    </Card>
+  );
+}
+
 function startOfToday() { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
+function isToday(value: string) {
+  const d = new Date(value);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
 function formatCalendarTime(value: string) {
   return new Date(value).toLocaleString(undefined, {
     weekday: 'short',
@@ -115,7 +134,7 @@ function formatCalendarTime(value: string) {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: ui.spacing.sm },
   headerCopy: { flex: 1, gap: ui.spacing.xs },
-  newBookingButton: { width: 132 },
+  newBookingButton: { width: 88 },
   controlRow: { flexDirection: 'row', alignItems: 'center', gap: ui.spacing.sm },
   serviceLink: {
     flex: 1,
@@ -125,7 +144,7 @@ const styles = StyleSheet.create({
     paddingVertical: ui.spacing.sm
   },
   refreshButton: { width: 104 },
-  timeline: { gap: ui.spacing.sm },
+  timeline: { gap: ui.spacing.sm, marginTop: ui.spacing.sm },
   itemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: ui.spacing.sm },
   itemTitle: { color: ui.colors.primaryText, fontSize: 17, fontWeight: '700' }
 });
