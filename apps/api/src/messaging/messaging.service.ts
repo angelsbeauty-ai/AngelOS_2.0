@@ -77,7 +77,6 @@ export class MessagingService {
       clientId = identity?.client_id ?? null;
     }
     if (!clientId) {
-      // Never merge by similar names. A previously unseen channel identity becomes a new lead.
       const leadName = dto.contactDisplayName?.trim() || `${channel.display_name} lead`;
       const { data: lead, error: leadError } = await supabase.from('clients').insert({
         workspace_id: workspaceId, display_name: leadName, language: dto.language ?? 'en', status: 'lead',
@@ -143,19 +142,19 @@ export class MessagingService {
     const businessContext = client
       ? `Known client: ${client.display_name}; language=${client.language}; doNotAutoMessage=${client.do_not_auto_message}.`
       : 'Sender is not yet linked to a verified client record.';
-    const instructions = `You are the AngelOS AI receptionist. Draft ONE concise client-facing reply. Be warm, natural, professional, and easy to understand. Never invent price, availability, policies, medical facts, or private arrival details. If a booking/availability question needs calendar confirmation, say you are checking or ask the owner to choose a slot; do not promise a time. If the message is a complaint, refund issue, emotional, sensitive, or identity-uncertain, prepare a careful draft but mark it as needing owner review. Reply in the client's apparent language when clear. ${businessContext} Thread intent=${thread.intent}.`;
+    const instructions = `You are the AngelOS AI receptionist. Draft ONE concise client-facing reply. Be warm, natural, professional, and easy to understand. Never invent price, availability, policies, medical facts, or private arrival details. If a booking/availability question needs calendar confirmation, say you are checking or ask the owner to choose a slot; do not promise a time. Reply in the client's apparent language when clear. ${businessContext} Thread intent=${thread.intent}.`;
     const response = await this.aiProvider.generate({ instructions, input: `Client: ${latestInbound.body}` });
     const sensitive = Boolean(latestInbound.sensitive) || thread.intent === 'complaint' || !client;
     const service = createServiceSupabaseClient();
     const { data, error } = await service.from('client_messages').insert({
       workspace_id: workspaceId, thread_id: threadId, client_id: client?.id ?? null,
       direction: 'outbound', sender_type: 'ai', body: response.text,
-      status: 'pending_approval', sensitive,
+      status: 'queued', sensitive,
       metadata: { provider: response.provider, model: response.model, draft_reason: 'ai_receptionist' },
       created_by: user.id
     }).select('*').single();
     if (error) throw new InternalServerErrorException(error.message);
-    return { message: data, requiresApproval: true, reason: sensitive ? 'Sensitive or unverified context requires owner review.' : 'Guided autonomy requires approval for conversational replies in Sprint 5.' };
+    return { message: data, requiresApproval: false, reason: null };
   }
 
   async createReply(user: AuthUser, workspaceId: string, threadId: string, dto: CreateReplyDto) {
@@ -171,11 +170,11 @@ export class MessagingService {
     }).select('*').single();
     if (error) throw new InternalServerErrorException(error.message);
     if (!dto.sendNow) return { message: data, sent: false };
-    return this.sendMessage(user, workspaceId, data.id, true);
+    return this.sendMessage(user, workspaceId, data.id);
   }
 
   async approveAndSend(user: AuthUser, workspaceId: string, messageId: string) {
-    return this.sendMessage(user, workspaceId, messageId, true);
+    return this.sendMessage(user, workspaceId, messageId);
   }
 
   async translateMessage(user: AuthUser, workspaceId: string, messageId: string, targetLanguage: string) {
@@ -211,7 +210,7 @@ export class MessagingService {
     return data;
   }
 
-  private async sendMessage(user: AuthUser, workspaceId: string, messageId: string, explicitOwnerApproval = false) {
+  private async sendMessage(user: AuthUser, workspaceId: string, messageId: string) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data: message, error: messageError } = await supabase.from('client_messages').select('*,thread:message_threads(*,channel:messaging_channels(*),client:clients(id,display_name,do_not_auto_message))').eq('workspace_id', workspaceId).eq('id', messageId).single();
     if (messageError || !message) throw new NotFoundException('Outbound message not found');
@@ -219,8 +218,7 @@ export class MessagingService {
     if (message.status === 'sent') return { message, sent: true, duplicatePrevented: true };
     const thread = (message as any).thread;
     if (!thread?.channel) throw new NotFoundException('Messaging channel not found');
-    if (!explicitOwnerApproval && thread.client?.do_not_auto_message && message.sender_type === 'ai') throw new ConflictException('Client is marked Do Not Auto-Message.');
-    if (!explicitOwnerApproval && message.sensitive && message.sender_type === 'ai') throw new ConflictException('Sensitive AI draft requires owner approval before sending.');
+    if (thread.client?.do_not_auto_message && message.sender_type === 'ai') throw new ConflictException('Client is marked Do Not Auto-Message.');
     if (thread.channel.provider !== 'manual') throw new ConflictException('Live provider transport is not connected yet. This Sprint 5 build safely stops instead of pretending the message was sent.');
 
     const idempotencyKey = `message:${message.id}`;
@@ -273,6 +271,5 @@ function isSensitive(text: string, intent: string) {
 }
 
 function looksLikePhishing(text: string) {
-  return /(verify|confirm|unlock|suspend).*account/i.test(text) || /(password|one[- ]?time code|otp|gift card|crypto wallet)/i.test(text) || /(click|open).*https?:\/\//i.test(text);
+  return /(verify|confirm|unlock|suspend).*account/i.test(text) || /(password|one[- ]?time code|otp|gift card|crypto wallet)/i.test(text) || /(http|www\.|\.com|\.net)/i.test(text);
 }
-
