@@ -34,7 +34,9 @@ export const tokens = {
     subhead: { fontFamily: 'Manrope_400Regular', fontSize: 15, lineHeight: 20 },
     footnote: { fontFamily: 'Manrope_500Medium', fontSize: 13, lineHeight: 18 },
     overline: { fontFamily: 'Manrope_600SemiBold', fontSize: 12, lineHeight: 14, letterSpacing: 1.2, textTransform: 'uppercase' },
-    maxFontScale: 1.3
+    // Dynamic Type: text that can wrap scales up to 2x (close to iOS AX sizes). Fixed-size cells (month day numbers,
+    // weekday letters, hour labels, tab labels, segment items) keep their own smaller caps so the layout holds.
+    maxFontScale: 2
   },
   font: {
     display: 'Manrope_700Bold',

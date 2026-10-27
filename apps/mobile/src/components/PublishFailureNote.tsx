@@ -40,8 +40,8 @@ export function PublishFailureNote({ ws, variants, onChanged, hideRetry }: { ws:
       setBusy(true); try { await publishContentVariant(ws, v.id, { confirmNotPosted: true }); onChanged(); } catch (e) { void dialog.notify(t('pub.why'), friendlyText(e, { action: 'save' }).message); } finally { setBusy(false); }
     }
     return <View key={v.id} accessibilityLiveRegion="polite" style={[styles.box, { backgroundColor: palette.fill }]}>
-      <Text maxFontSizeMultiplier={1.6} style={[styles.title, { color: check ? palette.text : red }]}>{check ? t('pub.needsCheckTitle') : `${t('pub.why')} · ${p}`}</Text>
-      <Text maxFontSizeMultiplier={1.6} style={[styles.body, { color: palette.muted }]}>{check ? t('pub.needsCheckBody', { p }) : reasonText(v, p, t)}</Text>
+      <Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.title, { color: check ? palette.text : red }]}>{check ? t('pub.needsCheckTitle') : `${t('pub.why')} · ${p}`}</Text>
+      <Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.body, { color: palette.muted }]}>{check ? t('pub.needsCheckBody', { p }) : reasonText(v, p, t)}</Text>
       {check && !hideRetry ? <View style={styles.row}>
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void markPosted()} style={[styles.btn, { borderColor: palette.border }]}><Text style={[styles.btnText, { color: palette.text }]}>{t('pub.markPosted')}</Text></Pressable>
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void postAnyway()} style={[styles.btn, { borderColor: palette.border }]}><Text style={[styles.btnText, { color: palette.text }]}>{t('pub.postAnyway')}</Text></Pressable>

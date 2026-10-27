@@ -324,8 +324,8 @@ export default function CalendarTab() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.addNew', 'Add a post or task')} onPress={() => openChoice(mode === 'month' || mode === 'list' ? (offset === 0 ? todayStart : base) : anchor, null)} style={styles.icon}><Plus size={26} color={palette.icon} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.filter', 'Show')} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
     </View>
-    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-      <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.bigTitle, { color: palette.text }]}>{headTitle}</Text>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8 }}>
+      <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={[styles.bigTitle, { flexShrink: 1 }, { color: palette.text }]}>{headTitle}</Text>
       <Text style={[styles.rowSub, { color: palette.muted }]}>JST · 24h</Text>
     </View>
     <View style={[styles.seg, night && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
@@ -336,7 +336,7 @@ export default function CalendarTab() {
     {mode === 'month' ? <View style={styles.wkHead} importantForAccessibility="no-hide-descendants">{cells.slice(0, 7).map((d, i) => <Text key={i} maxFontSizeMultiplier={1.3} style={[styles.wkH, { color: palette.muted }]}>{d.toLocaleDateString(LOC, { weekday: 'narrow' })}</Text>)}</View> : null}
     {mode === 'day' ? <View style={[styles.dayHead, { backgroundColor: palette.bg }]}>
       <View style={[styles.num, styles.numBig, key(anchor) === key(now) ? { backgroundColor: ACC } : { backgroundColor: palette.fill }]}><Text style={[styles.numText, { color: key(anchor) === key(now) ? ON_ACC : palette.text }]}>{anchor.getDate()}</Text></View>
-      <Text maxFontSizeMultiplier={1.4} style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+      <Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
     </View> : null}
     {mode === 'week' ? <View style={[styles.wkRow, ln, { backgroundColor: palette.bg }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} accessibilityRole="button" accessibilityLabel={d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 44 }}>
       <Text maxFontSizeMultiplier={1.3} style={[styles.wk, { color: palette.muted }]}>{d.toLocaleDateString(LOC, { weekday: 'narrow' })}</Text>
@@ -418,17 +418,17 @@ export default function CalendarTab() {
     return <View style={{ paddingBottom: 120, marginHorizontal: -16 }}>
       <Text style={[styles.rowSub, { color: palette.muted, marginHorizontal: 16 }]}>{t('cal.listSub', 'List · upcoming')}</Text>
       {listItems.map(({ d, items }) => { const today = key(d) === key(now); return <View key={key(d)}>
-        <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.listHead, { color: today ? ACC : palette.text, marginHorizontal: 16 }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.listHead, { color: today ? ACC : palette.text, marginHorizontal: 16 }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
         {items.map((it) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
           const title = it.kind === 'booking' ? [it.a.client?.display_name, it.a.service_name].filter(Boolean).join(' · ') + (pend ? ` · ${t('cal.pending', 'pending')}` : '') : `${platformNames(it.platforms)} · ${postTitle(it.p)}`;
           const st = it.kind === 'post' ? postStatusLabel(it.p, (k, dd) => t(k, dd)) : '';
           const row = <Pressable accessibilityRole="button" accessibilityLabel={`${time(it.at)}, ${title}${st ? `, ${st}` : ''}`} onPress={() => void openItem(it)} style={({ pressed }) => [styles.listRow, { minHeight: Math.round(60 * FS), paddingHorizontal: 16, borderColor: night ? 'rgba(255,255,255,0.10)' : LINE, backgroundColor: palette.bg }, pressed && { backgroundColor: palette.fill }]}>
             <View style={[styles.listBar, pend ? { borderWidth: 1, borderColor: palette.muted } : { backgroundColor: it.kind === 'post' && glyph(it.p) === '!' ? RED : palette.muted }]} />
             <View style={{ flex: 1 }}>
-              <Text maxFontSizeMultiplier={MAXF} numberOfLines={2} style={[styles.listTitle, { color: palette.text }]}>{title}</Text>
-              {st ? <Text maxFontSizeMultiplier={MAXF} numberOfLines={1} style={[styles.rowSub, { color: palette.muted }]}>{it.kind === 'post' ? `${glyph(it.p)} ` : ''}{st}</Text> : null}
+              <Text maxFontSizeMultiplier={tokens.type.maxFontScale} numberOfLines={2} style={[styles.listTitle, { color: palette.text }]}>{title}</Text>
+              {st ? <Text maxFontSizeMultiplier={tokens.type.maxFontScale} numberOfLines={1} style={[styles.rowSub, { color: palette.muted }]}>{it.kind === 'post' ? `${glyph(it.p)} ` : ''}{st}</Text> : null}
             </View>
-            <Text maxFontSizeMultiplier={MAXF} style={[styles.listTime, { color: palette.muted }]}>{time(it.at)}</Text>
+            <Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.listTime, { color: palette.muted }]}>{time(it.at)}</Text>
           </Pressable>;
           if (it.kind !== 'post') return <View key={`b-${it.a.id}`}>{row}</View>;
           const ic = palette.text;

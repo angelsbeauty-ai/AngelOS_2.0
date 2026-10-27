@@ -60,11 +60,11 @@ export function AnswerCard({ card }: { card: ToolCard }) {
     const open = () => router.push(`/messages/${d.thread_id}` as any);
     return <View style={[styles.card, { backgroundColor: bg, borderColor: palette.border }]}>
       <Text style={[styles.over, { color: palette.muted }]}>{t('ai.card.draftFor', { name: d.name ?? '' })}</Text>
-      <View style={[styles.bubble, { backgroundColor: tile }]}><Text maxFontSizeMultiplier={1.6} style={[styles.draftText, { color: palette.text }]}>{String(d.draft)}</Text></View>
+      <View style={[styles.bubble, { backgroundColor: tile }]}><Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.draftText, { color: palette.text }]}>{String(d.draft)}</Text></View>
       <Text style={[styles.sub, { color: palette.muted }]}>{t('ai.card.notSent')}</Text>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.primary, { backgroundColor: pressed ? '#72443A' : tokens.color.roseGold }]}><Text maxFontSizeMultiplier={1.4} style={styles.primaryText}>{t('ai.card.reviewApprove')}</Text></Pressable>
-        <Pressable accessibilityRole="button" onPress={open} style={[styles.secondary, { borderColor: palette.border }]}><Text maxFontSizeMultiplier={1.4} style={[styles.secondaryText, { color: palette.text }]}>{t('ai.card.edit')}</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={open} style={({ pressed }) => [styles.primary, { backgroundColor: tokens.color.roseGold, opacity: pressed ? 0.85 : 1 }]}><Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={styles.primaryText}>{t('ai.card.reviewApprove')}</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={open} style={[styles.secondary, { borderColor: palette.border }]}><Text maxFontSizeMultiplier={tokens.type.maxFontScale} style={[styles.secondaryText, { color: palette.text }]}>{t('ai.card.edit')}</Text></Pressable>
       </View>
     </View>;
   }
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
   draftText: { ...tokens.type.subhead },
   actions: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   primary: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, justifyContent: 'center' },
-  primaryText: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold, color: '#FFFFFF' },
+  primaryText: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold, color: tokens.color.onCharcoal },
   secondary: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth },
   secondaryText: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold }
 });
