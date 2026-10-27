@@ -15,7 +15,7 @@ import {
 } from '../../src/lib/content';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 
-const GOALS = [['bookings', 'Bookings'], ['academy_students', 'Academy students'], ['touch_ups', 'Touch-ups'], ['trust', 'Trust'], ['reach', 'Reach']] as const;
+const GOALS = [['bookings', 'Bookings'], ['touch_ups', 'Touch-ups'], ['trust', 'Trust'], ['reach', 'Reach']] as const;
 const errText = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Please try again.');
 
 export default function CampaignsScreen() {

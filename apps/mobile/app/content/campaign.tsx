@@ -11,7 +11,7 @@ import { dialog } from '../../src/lib/dialog';
 import { tokens } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
 
-const GOALS = ['bookings', 'touch_ups', 'trust', 'reach', 'academy_students'] as const;
+const GOALS = ['bookings', 'touch_ups', 'trust', 'reach'] as const;
 
 /** S7 Plan campaign: uses the existing campaigns API (create → plan). Drafts only; nothing posts. */
 export default function PlanCampaign() {

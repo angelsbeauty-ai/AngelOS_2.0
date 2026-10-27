@@ -263,7 +263,7 @@
     "loginSub": "Log in to AngelOS",
     "logIn": "Log in",
     "showPw": "Show",
-    "tagline": "Permanent makeup & academy",
+    "tagline": "Your studio, organised",
     "signupTitle": "Create your account",
     "signupSub": "Start with your email. Your invite and business setup come next.",
     "confirmPassword": "Confirm password",
@@ -939,8 +939,7 @@
       "bookings": "Bookings",
       "touch_ups": "Touch-ups",
       "trust": "Trust",
-      "reach": "Reach",
-      "academy_students": "Academy students"
+      "reach": "Reach"
     },
     "cIdeas": "Ideas from AngelOS",
     "cNoIdeas": "Ideas show up once you have photos and bookings.",
@@ -1135,16 +1134,13 @@
     "s9": "Recent workspaces",
     "s10": "What Founder controls never expose",
     "s11": "Private client details, treatment notes, subscriber messages, financial records and workspace content stay isolated. Emergency pause and audit evidence stay in the Safety Center.",
-    "s12": "Approve a beta business or student",
-    "s13": "Creates one private invite link. Unused invites expire in 60 days. Outside businesses get a 60-day beta window; student testers get 30 days.",
+    "s12": "Approve a beta business",
+    "s13": "Creates one private invite link. Unused invites expire in 60 days. Outside businesses get a 60-day beta window.",
     "s14": "Share this link once:",
     "s15": "Beta feedback",
     "s16": "No feedback yet.",
     "s17": "Platform feature controls",
     "s18": "A rollout never becomes public automatically. Every stage stays Founder-controlled and reversible.",
-    "s19": "Student discount",
-    "s20": "Creates a one-time private 20% token for a verified Angels Beauty student or alumnus.",
-    "s21": "Share this token once:",
     "s22": "Founder controls",
     "s23": "Platform health, beta access and rollouts only. Client records, conversations and private business content are never shown here.",
     "s24": "Controlled",
@@ -1165,8 +1161,6 @@
     "s39": "Revoke invite",
     "s40": "Revoke access",
     "s41": "Approval required",
-    "s42": "Student email (optional)",
-    "s43": "Create private discount token",
     "s44": "Your AngelOS invite"
   },
   "onb": {
@@ -1194,7 +1188,7 @@
     "s0": "Loading…",
     "s1": "AngelOS puts drafts on your Social calendar. Nothing is posted until you approve and post it.",
     "s2": "Fill the next 30 days",
-    "s3": "About 12 drafts: results 40%, education 25%, behind the scenes 15%, client stories 10%, offers/Academy 10%. Days that already have a post are skipped.",
+    "s3": "About 12 drafts: results 40%, education 25%, behind the scenes 15%, client stories 10%, offers 10%. Days that already have a post are skipped.",
     "s4": "New campaign",
     "s5": "Your campaigns",
     "s6": "LINE broadcast draft",
@@ -1205,7 +1199,7 @@
     "s11": "We couldn't load campaigns",
     "s12": "Check your connection and try again.",
     "s13": "Campaign name",
-    "s14": "e.g. Academy January intake",
+    "s14": "e.g. Spring touch-up week",
     "s15": "Starts",
     "s16": "Ends",
     "s17": "Offer",
@@ -1330,15 +1324,12 @@
     "s4": "Your plan, discount and workspace-access protection in one place.",
     "s5": "Current status",
     "s6": "Your plan",
-    "s7": "Angels Beauty student discount",
-    "s8": "Apply Student Discount",
     "s9": "Your data stays protected",
     "s10": "Cancellation does not immediately erase your business records. Your workspace remains read-only for 60 days so you can view, export or reactivate.",
     "s11": "Cancel subscription",
     "s12": "Beta: free during testing",
     "s13": "AngelOS is free while it is in private beta. Payments are not set up yet, so nothing can be charged and there is nothing to cancel.",
-    "s14": "Prices will be shown here before paid plans start, and you will be asked first.",
-    "s15": "Private student token"
+    "s14": "Prices will be shown here before paid plans start, and you will be asked first."
   },
   "svcs": {
     "s0": "Services",
@@ -1642,7 +1633,7 @@
     },
     "_subscription": {
       "t": "Subscription",
-      "d": "Plan, student discount and account access"
+      "d": "Plan and account access"
     },
     "_system_health": {
       "t": "System Health",
@@ -1958,13 +1949,13 @@
   },
   "cal": {
     "listEmpty": "Nothing coming up",
-    "listEmptySub": "Tap + to add a post or a booking.",
+    "listEmptySub": "Tap + to add a post, a task or a day off.",
     "listSub": "List · upcoming",
     "today": "Today",
     "pending": "pending",
     "addAtTime": "Add at {{t}}",
-    "addHint": "Opens New post or New booking",
-    "addNew": "Add a post or booking",
+    "addHint": "Opens New post, Task or Day off",
+    "addNew": "Add a post or task",
     "newPost": "New post",
     "newPostSub": "Write it, then Approve to schedule",
     "newBooking": "New booking",

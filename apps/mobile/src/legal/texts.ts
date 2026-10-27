@@ -4,7 +4,7 @@ export const LEGAL = {
 
 ## Who this covers
 
-AngelOS is a tool for a beauty studio and its students. It covers the person who signs in, and the clients whose details that person chooses to save.
+AngelOS is a tool for a beauty studio. It covers the person who signs in, and the clients whose details that person chooses to save.
 
 ## What is saved
 

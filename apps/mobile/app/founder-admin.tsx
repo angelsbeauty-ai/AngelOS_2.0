@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 import { Tabs } from '../src/components/Field';
-import { getActiveWorkspace } from '../src/lib/workspace';
 import { inviteLink } from '../src/lib/invite';
 import { useEffect, useState } from 'react';
 import { FounderAiUsage } from '../src/components/FounderAiUsage';
@@ -9,7 +8,7 @@ import { dialog } from '../src/lib/dialog';
 import { Screen } from '../src/components/Screen';
 import { Badge, BodyText, Button, Card, ListRow, Overline, SectionTitle, StatTile, SupportText, TextField, ui } from '../src/components/ui';
 import { PushedHeader } from '../src/components/PushedHeader';
-import { createStudentDiscount, getBrainAggregates, getFounderOverview, type BrainAggregateTopic, listFeatureFlags, listFounderWorkspaces, updateFeatureFlag } from '../src/lib/founder';
+import { getBrainAggregates, getFounderOverview, type BrainAggregateTopic, listFeatureFlags, listFounderWorkspaces, updateFeatureFlag } from '../src/lib/founder';
 import { createBetaInvite, getFounderBetaOverview, listBetaFeedback, listBetaInvites, revokeBetaInvite, revokeBetaTester, type BetaOverview } from '../src/lib/beta';
 
 export default function FounderAdminScreen() {
@@ -24,10 +23,10 @@ export default function FounderAdminScreen() {
   const [email, setEmail] = useState('');
   const [inviteLabel, setInviteLabel] = useState('');
   const [inviteRegion, setInviteRegion] = useState('');
-  const [inviteType, setInviteType] = useState<'business_owner'|'student'>('business_owner');
-  const [inviteCohort, setInviteCohort] = useState<'student'|'outside'|'partner'|'angels_beauty'>('outside');
-  const [lastToken, setLastToken] = useState<string | null>(null);
-  const [section, setSection] = useState<'overview'|'invites'|'feedback'|'flags'|'discounts'>('overview');
+  // AngelOS V1: business owner invites only (no student cohort in the app).
+  const inviteType = 'business_owner' as const;
+  const [inviteCohort, setInviteCohort] = useState<'outside'|'partner'|'angels_beauty'>('outside');
+  const [section, setSection] = useState<'overview'|'invites'|'feedback'|'flags'>('overview');
   const [lastBetaToken, setLastBetaToken] = useState<string | null>(null);
   useEffect(() => { void load(); }, []);
   async function load() {
@@ -38,7 +37,6 @@ export default function FounderAdminScreen() {
     } catch (error) { void dialog.notify('Founder Admin unavailable', error instanceof Error ? error.message : 'Unknown error'); }
   }
   async function toggleFlag(flag:any, enabled:boolean) { try { await updateFeatureFlag(flag.key,{ enabled, stage: enabled && ['off','paused'].includes(flag.stage) ? 'beta' : flag.stage }); await load(); } catch (error) { void dialog.notify('Could not update feature', error instanceof Error ? error.message : 'Unknown error'); } }
-  async function makeStudentDiscount() { try { const created=await createStudentDiscount({emailHint:email.trim()||undefined,discountPercent:20}); setLastToken(created.token); setEmail(''); } catch(error){void dialog.notify('Could not create student discount',error instanceof Error?error.message:'Unknown error');} }
   async function shareInvite(token: string) {
     const url = inviteLink(token);
     const nav: any = Platform.OS === 'web' ? (globalThis as any).navigator : null;
@@ -48,11 +46,11 @@ export default function FounderAdminScreen() {
       else await Share.share({ message: url });
     } catch { /* user closed the share sheet */ }
   }
-  async function makeBetaInvite() { try { const created=await createBetaInvite({ emailHint: email.trim() || undefined, cohort:inviteCohort, label: inviteLabel.trim() || undefined, region: inviteRegion.trim() || undefined, expiresInDays: 60, inviteType, workspaceId: inviteType==='student' ? (await getActiveWorkspace()).id : undefined }); setLastBetaToken(created.token); void shareInvite(created.token); setInviteLabel(''); setInviteRegion(''); setEmail(''); await load(); } catch(error){void dialog.notify('Could not create beta invite',error instanceof Error?error.message:'Unknown error');} }
+  async function makeBetaInvite() { try { const created=await createBetaInvite({ emailHint: email.trim() || undefined, cohort:inviteCohort, label: inviteLabel.trim() || undefined, region: inviteRegion.trim() || undefined, expiresInDays: 60, inviteType }); setLastBetaToken(created.token); void shareInvite(created.token); setInviteLabel(''); setInviteRegion(''); setEmail(''); await load(); } catch(error){void dialog.notify('Could not create beta invite',error instanceof Error?error.message:'Unknown error');} }
   async function revokeInvite(id:string){ try{ await revokeBetaInvite(id); await load(); }catch(error){void dialog.notify('Could not revoke invite',error instanceof Error?error.message:'Unknown error');} }
   async function revokeTester(userId:string){ const ok=await dialog.confirm({title:'Revoke beta access?',message:'The tester workspace will become read-only. Their data will not be deleted.',cancelText:'Keep access',confirmText:t('fadm.s40'),destructive:true}); if(!ok)return; try{await revokeBetaTester(userId);await load();}catch(error){void dialog.notify('Could not revoke beta access',error instanceof Error?error.message:'Unknown error');} }
 
-  const SECTIONS = [{id:'overview' as const,label:'Overview'},{id:'invites' as const,label:'Invites & testers'},{id:'feedback' as const,label:'Feedback'},{id:'flags' as const,label:'Feature flags'},{id:'discounts' as const,label:'Discount codes'}];
+  const SECTIONS = [{id:'overview' as const,label:'Overview'},{id:'invites' as const,label:'Invites & testers'},{id:'feedback' as const,label:'Feedback'},{id:'flags' as const,label:'Feature flags'}];
   return <Screen onRefresh={load}><View style={styles.stack}>
     <PushedHeader title="Founder" />
     <FounderAiUsage />
@@ -80,8 +78,7 @@ export default function FounderAdminScreen() {
       <TextField label={t('fadm.s34')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       <TextField label={t('fadm.s35')} value={inviteLabel} onChangeText={setInviteLabel} />
       <TextField label={t('fadm.s36')} value={inviteRegion} onChangeText={setInviteRegion} />
-      <Tabs value={inviteType} options={[{id:'business_owner',label:'Business owner'},{id:'student',label:'Student'}]} onChange={setInviteType} />
-      <Tabs value={inviteCohort} options={(['outside','student','partner','angels_beauty'] as const).map((v)=>({id:v,label:humanize(v)}))} onChange={setInviteCohort} />
+      <Tabs value={inviteCohort} options={(['outside','partner','angels_beauty'] as const).map((v)=>({id:v,label:humanize(v)}))} onChange={setInviteCohort} />
       <Button label={t('fadm.s37')} onPress={()=>void makeBetaInvite()} />
       {lastBetaToken ? <View style={styles.token}><Text style={styles.bold}>{t('fadm.s14')}</Text><Text selectable>{inviteLink(lastBetaToken)}</Text><Button small variant="secondary" label={t('fadm.s38')} onPress={()=>void shareInvite(lastBetaToken)} /></View>:null}
       {invites.slice(0,8).map((invite)=><ListRow key={invite.id} title={invite.label || invite.email_hint || 'Approved beta tester'} subtitle={`${invite.cohort} · ${invite.region || 'region not set'} · ${invite.redeemed_at?'redeemed':invite.revoked_at?'revoked':'unused'}`} chevron={false} trailing={!invite.redeemed_at&&!invite.revoked_at?<Button small variant="danger" label={t('fadm.s39')} onPress={()=>void revokeInvite(invite.id)} />:invite.redeemed_by?<Button small variant="danger" label={t('fadm.s40')} onPress={()=>void revokeTester(invite.redeemed_by)} />:undefined} />)}
@@ -91,7 +88,6 @@ export default function FounderAdminScreen() {
 
     {section==='flags' ? <Card premium><Badge status="request" label={t('fadm.s41')} /><SectionTitle>{t('fadm.s17')}</SectionTitle><SupportText>{t('fadm.s18')}</SupportText>{flags.map((flag)=><View key={flag.key} style={styles.flag}><View style={{flex:1}}><Text style={styles.bold}>{flag.name}</Text><SupportText>{flag.description} · {flag.stage}</SupportText></View><Switch accessibilityLabel={flag.name} value={flag.enabled && !['off','paused'].includes(flag.stage)} trackColor={{false:ui.colors.border,true:ui.colors.softGold}} thumbColor={flag.enabled?ui.colors.gold:ui.colors.secondaryText} onValueChange={(value)=>void toggleFlag(flag,value)}/></View>)}</Card> : null}
 
-    {section==='discounts' ? <Card><SectionTitle>{t('fadm.s19')}</SectionTitle><SupportText>{t('fadm.s20')}</SupportText><TextField label={t('fadm.s42')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" /><Button label={t('fadm.s43')} onPress={()=>void makeStudentDiscount()} />{lastToken ? <View style={styles.token}><Text style={styles.bold}>{t('fadm.s21')}</Text><Text selectable>{lastToken}</Text></View> : null}</Card> : null}
   </View></Screen>;
 }
 function humanize(value:string){return value.replaceAll('_',' ').replace(/\b\w/g,(c)=>c.toUpperCase());}

@@ -8,7 +8,7 @@ export interface PlannedPost { date: string; category: PlanCategory; title: stri
 export interface ContentIdea { key: string; title: string; angle: string; source: 'season' | 'photos' | 'services' | 'slow_day' | 'mix'; date?: string; objective: string }
 
 export const CATEGORY_LABEL: Record<PlanCategory, string> = {
-  results: 'Results', education: 'Education', behind_the_scenes: 'Behind the scenes', testimonial: 'Client story', offer: 'Offer / Academy'
+  results: 'Results', education: 'Education', behind_the_scenes: 'Behind the scenes', testimonial: 'Client story', offer: 'Offer'
 };
 const CATEGORY_FORMAT: Record<PlanCategory, PlannedPost['format']> = { results: 'carousel', education: 'reel', behind_the_scenes: 'reel', testimonial: 'photo', offer: 'photo' };
 const CATEGORY_OBJECTIVE: Record<PlanCategory, string> = { results: 'bookings', education: 'education', behind_the_scenes: 'trust', testimonial: 'trust', offer: 'bookings' };
@@ -17,7 +17,7 @@ const CATEGORY_TITLES: Record<PlanCategory, string[]> = {
   education: ['How long do PMU brows last?', 'Aftercare in 3 steps', 'Who is PMU right for?', 'Powder vs. hair strokes'],
   behind_the_scenes: ['A day at the studio', 'Mapping the perfect brow shape', 'Choosing the right pigment'],
   testimonial: ['What clients say'],
-  offer: ['Booking open this month', 'Academy: next intake']
+  offer: ['Booking open this month', 'Touch-up slots this month']
 };
 
 /** Mix 40/25/15/10/10 (results / education / behind the scenes / testimonial / offer). */
@@ -80,9 +80,8 @@ export function planPosts(input: { startsOn: string; endsOn: string; count: numb
 export function planCampaign(input: { startsOn: string; endsOn: string; goal: string; busyDays?: string[] }) {
   const span = Math.max(0, daysBetween(input.startsOn, input.endsOn));
   const count = Math.max(3, Math.min(10, Math.round((span + 1) / 3)));
-  const mix: Record<PlanCategory, number> = input.goal === 'academy_students'
-    ? { results: Math.ceil(count * 0.3), education: Math.ceil(count * 0.3), behind_the_scenes: 1, testimonial: 0, offer: 0 }
-    : { results: Math.ceil(count * 0.4), education: Math.ceil(count * 0.2), behind_the_scenes: 1, testimonial: 0, offer: 0 };
+  // AngelOS V1 has no Academy goal; a legacy 'academy_students' campaign plans like any other goal.
+  const mix: Record<PlanCategory, number> = { results: Math.ceil(count * 0.4), education: Math.ceil(count * 0.2), behind_the_scenes: 1, testimonial: 0, offer: 0 };
   const used = Object.values(mix).reduce((a, b) => a + b, 0);
   mix.offer = Math.max(1, count - used);
   const posts = planPosts({ startsOn: input.startsOn, endsOn: input.endsOn, count: Object.values(mix).reduce((a, b) => a + b, 0), busyDays: input.busyDays, mix });
@@ -100,8 +99,7 @@ const SEASON: Array<{ month: number; day: number; key: string; title: string; an
   { month: 8, day: 5, key: 'obon', title: 'Obon (お盆) homecoming look', angle: 'Look fresh for family visits at お盆', objective: 'bookings' },
   { month: 10, day: 20, key: 'halloween', title: 'Halloween behind the scenes', angle: 'Fun studio content for Halloween', objective: 'engagement' },
   { month: 11, day: 10, key: 'year_end_touch_up', title: 'Year-end touch-up push', angle: 'Touch-ups before the new year', objective: 'bookings' },
-  { month: 12, day: 20, key: 'nenmatsu', title: 'Year-end (年末) thank you', angle: 'Thank clients for the year; new-year slots open', objective: 'trust' },
-  { month: 12, day: 1, key: 'academy_january', title: 'Academy January intake', angle: 'Start your PMU career in the new year', objective: 'education' }
+  { month: 12, day: 20, key: 'nenmatsu', title: 'Year-end (年末) thank you', angle: 'Thank clients for the year; new-year slots open', objective: 'trust' }
 ];
 
 export function seasonalIdeas(today: string, horizonDays = 60): ContentIdea[] {

@@ -21,7 +21,7 @@ test('planPosts spreads posts inside the range, one per day, avoiding busy days'
 });
 
 test('campaign plan has 3..10 posts and a LINE broadcast inside the dates', () => {
-  const p = plan.planCampaign({ startsOn: '2026-12-01', endsOn: '2026-12-14', goal: 'academy_students' });
+  const p = plan.planCampaign({ startsOn: '2026-12-01', endsOn: '2026-12-14', goal: 'touch_ups' });
   assert.ok(p.posts.length >= 3 && p.posts.length <= 10, String(p.posts.length));
   assert.ok(p.posts.some((x) => x.category === 'offer'));
   assert.ok(p.lineBroadcastOn >= '2026-12-01' && p.lineBroadcastOn <= '2026-12-14');
@@ -33,6 +33,14 @@ test('seasonal ideas include Japan dates in the window', () => {
   assert.ok(ideas.some((i) => i.key === 'season:seijinshiki:2027'));
   assert.ok(ideas.some((i) => i.key.startsWith('season:nenmatsu')));
   assert.ok(ideas.every((i) => i.date >= '2026-12-10'));
+});
+
+test('AngelOS plans never mention Academy or students', () => {
+  const ideas = plan.seasonalIdeas('2026-11-20', 60);
+  const posts = plan.planPosts({ startsOn: '2026-11-01', endsOn: '2026-11-30', count: 12 });
+  const camp = plan.planCampaign({ startsOn: '2026-12-01', endsOn: '2026-12-14', goal: 'academy_students' });
+  const text = JSON.stringify([ideas, posts, camp, plan.CATEGORY_LABEL]);
+  assert.ok(!/academy|student/i.test(text), text);
 });
 
 test('mock caption list parses; bad answers fall back', () => {

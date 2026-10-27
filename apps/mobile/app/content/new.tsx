@@ -33,7 +33,6 @@ type Language = 'en' | 'ja' | 'both';
 
 const GOALS: { label: string; objective: ContentObjective; goal: string }[] = [
   { label: 'Bookings', objective: 'bookings', goal: 'bookings' },
-  { label: 'Academy students', objective: 'education', goal: 'academy_students' },
   { label: 'Trust', objective: 'trust', goal: 'trust' },
   { label: 'Reach', objective: 'reach', goal: 'reach' },
   { label: 'Engagement', objective: 'engagement', goal: 'engagement' },
