@@ -3,13 +3,15 @@ import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
 import { createHash } from 'crypto';
 import type { BillingProvider } from './billing-provider';
-import { UnconfiguredBillingProvider } from './billing-provider';
+import { StripeBillingProvider, UnconfiguredBillingProvider } from './billing-provider';
 
 const READ_ONLY_DAYS = 60;
 
 @Injectable()
 export class SubscriptionsService {
-  private readonly billing: BillingProvider = new UnconfiguredBillingProvider();
+  private readonly billing: BillingProvider = process.env.STRIPE_SECRET_KEY
+    ? new StripeBillingProvider(process.env.STRIPE_SECRET_KEY)
+    : new UnconfiguredBillingProvider();
 
   async getStatus(user: AuthUser, workspaceId: string) {
     await this.assertWorkspaceAccess(user, workspaceId);
@@ -78,15 +80,15 @@ export class SubscriptionsService {
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const { data: invite, error: inviteError } = await service.from('student_discount_invites').select('*').eq('token_hash', tokenHash).maybeSingle();
     if (inviteError) throw new InternalServerErrorException(inviteError.message);
-    if (!invite || invite.revoked_at || invite.redeemed_at) throw new NotFoundException('This student discount link is invalid, already used, or revoked.');
-    if (invite.email_hint && (!user.email || invite.email_hint.toLowerCase() !== user.email.toLowerCase())) throw new ConflictException('This student discount was issued for a different email address.');
+    if (!invite || invite.revoked_at || invite.redeemed_at) throw new NotFoundException('This discount link is invalid, already used, or revoked.');
+    if (invite.email_hint && (!user.email || invite.email_hint.toLowerCase() !== user.email.toLowerCase())) throw new ConflictException('This discount was issued for a different email address.');
     const now = new Date().toISOString();
     const { data: redeemed, error: updateError } = await service.from('student_discount_invites').update({ redeemed_workspace_id: workspaceId, redeemed_by: user.id, redeemed_at: now }).eq('id', invite.id).is('redeemed_at', null).select('id').maybeSingle();
     if (updateError) throw new InternalServerErrorException(updateError.message);
-    if (!redeemed) throw new ConflictException('This student discount was already redeemed.');
-    const { data: subscription, error: subscriptionError } = await service.from('workspace_subscriptions').update({ discount_percent: invite.discount_percent, discount_source: 'angels_beauty_student', updated_at: now }).eq('workspace_id', workspaceId).select('*').single();
+    if (!redeemed) throw new ConflictException('This discount was already redeemed.');
+    const { data: subscription, error: subscriptionError } = await service.from('workspace_subscriptions').update({ discount_percent: invite.discount_percent, discount_source: 'beta_tester', updated_at: now }).eq('workspace_id', workspaceId).select('*').single();
     if (subscriptionError) throw new InternalServerErrorException(subscriptionError.message);
-    await this.logEvent(workspaceId, user.id, 'student_discount_redeemed', { discountPercent: invite.discount_percent });
+    await this.logEvent(workspaceId, user.id, 'beta_discount_redeemed', { discountPercent: invite.discount_percent });
     return subscription;
   }
 
