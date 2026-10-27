@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ui } from './ui';
+import { useTranslation } from 'react-i18next';
 import { tokens } from '../design/theme';
 import { useAppearance } from '../design/appearance';
 
@@ -18,7 +19,8 @@ export function Avatar({ name }: { name: string }) {
 }
 
 export function UnreadDot({ visible }: { visible: boolean }) {
-  return visible ? <View accessibilityLabel="Unread" style={styles.dot} /> : <View style={styles.dotSpace} />;
+  const { t } = useTranslation();
+  return visible ? <View accessibilityLabel={t('messages.unreadDot', "Unread")} style={styles.dot} /> : <View style={styles.dotSpace} />;
 }
 
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {

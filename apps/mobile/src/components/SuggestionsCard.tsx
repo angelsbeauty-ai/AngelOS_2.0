@@ -67,7 +67,7 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
       {item.preview ? <Text numberOfLines={2} style={styles.preview}>"{item.preview}"</Text> : null}
       <SupportText>{item.detail}</SupportText>
       <View style={styles.actions}>
-        <ActionButton kind="primary" label={busy === item.key ? 'Working…' : item.kind === 'post_now' ? 'Open' : 'Approve'} disabled={Boolean(busy)} onPress={() => void approve(item)} />
+        <ActionButton kind="primary" label={busy === item.key ? t('sugg.working', "Working\u2026") : item.kind === 'post_now' ? t('sugg.open', "Open") : t('sugg.approve', "Approve")} disabled={Boolean(busy)} onPress={() => void approve(item)} />
         <ActionButton label={t('sgc.s4')} onPress={() => edit(item)} />
         <ActionButton kind="quiet" label={t('sgc.s5')} onPress={() => void dismiss(item)} />
       </View>

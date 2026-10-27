@@ -481,7 +481,8 @@
     "newDivider": "New messages",
     "markDone": "Mark as done",
     "platform": "Platform",
-    "theApp": "the app"
+    "theApp": "the app",
+    "unreadDot": "Unread"
   },
   "booking": {
     "newTitle": "New booking",
@@ -2152,7 +2153,11 @@
     "status": "Status",
     "tag": "Tag",
     "task": "Task",
-    "when": "When"
+    "when": "When",
+    "tag_appointment": "Appointment",
+    "tag_task": "Task",
+    "tag_time": "Scheduled time",
+    "tag_private": "Private"
   },
   "sched": {
     "offlineBar": "You're offline · showing what was last loaded",
@@ -2431,6 +2436,25 @@
   "cpost": {
     "fail": "That did not work",
     "note": "Nothing is posted by AngelOS on its own. You approve, then post (or send) each version.",
-    "lineNote": "To change the words, ask AngelOS for a new LINE draft (so the English meaning always matches)."
+    "lineNote": "To change the words, ask AngelOS for a new LINE draft (so the English meaning always matches).",
+    "changeTime": "Change time",
+    "schedule": "Schedule",
+    "scheduled": "Scheduled. AngelOS will remind you; it will not post by itself.",
+    "lineSent": "Sent to your LINE friends.",
+    "markedSent": "Marked as sent.",
+    "markedPosted": "Marked as posted.",
+    "approving": "Approving…",
+    "approve": "Approve post",
+    "approved": "Approved. Now schedule it or post it yourself."
+  },
+  "sr": {
+    "editReply": "Edit reply",
+    "newReply": "New reply",
+    "saving": "Saving…"
+  },
+  "sugg": {
+    "working": "Working…",
+    "open": "Open",
+    "approve": "Approve"
   }
 }

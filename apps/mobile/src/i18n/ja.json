@@ -481,7 +481,8 @@
     "newDivider": "新着メッセージ",
     "markDone": "対応済みにする",
     "platform": "アプリ",
-    "theApp": "アプリ"
+    "theApp": "アプリ",
+    "unreadDot": "未読"
   },
   "booking": {
     "newTitle": "新しい予約",
@@ -2152,7 +2153,11 @@
     "status": "ステータス",
     "tag": "タグ",
     "task": "タスク",
-    "when": "日時"
+    "when": "日時",
+    "tag_appointment": "予約",
+    "tag_task": "タスク",
+    "tag_time": "予定の時間",
+    "tag_private": "プライベート"
   },
   "sched": {
     "offlineBar": "オフラインです · 最後に読み込んだ内容を表示中",
@@ -2431,6 +2436,25 @@
   "cpost": {
     "fail": "うまくいかなかったよ",
     "note": "AngelOSが勝手に投稿することはないよ。承認してから、それぞれ投稿（または送信）してね。",
-    "lineNote": "文章を変えたいときは、AngelOSに新しいLINEの下書きを頼んでね（英語の意味もそろうよ）。"
+    "lineNote": "文章を変えたいときは、AngelOSに新しいLINEの下書きを頼んでね（英語の意味もそろうよ）。",
+    "changeTime": "時間を変える",
+    "schedule": "予定に入れる",
+    "scheduled": "予定に入れたよ。時間になったらお知らせするね。勝手に投稿はしないよ。",
+    "lineSent": "LINEの友だちに送ったよ。",
+    "markedSent": "送信済みにしたよ。",
+    "markedPosted": "投稿済みにしたよ。",
+    "approving": "承認中…",
+    "approve": "投稿を承認",
+    "approved": "承認したよ。予定に入れるか、自分で投稿してね。"
+  },
+  "sr": {
+    "editReply": "返信を編集",
+    "newReply": "新しい返信",
+    "saving": "保存中…"
+  },
+  "sugg": {
+    "working": "処理中…",
+    "open": "開く",
+    "approve": "承認"
   }
 }

@@ -62,7 +62,7 @@ export default function SavedRepliesScreen() {
     {needsMigration ? <Banner tone="warning"><SupportText tone="warning">Saved replies need the database update {needsMigration}. It is waiting for your yes.</SupportText></Banner> : null}
 
     {form ? <Card premium>
-      <SectionTitle>{form.id ? 'Edit reply' : 'New reply'}</SectionTitle>
+      <SectionTitle>{form.id ? t('sr.editReply', "Edit reply") : t('sr.newReply', "New reply")}</SectionTitle>
       <TextInput accessibilityLabel={t('svr.s7')} value={form.title} onChangeText={(title) => setForm({ ...form, title })} placeholder={t('svr.s8')} placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
       <View style={styles.chips}>{CATEGORIES.map(([key, label]) => <Chip key={key} label={label} selected={form.category === key} onPress={() => setForm({ ...form, category: key })} />)}</View>
       <Text style={styles.label}>{t('svr.s2')}</Text>
@@ -75,7 +75,7 @@ export default function SavedRepliesScreen() {
       </View>
       {form.bodyJa.trim() ? <BilingualBlock ja={form.bodyJa} en={jaMeaning} labelJa="日本語" /> : null}
       <View style={styles.chips}>
-        <ActionButton kind="primary" label={busy ? 'Saving…' : 'Save'} disabled={busy || !form.title.trim() || (!form.bodyEn.trim() && !form.bodyJa.trim())} onPress={() => void save()} />
+        <ActionButton kind="primary" label={busy ? t('sr.saving', "Saving\u2026") : t('common.save', 'Save')} disabled={busy || !form.title.trim() || (!form.bodyEn.trim() && !form.bodyJa.trim())} onPress={() => void save()} />
         <ActionButton kind="quiet" label={t('svr.s15')} onPress={() => { setForm(null); setJaMeaning(null); }} />
       </View>
     </Card> : <View style={styles.chips}>

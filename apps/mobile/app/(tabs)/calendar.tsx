@@ -516,7 +516,7 @@ export default function CalendarTab() {
           </View>}
           <Text style={styles.fieldK}>{t('cal.tag', 'Tag')}</Text>
           <View style={styles.remindRow}>
-            {TAGS.map((row) => <Pressable key={row.id} onPress={() => { setTag(row.id); setColor(row.color); }} style={[styles.chipBtn, tag === row.id && { backgroundColor: row.color }]}><Text style={[styles.chipBtnText, tag === row.id && { color: '#FFF' }]}>{row.label}</Text></Pressable>)}
+            {TAGS.map((row) => <Pressable key={row.id} onPress={() => { setTag(row.id); setColor(row.color); }} style={[styles.chipBtn, tag === row.id && { backgroundColor: row.color }]}><Text style={[styles.chipBtnText, tag === row.id && { color: '#FFF' }]}>{t(`cal.tag_${row.id}`, row.label)}</Text></Pressable>)}
           </View>
           <Text style={styles.fieldK}>{t('cal.color', 'Color')}</Text>
           <View style={styles.remindRow}>

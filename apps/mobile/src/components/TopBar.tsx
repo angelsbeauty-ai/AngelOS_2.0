@@ -15,8 +15,9 @@ import { PlusCircle } from 'phosphor-react-native/src/icons/PlusCircle';
 type MenuItem = Item & { Icon: typeof Plus };
 /** final-D2 Home + menu: small white card anchored under the + button. Tapping outside closes it. */
 function CreateMenu({ items, onClose }: { items: MenuItem[]; onClose: () => void }) {
+  const { t } = useTranslation();
   return <Modal transparent animationType="fade" onRequestClose={onClose}>
-    <Pressable style={styles.menuScrim} onPress={onClose} accessibilityLabel="Close">
+    <Pressable style={styles.menuScrim} onPress={onClose} accessibilityLabel={t('common.close', 'Close')}>
       <Pressable style={styles.menu} onPress={() => {}}>
         {items.map(({ label, href, Icon }, i) => <Pressable key={href} accessibilityRole="button" style={[styles.menuRow, i > 0 && styles.menuLine]} onPress={() => { onClose(); router.push(href as any); }}>
           <Icon size={20} color={D.text} /><Text style={styles.menuText}>{label}</Text></Pressable>)}
@@ -28,8 +29,9 @@ function CreateMenu({ items, onClose }: { items: MenuItem[]; onClose: () => void
 type Item = { label: string; href: string };
 
 function Sheet({ title, items, onClose }: { title: string; items: Item[]; onClose: () => void }) {
+  const { t } = useTranslation();
   return <Modal transparent animationType="fade" onRequestClose={onClose}>
-    <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close">
+    <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel={t('common.close', 'Close')}>
       <Pressable style={styles.sheet} onPress={() => {}}>
         <GlassSurface kind="toast" style={StyleSheet.absoluteFill} />
         <Text style={styles.sheetTitle}>{title}</Text>

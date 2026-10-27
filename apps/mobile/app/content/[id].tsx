@@ -91,30 +91,30 @@ export default function ContentDetailScreen() {
         {variant.status !== 'published' && approvedPost ? <View style={{ gap: 8 }}>
           <DateField label={t('post.s8')} value={slot.day} min={dayString(new Date())} onChange={(day) => setWhen((c) => ({ ...c, [variant.id]: { ...slot, day } }))} />
           <TimeField label={t('post.s9')} value={slot.time} onChange={(time) => setWhen((c) => ({ ...c, [variant.id]: { ...slot, time } }))} />
-          <ActionButton label={variant.status === 'scheduled' ? 'Change time' : 'Schedule'} disabled={busy} onPress={() => void run(() => scheduleContentVariant(workspaceId, variant.id, toIso(slot.day, slot.time)), 'Scheduled. AngelOS will remind you; it will not post by itself.')} />
+          <ActionButton label={variant.status === 'scheduled' ? t('cpost.changeTime', "Change time") : t('cpost.schedule', "Schedule")} disabled={busy} onPress={() => void run(() => scheduleContentVariant(workspaceId, variant.id, toIso(slot.day, slot.time)), t('cpost.scheduled', "Scheduled. AngelOS will remind you; it will not post by itself."))} />
         </View> : null}
 
         {ready && isLine ? <View style={{ gap: 8 }}>
           <SupportText>{estimate?.text ?? 'Checking LINE…'}</SupportText>
           {estimate?.connected ? <ActionButton kind="primary" label={t('post.s10')} disabled={busy} onPress={() => void (async () => {
             const ok = await dialog.confirm({ title: t('post.s17'), message: `${estimate.text}\n\nEnglish meaning:\n${en ?? ''}`, confirmText: t('post.s18'), cancelText: t('post.s19') });
-            if (ok) await run(() => sendLineBroadcast(workspaceId, variant.id), 'Sent to your LINE friends.');
+            if (ok) await run(() => sendLineBroadcast(workspaceId, variant.id), t('cpost.lineSent', "Sent to your LINE friends."));
           })()} /> : <>
             <ActionButton kind="primary" label={t('post.s11')} onPress={() => void copyCaptionAndOpen(variant.caption, 'line')} />
-            <ActionButton label={t('post.s12')} disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id), 'Marked as sent.')} />
+            <ActionButton label={t('post.s12')} disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id), t('cpost.markedSent', "Marked as sent."))} />
           </>}
         </View> : null}
 
         {ready && !isLine ? <View style={{ gap: 8 }}>
           <ActionButton kind="primary" label={`Copy caption & open ${platformLabel(variant.platform)}`} onPress={() => void copyCaptionAndOpen(full, variant.platform)} />
           <TextInput accessibilityLabel={t('post.s13')} value={links[variant.id] ?? ''} onChangeText={(v) => setLinks((c) => ({ ...c, [variant.id]: v }))} placeholder={t('post.s14')} autoCapitalize="none" placeholderTextColor={ui.colors.secondaryText} style={styles.input} />
-          <ActionButton label={t('post.s15')} disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id, links[variant.id]?.trim() || undefined), 'Marked as posted.')} />
+          <ActionButton label={t('post.s15')} disabled={busy} onPress={() => void run(() => markVariantPosted(workspaceId, variant.id, links[variant.id]?.trim() || undefined), t('cpost.markedPosted', "Marked as posted."))} />
         </View> : null}
         {variant.status === 'published' && variant.live_url ? <SupportText>Link: {variant.live_url}</SupportText> : null}
       </Card>;
     })}
 
-    {!approvedPost ? <ActionButton kind="primary" label={busy ? 'Approving…' : 'Approve post'} disabled={busy} onPress={() => void run(() => approveContentPost(workspaceId, id), 'Approved. Now schedule it or post it yourself.')} /> : null}
+    {!approvedPost ? <ActionButton kind="primary" label={busy ? t('cpost.approving', "Approving\u2026") : t('cpost.approve', "Approve post")} disabled={busy} onPress={() => void run(() => approveContentPost(workspaceId, id), t('cpost.approved', "Approved. Now schedule it or post it yourself."))} /> : null}
     <ActionButton label={t('post.s16')} onPress={() => router.push({ pathname: '/ai', params: { contextEntityType: 'content_post', contextEntityId: post.id, contextScreen: 'content' } } as any)} />
   </Screen>;
 }
