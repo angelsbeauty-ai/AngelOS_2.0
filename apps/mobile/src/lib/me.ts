@@ -31,6 +31,8 @@ export const STUDENT_ALLOWED = /^\/(account|profile|settings|login|onboarding|fo
 
 /** Internal founder tools. Everyone else is sent to Profile and never sees the screen render. */
 export const FOUNDER_ONLY = /^\/(founder-admin|system-health|beta-feedback)(\/|$)/;
+/** AngelOS V1: screens kept in code but not part of V1. Their entry points are hidden; a stray link lands on Messages. */
+export const V1_HIDDEN = /^\/(analytics|reports|bookings|finance|tasks|services|business-hours|time-off|automations|workspaces\/new)(\/|$)/;
 
 export function useFounder() {
   const [founder, setFounder] = useState<boolean | null>(null);

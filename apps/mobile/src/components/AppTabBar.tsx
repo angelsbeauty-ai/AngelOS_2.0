@@ -15,14 +15,14 @@ const NO_BAR = /^\/(login|signup|sign-up|register|onboarding|forgot-password|res
 /** Chat thread is one full screen. No tab bar. */
 const NO_BAR_THREAD = /^\/messages\/[^/]+$/;
 
-/** Inner (pushed) screens get the same 5-tab bar so Angel is never stuck. */
+/** Inner (pushed) screens get the same V1 tab bar (Messages, Calendar, Profile) so Angel is never stuck. */
 export function showsAppTabBar(pathname: string) { return !TAB_ROOTS.has(pathname) && !NO_BAR.test(pathname) && !NO_BAR_THREAD.test(pathname); }
 
 function activeTab(p: string) {
-  if (/^\/messages\//.test(p) || p === '/notifications') return p === '/notifications' ? '/' : '/messages';
+  if (/^\/messages\//.test(p)) return '/messages';
+  if (p === '/notifications') return '/profile';
   if (/^\/(bookings|content|media|business-hours|time-off)/.test(p)) return '/calendar';
-  if (/^\/analytics/.test(p)) return '/analytics';
-  if (/^\/(ai|suggestions)$/.test(p)) return '/';
+  if (/^\/(ai|suggestions)$/.test(p)) return '';
   return '/profile';
 }
 
@@ -35,10 +35,8 @@ export function AppTabBar() {
   if (!showsAppTabBar(pathname)) return null;
   const on = activeTab(pathname);
   const items = [
-    { href: '/', label: t('tabs.home'), glyph: 'home' as TabGlyphName },
     { href: '/messages', label: t('tabs.messages'), glyph: 'messages' as TabGlyphName },
     { href: '/calendar', label: t('tabs.calendar'), glyph: 'calendar' as TabGlyphName },
-    { href: '/analytics', label: t('tabs.analytics'), glyph: 'analytics' as TabGlyphName },
     { href: '/profile', label: t('tabs.profile'), glyph: 'profile' as TabGlyphName },
   ];
   // 49pt bar sits above the phone's bottom safe area. Read it from the device.

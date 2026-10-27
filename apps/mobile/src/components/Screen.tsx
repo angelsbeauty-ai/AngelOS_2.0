@@ -1,5 +1,5 @@
 import { useEffect, useRef, type PropsWithChildren, type ReactNode } from 'react';
-import { FOUNDER_ONLY, STUDENT_ALLOWED, useFounder, useRole } from '../lib/me';
+import { FOUNDER_ONLY, STUDENT_ALLOWED, V1_HIDDEN, useFounder, useRole } from '../lib/me';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -32,6 +32,9 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   const founderOnly = FOUNDER_ONLY.test(pathname);
   useEffect(() => { if (founderOnly && founder === false) router.replace('/profile' as any); }, [founderOnly, founder]);
   if (founderOnly && founder !== true) children = null;
+  const v1Hidden = V1_HIDDEN.test(pathname);
+  useEffect(() => { if (v1Hidden) router.replace('/messages' as any); }, [v1Hidden]);
+  if (v1Hidden) children = null;
   const showAsk = !hideAsk && role !== 'student' && TAB_PATHS.has(pathname);
   const { palette, mode } = useAppearance();
   const nightFix = mode === 'night' && !LOCKED.has(pathname);

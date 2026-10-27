@@ -8,7 +8,6 @@ import { SlidersHorizontal } from 'phosphor-react-native/src/icons/SlidersHorizo
 import { Button } from '../../src/components/ui';
 import { getSocialAccounts, PLATFORM_NAME, type SocialAccount, type SocialPlatform } from '../../src/lib/social';
 import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
-import { Megaphone } from 'phosphor-react-native/src/icons/Megaphone';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
 import { ContactAvatar, BrandLogo } from '../../src/components/BrandBadge';
@@ -218,7 +217,7 @@ export default function MessagesScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
         <SlidersHorizontal size={24} color={palette.icon} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('messages.broadcast', 'Broadcast')} hitSlop={6} onPress={() => router.push('/content/campaigns' as any)} style={styles.icon}><Megaphone size={24} color={palette.icon} /></Pressable>
+      {/* AngelOS V1: Broadcast is hidden (campaigns are not part of V1). */}
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color={palette.icon} weight="bold" /></Pressable>
     </View>
     <View accessibilityRole="tablist" style={styles.segRow}>

@@ -40,7 +40,7 @@ export default function NotificationsScreen() {
       setWorkspaceId(ws);
       const [next, act] = await Promise.all([getNotificationPrefs(ws).catch(() => null), getActivity(ws)]);
       if (next) setPrefs({ messages: next.messages, bookings: next.bookings, ai: next.ai });
-      setItems(act); setState('ready');
+      setItems(act.filter((it) => it.kind !== 'booking')); setState('ready'); // AngelOS V1: bookings are hidden
     } catch (error) { const f = toFriendly(error, { action: 'load' }); setErr({ title: f.title, message: f.message }); setState('error'); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));

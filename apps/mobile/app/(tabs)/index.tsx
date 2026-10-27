@@ -24,7 +24,20 @@ import { timeJst } from '../../src/lib/jst';
 
 export const GREEN = '#151515';
 
-export default function HomeScreen() {
+/** AngelOS V1: Home is hidden. '/' sends signed-in people to Messages and everyone else to login. */
+export default function HomeRoute() {
+  const [session, setSession] = useState<'loading' | 'in' | 'out'>('loading');
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => { if (mounted) setSession(data.session ? 'in' : 'out'); }).catch(() => { if (mounted) setSession('out'); });
+    return () => { mounted = false; };
+  }, []);
+  if (session === 'loading') return <Screen hideAsk>{null}</Screen>;
+  return <Redirect href={(session === 'in' ? '/messages' : '/login') as any} />;
+}
+
+/** Kept for a later version (not routed in V1). */
+export function HomeScreen() {
   const { t, i18n } = useTranslation();
   const { palette } = useAppearance();
   const icon = { size: 16, color: palette.icon, weight: 'regular' as const };

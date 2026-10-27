@@ -49,6 +49,8 @@ const key = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 const mon = (d: Date) => (d.getDay() + 6) % 7;
 const addD = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 type PostItem = { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
+/** AngelOS V1: bookings are not part of V1, so appointments are not drawn and cannot be created here (posts, tasks and days off stay). */
+const V1_BOOKINGS = false;
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date; end: Date } | PostItem;
 const FS = Math.min(1.6, Math.max(1, PixelRatio.getFontScale()));
 const HOURS = Array.from({ length: 24 }, (_, i) => i); const HOUR_H = Math.round(52 * FS); const GUTTER = 48;
@@ -260,7 +262,7 @@ export default function CalendarTab() {
     const m = new Map<string, Item[]>();
     const add = (it: Item) => m.set(key(it.at), [...(m.get(key(it.at)) ?? []), it]);
     const q = query.trim().toLowerCase(); const hit = (txt: string) => !q || txt.toLowerCase().includes(q);
-    if (show === 'all' || show === 'bookings') appts.filter((a) => hit(`${a.client?.display_name ?? ''} ${a.service_name}`)).forEach((a) => add({ kind: 'booking', a, at: toJ(new Date(a.start_at)), end: toJ(new Date(a.end_at)) }));
+    if (V1_BOOKINGS && (show === 'all' || show === 'bookings')) appts.filter((a) => hit(`${a.client?.display_name ?? ''} ${a.service_name}`)).forEach((a) => add({ kind: 'booking', a, at: toJ(new Date(a.start_at)), end: toJ(new Date(a.end_at)) }));
     if (show === 'all' || show === 'posts') posts.filter((p) => hit(`${p.title} ${p.variants?.[0]?.caption ?? ''}`)).forEach((p) => { const d = contentPostDate(p); if (d) add({ kind: 'post', p, at: toJ(d), platforms: Array.from(new Set((p.variants ?? []).map((v) => v.platform.split('_')[0]))) }); });
     m.forEach((v) => v.sort((x, y) => x.at.getTime() - y.at.getTime()));
     return m;
@@ -313,7 +315,7 @@ export default function CalendarTab() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.nextMonth', 'Next month')} onPress={() => shiftMonth(1)} style={styles.icon}><CaretRight size={20} color={palette.icon} /></Pressable>
       <View style={{ flex: 1 }} />
       <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('cal.addNew', 'Add a post or booking')} onPress={() => openChoice(mode === 'month' || mode === 'list' ? (offset === 0 ? todayStart : base) : anchor, null)} style={styles.icon}><Plus size={26} color={palette.icon} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('cal.addNew', 'Add a post or task')} onPress={() => openChoice(mode === 'month' || mode === 'list' ? (offset === 0 ? todayStart : base) : anchor, null)} style={styles.icon}><Plus size={26} color={palette.icon} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.filter', 'Show')} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
     </View>
     <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
@@ -365,7 +367,7 @@ export default function CalendarTab() {
       {tlDays.map((d, col) => { const isToday = key(d) === key(now); const nowTop = (now.getHours() + now.getMinutes() / 60 - HOURS[0]) * HOUR_H;
         const dayBlocks = (show === 'all' || show === 'tasks') ? blocks.filter((bl) => key(toJ(new Date(bl.start_at))) === key(d)) : [];
         return <View key={key(d)} style={[styles.col, ln, mode === 'day' && { borderLeftWidth: 0 }]}>
-          {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAtTime', { defaultValue: 'Add at {{t}}', t: `${dayText(d)} ${hourLabel(h)}` })} accessibilityHint={t('cal.addHint', 'Opens New post or New booking')} delayLongPress={500} onPress={(e) => openChoice(d, h * 60 + (e.nativeEvent.locationY > HOUR_H / 2 ? 30 : 0))} onLongPress={(e) => openChoice(d, h * 60 + (e.nativeEvent.locationY > HOUR_H / 2 ? 30 : 0), true)} style={[styles.hourLine, { height: HOUR_H }, ln]} />)}
+          {HOURS.map((h) => <Pressable key={h} accessibilityRole="button" accessibilityLabel={t('cal.addAtTime', { defaultValue: 'Add at {{t}}', t: `${dayText(d)} ${hourLabel(h)}` })} accessibilityHint={t('cal.addHint', 'Opens New post, Task or Day off')} delayLongPress={500} onPress={(e) => openChoice(d, h * 60 + (e.nativeEvent.locationY > HOUR_H / 2 ? 30 : 0))} onLongPress={(e) => openChoice(d, h * 60 + (e.nativeEvent.locationY > HOUR_H / 2 ? 30 : 0), true)} style={[styles.hourLine, { height: HOUR_H }, ln]} />)}
           {dayBlocks.map((bl) => { const st = toJ(new Date(bl.start_at)); const en = toJ(new Date(bl.end_at)); const top = Math.max(0, (st.getHours() + st.getMinutes() / 60 - HOURS[0]) * HOUR_H); const h = Math.max(22, ((en.getTime() - st.getTime()) / 3600000) * HOUR_H - 2);
             const mark = blockMark(bl.notes);
             return <View key={bl.id} accessible accessibilityLabel={`${time(st)}, ${bl.title}`} style={[styles.block, { top, height: h, backgroundColor: palette.fill, borderColor: palette.border }, mark && { backgroundColor: `${mark.color}22`, borderColor: mark.color, borderLeftWidth: 3, borderLeftColor: mark.color }]}><Text maxFontSizeMultiplier={MAXF} style={[styles.chipText, { color: mark?.color ?? palette.text }]}>{bl.title}</Text></View>; })}
@@ -387,7 +389,7 @@ export default function CalendarTab() {
         {cells.slice(w * 7, w * 7 + 7).map((d) => {
           const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
           const nb = items.filter((i) => i.kind === 'booking').length; const np = items.filter((i) => i.kind === 'post').length; const failed = items.some((i) => i.kind === 'post' && glyph(i.p) === '!');
-          const a11y = `${d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}${today ? `, ${t('cal.today', 'Today')}` : ''}, ${t('cal.nBookings', { defaultValue: '{{count}} bookings', count: nb })}, ${t('cal.nPosts', { defaultValue: '{{count}} posts', count: np })}`;
+          const a11y = `${d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}${today ? `, ${t('cal.today', 'Today')}` : ''}${V1_BOOKINGS ? `, ${t('cal.nBookings', { defaultValue: '{{count}} bookings', count: nb })}` : ''}, ${t('cal.nPosts', { defaultValue: '{{count}} posts', count: np })}`;
           return <Pressable key={k} accessibilityRole="button" accessibilityLabel={a11y} onPress={() => { setAnchor(d); openChoice(d, null); }} style={styles.cell}>
             <View style={[styles.num, today && { backgroundColor: RED }]}><Text maxFontSizeMultiplier={1.4} style={[styles.numText, { color: today ? '#FFFFFF' : inMonth ? palette.text : palette.muted }, !inMonth && { opacity: 0.5 }]}>{d.getDate()}</Text></View>
             {nb ? <View style={[styles.mkBook, { backgroundColor: palette.text }]} /> : null}
@@ -405,7 +407,7 @@ export default function CalendarTab() {
   const listView = () => {
     if (!listItems.length) return <View style={{ paddingVertical: 32, gap: 6, alignItems: 'center' }}>
       <Text style={[styles.rowTitle, { color: palette.text }]}>{t('cal.listEmpty', 'Nothing coming up')}</Text>
-      <Text style={[styles.rowSub, { color: palette.muted, textAlign: 'center' }]}>{t('cal.listEmptySub', 'Tap + to add a post or a booking.')}</Text>
+      <Text style={[styles.rowSub, { color: palette.muted, textAlign: 'center' }]}>{t('cal.listEmptySub', 'Tap + to add a post, a task or a day off.')}</Text>
     </View>;
     return <View style={{ paddingBottom: 120, marginHorizontal: -16 }}>
       <Text style={[styles.rowSub, { color: palette.muted, marginHorizontal: 16 }]}>{t('cal.listSub', 'List · upcoming')}</Text>
@@ -465,7 +467,7 @@ export default function CalendarTab() {
         {choice ? <Text style={[styles.sheetSub, { color: palette.muted }]}>{choice.day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}{choice.min != null ? ` · ${String(Math.floor(choice.min / 60)).padStart(2, '0')}:${String(choice.min % 60).padStart(2, '0')}` : ''}</Text> : null}
         {([
           ['post', t('cal.newPost', 'New post'), t('cal.newPostSub', 'Write it, then Approve to schedule')],
-          ['booking', t('cal.newBooking', 'New booking'), t('cal.newBookingSub', 'Add an appointment')],
+          ...(V1_BOOKINGS ? [['booking', t('cal.newBooking', 'New booking'), t('cal.newBookingSub', 'Add an appointment')] as const] : []),
           ['task', t('cal.task', 'Task'), ''],
           ['off', t('cal.dayOff', 'Day off'), ''],
           ...(choice?.min == null && mode === 'month' ? [['open', t('cal.openDay', 'Open this day'), ''] as const] : [])
@@ -540,7 +542,7 @@ export default function CalendarTab() {
       <Pressable style={styles.dropBack} onPress={() => setMoreOpen(false)}><View style={[styles.drop, sheetBg, { alignSelf: 'flex-end' }]}>
         {([
           ['posts', t('cal.showPosts', 'Scheduled posts')],
-          ['bookings', t('cal.showBookings', 'Appointments')],
+          ...(V1_BOOKINGS ? [['bookings', t('cal.showBookings', 'Appointments')] as const] : []),
           ['tasks', t('cal.showTasks', 'Tasks')]
         ] as const).map(([id, lbl]) => <Pressable key={id} accessibilityRole="button" accessibilityState={{ selected: show === id }} style={styles.dropItem} onPress={() => { setShow(show === id ? 'all' : id); setMoreOpen(false); }}><Text style={[styles.miText, { color: show === id ? tokens.color.tide : palette.text }]}>{lbl}</Text></Pressable>)}
       </View></Pressable>

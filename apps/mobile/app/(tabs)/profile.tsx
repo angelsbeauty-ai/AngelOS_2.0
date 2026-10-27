@@ -8,7 +8,6 @@ import { User } from 'phosphor-react-native/src/icons/User';
 import { Lock } from 'phosphor-react-native/src/icons/Lock';
 import { Translate } from 'phosphor-react-native/src/icons/Translate';
 import { Link } from 'phosphor-react-native/src/icons/Link';
-import { Scissors } from 'phosphor-react-native/src/icons/Scissors';
 import { Robot } from 'phosphor-react-native/src/icons/Robot';
 import { ShieldCheck } from 'phosphor-react-native/src/icons/ShieldCheck';
 import { Question } from 'phosphor-react-native/src/icons/Question';
@@ -17,15 +16,7 @@ import { Crown } from 'phosphor-react-native/src/icons/Crown';
 import { Heartbeat } from 'phosphor-react-native/src/icons/Heartbeat';
 import { Key } from 'phosphor-react-native/src/icons/Key';
 import { CreditCard } from 'phosphor-react-native/src/icons/CreditCard';
-import { ChartLine } from 'phosphor-react-native/src/icons/ChartLine';
-import { Users } from 'phosphor-react-native/src/icons/Users';
-import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
-import { Clock } from 'phosphor-react-native/src/icons/Clock';
-import { GraduationCap } from 'phosphor-react-native/src/icons/GraduationCap';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
-import { Pause } from 'phosphor-react-native/src/icons/Pause';
-import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
-import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Screen } from '../../src/components/Screen';
 import { screenHeader, Skeleton, SupportText, Button } from '../../src/components/ui';
 import { Chip, ROSE, SettingsGroup, SettingsRow } from '../../src/components/SettingsList';
@@ -34,7 +25,6 @@ import { clearMe, getMe, updateMe, type Me } from '../../src/lib/me';
 import { getActiveWorkspace, type WorkspaceSummary } from '../../src/lib/workspace';
 import { AiMeter } from '../../src/components/AiMeter';
 import { useAppearance, type AppearanceMode } from '../../src/design/appearance';
-import { listServices } from '../../src/lib/bookings';
 import { listConnections } from '../../src/lib/messaging';
 import { getSubscription } from '../../src/lib/subscription';
 import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system-health';
@@ -48,7 +38,6 @@ export default function ProfileScreen() {
   const [me, setMe] = useState<Me | null>(null);
   const [ws, setWs] = useState<WorkspaceSummary | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [services, setServices] = useState<number | null>(null);
   const [connected, setConnected] = useState<number | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
   const [health, setHealth] = useState<SystemHealthOverview | null | 'error'>(null);
@@ -64,7 +53,6 @@ export default function ProfileScreen() {
       const owner = m.memberships.some((x) => x.role === 'owner');
       const w = await getActiveWorkspace().catch(() => null); setWs(w);
       if (w && owner) {
-        void listServices(w.id).then((s) => setServices(s.length)).catch(() => undefined);
         void listConnections(w.id).then((c) => setConnected(c.filter((x) => x.connected).length)).catch(() => undefined);
         void getSubscription(w.id).then((s) => setPlan(s.plan?.name ?? s.plan?.code ?? null)).catch(() => undefined);
       }
@@ -113,21 +101,11 @@ export default function ProfileScreen() {
       <SettingsRow last icon={<Translate {...ink} />} title={t('pf.language')} value={i18n.language === 'ja' ? '日本語' : 'English'} onPress={() => setLangOpen(true)} />
     </SettingsGroup>
 
-    {owner ? <SettingsGroup title={t('pf.business')}>
-      <SettingsRow icon={<Users {...ink} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
-      <SettingsRow icon={<CurrencyJpy {...ink} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
-      <SettingsRow icon={<ListChecks {...ink} />} title={t('pf.tasks')} onPress={() => router.push('/tasks' as any)} />
-      <SettingsRow icon={<Plus {...ink} />} title={t('pf.newBusiness')} onPress={() => router.push('/workspaces/new' as any)} />
-      <SettingsRow last icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
-    </SettingsGroup> : null}
-
+    {/* AngelOS V1: Clients, Money, Tasks, New business, Services, Business hours, Days off and Automations are hidden (code kept). */}
     {owner ? <SettingsGroup title={t('pf.app')}>
       <SettingsRow icon={<Link {...ink} />} title={t('pf.connected')} value={connected} onPress={() => router.push('/settings/connections')} />
-      <SettingsRow icon={<Scissors {...ink} />} title={t('pf.services')} value={services} onPress={() => router.push('/services')} />
-      <SettingsRow icon={<Clock {...ink} />} title={t('pf.hours')} onPress={() => router.push('/business-hours' as any)} />
-      <SettingsRow icon={<Clock {...ink} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
-      <SettingsRow icon={<Bell {...ink} />} title={t('pf.notifications')} onPress={() => router.push('/notifications' as any)} />
-      <SettingsRow last icon={<Pause {...ink} />} title={t('pf.automations')} onPress={() => router.push('/automations' as any)} />
+      <SettingsRow icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
+      <SettingsRow last icon={<Bell {...ink} />} title={t('pf.notifications')} onPress={() => router.push('/notifications' as any)} />
     </SettingsGroup> : null}
 
     <SettingsGroup title={t('pf.support')}>
@@ -142,8 +120,7 @@ export default function ProfileScreen() {
         onPress={() => router.push('/system-health')} />
       <SettingsRow icon={<Key {...ink} />} title={t('pf.admin')} onPress={() => router.push('/founder-admin')} />
       <SettingsRow icon={<ChatText {...ink} />} title={t('pf.beta')} trailing={newFeedback ? <Chip label={t('pf.newN', { count: newFeedback })} /> : null} onPress={() => router.push('/founder-admin')} />
-      <SettingsRow icon={<CreditCard {...ink} />} title={t('pf.billing')} sub={t('pf.viewOnly')} onPress={() => router.push('/subscription')} />
-      <SettingsRow last icon={<ChartLine {...ink} />} title={t('pf.analytics')} onPress={() => router.push('/analytics')} />
+      <SettingsRow last icon={<CreditCard {...ink} />} title={t('pf.billing')} sub={t('pf.viewOnly')} onPress={() => router.push('/subscription')} />
     </SettingsGroup> : null}
 
     {me && ws ? <AiMeter workspaceId={ws.id} founder={Boolean(me.founder)} /> : null}
