@@ -1,16 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getAiUsage, type AiUsage } from '../lib/home';
 import { getFounderAiUsage } from '../lib/founder';
-import { tokens } from '../design/theme';
+import { D, N, tokens } from '../design/theme';
+import { useAppearance } from '../design/appearance';
 
-const GREEN = '#8C7A64';
+const GREEN = D.accentDeep;
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
 /** Founder: the real OpenAI dollars. Everyone else: today's uses and this month's uses. */
 export function AiMeter({ workspaceId, founder = false }: { workspaceId: string | null; founder?: boolean }) {
+  const { styles, night } = useMeterStyles();
   const { t } = useTranslation();
   const [u, setU] = useState<AiUsage | null>(null);
   const [bill, setBill] = useState<any>(null);
@@ -34,6 +36,7 @@ export function AiMeter({ workspaceId, founder = false }: { workspaceId: string 
 }
 
 function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
+  const { styles } = useMeterStyles();
   const { t } = useTranslation();
   const spent = bill?.bill?.usd;
   const credit = bill?.credit;
@@ -57,24 +60,32 @@ function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
 }
 
 function Bar({ label, n, max }: { label: string; n: number; max: number }) {
+  const { styles, night } = useMeterStyles();
   const pct = max ? Math.min(1, n / max) : 0;
-  const color = pct >= 1 ? '#B3261E' : pct >= 0.8 ? '#3A3A3C' : GREEN;
+  const color = pct >= 1 ? tokens.color.error : pct >= 0.8 ? (night ? N.text2 : D.text2) : GREEN;
   return <View style={{ gap: 6 }}>
     <View style={styles.row}><Text style={styles.label}>{label}</Text><Text style={styles.count}>{n} / {max}</Text></View>
     <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%`, backgroundColor: color }]} /></View>
   </View>;
 }
 
-const styles = StyleSheet.create({
-  box: { gap: 12, padding: 16, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
-  title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: '#151515' },
-  money: { fontFamily: tokens.font.uiBold, fontSize: 32, color: '#151515', fontVariant: ['tabular-nums'] },
-  moneySm: { fontFamily: tokens.font.uiBold, fontSize: 22, color: '#151515', fontVariant: ['tabular-nums'] },
+function useMeterStyles() {
+  const { mode } = useAppearance();
+  const night = mode === 'night';
+  return { night, styles: useMemo(() => makeStyles(night), [night]) };
+}
+
+// Night: card N.card, light text; the limit line uses the Night text colour because red text on the dark card is under 4.5:1.
+const makeStyles = (night: boolean) => StyleSheet.create({
+  box: { gap: 12, padding: 16, borderRadius: 22, backgroundColor: night ? N.card : D.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: night ? N.hairline : D.fill2 },
+  title: { fontFamily: tokens.font.uiBold, fontSize: 16, color: night ? N.text : D.text },
+  money: { fontFamily: tokens.font.uiBold, fontSize: 32, color: night ? N.text : D.text, fontVariant: ['tabular-nums'] },
+  moneySm: { fontFamily: tokens.font.uiBold, fontSize: 22, color: night ? N.text : D.text, fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
-  label: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#151515' },
-  count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515', fontVariant: ['tabular-nums'] },
-  track: { height: 8, borderRadius: 4, backgroundColor: '#F2F2F2', overflow: 'hidden' },
+  label: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: night ? N.text : D.text },
+  count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: night ? N.text : D.text, fontVariant: ['tabular-nums'] },
+  track: { height: 8, borderRadius: 4, backgroundColor: night ? N.field : D.fill, overflow: 'hidden' },
   fill: { height: 8, borderRadius: 4 },
-  limit: { fontFamily: tokens.font.uiSemibold, fontSize: 14, lineHeight: 20, color: '#B3261E' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6C6C70' }
+  limit: { fontFamily: tokens.font.uiSemibold, fontSize: 14, lineHeight: 20, color: night ? N.text : tokens.color.error },
+  muted: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: night ? N.muted : D.muted }
 });

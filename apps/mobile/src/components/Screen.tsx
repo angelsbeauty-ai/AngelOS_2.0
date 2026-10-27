@@ -6,7 +6,7 @@ import { Image, KeyboardAvoidingView, Platform, Pressable, RefreshControl, Scrol
 import { router, usePathname } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { showsAppTabBar } from './AppTabBar';
-import { colors, spacing, tokens } from '../design/theme';
+import { D, N, colors, spacing, tokens } from '../design/theme';
 import { useAppearance } from '../design/appearance';
 import { useNightFix } from '../design/night-web';
 import { GlassBackdrop } from './GlassBackdrop';
@@ -47,7 +47,7 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
     <GlassBackdrop />
     <View style={[styles.safe, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
     {header ? <View style={[styles.pinned, { backgroundColor: palette.bg }]}>{header}</View> : null}
-    {!online && !ownBanner ? <Text accessibilityLiveRegion="polite" accessibilityRole="alert" style={[styles.offline, { color: palette.text, backgroundColor: mode === 'night' ? '#1C1C1E' : '#E4E4E6' }]}>{t('sched.offlineBar')}</Text> : null}
+    {!online && !ownBanner ? <Text accessibilityLiveRegion="polite" accessibilityRole="alert" style={[styles.offline, { color: palette.text, backgroundColor: mode === 'night' ? N.card : D.fill2 }]}>{t('sched.offlineBar')}</Text> : null}
     {/* O06: the focused field and its button stay above the keyboard on every form screen. */}
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
     <ScrollView ref={scrollRef} onContentSizeChange={() => { if (scrollY != null && scrollY !== didY.current) { didY.current = scrollY; scrollRef.current?.scrollTo({ y: scrollY, animated: false }); } }} scrollEnabled={scrollEnabled} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} contentContainerStyle={[styles.content, Platform.OS === 'web' && !LOCKED.has(pathname) && styles.webTop]} scrollEventThrottle={32} onScroll={onSwipeUpAtEnd || onEndReached ? (e) => { const n = e.nativeEvent; const bottom = n.contentOffset.y + n.layoutMeasurement.height; atEnd.current = bottom >= n.contentSize.height - 24; if (onEndReached && bottom >= n.contentSize.height - 400) onEndReached(); } : undefined} onTouchStart={onSwipeUpAtEnd ? (e) => { touchY.current = atEnd.current ? e.nativeEvent.pageY : null; } : undefined} onTouchEnd={onSwipeUpAtEnd ? (e) => { const s = touchY.current; touchY.current = null; if (s != null && atEnd.current && s - e.nativeEvent.pageY > 90) onSwipeUpAtEnd(); } : undefined} refreshControl={onRefresh && Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={colors.light.gold} /> : undefined}><View style={[styles.stack, Platform.OS === 'web' && styles.webStack]}>{false ? <Pressable accessibilityRole="button" accessibilityLabel={t('common2.refresh')} onPress={() => void refresh()} style={styles.refresh}><Text style={styles.refreshText}>{refreshing ? t('ui.refreshing') : t('ui.refresh')}</Text></Pressable> : null}{children}</View></ScrollView>
@@ -66,7 +66,7 @@ function AskButton({ pathname, bottom, right }: { pathname: string; bottom?: num
   return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} onPress={() => router.push({ pathname: '/ai', params: { screen: parts[0] ?? 'home', ...(entityType ? { entityType, entityId: parts[1] } : {}) } })} style={[styles.ask, { borderColor: palette.border }, lift != null && { bottom: lift }, right != null && { right }]}>
     <BlurView intensity={palette.blur} tint={palette.tint} style={StyleSheet.absoluteFill} />
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.55)' }]} />
-    <Image accessibilityIgnoresInvertColors source={logo} style={[styles.askLogo, mode === 'night' && { tintColor: '#F4F4F5' }]} resizeMode="contain" />
+    <Image accessibilityIgnoresInvertColors source={logo} style={[styles.askLogo, mode === 'night' && { tintColor: N.text }]} resizeMode="contain" />
   </Pressable>;
 }
 
