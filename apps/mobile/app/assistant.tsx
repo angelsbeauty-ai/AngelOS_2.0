@@ -11,6 +11,9 @@ import { getActiveWorkspace } from '../src/lib/workspace';
 import { tokens } from '../src/design/theme';
 import { useAppearance } from '../src/design/appearance';
 
+/** AngelOS V1: automations are not part of the launch, so the section is hidden (code kept). */
+const V1_AUTOMATIONS = false;
+
 const WHEN: Record<string, string> = {
   appointment_confirmed: 'After a booking is confirmed',
   appointment_completed: 'After an appointment is done',
@@ -39,7 +42,7 @@ export default function AssistantWorkspace() {
       const [who, memory, automations] = await Promise.all([
         getAssistantProfile(ws),
         listAssistantMemory(ws).catch(() => []),
-        listAutomationRules(ws).catch(() => [] as AutomationRule[])
+        V1_AUTOMATIONS ? listAutomationRules(ws).catch(() => [] as AutomationRule[]) : Promise.resolve([] as AutomationRule[])
       ]);
       setProfile(who.profile);
       setSkills(memory.filter((item) => item.category === 'workflow' && item.status === 'approved'));
@@ -67,7 +70,7 @@ export default function AssistantWorkspace() {
   return <Screen onRefresh={() => load()}>
     <ScreenTitle>Assistant</ScreenTitle>
     {failed ? <Card><SupportText>The assistant settings could not load. Pull to try again, or open the assistant chat from the logo.</SupportText><ActionButton kind="primary" label="Open assistant chat" onPress={() => router.push('/ai' as any)} /></Card> : null}
-    <SupportText>This is her workspace. Personality, rules, skills, and the repeating tasks she can keep.</SupportText>
+    <SupportText>This is her workspace. Personality, rules, and skills.</SupportText>
 
     <Card>
       <SectionTitle>Personality</SectionTitle>
@@ -78,7 +81,7 @@ export default function AssistantWorkspace() {
 
     <Card>
       <SectionTitle>Instructions</SectionTitle>
-      <SupportText>She helps with the studio: bookings, messages, posts, and questions.</SupportText>
+      <SupportText>She helps with the studio: messages, posts, and questions.</SupportText>
       <SupportText>She looks up the real number before she answers. She does not guess.</SupportText>
       <SupportText>In voice she can read unread messages and send a reply after you say yes.</SupportText>
     </Card>
@@ -87,7 +90,7 @@ export default function AssistantWorkspace() {
       <SectionTitle>Rules</SectionTitle>
       <SupportText>She does not change settings, the password, billing, or connected apps.</SupportText>
       <SupportText>She does not invent a count, a price, or a client fact.</SupportText>
-      <SupportText>A new automation is saved off. Nothing repeats until you turn it on.</SupportText>
+      {V1_AUTOMATIONS ? <SupportText>A new automation is saved off. Nothing repeats until you turn it on.</SupportText> : null}
       <SupportText>She does not send a client message until you say yes.</SupportText>
     </Card>
 
@@ -103,7 +106,7 @@ export default function AssistantWorkspace() {
       <ActionButton kind="primary" label="Add skill" disabled={busy || skill.trim().length < 2} onPress={() => void addSkill()} />
     </Card>
 
-    <Card>
+    {V1_AUTOMATIONS ? <Card>
       <SectionTitle>Automations</SectionTitle>
       <SupportText>Tell her a task that repeats. It is saved off. Turn it on only when you want it to run. She can also make one from chat after you approve the card.</SupportText>
       {rules.length === 0 ? <SupportText>No automations yet.</SupportText> : null}
@@ -114,9 +117,9 @@ export default function AssistantWorkspace() {
         </View>
         <Switch accessibilityLabel={`${rule.name} on`} value={rule.enabled} disabled={busy} onValueChange={(enabled) => { if (workspaceId) void updateAutomationRule(workspaceId, rule.id, { enabled }).then(load).catch((error) => void dialog.notify('Could not update that automation', error instanceof Error ? error.message : '')); }} />
       </View>)}
-      <TextInput accessibilityLabel="Repeating task" value={task} onChangeText={setTask} placeholder="Example: Remind me the day before each booking" placeholderTextColor={night ? '#9A9A9F' : ui.colors.secondaryText} style={[styles.input, field]} />
+      <TextInput accessibilityLabel="Repeating task" value={task} onChangeText={setTask} placeholder="Example: Every Monday, remind me to plan the week's posts" placeholderTextColor={night ? '#9A9A9F' : ui.colors.secondaryText} style={[styles.input, field]} />
       <ActionButton kind="primary" label="Save automation, off" disabled={busy || task.trim().length < 4} onPress={() => void addTask()} />
-    </Card>
+    </Card> : null}
   </Screen>;
 }
 

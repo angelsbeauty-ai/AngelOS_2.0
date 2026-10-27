@@ -1948,6 +1948,7 @@
     }
   },
   "cal": {
+    "dayOff": "Day off",
     "listEmpty": "Nothing coming up",
     "listEmptySub": "Tap + to add a post, a task or a day off.",
     "listSub": "List · upcoming",
