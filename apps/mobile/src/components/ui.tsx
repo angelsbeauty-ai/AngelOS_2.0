@@ -91,10 +91,11 @@ type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export function Button({ label, onPress, variant = 'primary', loading, disabled, small, style, accessibilityLabel }: { label: string; onPress: () => void; variant?: ButtonVariant; loading?: boolean; disabled?: boolean; small?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel?: string }) {
   const ink = useInk();
   const off = disabled || loading;
-  const fg = variant === 'primary' ? ink.primaryFg : variant === 'danger' ? palette.critical : ink.text;
+  // Night danger is a filled red pill with white text (6.54:1): red text on black is only 3.12:1.
+  const fg = variant === 'primary' ? ink.primaryFg : variant === 'danger' ? (ink.night ? tokens.color.onCharcoal : palette.critical) : ink.text;
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ disabled: !!off, busy: !!loading }} disabled={off} onPress={onPress}
-      style={({ pressed }) => [styles.btn, small && styles.btnSmall, variant === 'primary' && { backgroundColor: ink.primaryBg }, variant === 'secondary' && { borderWidth: 1, borderColor: ink.border, backgroundColor: 'transparent' }, variant === 'danger' && styles.btnDanger, variant === 'ghost' && styles.btnGhost, pressed && !off && { transform: [{ scale: 0.97 }] }, style]}>
+      style={({ pressed }) => [styles.btn, small && styles.btnSmall, variant === 'primary' && { backgroundColor: ink.primaryBg }, variant === 'secondary' && { borderWidth: 1, borderColor: ink.border, backgroundColor: 'transparent' }, variant === 'danger' && styles.btnDanger, variant === 'danger' && ink.night && { backgroundColor: palette.critical }, variant === 'ghost' && styles.btnGhost, pressed && !off && { transform: [{ scale: 0.97 }] }, style]}>
       {loading ? <ActivityIndicator color={fg} size="small" /> : <Text {...textProps} numberOfLines={1} style={[styles.btnText, { color: fg }]}>{label}</Text>}
     </Pressable>
   );

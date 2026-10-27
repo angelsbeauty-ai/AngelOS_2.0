@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
-import { tokens } from '../design/theme';
+import { D, N, accent, onAccent, tokens } from '../design/theme';
 import { useAppearance } from '../design/appearance';
 
 export const ROSE = '#151515';
@@ -31,7 +31,12 @@ export function SettingsRow({ icon, title, sub, value, trailing, onPress, danger
 }
 
 export function Chip({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'rose' | 'success' | 'danger' }) {
-  const c = { neutral: ['#F2F2F2', '#3A3A3C'], rose: ['#151515', '#FFFFFF'], success: ['#F2F2F2', '#3A3A3C'], danger: ['#F2F2F2', '#151515'] }[tone];
+  const { mode, palette } = useAppearance();
+  const night = mode === 'night';
+  const soft = night ? N.card : D.fill;
+  const soft2 = night ? N.text2 : D.text2;
+  // 'rose' is the founder badge: the rose-gold accent token with its on-accent text (5.99:1 Day, 7.82:1 Night).
+  const c = { neutral: [soft, soft2], rose: [accent(night), onAccent(night)], success: [soft, soft2], danger: [soft, palette.text] }[tone];
   return <View style={[styles.chip, { backgroundColor: c[0] }]}><Text style={[styles.chipText, { color: c[1] }]}>{label}</Text></View>;
 }
 
@@ -47,5 +52,5 @@ const styles = StyleSheet.create({
   sub: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70' },
   value: { fontFamily: tokens.font.ui, fontSize: 14, color: '#6C6C70' },
   chip: { alignSelf: 'flex-start', borderRadius: 9, paddingHorizontal: 8, paddingVertical: 3 },
-  chipText: { fontFamily: tokens.font.uiSemibold, fontSize: 12 }
+  chipText: { ...tokens.type.overline, fontFamily: tokens.font.uiSemibold }
 });

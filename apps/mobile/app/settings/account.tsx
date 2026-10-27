@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { Screen } from '../../src/components/Screen';
 import { Field, Tabs } from '../../src/components/Field';
 import { ActionButton } from '../../src/components/MessagingBits';
-import { BodyText, Card, SectionTitle, SupportText } from '../../src/components/ui';
+import { BodyText, Button, Card, SectionTitle, SupportText } from '../../src/components/ui';
 import { PushedHeader } from '../../src/components/PushedHeader';
 import type { Lang } from '../../src/i18n';
 import { dialog } from '../../src/lib/dialog';
@@ -63,7 +63,7 @@ export default function AccountSettings() {
     <Card><Field label={t('account.password')} hint={t('account.passwordHint')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" /><ActionButton kind="primary" label={t('account.changePassword')} disabled={busy || !password} onPress={() => void changePassword()} /></Card>
     <Card>
       <ActionButton kind="secondary" label={t('settings.signOut')} onPress={() => void signOut()} />
-      {founder ? null : <Pressable accessibilityRole="button" onPress={() => setDelOpen(true)} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#B3261E' }}>{t('pf.deleteRow')}</Text></Pressable>}
+      {founder ? null : <Button variant="danger" label={t('pf.deleteRow')} onPress={() => setDelOpen(true)} />}
     </Card>
     {founder ? null : <SupportText>{t('pf.delFoot')}</SupportText>}
     <DeleteAccountSheet visible={delOpen} onClose={() => setDelOpen(false)} workspaceId={wsId} email={email || null} />

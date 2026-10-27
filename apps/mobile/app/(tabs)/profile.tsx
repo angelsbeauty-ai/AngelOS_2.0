@@ -31,7 +31,7 @@ import { getSystemHealth, type SystemHealthOverview } from '../../src/lib/system
 import { listBetaFeedback } from '../../src/lib/beta';
 import { confirm } from '../../src/lib/dialog';
 import { supabase } from '../../src/lib/supabase';
-import { tokens, webGlass } from '../../src/design/theme';
+import { D, N, tokens, webGlass } from '../../src/design/theme';
 
 export default function ProfileScreen() {
   const { t, i18n } = useTranslation();
@@ -44,6 +44,7 @@ export default function ProfileScreen() {
   const [newFeedback, setNewFeedback] = useState<number | null>(null);
   const [langOpen, setLangOpen] = useState(false);
   const { mode, palette } = useAppearance();
+  const night = mode === 'night';
   const ink = { size: 18, color: palette.icon, weight: 'duotone' as const };
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -84,7 +85,7 @@ export default function ProfileScreen() {
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
     {me ? <View style={[styles.card, { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
+      <View style={[styles.avatar, { backgroundColor: night ? N.card : D.fill2 }]}><Text style={[styles.avatarText, { color: palette.text }]}>{initials}</Text></View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text numberOfLines={1} style={[styles.name, { color: palette.text }]} {...(name ? {} : { accessibilityRole: 'button' as const, onPress: () => router.push('/profile/edit' as any) })}>{name || t('pf.addName', 'Add your name')}</Text>
         <Text numberOfLines={1} style={[styles.studio, { color: palette.muted }]}>{ws?.name ?? t('pf.noStudio')}</Text>
@@ -128,13 +129,13 @@ export default function ProfileScreen() {
     <View style={{ gap: 10 }}>
       <Button variant="secondary" label={t('pf.logout')} onPress={() => void logout()} />
       {me && !me.founder ? <Button variant="danger" label={t('pf.delete')} onPress={() => setDeleteOpen(true)} /> : null}
-      <Text style={styles.version}>{build ? t('pf.version', { v: version, b: build }) : t('pf.versionOnly', { v: version, defaultValue: 'AngelOS {{v}}' })}</Text>
+      <Text style={[styles.version, { color: palette.muted }]}>{build ? t('pf.version', { v: version, b: build }) : t('pf.versionOnly', { v: version, defaultValue: 'AngelOS {{v}}' })}</Text>
     </View>
 
     <Modal visible={langOpen} transparent animationType="fade" onRequestClose={() => setLangOpen(false)}>
-      <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)}><View style={styles.sheet}>
-        <Text style={styles.sheetTitle}>{t('pf.langTitle')}</Text>
-        {(['ja', 'en'] as const).map((l) => <Pressable key={l} accessibilityRole="button" onPress={() => void setLang(l)} style={[styles.option, i18n.language === l && styles.optionOn]}><Text style={[styles.optionText, i18n.language === l && { color: '#FFFFFF' }]}>{l === 'ja' ? '日本語' : 'English'}</Text></Pressable>)}
+      <Pressable style={styles.backdrop} onPress={() => setLangOpen(false)}><View style={[styles.sheet, { backgroundColor: night ? N.card : D.surface }]}>
+        <Text style={[styles.sheetTitle, { color: palette.text }]}>{t('pf.langTitle')}</Text>
+        {(['ja', 'en'] as const).map((l) => <Pressable key={l} accessibilityRole="button" onPress={() => void setLang(l)} style={[styles.option, { borderColor: night ? N.secondaryBorder : 'rgba(42,39,37,0.12)' }, i18n.language === l && { backgroundColor: palette.text, borderColor: palette.text }]}><Text style={[styles.optionText, { color: i18n.language === l ? palette.bg : palette.text }]}>{l === 'ja' ? '日本語' : 'English'}</Text></Pressable>)}
       </View></Pressable>
     </Modal>
     <DeleteAccountSheet visible={deleteOpen} onClose={() => setDeleteOpen(false)} workspaceId={ws?.id ?? null} email={me?.email ?? null} />
@@ -153,13 +154,12 @@ const styles = StyleSheet.create({
   avatar: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EDEDED' },
   avatarText: { color: '#151515', fontFamily: tokens.font.display, fontSize: 26 },
   name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
-  studio: { fontFamily: tokens.font.ui, fontSize: 13, color: '#6C6C70' },
-  edit: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: ROSE },
-  version: { textAlign: 'center', fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70', marginTop: 4 },
+  studio: { ...tokens.type.footnote, fontFamily: tokens.font.ui, color: '#6C6C70' },
+  edit: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold, lineHeight: 44, color: ROSE },
+  version: { textAlign: 'center', ...tokens.type.overline, fontFamily: tokens.font.ui, color: '#6C6C70', marginTop: 4 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFFFFF' },
-  sheetTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17, color: '#151515', textAlign: 'center', marginBottom: 4 },
+  sheetTitle: { ...tokens.type.headline, fontFamily: tokens.font.uiSemibold, color: '#151515', textAlign: 'center', marginBottom: 4 },
   option: { minHeight: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(42,39,37,0.12)' },
-  optionOn: { backgroundColor: '#151515', borderColor: '#151515' },
-  optionText: { fontFamily: tokens.font.uiSemibold, fontSize: 16, color: '#151515' }
+  optionText: { ...tokens.type.body, fontFamily: tokens.font.uiSemibold, color: '#151515' }
 });
