@@ -129,7 +129,7 @@ Sprint 11 adds the V1 subscription/access-control foundation and platform founde
 
 - 14-day Solo trial seeded automatically for each workspace.
 - Working plan configuration: **$49/month or $490/year**.
-- Verified Angels Beauty student/alumni 20% discount through private one-time tokens.
+- Verified beta / TestFlight user 20% discount through private one-time tokens.
 - 60-day read-only period after cancellation.
 - Global mutation guard when a workspace is read-only/expired.
 - Provider-ready billing boundary without pretending card charging is connected.
@@ -146,7 +146,7 @@ See `SPRINT_11_ACCEPTANCE.md` and `SPRINT_11_BUILD_NOTES.md` for the exact bound
 
 Sprint 12 completes the V1 feature roadmap with a real private-beta boundary: Founder-approved one-time invites, atomic redemption, database-level workspace-creation gating, beta cohorts, extended test windows, revocable tester access, private feedback with separate testimonial permission, and a Founder launch-readiness scorecard. Public signup remains off and cannot be enabled automatically by metrics.
 
-The V1 feature sprints are now complete. Remaining work is production hardening and deployment: verified social-provider adapters, payment processing/webhooks, device voice, resumable large-video uploads, push delivery, full networked builds/tests, staging/production infrastructure, TestFlight/App Store setup, and the real Angels Beauty/internal beta run.
+The V1 feature sprints are now complete. Remaining work is production hardening and deployment: verified social-provider adapters, payment processing/webhooks, device voice, resumable large-video uploads, push delivery, full networked builds/tests, staging/production infrastructure, TestFlight/App Store setup, and the real internal beta / TestFlight run.
 
 See `SPRINT_12_ACCEPTANCE.md` and `SPRINT_12_BUILD_NOTES.md`.
 
