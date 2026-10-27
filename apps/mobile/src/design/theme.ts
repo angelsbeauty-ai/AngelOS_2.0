@@ -129,3 +129,8 @@ export const chat = {
     day: { fontFamily: 'Manrope_500Medium', fontSize: 12, lineHeight: 16 },
   },
 } as const;
+
+/** Rose-gold accent for the current mode (Day #8C5547 = 5.4:1 on Day bg; Night #C99484 = 7.8:1 on black). */
+export const accent = (night: boolean) => (night ? tokens.color.roseGoldNight : tokens.color.roseGold);
+/** Text/glyph on a filled rose-gold shape: white in Day (6.0:1), black in Night (7.8:1). */
+export const onAccent = (night: boolean) => (night ? N.bg : tokens.color.onCharcoal);
