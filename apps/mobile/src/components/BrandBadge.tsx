@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Circle, Path, Rect, Text as SvgText } from 'react-native-svg';
-import { tokens } from '../design/theme';
+import { D, N, chat, tokens } from '../design/theme';
+import { useAppearance } from '../design/appearance';
 
 /** Official-style brand marks drawn as SVG (not generic icons). `messenger` is used for Facebook conversations. */
 export function BrandLogo({ platform, size = 20 }: { platform: string; size?: number }) {
@@ -28,7 +29,8 @@ export function BrandLogo({ platform, size = 20 }: { platform: string; size?: nu
 
 /** Brand logo with a thin white ring, for the bottom-right of avatars. Facebook threads are Messenger conversations. */
 export function BrandBadge({ platform, size = 20 }: { platform: string; size?: number }) {
-  return <View style={[styles.ring, { width: size + 4, height: size + 4, borderRadius: (size + 4) / 2 }]}><BrandLogo platform={platform === 'facebook' ? 'messenger' : platform} size={size} /></View>;
+  const { mode } = useAppearance();
+  return <View style={[styles.ring, mode === 'night' && { backgroundColor: N.bg }, { width: size + 4, height: size + 4, borderRadius: (size + 4) / 2 }]}><BrandLogo platform={platform === 'facebook' ? 'messenger' : platform} size={size} /></View>;
 }
 
 /** Round profile photo with an initial fallback and the platform badge bottom-right. */
@@ -40,9 +42,10 @@ export function contactInitials(name: string) {
 
 export function ContactAvatar({ name, uri, platform, size = 64 }: { name: string; uri?: string | null; platform?: string; size?: number }) {
   const initial = contactInitials(name);
+  const night = useAppearance().mode === 'night';
   return <View style={{ width: size, height: size }} accessibilityElementsHidden>
-    {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: '#F2F2F2' }} />
-      : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: '#EDEDED' }]}><Text style={[styles.initial, { fontSize: size * 0.38 }]}>{initial}</Text></View>}
+    {uri ? <Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: night ? chat.night.avatar : D.fill }} />
+      : <View style={[styles.center, { width: size, height: size, borderRadius: size / 2, backgroundColor: night ? chat.night.avatar : D.fill2 }]}><Text style={[styles.initial, { fontSize: size * 0.38 }, night && { color: N.text }]}>{initial}</Text></View>}
     {platform ? <View style={{ position: 'absolute', right: -3, bottom: -3 }}><BrandBadge platform={platform} size={Math.round(size * 0.32)} /></View> : null}
   </View>;
 }

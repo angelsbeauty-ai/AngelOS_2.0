@@ -139,7 +139,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
             <View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.cap}>{idea.title}</Text><View style={styles.metaRow}><Chip label={t('s3.idea')} /><Text numberOfLines={1} style={styles.meta}>{idea.angle}</Text></View></View></Pressable>)}
         </View> : listed.length ? <View style={styles.list}>{listed.map((p) => { const d = contentPostDate(p); const g = p.status === 'failed' ? 'failed' : GROUP[p.status] ?? 'drafts';
           return <Pressable key={p.id} accessibilityRole="button" onPress={() => router.push(`/content/${p.id}`)} onLongPress={() => setMenu(p)} delayLongPress={350} style={styles.row}>
-            <PostThumb workspaceId={ws} post={p} />
+            <PostThumb workspaceId={ws} post={p} placeholder={C.tint} />
             <View style={{ flex: 1, gap: 4 }}>
               <Text numberOfLines={2} style={styles.cap}>{p.variants?.[0]?.caption?.trim() || p.title}</Text>
               <View style={styles.metaRow}><Chip tone={TONE[g]} label={t(`s3.st.${g}`)} />{Array.from(new Set((p.variants ?? []).map((v) => v.platform))).map((pl) => <PlatformMark key={pl} p={pl} />)}
