@@ -16,9 +16,9 @@ Sprint 12 is accepted when the private-beta boundary is real, feedback is privac
 
 ## Beta cohorts and test windows
 
-- [x] Cohorts support Angels Beauty, students, outside businesses, and partners.
+- [x] Cohorts support beta / TestFlight testers, outside businesses, and partners.
 - [x] Public launch pricing/trial remains unchanged.
-- [x] Student beta testers receive up to a 30-day trial window for testing.
+- [x] Beta / TestFlight testers receive an extended trial window for testing.
 - [x] Outside/partner beta testers receive up to a 60-day trial window for testing.
 - [x] Extended beta windows start when the business workspace is created, not when the invite is generated.
 
