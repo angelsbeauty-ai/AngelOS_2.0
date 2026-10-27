@@ -1226,7 +1226,16 @@
     "inviteFail": "Invite could not be used",
     "createFail": "Could not create your studio",
     "svcFail": "Could not save services",
-    "hoursFail": "Could not save hours"
+    "hoursFail": "Could not save hours",
+    "checking": "Checking…",
+    "useInvite": "Use invite",
+    "english": "English",
+    "saving": "Saving…",
+    "next": "Next",
+    "stepOf": "Step {{n}} of {{total}}",
+    "readyV1": "{{name}} is ready. Connect your accounts and plan your first post.",
+    "yourStudio": "Your studio",
+    "start": "Get started"
   },
   "camp": {
     "s0": "Loading…",
@@ -2276,7 +2285,7 @@
     "openSettings": "Open Settings",
     "allow": "Turn on",
     "emptyTitle": "All caught up",
-    "emptyBody": "New messages, bookings and posts from the last two weeks show here.",
+    "emptyBody": "New messages and posts from the last two weeks show here.",
     "messages": "New messages",
     "messagesSub": "When a client messages you",
     "bookings": "Bookings",

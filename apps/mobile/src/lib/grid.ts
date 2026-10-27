@@ -27,7 +27,8 @@ export function gridDate(p: ContentPost): Date | null {
   if (!raw) return null; const d = new Date(raw); return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export function isCarousel(p: ContentPost) { return formatOf(p, igVariant(p)) === 'carousel' || (p.media ?? []).length > 1; }
+/** Carousel badge only when the post really has several photos (a 'carousel' draft with one or no photo shows no badge). */
+export function isCarousel(p: ContentPost) { return (p.media ?? []).length > 1; }
 export function isVideo(p: ContentPost) { return formatOf(p, igVariant(p)) === 'reel' || (p.media ?? []).some((m) => m.asset?.media_type === 'video'); }
 
 /** Instagram posts for a tab + filter, newest first (latest scheduled at the top, like the profile will look). */

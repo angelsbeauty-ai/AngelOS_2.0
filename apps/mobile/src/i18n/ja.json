@@ -1226,7 +1226,16 @@
     "inviteFail": "招待を使えなかったよ",
     "createFail": "サロンを作れなかったよ",
     "svcFail": "メニューを保存できなかったよ",
-    "hoursFail": "営業時間を保存できなかったよ"
+    "hoursFail": "営業時間を保存できなかったよ",
+    "checking": "確認中…",
+    "useInvite": "招待を使う",
+    "english": "English",
+    "saving": "保存中…",
+    "next": "次へ",
+    "stepOf": "ステップ {{n}}/{{total}}",
+    "readyV1": "{{name}}の準備ができたよ。アカウントをつないで、最初の投稿を考えてみよう。",
+    "yourStudio": "あなたのサロン",
+    "start": "はじめる"
   },
   "camp": {
     "s0": "読み込み中…",
@@ -2276,7 +2285,7 @@
     "openSettings": "設定を開く",
     "allow": "オンにする",
     "emptyTitle": "新しいお知らせはありません",
-    "emptyBody": "過去2週間のメッセージ・予約・投稿がここに表示されます。",
+    "emptyBody": "この2週間のメッセージや投稿がここに出るよ。",
     "messages": "新しいメッセージ",
     "messagesSub": "お客様からメッセージが届いたとき",
     "bookings": "予約",

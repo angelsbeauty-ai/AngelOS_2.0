@@ -132,7 +132,8 @@ export default function SocialAccounts() {
         : <Text style={styles.soon}>{t('messages.loginOff')}</Text>) : null}
       {a.platform !== 'line' && a.state !== 'not_connected' ? <ProfilePostGrid platform={a.platform} workspaceId={ws} posts={posts} failed={postsErr} onRetry={() => ws && loadPosts(ws)} inset={64} /> : null}
     </View>) : null}
-    {state === 'ready' ? <View style={styles.card}>
+    {/* TikTok grid only when a TikTok account is actually linked (V1 has no TikTok connect). */}
+    {state === 'ready' && items.some((x) => (x.platform as string) === 'tiktok' && x.state !== 'not_connected') ? <View style={styles.card}>
       <ProfilePostGrid platform="tiktok" workspaceId={ws} posts={posts} failed={postsErr} onRetry={() => ws && loadPosts(ws)} inset={64} />
     </View> : null}
   </Screen>;

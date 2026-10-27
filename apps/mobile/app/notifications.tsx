@@ -96,7 +96,7 @@ export default function NotificationsScreen() {
         </Pressable>; })}</View>}
 
     <Text style={[styles.section, { color: palette.muted }]}>{t('nt.alerts')}</Text>
-    <View style={[styles.list, card]}>{(['messages', 'bookings', 'ai'] as const).map((key, i) => (
+    <View style={[styles.list, card]}>{(['messages', 'ai'] as const) /* V1: no bookings toggle */.map((key, i) => (
       <View key={key} style={[styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }]}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[styles.label, { color: palette.text }]}>{t(`nt.${key}`)}</Text>

@@ -36,7 +36,7 @@ export default function VoiceScreen() {
   const top = live ? (voice.muted ? t('voice.muted', 'Muted') : t('voice.listening', 'Listening')) : voice.state === 'connecting' ? t('voice.connecting', 'Connecting…') : t('voice.title', 'Talk to your assistant');
   const caption = noWs ? t('voice.noStudio', 'Set up your studio first, then you can talk to your assistant.')
     : off ? (voice.status?.reason ?? t('voice.off', 'Voice is not available right now.'))
-    : voice.state === 'error' ? (voice.error ?? t('voice.error', 'Voice could not start. Check microphone permission in Settings.'))
+    : voice.state === 'error' ? t('voice.error', 'Voice could not start. Check microphone permission in Settings.')
     : live ? (voice.caption ? `“${voice.caption}”` : t('voice.listenCopy', "I'm listening. Take your time."))
     : null;
   const hint = live ? t('voice.tapPause', 'Tap the orb to pause') : t('voice.tapStart', 'Tap the orb to start');

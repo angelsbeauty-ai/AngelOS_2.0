@@ -16,10 +16,13 @@ import { friendlyText } from '../src/lib/friendly-error';
 
 type Workspace = { id: string; name: string; timezone: string; currency: string; locale: string };
 const CURRENCIES = ['JPY', 'USD', 'EUR', 'AUD', 'KRW', 'TWD'];
+/** AngelOS V1 has no bookings, so onboarding is invite → business → done. Services/hours stay in code for later. */
+const V1_BOOKINGS = false;
+/** Common treatments as a starting point; prices are left for the owner to fill in (no sample prices). */
 const PRESETS = [
-  { name: 'Powder brows', minutes: '150', price: '50000' },
-  { name: 'Lip blush', minutes: '150', price: '55000' },
-  { name: 'Eyeliner', minutes: '120', price: '45000' }
+  { name: 'Powder brows', minutes: '150', price: '' },
+  { name: 'Lip blush', minutes: '150', price: '' },
+  { name: 'Eyeliner', minutes: '120', price: '' }
 ];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -42,7 +45,7 @@ export default function OnboardingScreen() {
     try {
       const a = await getBetaAccess(); setAccess(a);
       const existing = await apiFetch<Workspace[]>('/workspaces').catch(() => []);
-      if (existing[0]) { setWorkspace(existing[0]); setStep(2); }
+      if (existing[0]) { if (!V1_BOOKINGS) { router.replace('/' as any); return; } setWorkspace(existing[0]); setStep(2); }
     } catch { setAccess(null); } finally { setChecking(false); }
   })(); }, []);
 
@@ -62,7 +65,7 @@ export default function OnboardingScreen() {
     try {
       const ws = await apiFetch<Workspace>('/workspaces', { method: 'POST', body: JSON.stringify({ name: biz.name.trim(), businessType: 'beauty', timezone: biz.timezone, currency: biz.currency, locale: biz.language === 'ja' ? 'ja-JP' : 'en-JP' }) });
       await updateMe({ language: biz.language }).catch(() => undefined);
-      clearMe(); setWorkspace(ws); setStep(2);
+      clearMe(); setWorkspace(ws); setStep(V1_BOOKINGS ? 2 : 4);
     } catch (e) { { const f = friendlyText(e, { action: 'save' }, t('onb.createFail', "Could not create your studio")); void dialog.notify(f.title, f.message); } }
     finally { setSaving(false); }
   }
@@ -91,12 +94,12 @@ export default function OnboardingScreen() {
     <SupportText>{t('onb.s2')}</SupportText>
     <Card premium>
       <Field label={t('onb.s11')} value={invite} onChangeText={setInvite} autoCapitalize="none" autoCorrect={false} />
-      <ActionButton kind="primary" label={saving ? 'Checking…' : 'Use invite'} disabled={saving || !invite.trim()} onPress={() => void redeem()} />
+      <ActionButton kind="primary" label={saving ? t('onb.checking', "Checking\u2026") : t('onb.useInvite', "Use invite")} disabled={saving || !invite.trim()} onPress={() => void redeem()} />
     </Card>
   </Screen>;
 
   return <Screen>
-    <Pill tone="gold">Step {step} of 4</Pill>
+    {step < 4 ? <Pill tone="gold">{t('onb.stepOf', { n: V1_BOOKINGS ? step : 1, total: V1_BOOKINGS ? 4 : 2, defaultValue: 'Step {{n}} of {{total}}' })}</Pill> : null}
     {step === 1 ? <>
       <ScreenTitle>{t('onb.s3')}</ScreenTitle>
       <Card>
@@ -106,8 +109,8 @@ export default function OnboardingScreen() {
         <SupportText>{t('onb.s5')}</SupportText>
         <View style={fieldStyles.row}>{Array.from(new Set(['Asia/Tokyo', deviceZone])).map((z) => <Chip key={z} label={z} selected={biz.timezone === z} onPress={() => setBiz({ ...biz, timezone: z })} />)}</View>
         <SupportText>{t('onb.s6')}</SupportText>
-        <View style={fieldStyles.row}><Chip label="English" selected={biz.language === 'en'} onPress={() => setBiz({ ...biz, language: 'en' })} /><Chip label="日本語" selected={biz.language === 'ja'} onPress={() => setBiz({ ...biz, language: 'ja' })} /></View>
-        <ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving || !biz.name.trim()} onPress={() => void saveBusiness()} />
+        <View style={fieldStyles.row}><Chip label={t('onb.english', "English")} selected={biz.language === 'en'} onPress={() => setBiz({ ...biz, language: 'en' })} /><Chip label="日本語" selected={biz.language === 'ja'} onPress={() => setBiz({ ...biz, language: 'ja' })} /></View>
+        <ActionButton kind="primary" label={saving ? t('onb.saving', "Saving\u2026") : t('onb.next', "Next")} disabled={saving || !biz.name.trim()} onPress={() => void saveBusiness()} />
       </Card>
     </> : null}
     {step === 2 ? <>
@@ -135,8 +138,8 @@ export default function OnboardingScreen() {
     </> : null}
     {step === 4 ? <>
       <ScreenTitle>{t('onb.s10')}</ScreenTitle>
-      <Card premium><BodyText>{workspace?.name ?? 'Your studio'} is ready. Add your first client or booking from Today.</BodyText></Card>
-      <ActionButton kind="primary" label={t('onb.s18')} onPress={() => router.replace('/(tabs)' as any)} />
+      <Card premium><BodyText>{t('onb.readyV1', { name: workspace?.name ?? t('onb.yourStudio', 'Your studio'), defaultValue: '{{name}} is ready. Connect your accounts and plan your first post.' })}</BodyText></Card>
+      <ActionButton kind="primary" label={t('onb.start', 'Get started')} onPress={() => router.replace('/' as any)} />
     </> : null}
   </Screen>;
 }

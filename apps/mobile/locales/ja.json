@@ -1,4 +1,4 @@
 {
-  "NSMicrophoneUsageDescription": "AngelOSは、アシスタントと話すときと、ボタンを長押ししてメッセージを音声入力するときだけマイクを使います。録音は保存されません。",
+  "NSMicrophoneUsageDescription": "AngelOSは、アシスタントと話すときと、ボタンを長押ししてメッセージを音声入力するときだけマイクを使います。声は内容を理解するためにアシスタントへ送られ、音声は保存されません。",
   "NSSpeechRecognitionUsageDescription": "AngelOSは、ボタンを長押しして音声入力しているあいだだけ、話した言葉を文字にします。送信ボタンを押すまで下書きのままです。"
 }
