@@ -19,13 +19,14 @@ import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
 import { Screen } from '../../src/components/Screen';
 import { Button, Overline, ScreenTitle, Skeleton } from '../../src/components/ui';
-import { Chip, ROSE } from '../../src/components/SettingsList';
+import { Chip } from '../../src/components/SettingsList';
 import { contentPostDate, listContent, listIdeas, duplicateContentPost, isNotConnected, publishContentVariant, type ContentIdea, type ContentPost } from '../../src/lib/content';
 import { getSocialAccounts } from '../../src/lib/social';
 import { SocialNumbersCard } from '../../src/components/SocialNumbersCard';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
-import { tokens, webGlass } from '../../src/design/theme';
+import { D, N, tokens, webGlass } from '../../src/design/theme';
+import { useAppearance } from '../../src/design/appearance';
 
 type View_ = 'drafts' | 'scheduled' | 'posted' | 'ideas';
 const VIEWS: View_[] = ['drafts', 'scheduled', 'posted', 'ideas'];
@@ -42,6 +43,10 @@ export default function SocialHome() { return <SocialHomeView />; }
 /** asCalendar: the NAV V1 Calendar tab (month view, posts per day with platform icons, link to bookings). */
 export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean }) {
   const { t, i18n } = useTranslation();
+  const { mode } = useAppearance();
+  const night = mode === 'night';
+  const C = cols(night);
+  const styles = useMemo(() => makeStyles(night), [night]);
   const params = useLocalSearchParams<{ view?: string }>();
   const [ws, setWs] = useState<string | null>(null);
   const [posts, setPosts] = useState<ContentPost[]>([]);
@@ -89,9 +94,9 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       <View style={styles.head}>
         <View style={{ flex: 1 }}>{!asCalendar ? <Overline>{now.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Overline> : null}<ScreenTitle>{asCalendar ? t('tabs.calendar') : t('social2.title')}</ScreenTitle></View>
         
-        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color="#262626" weight={month ? 'fill' : 'regular'} /></Pressable> : null}
-        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color="#262626" /></Pressable> : null}
-        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color="#262626" /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={month ? t('s3.week') : t('s3.month')} onPress={() => setMonth(!month)} style={styles.round}><CalendarBlank size={20} color={C.text} weight={month ? 'fill' : 'regular'} /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('grid.title')} onPress={() => router.push('/content/grid')} style={styles.round}><SquaresFour size={20} color={C.text} /></Pressable> : null}
+        {!asCalendar ? <Pressable accessibilityRole="button" accessibilityLabel={t('nav3.accounts')} onPress={() => router.push('/content/accounts')} style={styles.round}><Plug size={20} color={C.text} /></Pressable> : null}
       </View>
 
       {state === 'loading' ? <><Skeleton rows={1} height={64} /><Skeleton rows={4} height={86} /></> : null}
@@ -100,7 +105,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       {state === 'error' ? <View style={styles.calm}><Text style={styles.calmTitle}>{t('s3.errTitle')}</Text><Text style={styles.calmBody}>{t('s3.errBody')}</Text><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
 
       {empty ? <View style={styles.calm}>
-        <View style={styles.emptyIcon}><ImageSquare size={30} color={ROSE} weight="duotone" /></View>
+        <View style={styles.emptyIcon}><ImageSquare size={30} color={C.text} weight="duotone" /></View>
         <Text style={styles.calmTitle}>{t('s3.emptyTitle')}</Text><Text style={styles.calmBody}>{t('s3.emptyBody')}</Text>
         {connected === 0 ? <Button label={t('s3.connect')} onPress={() => router.push('/content/accounts')} /> : null}
         <Button variant={connected === 0 ? 'secondary' : 'primary'} label={t('social2.newPost')} onPress={() => router.push('/content/new')} />
@@ -109,27 +114,27 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       {state === 'ready' && !empty ? <>
         {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
         {month ? <View style={styles.monthNav}>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prevMonth', "Previous month")} onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color="#262626" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prevMonth', "Previous month")} onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color={C.text} weight="bold" /></Pressable>
           <Pressable accessibilityRole="button" onPress={() => { setOffset(0); setDay(null); }} style={{ flex: 1 }}><Text style={styles.monthLabel}>{base.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={t('cal.nextMonth', "Next month")} onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color="#262626" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('cal.nextMonth', "Next month")} onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color={C.text} weight="bold" /></Pressable>
         </View> : null}
         <View style={[styles.strip, month && styles.stripBig]}>
           {month ? Array.from({ length: 7 }, (_, i) => <View key={`w${i}`} style={styles.wd}><Text style={styles.dow}>{new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })}</Text></View>) : null}
           {Array.from({ length: lead }).map((_, i) => <View key={`l${i}`} style={styles.cell} />)}
           {cells.map((d) => { const k = dayKey(d); const ps = byDay.get(k) ?? []; const today = k === dayKey(now); const sel = k === day;
-            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? '#151515' : ps.length ? ROSE : 'transparent';
+            const ring = ps.some((p) => GROUP[p.status] === 'posted') ? C.text : ps.length ? C.text : 'transparent';
             return <Pressable key={k} accessibilityRole="button" accessibilityLabel={d.toDateString()} onPress={() => setDay(sel ? null : k)} style={[styles.cell, month && styles.cellBig, today && styles.cellToday, sel && !today && styles.cellSel]}>
-              {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: '#FFF' }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
-              <Text numberOfLines={1} style={[styles.dnum, today && { color: '#FFF' }]}>{d.getDate()}</Text>
-              {ps.length ? <View style={styles.marks}>{Array.from(new Set(ps.flatMap((p) => (p.variants ?? []).map((v) => v.platform.split('_')[0])))).slice(0, 3).map((pl) => <PlatformMark key={pl} p={pl} size={11} color={today ? '#FFF' : ring} />)}</View> : <View style={[styles.dot, { backgroundColor: ring }]} />}
+              {!month ? <Text numberOfLines={1} style={[styles.dow, today && { color: C.onInk }]}>{d.toLocaleDateString(lang, { weekday: 'narrow' })}</Text> : null}
+              <Text numberOfLines={1} style={[styles.dnum, today && { color: C.onInk }]}>{d.getDate()}</Text>
+              {ps.length ? <View style={styles.marks}>{Array.from(new Set(ps.flatMap((p) => (p.variants ?? []).map((v) => v.platform.split('_')[0])))).slice(0, 3).map((pl) => <PlatformMark key={pl} p={pl} size={11} color={today ? C.onInk : ring} />)}</View> : <View style={[styles.dot, { backgroundColor: ring }]} />}
             </Pressable>; })}
         </View>
 
         <View style={styles.seg}>{VIEWS.map((v) => <Pressable key={v} accessibilityRole="tab" accessibilityState={{ selected: active === v }} onPress={() => { setView(v); router.setParams({ view: v }); }} style={[styles.segItem, active === v && styles.segOn]}>
-          <Text numberOfLines={1} style={[styles.segText, active === v && { color: '#FFF' }]}>{t(`social2.${v}`)}</Text></Pressable>)}</View>
+          <Text numberOfLines={1} style={[styles.segText, active === v && { color: C.onInk }]}>{t(`social2.${v}`)}</Text></Pressable>)}</View>
 
         {active === 'ideas' ? <View style={styles.list}>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/content/campaign')} style={styles.row}><View style={[styles.thumb, styles.thumbIcon]}><Lightbulb size={24} color={ROSE} weight="duotone" /></View><View style={{ flex: 1 }}><Text style={styles.cap}>{t('s3.planCampaign')}</Text><Text style={styles.meta}>{t('s3.planCampaignSub')}</Text></View><CaretRight size={16} color="#8E8E8E" /></Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/content/campaign')} style={styles.row}><View style={[styles.thumb, styles.thumbIcon]}><Lightbulb size={24} color={C.text} weight="duotone" /></View><View style={{ flex: 1 }}><Text style={styles.cap}>{t('s3.planCampaign')}</Text><Text style={styles.meta}>{t('s3.planCampaignSub')}</Text></View><CaretRight size={16} color={C.muted} /></Pressable>
           {ideas.map((idea) => <Pressable key={idea.key} accessibilityRole="button" onPress={() => router.push({ pathname: '/content/new', params: { title: idea.title, goal: idea.objective } })} style={styles.row}>
             <View style={{ flex: 1 }}><Text numberOfLines={2} style={styles.cap}>{idea.title}</Text><View style={styles.metaRow}><Chip label={t('s3.idea')} /><Text numberOfLines={1} style={styles.meta}>{idea.angle}</Text></View></View></Pressable>)}
         </View> : listed.length ? <View style={styles.list}>{listed.map((p) => { const d = contentPostDate(p); const g = p.status === 'failed' ? 'failed' : GROUP[p.status] ?? 'drafts';
@@ -146,7 +151,7 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       <View style={{ height: 70 }} />
     </Screen>
 
-    {!empty && state !== 'nostudio' ? <Pressable accessibilityRole="button" accessibilityLabel={t('social2.newPost')} onPress={() => router.push('/content/new')} style={styles.fab}><Plus size={18} color="#FFF" weight="bold" /><Text style={styles.fabText}>{t('social2.newPost')}</Text></Pressable> : null}
+    {!empty && state !== 'nostudio' ? <Pressable accessibilityRole="button" accessibilityLabel={t('social2.newPost')} onPress={() => router.push('/content/new')} style={styles.fab}><Plus size={18} color={C.onInk} weight="bold" /><Text style={styles.fabText}>{t('social2.newPost')}</Text></Pressable> : null}
 
     <Modal visible={!!menu} transparent animationType="fade" onRequestClose={() => setMenu(null)}>
       <Pressable style={styles.backdrop} onPress={() => setMenu(null)}><View style={styles.menu}>
@@ -161,44 +166,51 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
   </View>;
 }
 
-const styles = StyleSheet.create({
+/** Day/Night colours for this screen, all from the D (Day) and N (Night) tokens. */
+function cols(night: boolean) {
+  return night
+    ? { surface: N.card, border: N.hairline, hair: N.hairline, text: N.text, text2: N.text2, muted: N.muted, faint: N.muted, onInk: N.bg, tint: N.field, sel: N.field, fail: N.text }
+    : { surface: D.surface, border: D.fill, hair: D.fill2, text: D.text, text2: D.text2, muted: D.muted, faint: D.faint, onInk: tokens.color.onCharcoal, tint: 'rgba(0,0,0,0.10)', sel: 'rgba(0,0,0,0.12)', fail: tokens.color.error };
+}
+
+const makeStyles = (night: boolean) => { const C = cols(night); return StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
-  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
+  round: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, ...(webGlass as object) },
+  strip: { flexDirection: 'row', flexWrap: 'wrap', padding: 8, borderRadius: 24, backgroundColor: C.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, ...(webGlass as object) },
   cell: { width: '14.28%', alignItems: 'center', gap: 3, paddingVertical: 6, borderRadius: 14 },
   stripBig: { paddingVertical: 14, paddingHorizontal: 4, marginHorizontal: -10 },
   cellBig: { paddingVertical: 12, minHeight: 64 },
   wd: { width: '14.28%', alignItems: 'center', paddingBottom: 6 },
   monthNav: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
-  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: '#151515', textAlign: 'center' },
-  cellToday: { backgroundColor: '#151515' }, cellSel: { backgroundColor: 'rgba(0,0,0,0.12)' },
-  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: '#76767A' },
-  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515', fontVariant: ['lining-nums'] },
+  navBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, ...(webGlass as object) },
+  monthLabel: { fontFamily: tokens.font.uiBold, fontSize: 19, color: C.text, textAlign: 'center' },
+  cellToday: { backgroundColor: C.text }, cellSel: { backgroundColor: C.sel },
+  dow: { fontFamily: tokens.font.uiSemibold, fontSize: 11, color: C.faint },
+  dnum: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: C.text, fontVariant: ['lining-nums'] },
   dot: { minWidth: 8, height: 8, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   marks: { flexDirection: 'row', gap: 1, minHeight: 11 },
-  dotN: { fontSize: 7, color: '#FFF', fontWeight: '700' },
-  seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: 'rgba(42,39,37,0.06)' },
+  dotN: { fontSize: 7, color: C.onInk, fontWeight: '700' },
+  seg: { flexDirection: 'row', padding: 4, borderRadius: 22, backgroundColor: night ? N.field : 'rgba(42,39,37,0.06)' },
   segItem: { flex: 1, flexShrink: 0, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  segOn: { backgroundColor: ROSE },
-  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515' },
-  list: { borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', overflow: 'hidden', ...(webGlass as object) },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EDEDED' },
-  thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' },
-  thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
+  segOn: { backgroundColor: C.text },
+  segText: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: C.text },
+  list: { borderRadius: 24, backgroundColor: C.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, overflow: 'hidden', ...(webGlass as object) },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 86, padding: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.hair },
+  thumb: { width: 60, height: 60, borderRadius: 14, overflow: 'hidden', flexDirection: 'row', backgroundColor: C.surface },
+  thumbIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: C.tint },
   half: { flex: 1 },
-  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: '#151515' },
+  cap: { fontFamily: tokens.font.uiMedium, fontSize: 15, lineHeight: 20, color: C.text },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  fail: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16, color: '#A3392F' },
-  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: '#6C6C70', flexShrink: 1 },
-  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#F2F2F2', ...(webGlass as object) },
-  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: '#151515', textAlign: 'center' },
-  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: '#6C6C70', textAlign: 'center' },
-  emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.10)' },
-  fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: ROSE, shadowColor: '#151515', shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
-  fabText: { fontFamily: tokens.font.uiBold, fontSize: 15, color: '#FFF' },
+  fail: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16, color: C.fail },
+  meta: { fontFamily: tokens.font.ui, fontSize: 12, color: C.muted, flexShrink: 1 },
+  calm: { alignItems: 'center', gap: 10, padding: 24, borderRadius: 24, backgroundColor: C.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, ...(webGlass as object) },
+  calmTitle: { fontFamily: tokens.font.display, fontSize: 24, color: C.text, textAlign: 'center' },
+  calmBody: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 20, color: C.muted, textAlign: 'center' },
+  emptyIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', backgroundColor: C.tint },
+  fab: { position: 'absolute', right: 16, bottom: 96, height: 52, borderRadius: 26, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.text, shadowColor: D.text, shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
+  fabText: { ...tokens.type.subhead, fontFamily: tokens.font.uiBold, color: C.onInk },
   backdrop: { flex: 1, justifyContent: 'center', padding: 32, backgroundColor: 'rgba(0,0,0,0.25)' },
-  menu: { borderRadius: 20, backgroundColor: '#FFFFFF', overflow: 'hidden' },
-  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EDEDED' },
-  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: '#151515' }
-});
+  menu: { borderRadius: 20, backgroundColor: C.surface, overflow: 'hidden' },
+  mi: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.hair },
+  miText: { fontFamily: tokens.font.uiMedium, fontSize: 16, color: C.text }
+}); };
