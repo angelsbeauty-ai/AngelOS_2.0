@@ -36,8 +36,15 @@ export interface ClientDetail {
 export type ClientFilter = 'all' | 'new' | 'active' | 'touch_up' | 'archived';
 export interface HealthQuestion { key: string; en: string; ja: string; redFlag: boolean }
 
-/** Legacy demo-inbox contacts (source 'manual', name 'Demo Client') are hidden, never deleted. */
-export const isDemoSeed = (c: ClientSummary) => c.display_name === 'Demo Client' && (c.source === 'manual' || c.source === 'manual-demo');
+/**
+ * Legacy demo / proof / test contacts left by earlier seeds are hidden everywhere, never deleted.
+ * Keep in sync with apps/api/src/clients/demo-seed.ts (isDemoSeedClient).
+ */
+const DEMO_NAMES = [/^Demo Client$/, /^Proof Client/, /^Walk Client/, /^Test Client [A-Z]$/];
+const DEMO_SOURCES = new Set(['test seed', 'manual-demo']);
+export const isDemoSeed = (c: Pick<ClientSummary, 'display_name' | 'source'>) =>
+  DEMO_SOURCES.has(String(c.source ?? '').trim().toLowerCase()) || DEMO_NAMES.some((re) => re.test(String(c.display_name ?? '').trim()));
+/** Every client picker reads through here, so demo seeds never show up anywhere in the app. */
 export function listClients(workspaceId: string, search = '', filter: ClientFilter = 'all') {
   const params = new URLSearchParams();
   if (search.trim()) params.set('search', search.trim());
@@ -46,7 +53,7 @@ export function listClients(workspaceId: string, search = '', filter: ClientFilt
   if (filter === 'touch_up') params.set('touchUpDue', 'true');
   if (filter === 'archived') params.set('archived', 'true');
   const query = params.toString();
-  return apiFetch<ClientSummary[]>(`/workspaces/${workspaceId}/clients${query ? `?${query}` : ''}`);
+  return apiFetch<ClientSummary[]>(`/workspaces/${workspaceId}/clients${query ? `?${query}` : ''}`).then((rows) => (rows ?? []).filter((c) => !isDemoSeed(c)));
 }
 
 export function updateClient(workspaceId: string, clientId: string, input: Record<string, unknown>) {

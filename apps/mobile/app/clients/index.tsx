@@ -8,7 +8,7 @@ import { RowMenu } from '../../src/components/RowMenu';
 import { ErrorState } from '../../src/components/ErrorState';
 import { Tabs } from '../../src/components/Field';
 import { Avatar, Badge, Button, EmptyState, Header, Skeleton, SupportText, ui } from '../../src/components/ui';
-import { isDemoSeed, listClients, setClientArchived, type ClientFilter, type ClientSummary } from '../../src/lib/clients';
+import { listClients, setClientArchived, type ClientFilter, type ClientSummary } from '../../src/lib/clients';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { toFriendly, type FriendlyResult } from '../../src/lib/friendly-error';
 import { label } from '../../src/lib/labels';
@@ -37,7 +37,7 @@ export default function ClientsScreen() {
     try {
       const id = workspaceId ?? (await getActiveWorkspace()).id;
       setWorkspaceId(id);
-      setClients((await listClients(id, search, filter)).filter((c) => !isDemoSeed(c)));
+      setClients(await listClients(id, search, filter));
     } catch (error) { if (isNoWorkspace(error)) setNoStudio(true); else setLoadError(toFriendly(error, { action: 'load', thing: 'clients' })); }
     finally { setBusy(false); }
   }

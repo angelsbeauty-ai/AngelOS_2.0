@@ -6,6 +6,7 @@
  * Client data is minimised: names and the fields needed to answer, no phone, email or notes. Message bodies only via
  * read_thread (one conversation, 'messages' area on). Studio tools are for owner/staff only; students never get them.
  */
+import { isDemoSeedClient } from '../../clients/demo-seed';
 export type Area = 'bookings' | 'clients' | 'messages' | 'posts' | 'analytics' | 'money' | 'services' | 'campaigns';
 export const AREAS: Area[] = ['bookings', 'clients', 'messages', 'posts', 'analytics', 'money', 'services', 'campaigns'];
 
@@ -113,13 +114,14 @@ export async function runReadTool(db: Db, workspaceId: string, name: string, arg
     return { area, from: from.toISOString(), to: to.toISOString(), count: rows.length, bookings: rows.map((r: any) => ({ id: r.id, start_at: r.start_at, end_at: r.end_at, service: r.service_name, status: r.status, client: shortName(r.client?.display_name) })) };
   }
   if (name === 'search_clients') {
-    let b = q('clients', 'id,display_name,status,created_at');
+    let b = q('clients', 'id,display_name,status,source,created_at');
     if (args.query) b = b.ilike('display_name', `%${String(args.query).replace(/[%_]/g, '')}%`);
     if (args.filter === 'new') b = b.gte('created_at', new Date(+now - 30 * DAY).toISOString());
     if (args.filter === 'inactive') b = b.eq('status', 'inactive');
-    const { data, error } = await b.limit(20);
+    const { data, error } = await b.limit(30);
     if (error) throw new Error(error.message);
-    return { area, count: (data ?? []).length, clients: (data ?? []).map((c: any) => ({ id: c.id, name: shortName(c.display_name), status: c.status })) };
+    const real = (data ?? []).filter((c: any) => !isDemoSeedClient(c)).slice(0, 20);
+    return { area, count: real.length, clients: real.map((c: any) => ({ id: c.id, name: shortName(c.display_name), status: c.status })) };
   }
   if (name === 'list_threads') {
     let b = q('message_threads', 'id,contact_display_name,status,owner_unread,last_message_at,channel:messaging_channels(provider),client:clients(display_name)').is('archived_at', null);

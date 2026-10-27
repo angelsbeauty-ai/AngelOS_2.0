@@ -91,3 +91,15 @@ test('voice token: scoped to one studio, short-lived, tamper-proof', () => {
   assert.equal(vt.verifyVoiceToken(t, A, Date.now(), 'other-key'), null);
   assert.equal(vt.verifyVoiceToken(t.slice(0, -2) + 'xx', A, Date.now(), 'k'), null);
 });
+
+test('search_clients hides legacy demo, proof and test seed contacts', async () => {
+  const seeded = { ...rows, clients: [...rows.clients,
+    { workspace_id: A, id: 'd1', display_name: 'Demo Client', source: 'manual', status: 'active', created_at: '2026-10-01T00:00:00Z' },
+    { workspace_id: A, id: 'd2', display_name: 'Proof Client 3', source: 'manual', status: 'active', created_at: '2026-10-01T00:00:00Z' },
+    { workspace_id: A, id: 'd3', display_name: 'Walk Client', source: 'manual', status: 'active', created_at: '2026-10-01T00:00:00Z' },
+    { workspace_id: A, id: 'd4', display_name: 'Test Client B', source: 'manual', status: 'active', created_at: '2026-10-01T00:00:00Z' },
+    { workspace_id: A, id: 'd5', display_name: 'Mika Seed', source: 'test seed', status: 'active', created_at: '2026-10-01T00:00:00Z' },
+    { workspace_id: A, id: 'c9', display_name: 'Test Client Bob', source: 'manual', status: 'active', created_at: '2026-10-01T00:00:00Z' }] };
+  const out = await rt.runReadTool(fakeDb(seeded), A, 'search_clients', {}, now);
+  assert.deepEqual(out.clients.map((c) => c.id).sort(), ['c1', 'c9']);
+});

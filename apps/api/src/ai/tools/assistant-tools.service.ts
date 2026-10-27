@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import type { AuthUser } from '../../auth/auth-user';
+import { isDemoSeedClient } from '../../clients/demo-seed';
 import { createUserSupabaseClient } from '../../config/supabase';
 import { AiProviderService } from '../ai-provider.service';
 import { StyleLearningService } from '../style/style-learning.service';
@@ -86,7 +87,8 @@ export class AssistantToolsService {
     if (action.action_key === 'draft_client_message') {
       const supabase = createUserSupabaseClient(user.accessToken);
       const name = String(input.clientName ?? '').trim();
-      const { data: found } = await supabase.from('clients').select('id,display_name,language,do_not_auto_message').eq('workspace_id', workspaceId).ilike('display_name', `%${name.replace(/[%_]/g, '')}%`).limit(5);
+      const { data: rows } = await supabase.from('clients').select('id,display_name,language,do_not_auto_message,source').eq('workspace_id', workspaceId).ilike('display_name', `%${name.replace(/[%_]/g, '')}%`).limit(10);
+      const found = (rows ?? []).filter((c: any) => !isDemoSeedClient(c)).slice(0, 5);
       const exact = (found ?? []).filter((c: any) => c.display_name.toLowerCase() === name.toLowerCase());
       const pick = exact.length === 1 ? exact[0] : (found ?? []).length === 1 ? found![0] : null;
       if (!pick) throw new NotFoundException(found?.length ? `More than one client matches “${name}”. Use the full name.` : `I couldn't find a client called “${name}”.`);
