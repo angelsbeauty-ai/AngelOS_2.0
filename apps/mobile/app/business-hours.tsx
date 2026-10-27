@@ -10,6 +10,7 @@ import { Card, ScreenTitle, SupportText } from '../src/components/ui';
 import { getBusinessHours, setBusinessHours } from '../src/lib/bookings';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { dialog } from '../src/lib/dialog';
+import { friendlyText } from '../src/lib/friendly-error';
 
 const NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 type Day = { dayOfWeek: number; startTime: string; endTime: string; isClosed: boolean };
@@ -23,14 +24,14 @@ export default function BusinessHoursScreen() {
     const id = (await getActiveWorkspace()).id; setWorkspaceId(id);
     const rows = await getBusinessHours(id);
     setDays([1, 2, 3, 4, 5, 6, 0].map((d) => { const r = rows.find((x) => x.day_of_week === d); return { dayOfWeek: d, startTime: r?.start_time?.slice(0, 5) ?? '10:00', endTime: r?.end_time?.slice(0, 5) ?? '19:00', isClosed: r ? r.is_closed : d === 0 }; }));
-  })().catch((e) => void dialog.notify('Could not load hours', e instanceof Error ? e.message : '')); }, []);
+  })().catch((e) => void dialog.notify('Could not load hours', friendlyText(e, { action: 'save' }).message)); }, []);
   const update = (i: number, patch: Partial<Day>) => setDays((all) => all.map((d, j) => (j === i ? { ...d, ...patch } : d)));
   async function save() {
     if (!workspaceId) return;
     if (days.some((d) => !d.isClosed && d.startTime >= d.endTime)) { void dialog.notify('Check the times', 'Closing time must be after opening time.'); return; }
     setSaving(true);
     try { await setBusinessHours(workspaceId, days.map((d) => (d.isClosed ? { dayOfWeek: d.dayOfWeek, isClosed: true } : d))); router.back(); }
-    catch (e) { void dialog.notify('Could not save hours', e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify('Could not save hours', friendlyText(e, { action: 'save' }).message); }
     finally { setSaving(false); }
   }
   return <Screen>

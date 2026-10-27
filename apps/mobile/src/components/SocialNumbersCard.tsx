@@ -11,9 +11,9 @@ export function SocialNumbersCard({ workspaceId }: { workspaceId: string }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<SocialNumber[] | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
-  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch((e) => setFailed(e instanceof Error ? e.message : 'unknown error')); }, [workspaceId]);
+  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch(() => setFailed('1')); }, [workspaceId]);
   const fmt = (n: number) => n.toLocaleString(i18n.language === 'ja' ? 'ja-JP' : 'en-US');
-  if (failed) return <View style={styles.card}><Text style={styles.title}>{t('sml.numbersTitle')}</Text><Text style={styles.body}>{t('acs.loadFail')}: {failed}</Text></View>;
+  if (failed) return <View style={styles.card}><Text style={styles.title}>{t('sml.numbersTitle')}</Text><Text style={styles.body}>{t('acs.loadFail')}</Text></View>;
   if (!items) return null;
   if (!items.length) return <View style={styles.card}>
     <Text style={styles.title}>{t('sml.numbersTitle')}</Text>

@@ -12,6 +12,7 @@ import { getBetaAccess, redeemBetaInvite, type BetaAccess } from '../src/lib/bet
 import { createService, setBusinessHours } from '../src/lib/bookings';
 import { clearMe, updateMe } from '../src/lib/me';
 import { dialog } from '../src/lib/dialog';
+import { friendlyText } from '../src/lib/friendly-error';
 
 type Workspace = { id: string; name: string; timezone: string; currency: string; locale: string };
 const CURRENCIES = ['JPY', 'USD', 'EUR', 'AUD', 'KRW', 'TWD'];
@@ -53,7 +54,7 @@ export default function OnboardingScreen() {
       clearMe();
       if (result?.role === 'student') { router.replace('/profile' as any); return; }
       setAccess(result);
-    } catch (e) { void dialog.notify('Invite could not be used', e instanceof Error ? e.message : ''); }
+    } catch (e) { { const f = friendlyText(e, { action: 'save' }, t('onb.inviteFail', "Invite could not be used")); void dialog.notify(f.title, f.message); } }
     finally { setSaving(false); }
   }
   async function saveBusiness() {
@@ -62,7 +63,7 @@ export default function OnboardingScreen() {
       const ws = await apiFetch<Workspace>('/workspaces', { method: 'POST', body: JSON.stringify({ name: biz.name.trim(), businessType: 'beauty', timezone: biz.timezone, currency: biz.currency, locale: biz.language === 'ja' ? 'ja-JP' : 'en-JP' }) });
       await updateMe({ language: biz.language }).catch(() => undefined);
       clearMe(); setWorkspace(ws); setStep(2);
-    } catch (e) { void dialog.notify('Could not create your studio', e instanceof Error ? e.message : ''); }
+    } catch (e) { { const f = friendlyText(e, { action: 'save' }, t('onb.createFail', "Could not create your studio")); void dialog.notify(f.title, f.message); } }
     finally { setSaving(false); }
   }
   async function saveServices() {
@@ -73,14 +74,14 @@ export default function OnboardingScreen() {
         await createService(workspace.id, { name: s.name.trim(), durationMinutes: Number(s.minutes) || 120, bufferBeforeMinutes: 0, bufferAfterMinutes: 15, standardPrice: Number(s.price) || 0, currency: workspace.currency });
       }
       setStep(3);
-    } catch (e) { void dialog.notify('Could not save services', e instanceof Error ? e.message : ''); }
+    } catch (e) { { const f = friendlyText(e, { action: 'save' }, t('onb.svcFail', "Could not save services")); void dialog.notify(f.title, f.message); } }
     finally { setSaving(false); }
   }
   async function saveHours() {
     if (!workspace) return;
     setSaving(true);
     try { await setBusinessHours(workspace.id, hours.map((h) => (h.open ? { dayOfWeek: h.dayOfWeek, startTime: h.startTime, endTime: h.endTime, isClosed: false } : { dayOfWeek: h.dayOfWeek, isClosed: true }))); setStep(4); }
-    catch (e) { void dialog.notify('Could not save hours', e instanceof Error ? e.message : ''); }
+    catch (e) { { const f = friendlyText(e, { action: 'save' }, t('onb.hoursFail', "Could not save hours")); void dialog.notify(f.title, f.message); } }
     finally { setSaving(false); }
   }
 

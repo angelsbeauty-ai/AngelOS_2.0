@@ -9,6 +9,7 @@ import { ActionButton, Banner, BilingualBlock, PlatformBadge } from '../../src/c
 import { DateField, TimeField, addDayString, dayString, toIso } from '../../src/components/DateField';
 import { tokens } from '../../src/design/theme';
 import { dialog } from '../../src/lib/dialog';
+import { friendlyText } from '../../src/lib/friendly-error';
 import {
   approveContentPost, copyCaptionAndOpen, getContentPost, getLineEstimate, markVariantPosted, platformLabel, scheduleContentVariant,
   sendLineBroadcast, updateContentVariant, type ContentPost, type ContentVariant, type LineEstimate
@@ -18,7 +19,6 @@ import { getActiveWorkspace } from '../../src/lib/workspace';
 import { PublishFailureNote } from '../../src/components/PublishFailureNote';
 
 const STATUS: Record<string, string> = { draft: 'Draft', prepared: 'Draft', approved: 'Approved', scheduled: 'Scheduled', publishing: 'Posting…', published: 'Posted', failed: 'Needs attention', archived: 'Archived' };
-const errText = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Please try again.');
 
 export default function ContentDetailScreen() {
   const { t } = useTranslation();
@@ -49,7 +49,7 @@ export default function ContentDetailScreen() {
   async function run(task: () => Promise<unknown>, done?: string) {
     setBusy(true);
     try { await task(); await load(); if (done) void dialog.notify(done); }
-    catch (e) { void dialog.notify('That did not work', errText(e)); }
+    catch (e) { { const f = friendlyText(e, { action: 'save' }, t('cpost.fail', "That did not work")); void dialog.notify(f.title, f.message); } }
     finally { setBusy(false); }
   }
 
@@ -60,7 +60,7 @@ export default function ContentDetailScreen() {
 
   return <Screen>
     <View style={styles.titleRow}><View style={{ flex: 1, gap: 6 }}><Pill tone="gold">{STATUS[post.status] ?? post.status}</Pill><ScreenTitle>{post.title}</ScreenTitle></View></View>
-    <SupportText>Nothing is posted by AngelOS on its own. You approve, then post (or send) each version.</SupportText>
+    <SupportText>{t('cpost.note', "Nothing is posted by AngelOS on its own. You approve, then post (or send) each version.")}</SupportText>
 
     {post.variants?.map((variant) => {
       const isLine = variant.platform === 'line';
@@ -74,7 +74,7 @@ export default function ContentDetailScreen() {
         {variant.status === 'failed' ? <PublishFailureNote ws={workspaceId} variants={[variant]} onChanged={() => void load()} /> : null}
         {isLine ? <>
           <BilingualBlock ja={variant.caption} en={en ?? meaning[variant.id] ?? null} labelJa="日本語 (sent to LINE friends)" />
-          <SupportText>To change the words, ask AngelOS for a new LINE draft (so the English meaning always matches).</SupportText>
+          <SupportText>{t('cpost.lineNote', "To change the words, ask AngelOS for a new LINE draft (so the English meaning always matches).")}</SupportText>
         </> : <>
           <View style={styles.preview}>
             {studioName ? <View style={styles.previewHead}><View style={styles.dot} /><Text numberOfLines={1} style={styles.previewName}>{studioName}</Text></View> : null}

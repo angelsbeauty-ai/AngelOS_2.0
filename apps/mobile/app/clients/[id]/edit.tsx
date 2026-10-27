@@ -9,6 +9,7 @@ import { BodyText, Card, ScreenTitle, SupportText } from '../../../src/component
 import { getClient, updateClient } from '../../../src/lib/clients';
 import { getActiveWorkspace } from '../../../src/lib/workspace';
 import { dialog } from '../../../src/lib/dialog';
+import { friendlyText } from '../../../src/lib/friendly-error';
 
 export default function EditClientScreen() {
   const { t } = useTranslation();
@@ -24,7 +25,7 @@ export default function EditClientScreen() {
     const { client } = await getClient(wsId, id!);
     setForm({ displayName: client.display_name, phone: client.phone ?? '', email: client.email ?? '', lineId: client.line_id ?? '', instagramHandle: client.instagram_handle ?? '', birthday: client.birthday ?? '' });
     setLanguage(client.language === 'en' ? 'en' : 'ja'); setManualOnly(client.do_not_auto_message);
-  })().catch((e) => void dialog.notify(t('cf.loadFail'), e instanceof Error ? e.message : '')); }, [id]);
+  })().catch((e) => void dialog.notify(t('cf.loadFail'), friendlyText(e, { action: 'save' }).message)); }, [id]);
 
   async function save() {
     if (!workspaceId || !id) return;
@@ -33,7 +34,7 @@ export default function EditClientScreen() {
     try {
       await updateClient(workspaceId, id, { displayName: form.displayName?.trim(), phone: form.phone?.trim() || null, email: form.email?.trim() || null, lineId: form.lineId?.trim() || null, instagramHandle: form.instagramHandle?.trim() || null, birthday: form.birthday || null, language, doNotAutoMessage: manualOnly });
       router.back();
-    } catch (e) { void dialog.notify(t('cf.saveFail'), e instanceof Error ? e.message : t('cf.tryAgain')); }
+    } catch (e) { void dialog.notify(t('cf.saveFail'), friendlyText(e, { action: 'save' }).message); }
     finally { setSaving(false); }
   }
 

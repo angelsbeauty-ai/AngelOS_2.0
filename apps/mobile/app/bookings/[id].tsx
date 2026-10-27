@@ -11,6 +11,7 @@ import { cancelAppointment, completeAppointment, confirmAppointment, getAppointm
 import { formatYen, recordFinanceEntry } from '../../src/lib/finance';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 const ACTIVE = ['request', 'confirmation_pending', 'confirmed', 'arrival_info_sent', 'checked_in'];
 const METHODS = ['cash', 'card', 'paypay', 'bank_transfer'] as const;
@@ -36,11 +37,11 @@ export default function BookingDetailScreen() {
       const d = await getAppointment(wsId, id!); setDetail(d);
       const start = new Date(d.appointment.start_at);
       setDay(dayString(start)); setTime(`${two(start.getHours())}:${two(start.getMinutes())}`); setNotes(d.appointment.notes ?? '');
-    } catch (e) { void dialog.notify(t('booking.couldNotLoad'), e instanceof Error ? e.message : ''); }
+    } catch (e) { void dialog.notify(t('booking.couldNotLoad'), friendlyText(e, { action: 'save' }).message); }
   }
   async function act(label: string, fn: () => Promise<unknown>) {
     setBusy(true);
-    try { await fn(); await load(); } catch (e) { void dialog.notify(label, e instanceof Error ? e.message : t('booking.tryAgain')); }
+    try { await fn(); await load(); } catch (e) { void dialog.notify(label, friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
   async function reschedule(override = false): Promise<void> {
@@ -52,7 +53,7 @@ export default function BookingDetailScreen() {
         if (await confirm({ title: t('booking.bookAnyway') + '?', message: t('booking.bookAnywayMsg'), confirmText: t('booking.bookAnyway') })) return reschedule(true);
         return;
       }
-      void dialog.notify(e?.payload?.code === 'HARD_CONFLICT' ? t('booking.taken') : t('booking.couldNotMove'), e?.payload?.code === 'HARD_CONFLICT' ? t('booking.takenMsg') : e instanceof Error ? e.message : '');
+      void dialog.notify(e?.payload?.code === 'HARD_CONFLICT' ? t('booking.taken') : t('booking.couldNotMove'), e?.payload?.code === 'HARD_CONFLICT' ? t('booking.takenMsg') : friendlyText(e, { action: 'save' }).message);
     }
   }
 

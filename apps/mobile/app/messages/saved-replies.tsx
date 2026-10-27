@@ -7,7 +7,7 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { Card, EmptyState, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { ActionButton, Banner, BilingualBlock, Chip } from '../../src/components/MessagingBits';
 import { dialog } from '../../src/lib/dialog';
-import { toFriendly } from '../../src/lib/friendly-error';
+import { toFriendly, friendlyText } from '../../src/lib/friendly-error';
 import { addStarterSavedReplies, createSavedReply, deleteSavedReply, listSavedReplies, translateText, updateSavedReply, type SavedReply } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
@@ -41,7 +41,7 @@ export default function SavedRepliesScreen() {
   async function act(task: () => Promise<unknown>) {
     setBusy(true);
     try { await task(); await load(); }
-    catch (error) { const f = toFriendly(error, { action: 'save' }); void dialog.notify(f.title, error instanceof Error && error.message ? error.message : f.message); }
+    catch (error) { const f = friendlyText(error, { action: 'save' }); void dialog.notify(f.title, f.message); }
     finally { setBusy(false); }
   }
 

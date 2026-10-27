@@ -7,12 +7,13 @@ import { Screen } from '../../src/components/Screen';
 import { BodyText, Button, Card, EmptyState, Header, Pill, SectionTitle, Skeleton, StatTile, SupportText, ui } from '../../src/components/ui';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 export default function MediaLibraryScreen() {
   const { t } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null); const [assets, setAssets] = useState<MediaAsset[]>([]); const [previews, setPreviews] = useState<Record<string, string>>({}); const [busy, setBusy] = useState(true);
   useEffect(() => { void load(); }, []);
-  async function load() { setBusy(true); try { const workspace = workspaceId ? { id: workspaceId } : await getActiveWorkspace(); if (!workspaceId) setWorkspaceId(workspace.id); const rows = await listMedia(workspace.id); setAssets(rows); const imageRows = rows.filter((row) => row.media_type === 'image' && row.upload_status === 'uploaded').slice(0, 24); const urls = await Promise.all(imageRows.map(async (row) => [row.id, (await getMediaViewUrl(workspace.id, row.id)).url] as const)); setPreviews(Object.fromEntries(urls)); } catch (error) { void dialog.notify('Could not load media', error instanceof Error ? error.message : 'Unknown error'); } finally { setBusy(false); } }
+  async function load() { setBusy(true); try { const workspace = workspaceId ? { id: workspaceId } : await getActiveWorkspace(); if (!workspaceId) setWorkspaceId(workspace.id); const rows = await listMedia(workspace.id); setAssets(rows); const imageRows = rows.filter((row) => row.media_type === 'image' && row.upload_status === 'uploaded').slice(0, 24); const urls = await Promise.all(imageRows.map(async (row) => [row.id, (await getMediaViewUrl(workspace.id, row.id)).url] as const)); setPreviews(Object.fromEntries(urls)); } catch (error) { void dialog.notify('Could not load media', friendlyText(error, { action: 'save' }).message); } finally { setBusy(false); } }
   const approvedCount = assets.filter((asset) => asset.marketing_permission === 'marketing_approved').length;
 
   return <Screen onRefresh={() => load()}>

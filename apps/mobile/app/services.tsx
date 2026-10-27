@@ -8,6 +8,7 @@ import { Screen } from '../src/components/Screen';
 import { BodyText, Card, Pill, PrimaryActionLabel, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { createService, listAllServices as listServices, type ServiceItem } from '../src/lib/bookings';
 import { getActiveWorkspace, type WorkspaceSummary } from '../src/lib/workspace';
+import { friendlyText } from '../src/lib/friendly-error';
 
 export default function ServicesScreen() {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ export default function ServicesScreen() {
       const activeWorkspace = await getActiveWorkspace();
       setWorkspace(activeWorkspace);
       setServices(await listServices(activeWorkspace.id));
-    } catch (error) { void dialog.notify('Could not load services', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Could not load services', friendlyText(error, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
 
@@ -46,7 +47,7 @@ export default function ServicesScreen() {
       setName(''); setDuration(''); setBufferBefore(''); setBufferAfter(''); setPrice('');
       setServices(await listServices(workspace.id));
       void dialog.notify('Service added', 'AngelOS will use these exact rules when checking availability.');
-    } catch (error) { void dialog.notify('Could not create service', error instanceof Error ? error.message : 'Unknown error'); }
+    } catch (error) { void dialog.notify('Could not create service', friendlyText(error, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
 

@@ -14,8 +14,9 @@ import { DeleteAccountSheet } from '../../src/components/DeleteAccountSheet';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { clearMe, getMe, updateMe } from '../../src/lib/me';
 import { supabase } from '../../src/lib/supabase';
+import { friendlyText } from '../../src/lib/friendly-error';
 
-const err = (e: unknown) => (e instanceof Error ? e.message : String(e));
+const err = (e: unknown) => friendlyText(e, { action: 'save' }).message;
 
 export default function AccountSettings() {
   const { t, i18n } = useTranslation();
@@ -39,7 +40,7 @@ export default function AccountSettings() {
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) return dialog.notify(t('common.error'), error.message);
+    if (error) return dialog.notify(t('common.error'), friendlyText(error, { action: 'save' }).message);
     setPassword('');
     await dialog.notify(t('account.passwordDone'));
   }

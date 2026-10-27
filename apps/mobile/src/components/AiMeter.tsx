@@ -22,12 +22,12 @@ export function AiMeter({ workspaceId, founder = false }: { workspaceId: string 
   }, [workspaceId, founder]));
   if (!workspaceId) return null;
   if (founder) return <FounderMoney bill={bill} err={err} />;
-  return <View style={styles.box} accessibilityLabel={u ? `${u.today} of ${u.dailyLimit} AI uses today, ${u.month} of ${u.monthlyLimit} this month` : undefined}>
+  return <View style={styles.box} accessibilityLabel={u ? t('meter.a11y', { today: u.today, dl: u.dailyLimit, month: u.month, ml: u.monthlyLimit, defaultValue: '{{today}} of {{dl}} AI uses today, {{month}} of {{ml}} this month' }) : undefined}>
     <Text style={styles.title}>{t('meter.title', 'AI uses')}</Text>
     {err ? <Text style={styles.muted}>{t('meter.error', 'Usage could not load right now.')}</Text> : !u ? <Text style={styles.muted}>…</Text> : <>
       <Bar label={t('meter.today', 'Today')} n={u.today} max={u.dailyLimit} />
       <Bar label={t('meter.month', 'This month')} n={u.month} max={u.monthlyLimit} />
-      {u.limited ? <Text style={styles.limit}>{u.message}</Text> : null}
+      {u.limited ? <Text style={styles.limit}>{u.reason === 'monthly' ? t('meter.limitMonth', { n: u.monthlyLimit, defaultValue: 'You have used all {{n}} AI uses for this month. They reset on the 1st.' }) : t('meter.limitDay', { n: u.dailyLimit, defaultValue: 'You have used all {{n}} AI uses for today. They reset at midnight (Japan time).' })}</Text> : null}
       {u.unavailable ? <Text style={styles.muted}>{t('meter.unavailable', 'Usage tracking is not available yet.')}</Text> : null}
     </>}
   </View>;
@@ -37,7 +37,8 @@ function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
   const { t } = useTranslation();
   const spent = bill?.bill?.usd;
   const credit = bill?.credit;
-  const reason = err ? t('founderBill.loadFail') : bill?.available === false ? (bill?.reason ?? t('founderBill.loadFail')) : spent == null ? (bill?.bill?.reason ?? null) : null;
+  // Server reasons are developer text (API keys, config); the owner sees one plain line instead.
+  const reason = t('founderBill.loadFail');
   return <View style={styles.box}>
     <Text style={styles.title}>{t('founderBill.profileTitle', 'AI usage')}</Text>
     {!bill && !err ? <Text style={styles.muted}>…</Text> : <>
@@ -49,7 +50,7 @@ function FounderMoney({ bill, err }: { bill: any; err: boolean }) {
         <Text style={styles.moneySm}>{usd(credit.availableUsd)}</Text>
         <Text style={styles.label}>{t('founderBill.left', 'Credit left')}</Text>
         <Text style={styles.muted}>{t('founderBill.of', { used: usd(credit.usedUsd), granted: usd(credit.grantedUsd), defaultValue: '{{used}} used of {{granted}} added' })}</Text>
-      </> : bill ? <Text style={styles.muted}>{bill.creditReason ?? t('founderBill.noCredit', 'The AI service did not share how much credit is left.')}</Text> : null}
+      </> : bill ? <Text style={styles.muted}>{t('founderBill.noCredit', 'The AI service did not share how much credit is left.')}</Text> : null}
       <Text style={styles.muted}>{t('founderBill.usdNote', 'The AI service charges in US dollars. AngelOS does not convert this into yen.')}</Text>
     </>}
   </View>;

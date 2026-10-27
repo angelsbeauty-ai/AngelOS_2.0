@@ -5,6 +5,7 @@ import { useAppearance } from '../design/appearance';
 import { tokens } from '../design/theme';
 import { dialog } from '../lib/dialog';
 import { markVariantPosted, publishContentVariant, type ContentVariant } from '../lib/content';
+import { friendlyText } from '../lib/friendly-error';
 
 const NAME: Record<string, string> = { instagram: 'Instagram', facebook: 'Facebook', line: 'LINE', tiktok: 'TikTok', threads: 'Threads' };
 const nameOf = (p: string) => NAME[p.split('_')[0]] ?? p;
@@ -32,11 +33,11 @@ export function PublishFailureNote({ ws, variants, onChanged, hideRetry }: { ws:
   return <View style={{ gap: 10 }}>{failed.map((v) => {
     const p = nameOf(v.platform);
     const check = Boolean(v.needs_check);
-    async function markPosted() { setBusy(true); try { await markVariantPosted(ws, v.id); onChanged(); } catch (e) { void dialog.notify(t('pub.why'), e instanceof Error ? e.message : ''); } finally { setBusy(false); } }
+    async function markPosted() { setBusy(true); try { await markVariantPosted(ws, v.id); onChanged(); } catch (e) { void dialog.notify(t('pub.why'), friendlyText(e, { action: 'save' }).message); } finally { setBusy(false); } }
     async function postAnyway() {
       const yes = await dialog.confirm({ title: t('pub.postAnywayTitle'), message: t('pub.postAnywayBody', { p }), confirmText: t('pub.postAnyway'), cancelText: t('sched.keepScheduled', 'Keep') });
       if (!yes) return;
-      setBusy(true); try { await publishContentVariant(ws, v.id, { confirmNotPosted: true }); onChanged(); } catch (e) { void dialog.notify(t('pub.why'), e instanceof Error ? e.message : ''); } finally { setBusy(false); }
+      setBusy(true); try { await publishContentVariant(ws, v.id, { confirmNotPosted: true }); onChanged(); } catch (e) { void dialog.notify(t('pub.why'), friendlyText(e, { action: 'save' }).message); } finally { setBusy(false); }
     }
     return <View key={v.id} accessibilityLiveRegion="polite" style={[styles.box, { backgroundColor: palette.fill }]}>
       <Text maxFontSizeMultiplier={1.6} style={[styles.title, { color: check ? palette.text : red }]}>{check ? t('pub.needsCheckTitle') : `${t('pub.why')} · ${p}`}</Text>

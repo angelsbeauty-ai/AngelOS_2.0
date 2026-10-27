@@ -14,6 +14,7 @@ import { formatYen, recordFinanceEntry } from '../../src/lib/finance';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 import { useAppearance } from '../../src/design/appearance';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 const METHODS = [['cash', 'cd.cash'], ['card', 'cd.card'], ['paypay', 'cd.paypay'], ['bank_transfer', 'cd.bank']] as const;
 
@@ -41,11 +42,11 @@ export default function ClientDetailScreen() {
     setBusy(true);
     try { const wsId = workspaceId ?? (await getActiveWorkspace()).id; setWorkspaceId(wsId); setDetail(await getClient(wsId, id));
       void listMedia(wsId, { clientId: id }).then(async (rows) => { const imgs = rows.filter((r) => r.media_type === 'image' && r.upload_status === 'uploaded'); setPhotos(imgs); const urls = await Promise.all(imgs.slice(0, 8).map(async (r) => [r.id, (await getMediaViewUrl(wsId, r.id)).url] as const)); setPreviews(Object.fromEntries(urls)); }).catch(() => undefined); }
-    catch (error) { void dialog.notify(t('cf.loadFail'), error instanceof Error ? error.message : t('cf.tryAgain')); }
+    catch (error) { void dialog.notify(t('cf.loadFail'), friendlyText(error, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
   async function run(label: string, fn: () => Promise<unknown>) {
-    try { await fn(); await load(); } catch (error) { void dialog.notify(label, error instanceof Error ? error.message : t('cf.tryAgain')); }
+    try { await fn(); await load(); } catch (error) { void dialog.notify(label, friendlyText(error, { action: 'save' }).message); }
   }
 
   if (busy && !detail) return <Screen><Card><BodyText>{t('cd.loading')}</BodyText></Card></Screen>;

@@ -6,7 +6,7 @@ import { Screen } from '../../src/components/Screen';
 import { Card, ScreenTitle, SectionTitle, SupportText, ui } from '../../src/components/ui';
 import { ActionButton, Avatar, Chip } from '../../src/components/MessagingBits';
 import { dialog } from '../../src/lib/dialog';
-import { toFriendly } from '../../src/lib/friendly-error';
+import { friendlyText } from '../../src/lib/friendly-error';
 import { getClient, listClients, type ClientSummary } from '../../src/lib/clients';
 import { startConversation } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
@@ -49,8 +49,7 @@ export default function NewConversationScreen() {
       const result = await startConversation(workspaceId, { clientId: client.id, platform, body: body.trim() });
       router.replace(`/messages/${result.threadId}` as any);
     } catch (error) {
-      const friendly = toFriendly(error, { action: 'save' });
-      void dialog.notify(friendly.title, error instanceof Error && error.message ? error.message : friendly.message);
+      const f = friendlyText(error, { action: 'save' }); void dialog.notify(f.title, f.message);
     } finally { setBusy(false); }
   }
 
@@ -82,7 +81,7 @@ export default function NewConversationScreen() {
 
     <Card>
       <SectionTitle>{t('mnew.where')}</SectionTitle>
-      <View style={styles.chips}>{PLATFORMS.map((item) => <Chip key={item.key} label={item.label} selected={platform === item.key} onPress={() => setPlatform(item.key)} />)}</View>
+      <View style={styles.chips}>{PLATFORMS.map((item) => <Chip key={item.key} label={item.key === 'other' ? t('mnew.other', "Other") : item.label} selected={platform === item.key} onPress={() => setPlatform(item.key)} />)}</View>
     </Card>
 
     <Card>

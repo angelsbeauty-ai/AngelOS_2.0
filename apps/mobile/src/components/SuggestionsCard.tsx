@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Card, SectionTitle, SupportText, ui } from './ui';
 import { ActionButton } from './MessagingBits';
 import { dialog } from '../lib/dialog';
-import { toFriendly } from '../lib/friendly-error';
+import { friendlyText } from '../lib/friendly-error';
 import { approveSuggestion, dismissSuggestion, listSuggestions, type Suggestion } from '../lib/suggestions';
 import { tokens } from '../design/theme';
 
@@ -39,8 +39,8 @@ export function SuggestionsCard({ workspaceId, limit, showAllLink = true }: { wo
       if (result.threadId) router.push(`/messages/${result.threadId}` as any);
       else if (result.contentPostId) router.push(`/content/${result.contentPostId}` as any);
     } catch (error) {
-      const f = toFriendly(error, { action: 'save' });
-      void dialog.notify(f.title, error instanceof Error && error.message ? error.message : f.message);
+      const f = friendlyText(error, { action: 'save' });
+      void dialog.notify(f.title, f.message);
     } finally { setBusy(null); }
   }
 

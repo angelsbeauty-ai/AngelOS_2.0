@@ -19,7 +19,7 @@ import { useOnline } from '../../src/lib/offline';
 import { fromJ, ymd } from '../../src/lib/jst';
 import { approveContentPost, publishContentVariant, isNotConnected, scheduleContentVariant, cancelScheduledVariant, bestTimes, BEST_TIME_SOURCE, ownBestTimes, createComposerDraft, draftCaption, listHashtagSets, type CaptionTone, type HashtagSet, type ContentFormat, type ContentObjective, type ContentPlatform } from '../../src/lib/content';
 import { dialog } from '../../src/lib/dialog';
-import { toFriendly } from '../../src/lib/friendly-error';
+import { toFriendly, friendlyText } from '../../src/lib/friendly-error';
 import { getMediaViewUrl, listMedia, type MediaAsset } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { useAppearance } from '../../src/design/appearance';
@@ -46,7 +46,8 @@ const PLATFORMS: { id: ContentPlatform; label: string }[] = [
 ];
 
 type Kind = 'story' | 'post' | 'carousel' | 'reel' | 'live' | 'thread';
-const KINDS: Kind[] = ['story', 'post', 'carousel', 'reel', 'live', 'thread'];
+/** AngelOS V1 offers only the types it can save and post; Live and Threads stay in code (Meta cannot schedule them). */
+const KINDS: Kind[] = ['story', 'post', 'carousel', 'reel'];
 
 const TIMES = ['10:00', '12:00', '18:00', '19:00', '20:00', '21:00'];
 const IG_CAPTION_LIMIT = 2200;
@@ -175,7 +176,7 @@ export default function NewPostScreen() {
       }
       setSelectedMedia((cur) => [...saved, ...cur].slice(0, 10));
       setMediaState('ready');
-    } catch (e) { void dialog.notify(t('imp.fail'), e instanceof Error ? e.message : t('imp.unknown')); }
+    } catch (e) { void dialog.notify(t('imp.fail'), friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
 
@@ -293,7 +294,7 @@ export default function NewPostScreen() {
   }
 
   const captionTooLongForInstagram = platforms.includes('instagram') && postedCaption.length > IG_CAPTION_LIMIT;
-  const kindLabel = (id: Kind) => id === 'story' ? 'Story' : id === 'post' ? t('cnew.post') : id === 'carousel' ? 'Carousel' : id === 'reel' ? 'Reel' : id === 'live' ? t('cnew.live') : t('cnew.thread');
+  const kindLabel = (id: Kind) => id === 'story' ? t('cnew.story', 'Story') : id === 'post' ? t('cnew.post') : id === 'carousel' ? t('cnew.carousel', 'Carousel') : id === 'reel' ? t('cnew.reel', 'Reel') : id === 'live' ? t('cnew.live') : t('cnew.thread');
 
   return (
     <Screen>

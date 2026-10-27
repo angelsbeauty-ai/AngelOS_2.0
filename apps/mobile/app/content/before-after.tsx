@@ -10,6 +10,7 @@ import { dialog } from '../../src/lib/dialog';
 import { getClient, listClients } from '../../src/lib/clients';
 import { getMediaViewUrl, importMedia, listMedia, type MediaAsset } from '../../src/lib/media';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 type Layout = 'side' | 'stack' | 'three';
 type Ratio = '1:1' | '4:5' | '9:16';
@@ -104,7 +105,7 @@ export default function BeforeAfterScreen() {
       const urls = picked.map((id) => photos.find((p) => p.id === id)?.url).filter(Boolean) as string[];
       const blob = await render(canvasRef.current, { urls, layout: layout === 'three' ? 'side' : layout, ratio, labels, watermark: watermark ? (studio || 'Angels Beauty') : null });
       setResult({ url: (globalThis as any).URL.createObjectURL(blob), blob });
-    } catch (e) { void dialog.notify('Could not make the image', e instanceof Error ? e.message : 'Please try again.'); }
+    } catch (e) { void dialog.notify('Could not make the image', friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
 
@@ -115,7 +116,7 @@ export default function BeforeAfterScreen() {
       const asset = await importMedia(workspaceId, { uri: result.url, filename: `before-after-${Date.now()}.jpg`, mimeType: 'image/jpeg', sizeBytes: result.blob.size, source: 'phone_files' },
         { clientId: client.id, role: 'content_source', marketingPermission: 'marketing_approved' });
       router.push({ pathname: '/content/new', params: { mediaId: asset.id, title: `Before & after: ${client.name.split(' ')[0]}`, goal: 'bookings' } } as any);
-    } catch (e) { void dialog.notify('Could not save the image', e instanceof Error ? e.message : 'Please try again.'); }
+    } catch (e) { void dialog.notify('Could not save the image', friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
 

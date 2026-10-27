@@ -9,6 +9,7 @@ import { BodyText, Card, ScreenTitle, SupportText } from '../../src/components/u
 import { listAllServices, updateService } from '../../src/lib/bookings';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { dialog } from '../../src/lib/dialog';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 export default function EditServiceScreen() {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export default function EditServiceScreen() {
     if (!s) throw new Error('Service not found');
     setF({ name: s.name, duration: String(s.duration_minutes), before: String(s.buffer_before_minutes), after: String(s.buffer_after_minutes), price: String(s.standard_price), deposit: s.deposit_amount != null ? String(s.deposit_amount) : '', description: s.description ?? '' });
     setActive(s.active !== false);
-  })().catch((e) => void dialog.notify('Could not load service', e instanceof Error ? e.message : '')); }, [id]);
+  })().catch((e) => void dialog.notify('Could not load service', friendlyText(e, { action: 'save' }).message)); }, [id]);
   if (!f) return <Screen><Card><BodyText>{t('svcd.s0')}</BodyText></Card></Screen>;
   const set = (k: string) => (v: string) => setF({ ...f, [k]: v });
   const int = (v: string) => Number.isInteger(Number(v)) ? Number(v) : NaN;
@@ -30,7 +31,7 @@ export default function EditServiceScreen() {
     if (!workspaceId || !id || !f) return;
     const body = { name: f.name.trim(), durationMinutes: int(f.duration), bufferBeforeMinutes: int(f.before || '0'), bufferAfterMinutes: int(f.after || '0'), standardPrice: Number(f.price), depositAmount: f.deposit.trim() ? Number(f.deposit) : null, description: f.description.trim() || null, active };
     if (!body.name || !(body.durationMinutes >= 5) || !(body.standardPrice >= 0) || Number.isNaN(body.bufferBeforeMinutes) || Number.isNaN(body.bufferAfterMinutes)) { void dialog.notify('Check the details', 'Name, a duration of at least 5 minutes and a price are needed.'); return; }
-    try { await updateService(workspaceId, id, body); router.back(); } catch (e) { void dialog.notify('Could not save', e instanceof Error ? e.message : ''); }
+    try { await updateService(workspaceId, id, body); router.back(); } catch (e) { void dialog.notify('Could not save', friendlyText(e, { action: 'save' }).message); }
   }
   return <Screen>
     <ScreenTitle>{t('svcd.s1')}</ScreenTitle>

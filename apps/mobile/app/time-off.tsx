@@ -9,6 +9,7 @@ import { Card, ScreenTitle, SectionTitle, SupportText } from '../src/components/
 import { createBlock, deleteBlock, getCalendar, type CalendarBlock } from '../src/lib/bookings';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { confirm, dialog } from '../src/lib/dialog';
+import { friendlyText } from '../src/lib/friendly-error';
 
 export default function TimeOffScreen() {
   const { t } = useTranslation();
@@ -34,7 +35,7 @@ export default function TimeOffScreen() {
     const endAt = kind === 'day' ? toIso(addDayString(to < from ? from : to, 1), '00:00') : toIso(from, end);
     if (Date.parse(endAt) <= Date.parse(startAt)) { void dialog.notify('Check the times', 'The end must be after the start.'); return; }
     try { await createBlock(workspaceId, { title: title.trim() || 'Blocked', blockType: flexible ? 'soft' : 'personal', startAt, endAt }); await load(); }
-    catch (e) { void dialog.notify('Could not save', e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify('Could not save', friendlyText(e, { action: 'save' }).message); }
   }
   return <Screen>
     <ScreenTitle>Days off & blocks</ScreenTitle>

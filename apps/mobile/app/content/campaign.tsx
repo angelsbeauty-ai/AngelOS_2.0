@@ -10,6 +10,7 @@ import { getActiveWorkspace } from '../../src/lib/workspace';
 import { dialog } from '../../src/lib/dialog';
 import { tokens } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 const GOALS = ['bookings', 'touch_ups', 'trust', 'reach'] as const;
 
@@ -43,7 +44,7 @@ export default function PlanCampaign() {
       const r = await planCampaign(ws, c.id);
       await dialog.notify(t('s3.cCreated', { count: r.created.length }), t('s3.cCreatedMsg'));
       router.replace({ pathname: '/social', params: { view: 'drafts' } });
-    } catch (e) { await dialog.notify(t('s3.cFail'), e instanceof Error ? e.message : ''); }
+    } catch (e) { await dialog.notify(t('s3.cFail'), friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
 

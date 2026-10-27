@@ -9,7 +9,7 @@ import { ErrorState } from '../src/components/ErrorState';
 import { Card, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { ActionButton, Banner, BilingualBlock, Chip } from '../src/components/MessagingBits';
 import { dialog } from '../src/lib/dialog';
-import { toFriendly } from '../src/lib/friendly-error';
+import { friendlyText } from '../src/lib/friendly-error';
 import {
   approveSuggestedReply, getAssistantProfile, getBrainSummaries, getReplyStyle, learnReplyStyleNow, listSuggestedReplies, rejectSuggestedReply,
   updateAssistantProfile, updateAssistantRoles, updateReplyStyle, type AssistantProfile, type AssistantRole, type AssistantRoleKey, type BrainSummary, type ReplyStyle
@@ -33,7 +33,7 @@ const LENGTH = [['short', 'Short'], ['medium', 'Medium'], ['detailed', 'Detailed
 const FORMALITY: Record<string, string> = { casual: 'casual', polite: 'polite', formal: 'formal' };
 
 export default function AiSettingsScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [profile, setProfile] = useState<AssistantProfile | null>(null);
   const [roles, setRoles] = useState<AssistantRole[]>([]);
@@ -69,7 +69,7 @@ export default function AiSettingsScreen() {
   async function act<T>(task: () => Promise<T>, after?: (value: T) => void) {
     setBusy(true);
     try { const value = await task(); after?.(value); }
-    catch (error) { const f = toFriendly(error, { action: 'save' }); void dialog.notify(f.title, error instanceof Error && error.message ? error.message : f.message); }
+    catch (error) { const g = friendlyText(error, { action: 'save' }); void dialog.notify(g.title, g.message); }
     finally { setBusy(false); }
   }
   const saveProfile = (patch: Record<string, unknown>) => workspaceId && act(() => updateAssistantProfile(workspaceId, patch), setProfile);
@@ -77,8 +77,8 @@ export default function AiSettingsScreen() {
 
   if (state === 'error' || !profile || !workspaceId) return <Screen>
     <ScreenTitle>{t('aiset.s1')}</ScreenTitle>
-    <SupportText>How your assistant sounds, and when she speaks up.</SupportText>
-    {state === 'error' ? <ErrorState title={t('aiset.s23')} message={t('aiset.s24')} onRetry={() => { setState('loading'); void load(); }} /> : <Card><SupportText>These settings appear once you are signed in to your studio.</SupportText></Card>}
+    <SupportText>{t('aiset.introV1', "How your assistant sounds, and when it speaks up.")}</SupportText>
+    {state === 'error' ? <ErrorState title={t('aiset.s23')} message={t('aiset.s24')} onRetry={() => { setState('loading'); void load(); }} /> : <Card><SupportText>{t('aiset.signedOut', "These settings appear once you are signed in to your studio.")}</SupportText></Card>}
   </Screen>;
   const learned = style?.learned ?? {};
 
@@ -98,7 +98,7 @@ export default function AiSettingsScreen() {
       <TextInput accessibilityLabel={t('aiset.s26')} value={personality} onChangeText={setPersonality} multiline placeholder={t('aiset.s27')} placeholderTextColor={ui.colors.secondaryText} style={[styles.input, styles.multi]} />
       {personality !== (profile.personality_prompt ?? '') ? <ActionButton label={t('aiset.s28')} disabled={busy} onPress={() => void saveProfile({ personalityPrompt: personality.trim() })} /> : null}
       <Text style={styles.label}>{t('aiset.s6')}</Text>
-      <View style={styles.chips}>{(['low', 'balanced', 'high'] as const).map((value) => <Chip key={value} label={value === 'low' ? 'Only when asked' : value === 'balanced' ? 'Balanced' : 'Very proactive'} selected={profile.proactivity === value} onPress={() => void saveProfile({ proactivity: value })} />)}</View>
+      <View style={styles.chips}>{(['low', 'balanced', 'high'] as const).map((value) => <Chip key={value} label={value === 'low' ? t('aiset.proLow', "Only when asked") : value === 'balanced' ? t('aiset.proBal', "Balanced") : t('aiset.proHigh', "Very proactive")} selected={profile.proactivity === value} onPress={() => void saveProfile({ proactivity: value })} />)}</View>
     </Card>
 
     <Card>
@@ -122,15 +122,15 @@ export default function AiSettingsScreen() {
         <Switch accessibilityLabel={t('aiset.s10')} value={style?.learn_from_replies ?? true} disabled={busy || Boolean(styleMigration)} onValueChange={(value) => void saveStyle({ learnFromReplies: value })} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(style?.learn_from_replies ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
       </View>
       {learned.sampleCount ? <View style={styles.learned}>
-        <Text style={styles.learnedTitle}>What it learned from {learned.sampleCount} replies</Text>
-        <SupportText>• Languages: {learned.languageMix?.ja ?? 0} Japanese, {learned.languageMix?.en ?? 0} English</SupportText>
-        <SupportText>• Usually {learned.lengthBand} replies, {FORMALITY[learned.formality ?? 'polite']} tone, about {learned.emojiPerReply ?? 0} emoji each {learned.topEmojis?.length ? `(${learned.topEmojis.join(' ')})` : ''}</SupportText>
+        <Text style={styles.learnedTitle}>{t('aiset.learnedFrom', { defaultValue: "What it learned from {{n}} replies", n: learned.sampleCount })}</Text>
+        <SupportText>{t('aiset.learnedLang', { defaultValue: "\u2022 Languages: {{ja}} Japanese, {{en}} English", ja: learned.languageMix?.ja ?? 0, en: learned.languageMix?.en ?? 0 })}</SupportText>
+        <SupportText>{t('aiset.learnedStyle', { defaultValue: "\u2022 Usually {{len}} replies, {{tone}} tone, about {{emoji}} emoji each", len: t(`aiset.len_${learned.lengthBand}`, String(learned.lengthBand ?? '')), tone: t(`aiset.form_${learned.formality ?? 'polite'}`, FORMALITY[learned.formality ?? 'polite'] ?? 'polite'), emoji: learned.emojiPerReply ?? 0 })}{learned.topEmojis?.length ? ` (${learned.topEmojis.join(' ')})` : ''}</SupportText>
         {learned.usesClientName ? <SupportText>{t('aiset.s12')}</SupportText> : null}
-        {learned.greetings?.length ? <SupportText>• Openings: {learned.greetings.join(' / ')}</SupportText> : null}
-        {learned.closings?.length ? <SupportText>• Closings: {learned.closings.join(' / ')}</SupportText> : null}
-        {style?.learned_at ? <SupportText>Last learned {new Date(style.learned_at).toLocaleString()}</SupportText> : null}
+        {learned.greetings?.length ? <SupportText>{t('aiset.openings', "\u2022 Openings: ")}{learned.greetings.join(' / ')}</SupportText> : null}
+        {learned.closings?.length ? <SupportText>{t('aiset.closings', "\u2022 Closings: ")}{learned.closings.join(' / ')}</SupportText> : null}
+        {style?.learned_at ? <SupportText>{t('aiset.lastLearned', { defaultValue: "Last learned {{when}}", when: new Date(style.learned_at).toLocaleString(i18n.language?.startsWith('ja') ? 'ja-JP' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }) })}</SupportText> : null}
       </View> : <SupportText>{t('aiset.s13')}</SupportText>}
-      <ActionButton label={busy ? 'Learning…' : 'Learn now'} disabled={busy || Boolean(styleMigration) || style?.learn_from_replies === false} onPress={() => void act(() => learnReplyStyleNow(workspaceId), (result) => { void load(); void dialog.notify('Done', result.newSuggestions ? `${result.newSuggestions} new repeated reply suggestion(s) below.` : 'Your style summary is up to date.'); })} />
+      <ActionButton label={busy ? t('aiset.learning', "Learning\u2026") : t('aiset.learnNow', "Learn now")} disabled={busy || Boolean(styleMigration) || style?.learn_from_replies === false} onPress={() => void act(() => learnReplyStyleNow(workspaceId), (result) => { void load(); void dialog.notify(t('aiset.done', "Done"), result.newSuggestions ? t('aiset.newSugg', { defaultValue: "{{n}} new repeated reply suggestions below.", n: result.newSuggestions }) : t('aiset.upToDate', "Your style summary is up to date.")); })} />
     </Card>
 
     <Card>
@@ -140,7 +140,7 @@ export default function AiSettingsScreen() {
       {suggested.map((item) => editing?.id === item.id ? <View key={item.id} style={styles.suggestion}>
         <TextInput accessibilityLabel={t('aiset.s30')} value={editing.title} onChangeText={(title) => setEditing({ ...editing, title })} style={styles.input} />
         {item.body_ja !== null ? <><Text style={styles.label}>日本語</Text><TextInput accessibilityLabel={t('aiset.s31')} value={editing.bodyJa} onChangeText={(bodyJa) => setEditing({ ...editing, bodyJa })} multiline style={[styles.input, styles.multi]} /></> : null}
-        <Text style={styles.label}>English</Text>
+        <Text style={styles.label}>{t('aiset.english', "English")}</Text>
         <TextInput accessibilityLabel={t('aiset.s32')} value={editing.bodyEn} onChangeText={(bodyEn) => setEditing({ ...editing, bodyEn })} multiline style={[styles.input, styles.multi]} />
         {item.body_ja !== null && editing.bodyJa !== item.body_ja ? <ActionButton label={t('aiset.s33')} disabled={busy || !editing.bodyJa.trim()} onPress={() => void act(() => translateText(workspaceId, editing.bodyJa.trim(), 'en'), (result) => setEditing({ ...editing, bodyEn: result.translation, checkedJa: editing.bodyJa }))} /> : null}
         <View style={styles.chips}>
@@ -149,7 +149,7 @@ export default function AiSettingsScreen() {
         </View>
       </View> : <View key={item.id} style={styles.suggestion}>
         <View style={styles.toggleRow}><Text style={styles.learnedTitle}>{item.title}</Text><SupportText>sent {item.occurrences ?? 3}×</SupportText></View>
-        {item.body_ja ? <BilingualBlock ja={item.body_ja} en={item.body_en} labelJa="日本語" labelEn="English meaning" /> : <Text style={styles.body}>{item.body_en}</Text>}
+        {item.body_ja ? <BilingualBlock ja={item.body_ja} en={item.body_en} labelJa="日本語" labelEn={t('aiset.englishMeaning', "English meaning")} /> : <Text style={styles.body}>{item.body_en}</Text>}
         <View style={styles.chips}>
           <ActionButton kind="primary" label={t('aiset.s34')} disabled={busy} onPress={() => void act(() => approveSuggestedReply(workspaceId, item.id), () => void load())} />
           <ActionButton label={t('aiset.s36')} onPress={() => setEditing({ id: item.id, title: item.title, bodyEn: item.body_en ?? '', bodyJa: item.body_ja ?? '' })} />
@@ -159,7 +159,7 @@ export default function AiSettingsScreen() {
     </Card>
 
     <Card>
-      <SectionTitle>Roles</SectionTitle>
+      <SectionTitle>{t('aiset.roles', "Roles")}</SectionTitle>
       {ROLE_COPY.map((role) => <View key={role.key} style={styles.toggleRow}>
         <View style={{ flex: 1, gap: 2 }}><Text style={styles.learnedTitle}>{t(`aiset.role.${role.key}.l`, role.label)}</Text><SupportText>{t(`aiset.role.${role.key}.d`, role.description)}</SupportText></View>
         <Switch accessibilityLabel={t(`aiset.role.${role.key}.l`, role.label)} value={roleMap.get(role.key) ?? true} disabled={busy} onValueChange={(value) => void act(() => updateAssistantRoles(workspaceId, { [role.key]: value }), (result) => setRoles(result.roles))} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(roleMap.get(role.key) ?? true) ? tokens.color.tide : ui.colors.secondaryText} />

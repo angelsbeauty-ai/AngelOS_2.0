@@ -21,7 +21,7 @@ import { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
 import { X } from 'phosphor-react-native/src/icons/X';
 import { dialog } from '../../src/lib/dialog';
-import { toFriendly } from '../../src/lib/friendly-error';
+import { friendlyText } from '../../src/lib/friendly-error';
 import {
   approveReply, createAiReplyDraft, createMessageReply, fillName, getMessageThread, MESSAGE_PAGE, isJapanese,
   listSavedReplies, markThreadRead, timeLabel, toggleReaction, translateText, type ClientMessage, type MessageThreadDetail, type SavedReply
@@ -32,7 +32,7 @@ import { useAppearance } from '../../src/design/appearance';
 /** Japanese text uses the system font (Manrope has no kana; web would fall back to a handwriting face). */
 const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
 const REACTIONS = ['❤️', '👍', '😂', '😮', '🙏', '✨'];
-const APP_NAME: Record<string, string> = { line: 'LINE', instagram: 'Instagram', facebook: 'Messenger', other: 'the app' };
+const APP_NAME: Record<string, string> = { line: 'LINE', instagram: 'Instagram', facebook: 'Messenger', other: '' };
 
 export default function MessageThreadScreen() {
   const { t, i18n } = useTranslation();
@@ -126,8 +126,8 @@ export default function MessageThreadScreen() {
     setBusy(label);
     try { await task(); if (after) await load(); }
     catch (error) {
-      const friendly = toFriendly(error, { action: 'save' });
-      void dialog.notify(friendly.title, error instanceof Error && error.message ? error.message : friendly.message);
+      const friendly = friendlyText(error, { action: 'save' });
+      void dialog.notify(friendly.title, friendly.message);
     } finally { setBusy(null); }
   }
 
@@ -138,13 +138,13 @@ export default function MessageThreadScreen() {
     toast.show({ title: dictation.error === 'permission' ? t('messages.dictatePerm') : t('messages.dictateFail'), tone: 'error' });
     dictation.clearError();
   }, [dictation.error]);
-  if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('messages.tryAgain')}</Text></Pressable></View>;
+  if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('messages.tryAgain')}</Text></Pressable><Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.replace('/messages' as any))} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('common.goBack', 'Go back')}</Text></Pressable></View>;
   if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><View style={{ padding: 16, paddingTop: 70 }}><Skeleton rows={6} height={48} /></View></View>;
 
   const thread = detail.thread;
   const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
   const firstName = name.split(/[\s\u3000]+/)[0];
-  const appName = APP_NAME[thread.platform] ?? 'LINE';
+  const appName = APP_NAME[thread.platform] || t('messages.theApp', 'the app');
   const live = thread.delivery === 'live';
   const incBg = night ? '#26262A' : '#FFFFFF';
   const incText = night ? '#F4F4F5' : '#151515';

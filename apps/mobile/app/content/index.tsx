@@ -109,9 +109,9 @@ export function SocialHomeView({ asCalendar = false }: { asCalendar?: boolean })
       {state === 'ready' && !empty ? <>
         {ws && !asCalendar ? <SocialNumbersCard workspaceId={ws} /> : null}
         {month ? <View style={styles.monthNav}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color="#262626" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prevMonth', "Previous month")} onPress={() => { setOffset(offset - 1); setDay(null); }} style={styles.navBtn}><CaretLeft size={20} color="#262626" weight="bold" /></Pressable>
           <Pressable accessibilityRole="button" onPress={() => { setOffset(0); setDay(null); }} style={{ flex: 1 }}><Text style={styles.monthLabel}>{base.toLocaleDateString(lang, { month: 'long', year: 'numeric' })}</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color="#262626" weight="bold" /></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('cal.nextMonth', "Next month")} onPress={() => { setOffset(offset + 1); setDay(null); }} style={styles.navBtn}><CaretRight size={20} color="#262626" weight="bold" /></Pressable>
         </View> : null}
         <View style={[styles.strip, month && styles.stripBig]}>
           {month ? Array.from({ length: 7 }, (_, i) => <View key={`w${i}`} style={styles.wd}><Text style={styles.dow}>{new Date(2024, 0, 1 + i).toLocaleDateString(lang, { weekday: 'narrow' })}</Text></View>) : null}

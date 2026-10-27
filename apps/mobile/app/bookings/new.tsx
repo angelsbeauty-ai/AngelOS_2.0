@@ -1,4 +1,4 @@
-import { toFriendly } from '../../src/lib/friendly-error';
+import { toFriendly, friendlyText } from '../../src/lib/friendly-error';
 import { useEffect, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -47,7 +47,7 @@ export default function NewBookingScreen() {
       const workspace = await getActiveWorkspace();
       setWorkspaceId(workspace.id);
       setServices(await listServices(workspace.id));
-    } catch (error) { void dialog.notify(t('booking.setupFail'), error instanceof Error ? error.message : ''); }
+    } catch (error) { void dialog.notify(t('booking.setupFail'), friendlyText(error, { action: 'save' }).message); }
   }
 
   const selectedClient = clients.find((c) => c.id === clientId);

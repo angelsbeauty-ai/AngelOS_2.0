@@ -48,6 +48,8 @@ import {
 } from '../src/lib/ai';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { ChatBar } from '../src/components/ChatBar';
+import { friendlyText } from '../src/lib/friendly-error';
+import i18nInstance from '../src/i18n';
 import { useInsets } from '../src/lib/insets';
 import { useDictation } from '../src/lib/dictation';
 import { AnswerCard, type ToolCard } from '../src/components/AnswerCard';
@@ -138,13 +140,13 @@ export default function AiScreen() {
         {
           id: 'welcome',
           author_type: 'assistant',
-          content: `Tell me what you're trying to get done. You don't need to know the perfect question. I'll help you figure out the next useful step.`,
+          content: t('aip.welcome', "Tell me what you're trying to get done. You don't need to know the perfect question. I'll help you figure out the next useful step."),
           metadata: {},
           created_at: new Date().toISOString()
         }
       ]);
     } catch (error) {
-      void dialog.notify('AI setup needs attention', error instanceof Error ? error.message : 'Unknown error');
+      { const f = friendlyText(error, { action: 'load' }, t('aip.setupErr', 'AI setup needs attention')); void dialog.notify(f.title, f.message); }
     } finally {
       setBusy(false);
     }
@@ -169,7 +171,7 @@ export default function AiScreen() {
       setMessages((current) => [...current, result.message]);
       setAction(result.action); setActionOpen(true);
     } catch (error) {
-      void dialog.notify('Could not reach your assistant', error instanceof Error ? error.message : 'Unknown error');
+      { const f = friendlyText(error, { action: 'send' }, t('aip.reachErr', 'Could not reach your assistant')); void dialog.notify(f.title, f.message); }
     } finally {
       setBusy(false);
     }
@@ -196,14 +198,14 @@ export default function AiScreen() {
         {
           id: `action-${Date.now()}`,
           author_type: 'system_action',
-          content: approved ? (action.kind === 'draft' ? 'Done. The draft is ready for you to check. Nothing was sent or posted.' : 'Done and checked.') : 'Cancelled. Nothing changed.',
+          content: approved ? (action.kind === 'draft' ? t('aip.doneDraft', 'Done. The draft is ready for you to check. Nothing was sent or posted.') : t('aip.doneChecked', 'Done and checked.')) : t('aip.cancelled', 'Cancelled. Nothing changed.'),
           metadata: { actionId: action.id },
           created_at: new Date().toISOString()
         }
       ]);
       setAction(null);
     } catch (error) {
-      void dialog.notify('Action needs attention', error instanceof Error ? error.message : 'Unknown error');
+      { const f = friendlyText(error, { action: 'save' }, t('aip.actionErr', 'Action needs attention')); void dialog.notify(f.title, f.message); }
     } finally {
       setBusy(false);
     }
@@ -313,10 +315,11 @@ const makeStyles = (P: Palette, night: boolean) => StyleSheet.create({
 });
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  if (__DEV__) console.warn(error);
   return <EBView style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 24 }}>
-    <EBText style={{ color: '#fff', fontSize: 18, marginBottom: 12 }}>Something went wrong</EBText>
-    <EBText selectable style={{ color: '#bbb', fontSize: 14, marginBottom: 20 }}>{String(error?.message ?? error)}</EBText>
-    <EBPressable onPress={() => { void retry(); }}><EBText style={{ color: '#fff', fontSize: 16 }}>Try again</EBText></EBPressable>
-    <EBPressable onPress={() => ebRouter.back()} style={{ marginTop: 16 }}><EBText style={{ color: '#fff', fontSize: 16 }}>Go back</EBText></EBPressable>
+    <EBText style={{ color: '#fff', fontSize: 18, marginBottom: 12 }}>{i18nInstance.t('aip.crashTitle', 'Something went wrong')}</EBText>
+    <EBText style={{ color: '#bbb', fontSize: 14, marginBottom: 20 }}>{i18nInstance.t('aip.crashBody', 'The assistant hit a problem. Nothing was sent or changed.')}</EBText>
+    <EBPressable accessibilityRole="button" onPress={() => { void retry(); }}><EBText style={{ color: '#fff', fontSize: 16 }}>{i18nInstance.t('aip.retry', 'Try again')}</EBText></EBPressable>
+    <EBPressable accessibilityRole="button" onPress={() => { if (ebRouter.canGoBack()) ebRouter.back(); else ebRouter.replace('/messages' as any); }} style={{ marginTop: 16 }}><EBText style={{ color: '#fff', fontSize: 16 }}>{i18nInstance.t('common.goBack', 'Go back')}</EBText></EBPressable>
   </EBView>;
 }

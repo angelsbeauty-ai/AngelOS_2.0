@@ -22,3 +22,14 @@ export function toFriendly(error: unknown, ctx: FriendlyContext): FriendlyResult
   if (ctx.action === 'save') return { title: i18n.t('errors.save'), message: i18n.t('errors.saveMsg'), retry: true, kind: 'error' };
   return { title: i18n.t('errors.generic'), message: i18n.t('errors.genericMsg'), retry: true, kind: 'error' };
 }
+
+/**
+ * Title + message for an error pop-up. Shows the server's own sentence only for a 4xx ApiError
+ * (those are written for the owner, e.g. "That LINE token is not valid"); anything else (5xx,
+ * network, JS exceptions, raw library text) gets the friendly, translated message instead.
+ */
+export function friendlyText(error: unknown, ctx: FriendlyContext, title?: string): { title: string; message: string } {
+  const f = toFriendly(error, ctx);
+  const own = error instanceof ApiError && error.status >= 400 && error.status < 500 && ![401, 403, 404, 429].includes(error.status) && typeof error.message === 'string' && error.message.trim() && !/^(unknown|internal|undefined|null|\[object)/i.test(error.message.trim()) ? error.message.trim() : null;
+  return { title: title ?? f.title, message: own ?? f.message };
+}

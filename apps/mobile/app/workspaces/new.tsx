@@ -8,6 +8,7 @@ import { setActiveWorkspace } from '../../src/lib/workspace';
 import { useAppearance } from '../../src/design/appearance';
 import { tokens } from '../../src/design/theme';
 import { dialog } from '../../src/lib/dialog';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 export default function NewWorkspaceScreen() {
   const { palette } = useAppearance();
@@ -26,7 +27,7 @@ export default function NewWorkspaceScreen() {
       void dialog.notify('Business created', name.trim());
       router.replace('/');
     } catch (e) {
-      void dialog.notify('Could not create', e instanceof Error ? e.message : '');
+      void dialog.notify('Could not create', friendlyText(e, { action: 'save' }).message);
     } finally { setBusy(false); }
   }
 

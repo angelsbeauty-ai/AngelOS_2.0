@@ -7,7 +7,7 @@ import { Screen } from '../../../src/components/Screen';
 import { ErrorState } from '../../../src/components/ErrorState';
 import { Skeleton } from '../../../src/components/ui';
 import { dialog } from '../../../src/lib/dialog';
-import { toFriendly } from '../../../src/lib/friendly-error';
+import { toFriendly, friendlyText } from '../../../src/lib/friendly-error';
 import { getMessageThread, PLATFORM_OPEN_URL, updateThread, type MessageThreadDetail } from '../../../src/lib/messaging';
 import { getActiveWorkspace } from '../../../src/lib/workspace';
 import { useAppearance } from '../../../src/design/appearance';
@@ -34,7 +34,7 @@ export default function ContactInfoScreen() {
     const before = detail;
     setDetail({ ...detail, thread: { ...detail.thread, ...patch } as any });
     try { await updateThread(ws, detail.thread.id, patch); if (patch.deleted) router.replace('/messages' as any); }
-    catch (e) { setDetail(before); const f = toFriendly(e, { action: 'save' }); void dialog.notify(f.title, e instanceof Error && e.message ? e.message : f.message); }
+    catch (e) { setDetail(before); const f = friendlyText(e, { action: 'save' }); void dialog.notify(f.title, f.message); }
   }
 
   if (failed) return <Screen><ErrorState title={t('messages.openFail')} message={t('messages.commentsFailMsg')} onRetry={() => void load()} /></Screen>;

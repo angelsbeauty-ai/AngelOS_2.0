@@ -7,7 +7,7 @@ import { ErrorState } from '../../src/components/ErrorState';
 import { Card, ScreenTitle, SupportText, ui } from '../../src/components/ui';
 import { ActionButton } from '../../src/components/MessagingBits';
 import { dialog } from '../../src/lib/dialog';
-import { toFriendly } from '../../src/lib/friendly-error';
+import { friendlyText } from '../../src/lib/friendly-error';
 import { connectLine, listConnections, type ConnectionStatus } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
@@ -32,8 +32,8 @@ export default function ConnectionsScreen() {
   async function connect() {
     if (!workspaceId) return;
     setBusy(true);
-    try { await connectLine(workspaceId); await load(); void dialog.notify('LINE connected', 'New LINE messages will appear in Messages. Replies are only sent after you tap Approve.'); }
-    catch (error) { const f = toFriendly(error, { action: 'save' }); void dialog.notify('LINE is not connected', error instanceof Error && error.message ? error.message : f.message); }
+    try { await connectLine(workspaceId); await load(); void dialog.notify(t('conn.lineOk', "LINE connected"), t('conn.lineOkBody', "New LINE messages will appear in Messages. Replies are only sent after you tap Approve.")); }
+    catch (error) { const f = friendlyText(error, { action: 'save' }, t('conn.lineFail', "LINE is not connected")); void dialog.notify(f.title, f.message); }
     finally { setBusy(false); }
   }
 
@@ -46,18 +46,18 @@ export default function ConnectionsScreen() {
     {items.map((item) => <Card key={item.provider}>
       <View style={styles.head}>
         <Text style={styles.title}>{item.label}</Text>
-        <Text style={[styles.state, item.connected ? styles.ok : styles.off]}>{STATE_LABEL[item.state]}</Text>
+        <Text style={[styles.state, item.connected ? styles.ok : styles.off]}>{t(`conn.st_${item.state}`, STATE_LABEL[item.state])}</Text>
       </View>
-      {item.accountName ? <SupportText>Account: {item.accountName}</SupportText> : null}
+      {item.accountName ? <SupportText>{t('conn.account', "Account: ")}{item.accountName}</SupportText> : null}
       <SupportText>{item.detail}</SupportText>
       {item.needs.length && !item.connected ? <View style={{ gap: 2 }}><Text style={styles.needsLabel}>{t('conn.s3')}</Text>{item.needs.filter((need) => !/project key|admin key/i.test(need)).map((need) => <SupportText key={need}>• {need}</SupportText>)}</View> : null}
-      {item.provider === 'line' && item.canConnect ? <ActionButton kind="primary" label={busy ? 'Connecting…' : 'Connect LINE'} disabled={busy} onPress={() => void connect()} /> : null}
+      {item.provider === 'line' && item.canConnect ? <ActionButton kind="primary" label={busy ? t('conn.connecting', "Connecting\u2026") : t('conn.connectLine', "Connect LINE")} disabled={busy} onPress={() => void connect()} /> : null}
     </Card>)}
 
     {state === 'ready' ? <>
       <Card>
-        <View style={styles.head}><Text style={styles.title}>Instagram & Facebook posting</Text><Text style={[styles.state, styles.off]}>{t('conn.s4')}</Text></View>
-        <SupportText>Posting needs an Instagram Business/Creator account linked to a Facebook Page and a Meta app. Until then use "Copy caption & open Instagram".</SupportText>
+        <View style={styles.head}><Text style={styles.title}>{t('conn.metaTitle', "Instagram & Facebook posting")}</Text><Text style={[styles.state, styles.off]}>{t('conn.s4')}</Text></View>
+        <SupportText>{t('conn.metaBody', "Posting needs an Instagram professional account linked to a Facebook Page. Until then, use \"Copy caption & open Instagram\".")}</SupportText>
       </Card>
       <Card>
         <View style={styles.head}><Text style={styles.title}>TikTok</Text><Text style={[styles.state, styles.off]}>{t('conn.s5')}</Text></View>

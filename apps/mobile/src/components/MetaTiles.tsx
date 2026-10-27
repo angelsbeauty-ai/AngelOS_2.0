@@ -14,8 +14,8 @@ export function MetaTiles({ workspaceId, platform }: { workspaceId: string; plat
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<SocialNumber[] | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
-  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch((e) => setFailed(e instanceof Error ? e.message : 'unknown error')); }, [workspaceId]);
-  if (failed) return <View style={styles.card}><Text style={styles.body}>{t('acs.loadFail')}: {failed}</Text></View>;
+  useEffect(() => { getSocialNumbers(workspaceId).then((r) => setItems(r.items)).catch(() => setFailed('1')); }, [workspaceId]);
+  if (failed) return <View style={styles.card}><Text style={styles.body}>{t('acs.loadFail')}</Text></View>;
   if (!items) return null;
   const rows = items.filter((n) => platform === 'all' || n.platform === platform);
   if (!rows.length) return <View style={styles.card}>

@@ -6,6 +6,7 @@ import { ActionButton } from '../../src/components/MessagingBits';
 import { Card, ScreenTitle, SectionTitle, SupportText } from '../../src/components/ui';
 import { dialog } from '../../src/lib/dialog';
 import { getActiveWorkspace, updateWorkspace, type WorkspaceSummary } from '../../src/lib/workspace';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 const CURRENCIES = ['JPY', 'USD', 'EUR', 'AUD', 'GBP'] as const;
 const deviceTz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { return 'Asia/Tokyo'; } };
@@ -27,7 +28,7 @@ export default function BusinessSettings() {
     if (!ws) return;
     setBusy(true);
     try { const next = await updateWorkspace(ws.id, { name: name.trim(), currency, timezone, locale }); setWs({ ...ws, ...next }); await dialog.notify(t('common.saved')); }
-    catch (e) { await dialog.notify(t('common.error'), e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    catch (e) { await dialog.notify(t('common.error'), friendlyText(e, { action: 'save' }).message); } finally { setBusy(false); }
   }
 
   return <Screen>

@@ -70,12 +70,12 @@ export default function ProfileScreen() {
   }
   async function setLang(lang: 'en' | 'ja') { setLangOpen(false); await updateMe({ language: lang }).then(setMe).catch(() => void i18n.changeLanguage(lang)); }
 
-  const name = me?.displayName?.trim() || me?.email?.split('@')[0] || '';
-  const initials = name.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
+  const name = me?.displayName?.trim() || '';
+  const initials = (name || me?.email || '').split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '·';
   const owner = me?.memberships.some((x) => x.role === 'owner');
   const student = !owner && me?.memberships.some((x) => x.role === 'student');
   const version = Constants.expoConfig?.version ?? '0.0.0';
-  const build = (Constants.expoConfig?.ios?.buildNumber ?? Constants.expoConfig?.android?.versionCode ?? Constants.nativeBuildVersion ?? '—').toString();
+  const build = (Constants.nativeBuildVersion ?? Constants.expoConfig?.ios?.buildNumber ?? Constants.expoConfig?.android?.versionCode ?? '').toString();
   const checkedMin = health && health !== 'error' ? Math.max(0, Math.round((Date.now() - Math.max(...health.components.map((c) => Date.parse(c.last_checked_at) || 0), 0)) / 60000)) : null;
 
   return <Screen onRefresh={load}>
@@ -86,7 +86,7 @@ export default function ProfileScreen() {
     {me ? <View style={[styles.card, { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }]}>
       <View style={styles.avatar}><Text style={styles.avatarText}>{initials}</Text></View>
       <View style={{ flex: 1, gap: 3 }}>
-        <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
+        <Text numberOfLines={1} style={[styles.name, { color: palette.text }]} {...(name ? {} : { accessibilityRole: 'button' as const, onPress: () => router.push('/profile/edit' as any) })}>{name || t('pf.addName', 'Add your name')}</Text>
         <Text numberOfLines={1} style={[styles.studio, { color: palette.muted }]}>{ws?.name ?? t('pf.noStudio')}</Text>
         <View style={{ flexDirection: 'row', gap: 6 }}>{plan ? <Chip label={t('pf.plan', { name: plan })} /> : null}{me.founder ? <Chip tone="rose" label={t('pf.founder').toUpperCase()} /> : null}</View>
       </View>
@@ -128,7 +128,7 @@ export default function ProfileScreen() {
     <View style={{ gap: 10 }}>
       <Button variant="secondary" label={t('pf.logout')} onPress={() => void logout()} />
       {me && !me.founder ? <Button variant="danger" label={t('pf.delete')} onPress={() => setDeleteOpen(true)} /> : null}
-      <Text style={styles.version}>{t('pf.version', { v: version, b: build })}</Text>
+      <Text style={styles.version}>{build ? t('pf.version', { v: version, b: build }) : t('pf.versionOnly', { v: version, defaultValue: 'AngelOS {{v}}' })}</Text>
     </View>
 
     <Modal visible={langOpen} transparent animationType="fade" onRequestClose={() => setLangOpen(false)}>

@@ -66,7 +66,9 @@ function glyph(p: ContentPost) {
 
 /** Calendar tab: Month / Week / Day / List. Monday-first, JST 24h. Posts can be dragged (Week/Day) or rescheduled from the sheet. */
 export default function CalendarTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // Month and weekday names follow the app language (ja: 10月, 月火水…).
+  const LOC = i18n.language?.startsWith('ja') ? 'ja-JP' : 'en-GB';
   const { palette, mode: look } = useAppearance();
   const night = look === 'night';
   const RED = night ? '#FF453A' : '#D70015';
@@ -297,12 +299,12 @@ export default function CalendarTab() {
   }
   const time = (d: Date) => hhmm(d);
   const hourLabel = (h: number) => `${String(h).padStart(2, '0')}:00`;
-  const draftLang = 'en-GB';
+  const draftLang = LOC;
   const platformNames = (ps: string[]) => ps.map((p) => PLATFORM_NAME[p as keyof typeof PLATFORM_NAME] ?? p).join(', ');
   const postTitle = (p: ContentPost) => (p.title?.trim() || p.variants?.[0]?.caption?.split('\n')[0] || t('sched.post', 'Post')).trim();
   const label = (it: Item) => it.kind === 'booking' ? `${it.a.client?.display_name ?? ''} ${it.a.service_name}`.trim() : postTitle(it.p);
   const bookingStatus = (st: string) => st === 'confirmed' ? t('cal.stConfirmed', 'Confirmed') : PENDING.test(st) ? t('cal.stPending', 'Pending') : st === 'completed' ? t('cal.stDone', 'Done') : st === 'no_show' ? t('cal.stNoShow', 'No-show') : t('cal.stBooked', 'Booked');
-  const headTitle = (mode === 'month' || mode === 'list' ? base : anchor).toLocaleDateString('en-GB', { month: 'long' });
+  const headTitle = (mode === 'month' || mode === 'list' ? base : anchor).toLocaleDateString(LOC, { month: 'long' });
   const headYear = (mode === 'month' || mode === 'list' ? base : anchor).getFullYear();
   const listItems = useMemo(() => Array.from({ length: 31 }, (_, i) => addD(todayStart, i)).map((d) => ({ d, items: (byDay.get(key(d)) ?? []).filter((it) => key(d) !== key(now) || (it.kind === 'booking' ? it.end : it.at).getTime() >= now.getTime() - 3600000) })).filter((g) => g.items.length),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -327,13 +329,13 @@ export default function CalendarTab() {
         <Text maxFontSizeMultiplier={1.4} style={[styles.segText, { color: mode === m ? palette.text : night ? palette.muted : D.text2 }]}>{t(`cal.${m}`, { defaultValue: m === 'day' ? 'Day' : m === 'week' ? 'Week' : m === 'month' ? 'Month' : 'List' })}</Text></Pressable>)}
     </View>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('cal.searchPh', 'Search clients, services, posts')} placeholderTextColor={palette.muted} style={[styles.search, { color: palette.text, backgroundColor: palette.fill }]} /> : null}
-    {mode === 'month' ? <View style={styles.wkHead} importantForAccessibility="no-hide-descendants">{cells.slice(0, 7).map((d, i) => <Text key={i} maxFontSizeMultiplier={1.3} style={[styles.wkH, { color: palette.muted }]}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</Text>)}</View> : null}
+    {mode === 'month' ? <View style={styles.wkHead} importantForAccessibility="no-hide-descendants">{cells.slice(0, 7).map((d, i) => <Text key={i} maxFontSizeMultiplier={1.3} style={[styles.wkH, { color: palette.muted }]}>{d.toLocaleDateString(LOC, { weekday: 'narrow' })}</Text>)}</View> : null}
     {mode === 'day' ? <View style={[styles.dayHead, { backgroundColor: night ? '#000000' : D.bg }]}>
       <View style={[styles.num, styles.numBig, key(anchor) === key(now) ? { backgroundColor: RED } : { backgroundColor: palette.fill }]}><Text style={[styles.numText, { color: key(anchor) === key(now) ? '#FFFFFF' : palette.text }]}>{anchor.getDate()}</Text></View>
-      <Text maxFontSizeMultiplier={1.4} style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+      <Text maxFontSizeMultiplier={1.4} style={[styles.rowTitle, { color: palette.text }]}>{anchor.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
     </View> : null}
-    {mode === 'week' ? <View style={[styles.wkRow, ln, night && { backgroundColor: '#000000' }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} accessibilityRole="button" accessibilityLabel={d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 44 }}>
-      <Text maxFontSizeMultiplier={1.3} style={[styles.wk, { color: palette.muted }]}>{d.toLocaleDateString('en-GB', { weekday: 'narrow' })}</Text>
+    {mode === 'week' ? <View style={[styles.wkRow, ln, night && { backgroundColor: '#000000' }]}><View style={{ width: GUTTER }} />{tlDays.map((d) => { const today = key(d) === key(now); return <Pressable key={key(d)} accessibilityRole="button" accessibilityLabel={d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })} onPress={() => { setMode('day'); setAnchor(d); }} style={{ flex: 1, alignItems: 'center', gap: 2, minHeight: 44 }}>
+      <Text maxFontSizeMultiplier={1.3} style={[styles.wk, { color: palette.muted }]}>{d.toLocaleDateString(LOC, { weekday: 'narrow' })}</Text>
       <View style={[styles.num, today && { backgroundColor: RED }]}><Text maxFontSizeMultiplier={1.3} style={[styles.numText, { color: today ? '#FFFFFF' : palette.text }]}>{d.getDate()}</Text></View></Pressable>; })}</View> : null}
   </View>;
 
@@ -389,7 +391,7 @@ export default function CalendarTab() {
         {cells.slice(w * 7, w * 7 + 7).map((d) => {
           const k = key(d); const items = byDay.get(k) ?? []; const inMonth = d.getMonth() === base.getMonth(); const today = k === key(now);
           const nb = items.filter((i) => i.kind === 'booking').length; const np = items.filter((i) => i.kind === 'post').length; const failed = items.some((i) => i.kind === 'post' && glyph(i.p) === '!');
-          const a11y = `${d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}${today ? `, ${t('cal.today', 'Today')}` : ''}${V1_BOOKINGS ? `, ${t('cal.nBookings', { defaultValue: '{{count}} bookings', count: nb })}` : ''}, ${t('cal.nPosts', { defaultValue: '{{count}} posts', count: np })}`;
+          const a11y = `${d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}${today ? `, ${t('cal.today', 'Today')}` : ''}${V1_BOOKINGS ? `, ${t('cal.nBookings', { defaultValue: '{{count}} bookings', count: nb })}` : ''}, ${t('cal.nPosts', { defaultValue: '{{count}} posts', count: np })}`;
           return <Pressable key={k} accessibilityRole="button" accessibilityLabel={a11y} onPress={() => { setAnchor(d); openChoice(d, null); }} style={styles.cell}>
             <View style={[styles.num, today && { backgroundColor: RED }]}><Text maxFontSizeMultiplier={1.4} style={[styles.numText, { color: today ? '#FFFFFF' : inMonth ? palette.text : palette.muted }, !inMonth && { opacity: 0.5 }]}>{d.getDate()}</Text></View>
             {nb ? <View style={[styles.mkBook, { backgroundColor: palette.text }]} /> : null}
@@ -412,7 +414,7 @@ export default function CalendarTab() {
     return <View style={{ paddingBottom: 120, marginHorizontal: -16 }}>
       <Text style={[styles.rowSub, { color: palette.muted, marginHorizontal: 16 }]}>{t('cal.listSub', 'List · upcoming')}</Text>
       {listItems.map(({ d, items }) => { const today = key(d) === key(now); return <View key={key(d)}>
-        <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.listHead, { color: today ? RED : palette.text, marginHorizontal: 16 }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} style={[styles.listHead, { color: today ? RED : palette.text, marginHorizontal: 16 }]}>{today ? `${t('cal.today', 'Today')} · ` : ''}{d.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
         {items.map((it) => { const pend = it.kind === 'booking' && PENDING.test(it.a.status);
           const title = it.kind === 'booking' ? [it.a.client?.display_name, it.a.service_name].filter(Boolean).join(' · ') + (pend ? ` · ${t('cal.pending', 'pending')}` : '') : `${platformNames(it.platforms)} · ${postTitle(it.p)}`;
           const st = it.kind === 'post' ? postStatusLabel(it.p, (k, dd) => t(k, dd)) : '';
@@ -436,7 +438,7 @@ export default function CalendarTab() {
   };
 
   return <View style={{ flex: 1 }}>
-    <Screen onRefresh={load} scrollEnabled={!dragging} scrollY={state !== 'ready' ? undefined : mode === 'day' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') && tlDays.some((d) => key(d) === key(now)) ? Math.max(0, (now.getHours() - HOURS[0] - 2) * HOUR_H) : undefined} header={header}>
+    <Screen onRefresh={load} scrollEnabled={!dragging} scrollY={state !== 'ready' ? undefined : mode === 'day' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') && tlDays.some((d) => key(d) === key(now)) ? Math.max(0, (now.getHours() - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') ? (8 - HOURS[0]) * HOUR_H : undefined} header={header}>
       <Animated.View {...pinch.panHandlers} style={pinchStyle} accessibilityHint={t('cal.pinchHint', 'Pinch to switch between month, week and day')}><View {...swipe.panHandlers}>
       {!online && state === 'ready' ? <Text accessibilityLiveRegion="polite" style={[styles.offline, { color: palette.text, backgroundColor: palette.fill }]}>{t('sched.offlineBar', "You're offline · showing what was last loaded")}</Text> : null}
       {state === 'nostudio' ? <NoStudio /> : null}
@@ -464,7 +466,7 @@ export default function CalendarTab() {
     <Modal visible={!!choice} transparent animationType="slide" onRequestClose={() => setChoice(null)}>
       <Pressable accessibilityLabel={t('common.close', 'Close')} style={styles.backdrop} onPress={() => setChoice(null)}><Pressable style={[styles.sheet, sheetBg]} onPress={() => undefined}>
         <View style={styles.grabber} />
-        {choice ? <Text style={[styles.sheetSub, { color: palette.muted }]}>{choice.day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}{choice.min != null ? ` · ${String(Math.floor(choice.min / 60)).padStart(2, '0')}:${String(choice.min % 60).padStart(2, '0')}` : ''}</Text> : null}
+        {choice ? <Text style={[styles.sheetSub, { color: palette.muted }]}>{choice.day.toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long' })}{choice.min != null ? ` · ${String(Math.floor(choice.min / 60)).padStart(2, '0')}:${String(choice.min % 60).padStart(2, '0')}` : ''}</Text> : null}
         {([
           ['post', t('cal.newPost', 'New post'), t('cal.newPostSub', 'Write it, then Approve to schedule')],
           ...(V1_BOOKINGS ? [['booking', t('cal.newBooking', 'New booking'), t('cal.newBookingSub', 'Add an appointment')] as const] : []),

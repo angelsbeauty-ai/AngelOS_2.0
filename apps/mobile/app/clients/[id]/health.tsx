@@ -10,6 +10,7 @@ import { addConsent, addHealthForm, getHealthForms, type HealthQuestion } from '
 import { getActiveWorkspace } from '../../../src/lib/workspace';
 import i18n from '../../../src/i18n';
 import { dialog } from '../../../src/lib/dialog';
+import { friendlyText } from '../../../src/lib/friendly-error';
 
 const CONSENTS = [
   { type: 'treatment', k: 'hf.cTreat' },
@@ -45,7 +46,7 @@ export default function HealthFormScreen() {
         await addHealthForm(workspaceId, id, { answers, signedName: name.trim() });
       }
       router.back();
-    } catch (e) { void dialog.notify(t('cf.saveFail'), e instanceof Error ? e.message : t('cf.tryAgain')); }
+    } catch (e) { void dialog.notify(t('cf.saveFail'), friendlyText(e, { action: 'save' }).message); }
     finally { setSaving(false); }
   }
 

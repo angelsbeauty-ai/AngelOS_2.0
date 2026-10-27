@@ -8,6 +8,7 @@ import { Card, PrimaryActionLabel, ScreenTitle, SupportText, ui } from '../../sr
 import { Chip } from '../../src/components/MessagingBits';
 import { createClient } from '../../src/lib/clients';
 import { getActiveWorkspace } from '../../src/lib/workspace';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 export default function NewClientScreen() {
   const { t } = useTranslation();
@@ -31,7 +32,7 @@ export default function NewClientScreen() {
       });
       router.replace({ pathname: '/clients/[id]', params: { id: client.id } });
     } catch (error) {
-      void dialog.notify(t('cf.createFail'), error instanceof Error ? error.message : t('cf.unknown'));
+      void dialog.notify(t('cf.createFail'), friendlyText(error, { action: 'save' }).message);
     } finally {
       setBusy(false);
     }

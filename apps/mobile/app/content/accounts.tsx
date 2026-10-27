@@ -12,6 +12,7 @@ import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens } from '../../src/design/theme';
 import { ProfilePostGrid } from '../../src/components/ProfilePostGrid';
 import { listContent, type ContentPost } from '../../src/lib/content';
+import { friendlyText } from '../../src/lib/friendly-error';
 
 /** Social › Accounts: LINE guided one-time setup; IG/FB Connect when the Meta login is live on the server. */
 export default function SocialAccounts() {
@@ -41,13 +42,13 @@ export default function SocialAccounts() {
   useEffect(() => {
     if (!ws || state !== 'ready' || !items.some((a) => a.platform !== 'line' && a.connectPath)) return;
     getMetaPendingPages(ws).then((p) => { if (p.length) setChoices(p); else if (meta === 'choose') setNotice(t('sml.choiceExpired')); })
-      .catch((e) => { if (meta === 'choose') setNotice(`${t('sml.choiceExpired')} ${e instanceof Error ? e.message : ''}`); });
+      .catch((e) => { if (meta === 'choose') setNotice(`${t('sml.choiceExpired')} ${friendlyText(e, { action: 'save' }).message}`); });
   }, [meta, ws, state, items, t]);
 
   async function choosePage(p: MetaPageChoice) {
     if (!ws || busy) return; setBusy(true);
     try { await selectMetaPage(ws, p.pageId); setChoices(null); if (Platform.OS === 'web') window.history.replaceState(null, '', window.location.pathname); await load(); void dialog.notify(t('sml.metaConnected'), p.pageName ?? ''); }
-    catch (e) { void dialog.notify(t('sml.metaFailed'), e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify(t('sml.metaFailed'), friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
   async function disconnect() {
@@ -55,20 +56,20 @@ export default function SocialAccounts() {
     const ok = await dialog.confirm({ title: t('sml.disconnectTitle'), message: t('sml.disconnectBody'), confirmText: t('sml.disconnect'), destructive: true });
     if (!ok) return;
     try { await disconnectMeta(ws); await load(); }
-    catch (e) { void dialog.notify(t('sml.disconnectFailed'), e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify(t('sml.disconnectFailed'), friendlyText(e, { action: 'save' }).message); }
   }
 
   async function saveLine() {
     if (!ws) return; setBusy(true);
     try { const a = await connectLineChannel(ws, form); setSetup(false); setForm({ channelId: '', channelSecret: '', accessToken: '' }); await load(); void dialog.notify(t('sml.lineConnected'), a.name ?? ''); }
-    catch (e) { void dialog.notify(t('sml.lineFailed'), e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify(t('sml.lineFailed'), friendlyText(e, { action: 'save' }).message); }
     finally { setBusy(false); }
   }
   async function connectMeta(a: SocialAccount) {
     if (!ws) return;
     setConnErr(null);
     try { const r = await startReconnect(ws, a.platform); if (r === 'returned') await load(); }
-    catch (e) { setConnErr({ a, message: e instanceof ReconnectError && e.kind === 'login_off' ? t('messages.loginOff') : e instanceof Error ? e.message : String(e) }); }
+    catch (e) { setConnErr({ a, message: e instanceof ReconnectError && e.kind === 'login_off' ? t('messages.loginOff') : friendlyText(e, { action: 'save' }).message }); }
   }
 
   const canSave = /^\d{6,20}$/.test(form.channelId.trim()) && form.channelSecret.trim().length >= 16 && form.accessToken.trim().length >= 40 && !busy;

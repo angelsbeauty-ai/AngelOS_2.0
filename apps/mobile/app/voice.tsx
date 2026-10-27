@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import i18nInstance from '../src/i18n';
 import { X } from 'phosphor-react-native/src/icons/X';
 import { Microphone } from 'phosphor-react-native/src/icons/Microphone';
 import { MicrophoneSlash } from 'phosphor-react-native/src/icons/MicrophoneSlash';
@@ -52,8 +53,8 @@ export default function VoiceScreen() {
       </Pressable>
       {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{caption}</Text> : null}
       {voice.state === 'error' ? (
-        <Pressable accessibilityRole="button" accessibilityLabel="Open Settings" onPress={() => void Linking.openSettings()} style={[styles.settingsBtn, { backgroundColor: palette.text }]}>
-          <Text style={[styles.settingsText, { color: palette.bg }]}>Open Settings</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('voice.openSettings', "Open Settings")} onPress={() => void Linking.openSettings()} style={[styles.settingsBtn, { backgroundColor: palette.text }]}>
+          <Text style={[styles.settingsText, { color: palette.bg }]}>{t('voice.openSettings', "Open Settings")}</Text>
         </Pressable>
       ) : null}
       <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>
@@ -100,10 +101,12 @@ const styles = StyleSheet.create({
 });
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+  if (__DEV__) console.warn(error);
+  const t = (k: string, d: string) => i18nInstance.t(k, d);
   return <EBView style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 24 }}>
-    <EBText style={{ color: '#fff', fontSize: 18, marginBottom: 12 }}>Something went wrong</EBText>
-    <EBText selectable style={{ color: '#bbb', fontSize: 14, marginBottom: 20 }}>{String(error?.message ?? error)}</EBText>
-    <EBPressable onPress={() => { void retry(); }}><EBText style={{ color: '#fff', fontSize: 16 }}>Try again</EBText></EBPressable>
-    <EBPressable onPress={() => ebRouter.back()} style={{ marginTop: 16 }}><EBText style={{ color: '#fff', fontSize: 16 }}>Go back</EBText></EBPressable>
+    <EBText style={{ color: '#fff', fontSize: 18, marginBottom: 12 }}>{t('aip.crashTitle', 'Something went wrong')}</EBText>
+    <EBText style={{ color: '#bbb', fontSize: 14, marginBottom: 20 }}>{t('aip.crashBody', 'Please try again.')}</EBText>
+    <EBPressable accessibilityRole="button" onPress={() => { void retry(); }}><EBText style={{ color: '#fff', fontSize: 16 }}>{t('common.tryAgain', 'Try again')}</EBText></EBPressable>
+    <EBPressable accessibilityRole="button" onPress={() => (ebRouter.canGoBack() ? ebRouter.back() : ebRouter.replace('/ai' as any))} style={{ marginTop: 16 }}><EBText style={{ color: '#fff', fontSize: 16 }}>{t('common.goBack', 'Go back')}</EBText></EBPressable>
   </EBView>;
 }

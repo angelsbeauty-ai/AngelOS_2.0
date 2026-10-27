@@ -9,6 +9,7 @@ import { Card, ScreenTitle, SectionTitle, StatCard, SupportText, ui } from '../s
 import { exportMoneyCsv, formatYen, getMoneySummary, recordExpense, type MoneySummary } from '../src/lib/finance';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { dialog } from '../src/lib/dialog';
+import { friendlyText } from '../src/lib/friendly-error';
 
 const METHODS = [['cash', 'Cash'], ['card', 'Card'], ['paypay', 'PayPay'], ['bank_transfer', 'Bank transfer']] as const;
 const CATEGORIES = [['supplies', 'Supplies'], ['rent', 'Rent'], ['marketing', 'Marketing'], ['education', 'Education'], ['equipment', 'Equipment'], ['fees', 'Fees'], ['other', 'Other']] as const;
@@ -22,12 +23,12 @@ export default function FinanceScreen() {
   useEffect(() => { void load(); }, []);
   async function load() {
     try { const id = workspaceId ?? (await getActiveWorkspace()).id; setWorkspaceId(id); setData(await getMoneySummary(id)); }
-    catch (e) { void dialog.notify('Could not load money', e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify('Could not load money', friendlyText(e, { action: 'save' }).message); }
   }
   async function saveExpense() {
     if (!workspaceId) return;
     try { await recordExpense(workspaceId, { amount: Number(expense.amount), category: expense.category, method: expense.method, note: expense.note.trim() || undefined, idempotencyKey: `expense:${Date.now()}` }); setExpense({ ...expense, open: false, amount: '', note: '' }); await load(); }
-    catch (e) { void dialog.notify('Could not save expense', e instanceof Error ? e.message : ''); }
+    catch (e) { void dialog.notify('Could not save expense', friendlyText(e, { action: 'save' }).message); }
   }
   async function exportCsv() {
     if (!workspaceId) return;
@@ -37,7 +38,7 @@ export default function FinanceScreen() {
         const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
         const a = document.createElement('a'); a.href = url; a.download = `angelos-money-${new Date().toISOString().slice(0, 10)}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else await Share.share({ message: csv, title: t('fin.s19') });
-    } catch (e) { void dialog.notify('Could not export', e instanceof Error ? e.message : ''); }
+    } catch (e) { void dialog.notify('Could not export', friendlyText(e, { action: 'save' }).message); }
   }
   const cur = data?.currency ?? 'JPY';
   const money = (n: number) => formatYen(n, cur);
