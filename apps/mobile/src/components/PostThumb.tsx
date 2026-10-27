@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { getMediaViewUrl } from '../lib/media';
 import type { ContentPost } from '../lib/content';
+import { useAppearance } from '../design/appearance';
+import { D, N, tokens } from '../design/theme';
 
 const cache = new Map<string, string>();
 
-/** Real photo thumbnail for a post (first image), with the calm two-tone placeholder while loading or when there is none. */
-export function PostThumb({ workspaceId, post, size = 60, height, radius = 14, placeholder }: { workspaceId: string | null; post: ContentPost; size?: number; /** Defaults to size (square). */ height?: number; radius?: number; placeholder?: string }) {
+/**
+ * Real photo thumbnail for a post (first image). While a photo loads the tile is a flat neutral square.
+ * A post with no photo at all shows a calm text tile (the first words of its caption) when `textTile` is on,
+ * so a grid of text-only drafts still tells you which post is which.
+ */
+export function PostThumb({ workspaceId, post, size = 60, height, radius = 14, placeholder, textTile = false }: { workspaceId: string | null; post: ContentPost; size?: number; /** Defaults to size (square). */ height?: number; radius?: number; placeholder?: string; textTile?: boolean }) {
+  const { mode, palette } = useAppearance();
+  const night = mode === 'night';
   const asset = [...(post.media ?? [])].sort((a, b) => a.position - b.position).find((m) => m.asset?.media_type === 'image')?.asset;
   const [url, setUrl] = useState<string | null>(asset ? cache.get(asset.id) ?? null : null);
   useEffect(() => {
@@ -15,9 +23,18 @@ export function PostThumb({ workspaceId, post, size = 60, height, radius = 14, p
     void getMediaViewUrl(workspaceId, asset.id).then((r) => { cache.set(asset.id, r.url); if (live) setUrl(r.url); }).catch(() => undefined);
     return () => { live = false; };
   }, [workspaceId, asset?.id]);
+  const fill = placeholder ?? (night ? N.card : D.fill2);
   const box = { width: size, height: height ?? size, borderRadius: radius };
-  if (url) return <Image source={{ uri: url }} resizeMode="cover" style={[box, { backgroundColor: placeholder ?? '#F2F2F2' }]} accessibilityIgnoresInvertColors />;
-  return placeholder ? <View style={[box, { backgroundColor: placeholder }]} /> : <View style={[box, styles.ph]}><View style={[styles.half, { backgroundColor: '#EDEDED' }]} /><View style={{ width: 2 }} /><View style={[styles.half, { backgroundColor: '#EDEDED' }]} /></View>;
+  if (url) return <Image source={{ uri: url }} resizeMode="cover" style={[box, { backgroundColor: fill }]} accessibilityIgnoresInvertColors />;
+  const words = textTile && !asset ? (post.variants?.find((v) => v.caption)?.caption ?? post.title ?? '').trim() : '';
+  if (words) return <View style={[box, styles.text, { backgroundColor: fill }]}>
+    <Text numberOfLines={Math.max(2, Math.floor(((height ?? size) - 16) / tokens.type.footnote.lineHeight))} maxFontSizeMultiplier={1} style={[styles.words, { color: palette.text }]}>{words}</Text>
+  </View>;
+  return <View style={[box, { backgroundColor: fill }]} />;
 }
 
-const styles = StyleSheet.create({ ph: { overflow: 'hidden', flexDirection: 'row', backgroundColor: '#FFF' }, half: { flex: 1 } });
+const styles = StyleSheet.create({
+  text: { padding: 8, justifyContent: 'center', overflow: 'hidden' },
+  // Fixed size on purpose: the tile is a preview of the square, and VoiceOver reads the full title from the tile's label.
+  words: { ...tokens.type.footnote, textAlign: 'center' },
+});

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Image, Modal, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -6,12 +6,12 @@ import { Check } from 'phosphor-react-native/src/icons/Check';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { SatinGlyph } from '../../src/components/SatinGlyph';
 import { ErrorState } from '../../src/components/ErrorState';
-import { EmptyState, Skeleton } from '../../src/components/ui';
+import { EmptyState, Skeleton, screenHeader } from '../../src/components/ui';
 import { Screen } from '../../src/components/Screen';
 import { PostThumb } from '../../src/components/PostThumb';
 import { NoStudio } from '../../src/components/NoStudio';
 import { useAppearance } from '../../src/design/appearance';
-import { tokens } from '../../src/design/theme';
+import { D, N, tokens } from '../../src/design/theme';
 import { listContent, type ContentPost } from '../../src/lib/content';
 import { gridDate, gridPosts, isCarousel, isScheduled, isVideo, stateOf, type GridFilter, type GridTab } from '../../src/lib/grid';
 import { getMediaViewUrl } from '../../src/lib/media';
@@ -64,35 +64,39 @@ export default function ContentGrid() {
   const idx = pendingIndex === -1 || pendingIndex > posts.length ? posts.length : pendingIndex;
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-GB';
   const when = (d: Date | null) => (d ? d.toLocaleString(locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
-  const ph = night ? '#2C2C2E' : '#EDEDED';
+  const ph = night ? N.card : D.fill2;
+  // Filter menu opens right under its button (not at a fixed 210pt), so it follows larger text.
+  const dropRef = useRef<View>(null);
+  const [menuTop, setMenuTop] = useState(0);
+  function openMenu() { dropRef.current?.measureInWindow((_x, y, _w, h) => { setMenuTop(y + h + 4); setMenu(true); }); }
 
   function tile(p: ContentPost) {
     const sched = isScheduled(p);
     const label = [p.title, sched ? t('grid.scheduledFor', { when: when(gridDate(p)) }) : when(gridDate(p)), isCarousel(p) ? t('grid.carousel') : null, isVideo(p) ? t('grid.video') : null].filter(Boolean).join(', ');
     return <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={label} onPress={() => router.push(`/content/${p.id}` as any)} style={({ pressed }) => [{ width: cell, height: tileH, opacity: pressed ? 0.85 : 1 }]}>
-      <PostThumb workspaceId={ws} post={p} size={cell} height={tileH} radius={0} placeholder={ph} />
-      {tab === 'grid' && isCarousel(p) ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="carousel" color="#FFFFFF" size={16} /></View> : null}
-      {tab === 'grid' && !isCarousel(p) && isVideo(p) ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="play" color="#FFFFFF" size={16} /></View> : null}
-      {tab === 'reels' ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="play" color="#FFFFFF" size={16} /></View> : null}
-      {tab === 'stories' ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="story" color="#FFFFFF" size={16} /></View> : null}
-      {sched ? <View pointerEvents="none" style={[styles.clock, { backgroundColor: tokens.color.roseGold }]}><SatinGlyph name="clock" color="#FFFFFF" size={13} /></View> : null}
+      <PostThumb workspaceId={ws} post={p} size={cell} height={tileH} radius={0} placeholder={ph} textTile />
+      {tab === 'grid' && isCarousel(p) ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="carousel" color={tokens.color.onCharcoal} size={16} /></View> : null}
+      {tab === 'grid' && !isCarousel(p) && isVideo(p) ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="play" color={tokens.color.onCharcoal} size={16} /></View> : null}
+      {tab === 'reels' ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="play" color={tokens.color.onCharcoal} size={16} /></View> : null}
+      {tab === 'stories' ? <View pointerEvents="none" style={styles.corner}><SatinGlyph name="story" color={tokens.color.onCharcoal} size={16} /></View> : null}
+      {sched ? <View pointerEvents="none" style={[styles.clock, { backgroundColor: tokens.color.roseGold }]}><SatinGlyph name="clock" color={tokens.color.onCharcoal} size={13} /></View> : null}
     </Pressable>;
   }
 
   function pendingTile() {
     return <View key="pending" accessible accessibilityLabel={t('grid.pendingA11y', { when: when(pendingAt) })} style={{ width: cell, height: tileH }}>
       {pendingUrl ? <Image source={{ uri: pendingUrl }} resizeMode="cover" style={{ width: cell, height: tileH }} /> : <View style={{ width: cell, height: tileH, backgroundColor: ph }} />}
-      <View pointerEvents="none" style={[styles.clock, { backgroundColor: tokens.color.roseGold }]}><SatinGlyph name="pencil" color="#FFFFFF" size={13} /></View>
+      <View pointerEvents="none" style={[styles.clock, { backgroundColor: tokens.color.roseGold }]}><SatinGlyph name="pencil" color={tokens.color.onCharcoal} size={13} /></View>
     </View>;
   }
 
   function row(p: ContentPost) {
     const sched = isScheduled(p);
     return <Pressable key={p.id} accessibilityRole="button" onPress={() => router.push(`/content/${p.id}` as any)} style={[styles.row, { borderColor: palette.border }]}>
-      <PostThumb workspaceId={ws} post={p} size={56} height={56} radius={8} placeholder={ph} />
+      <PostThumb workspaceId={ws} post={p} size={56} height={56} radius={8} placeholder={ph} textTile />
       <View style={{ flex: 1, gap: 2 }}>
-        <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={[styles.rowTitle, { color: palette.text }]}>{p.title || (p.variants?.[0]?.caption ?? '').slice(0, 60)}</Text>
-        <Text numberOfLines={1} maxFontSizeMultiplier={1.6} style={[styles.rowSub, { color: palette.muted }]}>{t(`grid.st.${stateLabel(stateOf(p))}`)}{gridDate(p) ? ` · ${when(gridDate(p))}` : ''}</Text>
+        <Text numberOfLines={1} maxFontSizeMultiplier={2} style={[styles.rowTitle, { color: palette.text }]}>{p.title || (p.variants?.[0]?.caption ?? '').slice(0, 60)}</Text>
+        <Text numberOfLines={1} maxFontSizeMultiplier={2} style={[styles.rowSub, { color: palette.muted }]}>{t(`grid.st.${stateLabel(stateOf(p))}`)}{gridDate(p) ? ` · ${when(gridDate(p))}` : ''}</Text>
       </View>
       {sched ? <SatinGlyph name="clock" color={rose} size={16} /> : null}
     </Pressable>;
@@ -104,24 +108,24 @@ export default function ContentGrid() {
 
   return <Screen hideAsk onRefresh={load}>
     <View style={styles.head}>
-      <Text accessibilityRole="header" maxFontSizeMultiplier={1.3} style={[styles.large, { color: palette.text }]}>{t('grid.content')}</Text>
-      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/content/new', params: { format: tab === 'reels' ? 'reel' : tab === 'stories' ? 'story' : 'post' } } as any)} style={({ pressed }) => [styles.create, { backgroundColor: pressed ? '#72443A' : tokens.color.roseGold }]}>
-        <Text maxFontSizeMultiplier={1.4} style={[styles.createText, { color: '#FFFFFF' }]}>{t('grid.create')}</Text>
+      <Text accessibilityRole="header" style={[screenHeader.title, { color: palette.text }]}>{t('grid.content')}</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/content/new', params: { format: tab === 'reels' ? 'reel' : tab === 'stories' ? 'story' : 'post' } } as any)} style={({ pressed }) => [styles.create, { backgroundColor: tokens.color.roseGold, opacity: pressed ? 0.85 : 1 }]}>
+        <Text maxFontSizeMultiplier={2} style={[styles.createText, { color: tokens.color.onCharcoal }]}>{t('grid.create')}</Text>
       </Pressable>
     </View>
 
     <View accessibilityRole="tablist" style={[styles.tabs, { borderColor: palette.border }]}>
       {TABS.map((k) => <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: tab === k }} onPress={() => setTab(k)} style={styles.tabItem}>
-        <Text maxFontSizeMultiplier={1.4} style={[styles.tabText, { color: tab === k ? palette.text : palette.muted }]}>{t(`grid.tab.${k}`)}</Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.tabText, { color: tab === k ? palette.text : palette.muted }]}>{t(`grid.tab.${k}`)}</Text>
         <View style={[styles.underline, { backgroundColor: tab === k ? rose : 'transparent' }]} />
       </Pressable>)}
     </View>
 
     <View style={styles.bar}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('grid.filterA11y', { name: t(`grid.f.${filter}`) })} onPress={() => setMenu(true)} style={styles.drop}>
-        <Text maxFontSizeMultiplier={1.4} style={[styles.dropText, { color: palette.text }]}>{t(`grid.f.${filter}`)}</Text>
+      <View ref={dropRef} collapsable={false}><Pressable accessibilityRole="button" accessibilityLabel={t('grid.filterA11y', { name: t(`grid.f.${filter}`) })} onPress={openMenu} style={styles.drop}>
+        <Text maxFontSizeMultiplier={2} style={[styles.dropText, { color: palette.text }]}>{t(`grid.f.${filter}`)}</Text>
         <SatinGlyph name="caretDown" color={rose} size={16} />
-      </Pressable>
+      </Pressable></View>
       <Pressable accessibilityRole="button" accessibilityLabel={list ? t('grid.showGrid') : t('grid.showList')} onPress={() => setList((x) => !x)} hitSlop={8} style={styles.toggle}>
         <SatinGlyph name={list ? 'grid' : 'list'} color={rose} size={22} />
       </Pressable>
@@ -136,10 +140,10 @@ export default function ContentGrid() {
     </Animated.View> : null}
 
     <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
-      <Pressable style={styles.scrim} onPress={() => setMenu(false)} accessibilityLabel={t('common.close', 'Close')}>
-        <View style={[styles.menu, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: palette.border }]}>
+      <Pressable style={[styles.scrim, { paddingTop: menuTop }]} onPress={() => setMenu(false)} accessibilityLabel={t('common.close', 'Close')}>
+        <View style={[styles.menu, { backgroundColor: night ? N.card : D.surface, borderColor: palette.border }]}>
           {FILTERS.map((f, i) => <Pressable key={f} accessibilityRole="menuitem" accessibilityState={{ selected: filter === f }} onPress={() => { setFilter(f); setMenu(false); }} style={[styles.menuItem, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: palette.border }]}>
-            <Text maxFontSizeMultiplier={1.6} style={[styles.menuText, { color: palette.text }]}>{t(`grid.f.${f}`)}</Text>
+            <Text maxFontSizeMultiplier={2} style={[styles.menuText, { color: palette.text }]}>{t(`grid.f.${f}`)}</Text>
             {filter === f ? <Check size={16} color={rose} weight="bold" /> : null}
           </Pressable>)}
         </View>
@@ -152,7 +156,7 @@ function stateLabel(s: string) { return s === 'published' || s === 'analyzed' ? 
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, marginBottom: 12 },
-  large: { ...tokens.type.largeTitle, flexShrink: 1 },
+  // Create: filled rose-gold pill, white label, 44pt (Day rose gold in both modes: white on Night rose gold is only 2.4:1).
   create: { minHeight: 44, paddingHorizontal: 20, borderRadius: 22, justifyContent: 'center' },
   createText: { ...tokens.type.headline },
   bar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
@@ -169,7 +173,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
   rowTitle: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold },
   rowSub: { ...tokens.type.footnote },
-  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', paddingTop: 210, paddingHorizontal: 16 },
+  scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.18)', paddingHorizontal: 16 },
   menu: { width: 240, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
   menuItem: { minHeight: 44, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   menuText: { ...tokens.type.body }
