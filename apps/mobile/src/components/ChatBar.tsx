@@ -9,7 +9,7 @@ import { Microphone } from 'phosphor-react-native/src/icons/Microphone';
 import { Platform } from 'react-native';
 import { ArrowUp } from 'phosphor-react-native/src/icons/ArrowUp';
 import { useAppearance } from '../design/appearance';
-import { tokens } from '../design/theme';
+import { chat, tokens } from '../design/theme';
 
 /**
  * The single approved chat bar (Messages + Assistant): round + (44), 44pt pill with the field,
@@ -40,15 +40,15 @@ export function ChatBar({
   const night = mode === 'night';
   const hasText = value.trim().length > 0;
   const canSend = hasText && !disabled;
-  const circle = night ? '#FFFFFF' : '#151515';
-  const glyph = night ? '#151515' : '#FFFFFF';
-  const fieldBg = night ? '#1C1C1E' : '#FFFFFF';
+  const circle = palette.text;
+  const glyph = palette.bg;
+  const fieldBg = night ? chat.night.card : chat.day.card;
   const fieldBorder = night ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.10)';
   const holding = useRef(false);
   const voiceOnly = !hasText || Boolean(recording);
   const active = voiceOnly ? (Boolean(onVoice) || Boolean(onHoldStart)) && !disabled : canSend;
   return (
-    <View style={[styles.wrap, { backgroundColor: night ? '#000000' : '#F3F3F3', paddingBottom: keyboardOpen ? 8 : Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.wrap, { backgroundColor: palette.bg, paddingBottom: keyboardOpen ? 8 : Math.max(insets.bottom, 8) }]}>
       {onPlus ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('messages.add', { defaultValue: 'Add' })} onPress={onPlus} style={[styles.plus, { backgroundColor: fieldBg, borderColor: fieldBorder }]}>
           <Plus size={22} color={palette.text} />
@@ -60,7 +60,7 @@ export function ChatBar({
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={night ? '#9A9A9F' : '#6C6C70'}
+          placeholderTextColor={palette.muted}
           multiline={Platform.OS !== 'web'}
           numberOfLines={1}
           scrollEnabled
@@ -77,7 +77,7 @@ export function ChatBar({
             onPressOut={() => onHoldEnd?.()}
             style={styles.hit}
           >
-            <Microphone size={22} color={recording ? palette.text : (night ? '#9A9A9F' : '#6C6C70')} weight={recording ? 'fill' : 'regular'} />
+            <Microphone size={22} color={recording ? palette.text : (palette.muted)} weight={recording ? 'fill' : 'regular'} />
           </Pressable>
         ) : null}
         <Pressable

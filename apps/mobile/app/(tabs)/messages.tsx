@@ -20,7 +20,7 @@ import { THREAD_PAGE, listComments, listConnections, listMessageThreads, searchM
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { addTask } from '../../src/lib/tasks';
 import * as Notifications from 'expo-notifications';
-import { tokens } from '../../src/design/theme';
+import { D, N, tokens } from '../../src/design/theme';
 const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
 import { useNightSafe } from '../../src/components/NightSafe';
 import { SwipeRow } from '../../src/components/SwipeRow';
@@ -223,13 +223,14 @@ export default function MessagesScreen() {
     <View accessibilityRole="tablist" style={styles.segRow}>
       {(['messages', 'comments'] as const).map((k) => { const on = seg === k; const n = k === 'messages' ? threads.filter((x) => x.unread).length : null; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setSeg(k)} style={[styles.seg, on && { borderBottomColor: palette.text }]}>
         <Text style={[styles.segText, { color: on ? palette.text : palette.muted }]}>{k === 'messages' ? t('messages.title') : t('messages.comments', 'Comments')}</Text>
-        {n ? <View style={[styles.segBadge, { backgroundColor: mode === 'night' ? '#2C2C2E' : '#E4E4E6' }]}><Text style={[styles.segBadgeText, { color: palette.text }]}>{n}</Text></View> : null}
+        {n ? <View style={[styles.segBadge, { backgroundColor: mode === 'night' ? N.card : D.fill2 }]}><Text style={[styles.segBadgeText, { color: palette.text }]}>{n}</Text></View> : null}
       </Pressable>; })}
     </View>
     {seg === 'messages' ? <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsWrap} contentContainerStyle={styles.chips}>
-      {CHIPS.map(([k, name]) => { const on = k === 'unread' ? filter === 'unread' : plat === k; return <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={k === 'unread' ? t('messages.unreadA', 'Unread') : name} onPress={() => k === 'unread' ? setFilter(on ? null : 'unread') : setPlat(on ? 'all' : k)} style={[styles.chip, styles.tab, { backgroundColor: mode === 'night' ? '#1C1C1E' : '#E9E9EB', borderColor: 'transparent' }, on && { backgroundColor: palette.text }]}>
+      {CHIPS.map(([k, name]) => { const on = k === 'unread' ? filter === 'unread' : plat === k; return <Pressable key={k} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={k === 'unread' ? t('messages.unreadA', 'Unread') : name} onPress={() => k === 'unread' ? setFilter(on ? null : 'unread') : setPlat(on ? 'all' : k)} style={styles.chipHit}>
+        <View style={[styles.chip, styles.tab, { backgroundColor: on ? palette.text : mode === 'night' ? N.card : D.fill2, borderColor: 'transparent' }]}>
         {k !== 'unread' ? <BrandLogo platform={k === 'facebook' ? 'messenger' : k} size={20} /> : null}
-        <Text numberOfLines={1} style={[styles.chipText, { color: on ? (mode === 'night' ? '#151515' : '#FFFFFF') : palette.text }]}>{k === 'unread' ? t('messages.unreadA', 'Unread') : name}</Text></Pressable>; })}
+        <Text numberOfLines={1} style={[styles.chipText, { color: on ? palette.bg : palette.text }]}>{k === 'unread' ? t('messages.unreadA', 'Unread') : name}</Text></View></Pressable>; })}
     </ScrollView> : null}
     </View>}>
     {searchOpen ? <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={t('common2.search', { defaultValue: 'Search' })} placeholderTextColor={palette.muted} style={safe.search} /> : null}
@@ -345,18 +346,17 @@ const styles = StyleSheet.create({
   badgeText: { fontFamily: tokens.font.uiBold, fontSize: 12, fontVariant: ['tabular-nums'] },
   tabsWrap: { marginHorizontal: -16, flexGrow: 0 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
-  bellDot: { position: 'absolute', top: 9, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#151515' },
+  icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   unread: { width: 8, height: 8, borderRadius: 4 },
   previewRead: { fontFamily: tokens.font.ui },
   chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },
-  chip: { flexShrink: 0, height: 36, marginVertical: 4, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', backgroundColor: 'transparent', borderWidth: StyleSheet.hairlineWidth, borderColor: '#EDEDED' },
-  chipOn: { backgroundColor: '#151515', borderColor: '#151515' },
-  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
+  chipHit: { flexShrink: 0, minHeight: 44, justifyContent: 'center' },
+  chip: { flexShrink: 0, height: 36, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth },
+  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
   backdrop: { flex: 1, alignItems: 'flex-end', paddingTop: 96, paddingRight: 16, backgroundColor: 'rgba(0,0,0,0.2)' },
   mi: { minHeight: 46, justifyContent: 'center', paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.08)' },
   miSep: { borderTopWidth: 6, borderTopColor: 'rgba(42,39,37,0.06)' },
-  link: { fontFamily: tokens.font.uiBold, fontSize: 15, paddingVertical: 6 },
+  link: { fontFamily: tokens.font.uiBold, fontSize: 15, minHeight: 44, lineHeight: 44 },
   list: { marginHorizontal: -16 },
   pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 8 },
   segRow: { flexDirection: 'row', gap: 24, height: 44 },

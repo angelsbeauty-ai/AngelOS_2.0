@@ -105,3 +105,27 @@ export const D = {
   hairline: '#EDEDED', accent: '#B8A48A', accentDeep: '#8C7A64', accentTint: '#F5F5F5',
   pendingRule: '#8A8379', danger: '#B3261E', listening: '#75654F',
 } as const;
+
+/** Night tokens (docs/design-review-oct20/NIGHT_TOKENS_AUDIT.md rules 1-7). Same values the Night screens already use. */
+export const N = {
+  bg: '#050505', card: '#161618', text: '#F4F4F5', text2: '#C7C7CC', muted: '#9A9A9F', chipText: '#E5E5E7',
+  field: 'rgba(255,255,255,0.05)', fieldBorder: 'rgba(255,255,255,0.14)', hairline: 'rgba(255,255,255,0.11)',
+  onLight: '#0A0A0A', secondaryBorder: 'rgba(255,255,255,0.24)',
+} as const;
+
+/**
+ * Chat thread tokens (angelos-designer/chat-rebuild/BUILD_PACKET_CHAT_CALENDAR.md `chat.day` / `chat.night` / sizes).
+ * Colours are the values the approved thread already ships with; the packet's dark Day out-bubble was later changed to grey.
+ */
+export const chat = {
+  day: { bg: '#F3F3F3', inc: '#FFFFFF', incText: '#151515', out: '#E4E4E6', outText: '#151515', quoteOnOut: '#3A3A3C', muted: '#6C6C70', pill: '#E4E4E6', banner: '#EBEBED', card: '#FFFFFF', avatar: '#D1D1D6', hair: 'rgba(0,0,0,0.08)' },
+  night: { bg: '#050505', inc: '#26262A', incText: '#F4F4F5', out: '#E9E9EB', outText: '#151515', quoteOnOut: '#3A3A3C', muted: '#9A9A9F', pill: '#2C2C2E', banner: '#0B0B0C', card: '#161618', avatar: '#3A3A3D', hair: 'rgba(255,255,255,0.10)' },
+  /** Packet type: header name 17/22 600 · bubble 16/22 · meaning 12/16 · time 11/14 500 · day separator 12/16 500. */
+  type: {
+    name: { fontFamily: 'Manrope_600SemiBold', fontSize: 17, lineHeight: 22 },
+    bubble: { fontFamily: 'Manrope_400Regular', fontSize: 16, lineHeight: 22 },
+    meaning: { fontFamily: 'Manrope_400Regular', fontSize: 12, lineHeight: 16 },
+    time: { fontFamily: 'Manrope_500Medium', fontSize: 11, lineHeight: 14 },
+    day: { fontFamily: 'Manrope_500Medium', fontSize: 12, lineHeight: 16 },
+  },
+} as const;

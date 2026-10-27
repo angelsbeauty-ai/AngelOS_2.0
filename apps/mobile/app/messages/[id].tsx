@@ -28,6 +28,7 @@ import {
 } from '../../src/lib/messaging';
 import { getActiveWorkspace } from '../../src/lib/workspace';
 import { useAppearance } from '../../src/design/appearance';
+import { chat, tokens } from '../../src/design/theme';
 
 /** Japanese text uses the system font (Manrope has no kana; web would fall back to a handwriting face). */
 const JP_FONT = (text?: string | null) => (text && /[\u3040-\u30ff\u4e00-\u9faf]/.test(text) ? { fontFamily: Platform.OS === 'web' ? '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif' : undefined } : null);
@@ -41,6 +42,7 @@ export default function MessageThreadScreen() {
   const { palette, mode } = useAppearance();
   const insets = useSafeAreaInsets();
   const night = mode === 'night';
+  const C = night ? chat.night : chat.day;
   const scrollRef = useRef<ScrollView>(null);
   // M17/M25: keep the latest message visible as the keyboard opens.
   const toEnd = useCallback(() => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50); }, []);
@@ -138,18 +140,18 @@ export default function MessageThreadScreen() {
     toast.show({ title: dictation.error === 'permission' ? t('messages.dictatePerm') : t('messages.dictateFail'), tone: 'error' });
     dictation.clearError();
   }, [dictation.error]);
-  if (state === 'error') return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('messages.tryAgain')}</Text></Pressable><Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.replace('/messages' as any))} style={styles.retryBig}><Text style={{ color: palette.text, fontWeight: '600' }}>{t('common.goBack', 'Go back')}</Text></Pressable></View>;
-  if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: night ? '#050505' : '#F3F3F3', paddingTop: insets.top }]}><View style={{ padding: 16, paddingTop: 70 }}><Skeleton rows={6} height={48} /></View></View>;
+  if (state === 'error') return <View style={[styles.fill, { backgroundColor: C.bg, paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontFamily: tokens.font.uiSemibold, fontSize: tokens.type.body.fontSize }}>{t('messages.tryAgain')}</Text></Pressable><Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.replace('/messages' as any))} style={styles.retryBig}><Text style={{ color: palette.text, fontFamily: tokens.font.uiSemibold, fontSize: tokens.type.body.fontSize }}>{t('common.goBack', 'Go back')}</Text></Pressable></View>;
+  if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: C.bg, paddingTop: insets.top }]}><View style={{ padding: 16, paddingTop: 70 }}><Skeleton rows={6} height={48} /></View></View>;
 
   const thread = detail.thread;
   const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
   const firstName = name.split(/[\s\u3000]+/)[0];
   const appName = APP_NAME[thread.platform] || t('messages.theApp', 'the app');
   const live = thread.delivery === 'live';
-  const incBg = night ? '#26262A' : '#FFFFFF';
-  const incText = night ? '#F4F4F5' : '#151515';
-  const outBg = night ? '#E9E9EB' : '#E4E4E6';
-  const outText = '#151515';
+  const incBg = C.inc;
+  const incText = C.incText;
+  const outBg = C.out;
+  const outText = C.outText;
 
   async function send() {
     const text = reply.trim();
@@ -247,9 +249,9 @@ export default function MessageThreadScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={[styles.fill, { backgroundColor: night ? '#000000' : '#F3F3F3' }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={[styles.fill, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: night ? '#0B0B0C' : '#F3F3F3', borderBottomColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}>
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: C.bg, borderBottomColor: C.hair }]}>
         <View style={styles.headerRow}>
           <Pressable accessibilityRole="button" accessibilityLabel={t('common.back', { defaultValue: 'Back' })} onPress={() => router.back()} style={styles.back}>
             <CaretLeft size={24} color={palette.text} />
@@ -278,49 +280,49 @@ export default function MessageThreadScreen() {
         return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" maintainVisibleContentPosition={{ minIndexForVisible: 0 }} scrollEventThrottle={64} onScroll={(e) => { if (e.nativeEvent.contentOffset.y < 200) void loadOlder(); }} onContentSizeChange={() => { if (prepending.current) { prepending.current = false; return; } scrollRef.current?.scrollToEnd({ animated: false }); }}>
           {loadingOlder ? <ActivityIndicator style={{ marginVertical: 12 }} color={palette.muted} /> : null}
           {items.map((x) => {
-            if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: night ? '#2C2C2E' : '#E4E4E6', color: palette.text }]}>{x.label}</Text></View>;
+            if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: C.pill, color: palette.text }]}>{x.label}</Text></View>;
             const message = x.m; const out = message.direction === 'outbound'; const tr = translations[message.id];
             return <SwipeReply key={message.id} night={night} label={t('messages.reply', { defaultValue: 'Reply' })} onReply={() => setReplyTo(message)}><View style={[styles.line, out && styles.lineOut]}>
-              {!out ? (x.first ? <View style={[styles.inAvatar, { backgroundColor: night ? '#3A3A3D' : '#D1D1D6' }]}>{thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.inAvatarImg} /> : <Text style={[styles.inAvatarText, { color: palette.text }]}>{initials}</Text>}</View> : <View style={styles.inAvatarGap} />) : null}
+              {!out ? (x.first ? <View style={[styles.inAvatar, { backgroundColor: C.avatar }]}>{thread.contact_avatar_url ? <Image source={{ uri: thread.contact_avatar_url }} style={styles.inAvatarImg} /> : <Text style={[styles.inAvatarText, { color: palette.text }]}>{initials}</Text>}</View> : <View style={styles.inAvatarGap} />) : null}
               <Pressable onLongPress={() => onLongPress(message)} style={[styles.row, out && styles.rowOut]}>
                 <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }, detail.attachments?.[message.id] && !message.body && { padding: 4 }]}>
-                  {message.metadata?.reply_to ? <View style={[styles.inQuote, { borderLeftColor: out ? outText : incText }]}><Text numberOfLines={2} style={[styles.inQuoteText, { color: out ? '#3A3A3D' : night ? '#B8B8BD' : '#6C6C70' }]}>{message.metadata.reply_to.body}</Text></View> : null}
+                  {message.metadata?.reply_to ? <View style={[styles.inQuote, { borderLeftColor: out ? outText : incText }]}><Text numberOfLines={2} style={[styles.inQuoteText, { color: out ? C.quoteOnOut : C.muted }]}>{message.metadata.reply_to.body}</Text></View> : null}
                   {detail.attachments?.[message.id] ? <Image accessibilityLabel={t('messages.photo')} source={{ uri: detail.attachments[message.id] }} style={styles.photo} resizeMode="cover" /> : message.metadata?.attachment ? <Text style={[styles.body, { color: out ? outText : incText }]}>{t('messages.photoUnavailable')}</Text> : null}
                   {message.body ? <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text> : null}
                 </View>
-                {detail.reactions?.[message.id]?.length ? <Text accessibilityLabel={t('messages.reactions', { list: detail.reactions[message.id].join(' ') })} style={[styles.reacts, { backgroundColor: night ? '#2C2C2E' : '#FFFFFF' }]}>{detail.reactions[message.id].join(' ')}</Text> : null}
-                {tr?.shown ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{tr.text}</Text> : null}
+                {detail.reactions?.[message.id]?.length ? <Text accessibilityLabel={t('messages.reactions', { list: detail.reactions[message.id].join(' ') })} style={[styles.reacts, { backgroundColor: C.inc }]}>{detail.reactions[message.id].join(' ')}</Text> : null}
+                {tr?.shown ? <Text style={[styles.meaning, { color: C.muted }]}>{tr.text}</Text> : null}
                 {out && message.status === 'failed' ? (
                   <Pressable accessibilityRole="button" accessibilityLabel={t('messages.retryA11y')} onPress={() => void retry(message)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }} style={styles.failRow}>
-                    <Text style={[styles.time, { color: palette.text, fontWeight: '600' }]}>{t('messages.stFailed')} · {t('messages.retry')}</Text>
+                    <Text style={[styles.time, { color: palette.text, fontFamily: tokens.font.uiSemibold }]}>{t('messages.stFailed')} · {t('messages.retry')}</Text>
                   </Pressable>
                 ) : (
-                  <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{timeLabel(message.created_at)}{out && statusLabel(message) ? ` · ${statusLabel(message)}` : ''}</Text>
+                  <Text style={[styles.time, { color: C.muted }]}>{timeLabel(message.created_at)}{out && statusLabel(message) ? ` · ${statusLabel(message)}` : ''}</Text>
                 )}
               </Pressable>
             </View></SwipeReply>;
           })}
           {outbox.map((q) => <View key={q.key} style={[styles.line, styles.lineOut]}><View style={[styles.row, styles.rowOut]}>
             <View style={[styles.bubble, { backgroundColor: outBg, opacity: 0.6 }]}><Text style={[styles.body, { color: outText }, JP_FONT(q.body)]}>{q.body}</Text></View>
-            <Text style={[styles.time, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{t('messages.stWaiting')}</Text>
+            <Text style={[styles.time, { color: C.muted }]}>{t('messages.stWaiting')}</Text>
           </View></View>)}
         </ScrollView>;
       })()}
 
       {showChip ? (
-        <View style={[styles.chip, night && { backgroundColor: '#161618', borderColor: 'rgba(255,255,255,0.10)' }]}>
+        <View style={[styles.chip, { backgroundColor: C.card, borderColor: C.hair }]}>
           <Pressable onPress={() => setDraftOpen((v) => !v)} style={{ flex: 1 }}>
             <Text style={[styles.chipText, { color: palette.text }]}>{draftOpen ? t('messages.hideDraft') : t('messages.aiDraft', { defaultValue: 'AI draft' })}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={t('messages.closeDraft')} onPress={() => { setDraftHidden(true); setDraftOpen(false); }} hitSlop={8} style={styles.close}>
-            <Text style={[styles.closeText, { color: night ? '#9A9A9F' : '#8A8A8E' }]}>×</Text>
+            <Text style={[styles.closeText, { color: C.muted }]}>×</Text>
           </Pressable>
         </View>
       ) : null}
       {draftOpen && pendingDraft && !draftHidden ? (
-        <View style={[styles.draft, night && { backgroundColor: '#161618' }]}>
+        <View style={[styles.draft, { backgroundColor: C.card }]}>
           <Text style={[styles.draftText, { color: palette.text }, JP_FONT(pendingDraft.body)]}>{pendingDraft.body}</Text>
-          {pendingDraft.translated_body && isJapanese(pendingDraft.body) ? <Text style={[styles.meaning, { color: night ? '#9A9A9F' : '#6C6C70', fontSize: 14, lineHeight: 19 }]}>{t('messages.means', { text: pendingDraft.translated_body })}</Text> : null}
+          {pendingDraft.translated_body && isJapanese(pendingDraft.body) ? <Text style={[styles.meaning, { color: C.muted, ...tokens.type.subhead }]}>{t('messages.means', { text: pendingDraft.translated_body })}</Text> : null}
           <View style={styles.draftRow}>
             <Pressable accessibilityRole="button" onPress={() => { setReply(pendingDraft.body); setDraftOpen(false); }} style={styles.draftHit}><Text style={[styles.draftBtn, { color: palette.text }]}>{t('messages.useDraft')}</Text></Pressable>
             <Pressable accessibilityRole="button" onPress={() => void run('draft', () => createAiReplyDraft(workspaceId, thread.id))} style={styles.draftHit}><Text style={[styles.draftBtn, { color: palette.text }]}>{t('messages.newDraft')}</Text></Pressable>
@@ -330,34 +332,34 @@ export default function MessageThreadScreen() {
 
       <View onLayout={(e) => { const h = e.nativeEvent.layout.height; if (h !== bottomH) { setBottomH(h); setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 30); } }}>
       {replyTo ? (
-        <View style={[styles.quote, { backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>
+        <View style={[styles.quote, { backgroundColor: C.banner }]}>
           <View style={[styles.quoteLine, { backgroundColor: palette.text }]} />
           <View style={{ flex: 1 }}>
             <Text numberOfLines={1} style={[styles.quoteTitle, { color: palette.text }]}>{t('messages.replyingTo', { name: replyTo.direction === 'outbound' ? t('messages.yourself', { defaultValue: 'yourself' }) : name, defaultValue: 'Replying to {{name}}' })}</Text>
-            <Text numberOfLines={1} style={[styles.quoteBody, { color: night ? '#9A9A9F' : '#6C6C70' }]}>{replyTo.body}</Text>
+            <Text numberOfLines={1} style={[styles.quoteBody, { color: C.muted }]}>{replyTo.body}</Text>
           </View>
           <Pressable accessibilityRole="button" accessibilityLabel={t('common.close', { defaultValue: 'Close' })} onPress={() => setReplyTo(null)} style={styles.back}>
-            <X size={20} color={night ? '#9A9A9F' : '#6C6C70'} />
+            <X size={20} color={C.muted} />
           </Pressable>
         </View>
       ) : null}
       {!replyTo && !reply && !locked && !pendingDraft ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggest} keyboardShouldPersistTaps="handled">
-          {(['times', 'price', 'thanks'] as const).map((k) => <Pressable key={k} accessibilityRole="button" accessibilityLabel={t('messages.aiChipA11y', { label: t(`messages.ai_${k}`) })} accessibilityHint={t('messages.aiChipHint')} disabled={Boolean(busy) || !online} onPress={() => { setDraftHidden(false); void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id, k); setDraftOpen(true); }); }} style={[styles.suggestChip, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }, (Boolean(busy) || !online) && { opacity: 0.5 }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{busy === 'draft' ? t('messages.aiChipBusy') : `✦ ${t(`messages.ai_${k}`)}`}</Text></Pressable>)}
-          {chips.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('messages.useSaved', { title: item.title })} onPress={() => insertSaved(item)} style={[styles.suggestChip, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF', borderColor: night ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.08)' }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{item.title}</Text></Pressable>)}
+          {(['times', 'price', 'thanks'] as const).map((k) => <Pressable key={k} accessibilityRole="button" accessibilityLabel={t('messages.aiChipA11y', { label: t(`messages.ai_${k}`) })} accessibilityHint={t('messages.aiChipHint')} disabled={Boolean(busy) || !online} onPress={() => { setDraftHidden(false); void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id, k); setDraftOpen(true); }); }} style={[styles.suggestChip, { backgroundColor: C.card, borderColor: C.hair }, (Boolean(busy) || !online) && { opacity: 0.5 }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{busy === 'draft' ? t('messages.aiChipBusy') : `✦ ${t(`messages.ai_${k}`)}`}</Text></Pressable>)}
+          {chips.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('messages.useSaved', { title: item.title })} onPress={() => insertSaved(item)} style={[styles.suggestChip, { backgroundColor: C.card, borderColor: C.hair }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{item.title}</Text></Pressable>)}
         </ScrollView>
       ) : null}
-      {!online ? <Text accessibilityLiveRegion="polite" style={[styles.banner, { color: palette.text, backgroundColor: night ? '#1C1C1E' : '#E4E4E6' }]}>{t('messages.offline')}</Text> : null}
-      {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: night ? '#9A9A9F' : '#6C6C70', backgroundColor: night ? '#0B0B0C' : '#EBEBED' }]}>{banner}</Text> : null}
-      {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, fontSize: 13, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
+      {!online ? <Text accessibilityLiveRegion="polite" style={[styles.banner, { color: palette.text, backgroundColor: C.pill }]}>{t('messages.offline')}</Text> : null}
+      {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: C.muted, backgroundColor: C.banner }]}>{banner}</Text> : null}
+      {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, ...tokens.type.footnote, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
       <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
       </View>
 
       <Modal visible={Boolean(menuFor)} transparent animationType="fade" onRequestClose={() => setMenuFor(null)}>
         <Pressable accessibilityLabel={t('common.close', { defaultValue: 'Close' })} style={styles.menuBackdrop} onPress={() => setMenuFor(null)}>
-          <View style={[styles.menuCard, { backgroundColor: night ? '#1C1C1E' : '#FFFFFF' }]}>
+          <View style={[styles.menuCard, { backgroundColor: C.card }]}>
             {detail.reactionsAvailable !== false ? <View style={styles.reactBar} accessibilityRole="toolbar">
-              {REACTIONS.map((e) => { const on = Boolean(menuFor && detail.reactions?.[menuFor.id]?.includes(e)); return <Pressable key={e} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={t('messages.reactWith', { emoji: e })} onPress={() => menuFor && void react(menuFor, e)} style={[styles.reactBtn, on && { backgroundColor: night ? '#3A3A3D' : '#E4E4E6' }]}><Text style={styles.reactEmoji}>{e}</Text></Pressable>; })}
+              {REACTIONS.map((e) => { const on = Boolean(menuFor && detail.reactions?.[menuFor.id]?.includes(e)); return <Pressable key={e} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={t('messages.reactWith', { emoji: e })} onPress={() => menuFor && void react(menuFor, e)} style={[styles.reactBtn, on && { backgroundColor: C.pill }]}><Text style={styles.reactEmoji}>{e}</Text></Pressable>; })}
             </View> : null}
             {(['reply', 'copy', 'translate'] as const).map((k) => <Pressable key={k} accessibilityRole="button" onPress={() => menuAction(k)} style={styles.menuRow}><Text style={[styles.plusTitle, { color: palette.text }]}>{k === 'reply' ? t('messages.reply', { defaultValue: 'Reply' }) : k === 'copy' ? t('common.copy', { defaultValue: 'Copy' }) : t('messages.translate')}</Text></Pressable>)}
           </View>
@@ -389,60 +391,59 @@ const styles = StyleSheet.create({
   titleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 44 },
   quote: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 16, paddingVertical: 6 },
   quoteLine: { width: 3, alignSelf: 'stretch', borderRadius: 2 },
-  quoteTitle: { fontSize: 14, fontWeight: '600' },
-  quoteBody: { fontSize: 14 },
+  quoteTitle: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold },
+  quoteBody: { ...tokens.type.subhead },
   back: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  chevron: { fontSize: 28, lineHeight: 32 },
-  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#E4E4E6', justifyContent: 'center', alignItems: 'center', marginRight: 8, overflow: 'hidden' },
+  avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: chat.day.pill, justifyContent: 'center', alignItems: 'center', marginRight: 8, overflow: 'hidden' },
   avatarImg: { width: 32, height: 32 },
-  avatarText: { fontSize: 14, fontWeight: '600', color: '#151515' },
-  name: { fontSize: 17, lineHeight: 22, fontWeight: '600', flexShrink: 1 },
+  avatarText: { ...tokens.type.footnote, fontFamily: tokens.font.uiSemibold, color: chat.day.incText },
+  name: { ...chat.type.name, flexShrink: 1 },
   sub: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  subText: { fontSize: 12, lineHeight: 16 },
-  open: { paddingHorizontal: 10, height: 32, justifyContent: 'center' },
-  openText: { fontSize: 15, fontWeight: '600' },
+  subText: { ...chat.type.meaning },
+  open: { paddingHorizontal: 10, minHeight: 44, justifyContent: 'center' },
+  openText: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold },
   thread: { flexGrow: 1, justifyContent: 'flex-end', padding: 12, gap: 8, paddingBottom: 16 },
   dayWrap: { alignItems: 'center', paddingVertical: 6 },
-  dayPill: { overflow: 'hidden', fontSize: 13, fontWeight: '500', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  dayPill: { overflow: 'hidden', ...chat.type.day, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   line: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   lineOut: { justifyContent: 'flex-end' },
   inAvatar: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   inAvatarImg: { width: 32, height: 32 },
-  inAvatarText: { fontSize: 12, fontWeight: '600' },
+  inAvatarText: { ...chat.type.meaning, fontFamily: tokens.font.uiSemibold },
   inAvatarGap: { width: 32 },
   row: { alignItems: 'flex-start', gap: 2, maxWidth: '78%' },
   rowOut: { alignSelf: 'flex-end', alignItems: 'flex-end' },
   bubble: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9 },
-  body: { fontSize: 16, lineHeight: 22 },
-  meaning: { fontSize: 12, lineHeight: 16, marginTop: 2 },
-  time: { fontSize: 11, lineHeight: 14, marginTop: 2 },
-  chip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', marginLeft: 12, marginBottom: 4, paddingLeft: 12, paddingRight: 4, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)', backgroundColor: '#FFFFFF', gap: 4 },
-  chipText: { fontSize: 13, fontWeight: '600' },
-  close: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  closeText: { fontSize: 18, lineHeight: 20 },
-  draft: { marginHorizontal: 12, marginBottom: 6, padding: 12, borderRadius: 16, backgroundColor: '#FFFFFF', gap: 8 },
-  draftText: { fontSize: 15, lineHeight: 20 },
+  body: { ...chat.type.bubble },
+  meaning: { ...chat.type.meaning, marginTop: 2 },
+  time: { ...chat.type.time, marginTop: 2 },
+  chip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', marginLeft: 12, marginBottom: 4, paddingLeft: 12, paddingRight: 4, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: chat.day.hair, backgroundColor: chat.day.card, gap: 4 },
+  chipText: { ...tokens.type.footnote, fontFamily: tokens.font.uiSemibold },
+  close: { width: 44, height: 44, marginVertical: -8, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  closeText: { ...tokens.type.headline },
+  draft: { marginHorizontal: 12, marginBottom: 6, padding: 12, borderRadius: 16, backgroundColor: chat.day.card, gap: 8 },
+  draftText: { ...tokens.type.subhead },
   draftRow: { flexDirection: 'row', gap: 12 },
-  draftBtn: { fontSize: 14, fontWeight: '600' },
-  plusRow: { paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
-  plusTitle: { fontSize: 16, fontWeight: '600' },
-  saved: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
-  savedTitle: { fontSize: 16 },
-  err: { fontSize: 16, textAlign: 'center', marginTop: 40 },
+  draftBtn: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold },
+  plusRow: { paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: chat.day.hair },
+  plusTitle: { ...tokens.type.headline },
+  saved: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: chat.day.hair },
+  savedTitle: { ...tokens.type.body },
+  err: { ...tokens.type.body, textAlign: 'center', marginTop: 40 },
   retryBig: { minHeight: 44, alignSelf: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   failRow: { minHeight: 22, justifyContent: 'center' },
   draftHit: { minHeight: 44, justifyContent: 'center', paddingRight: 8 },
   suggest: { gap: 8, paddingHorizontal: 12, paddingBottom: 6 },
-  suggestChip: { minHeight: 36, maxWidth: 220, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
+  suggestChip: { minHeight: 44, maxWidth: 220, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
   inQuote: { borderLeftWidth: 2, paddingLeft: 8, marginBottom: 6, opacity: 0.85 },
-  inQuoteText: { fontSize: 13, lineHeight: 17 },
+  inQuoteText: { ...tokens.type.footnote },
   photo: { width: 220, height: 220, borderRadius: 16, marginBottom: 2 },
-  reacts: { alignSelf: 'flex-start', overflow: 'hidden', marginTop: -6, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10, fontSize: 13 },
+  reacts: { alignSelf: 'flex-start', overflow: 'hidden', marginTop: -6, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10, ...tokens.type.footnote },
   menuBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', padding: 24 },
   menuCard: { borderRadius: 16, paddingVertical: 8, overflow: 'hidden' },
   reactBar: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 8, paddingBottom: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(127,127,127,0.25)' },
   reactBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   reactEmoji: { fontSize: 24 },
   menuRow: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 20 },
-  banner: { fontSize: 13, lineHeight: 18, textAlign: 'center', paddingHorizontal: 16, paddingVertical: 8 }
+  banner: { ...tokens.type.footnote, textAlign: 'center', paddingHorizontal: 16, paddingVertical: 8 }
 });

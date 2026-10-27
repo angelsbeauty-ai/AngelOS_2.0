@@ -11,7 +11,7 @@ import { toFriendly, friendlyText } from '../../../src/lib/friendly-error';
 import { getMessageThread, PLATFORM_OPEN_URL, updateThread, type MessageThreadDetail } from '../../../src/lib/messaging';
 import { getActiveWorkspace } from '../../../src/lib/workspace';
 import { useAppearance } from '../../../src/design/appearance';
-import { tokens } from '../../../src/design/theme';
+import { chat, tokens } from '../../../src/design/theme';
 
 /** M15 Contact info: who this is, where they write from, and the per-chat settings. Real data only. */
 export default function ContactInfoScreen() {
@@ -45,9 +45,9 @@ export default function ContactInfoScreen() {
   const photos = Object.entries(detail.attachments ?? {});
   const firstAt = detail.messages[0]?.created_at;
   const openUrl = PLATFORM_OPEN_URL[th.platform] ?? '';
-  const rowBg = night ? '#1C1C1E' : '#FFFFFF';
-  const sep = night ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-  const muted = night ? '#9A9A9F' : '#6C6C70';
+  const rowBg = night ? chat.night.card : chat.day.card;
+  const sep = night ? chat.night.hair : chat.day.hair;
+  const muted = palette.muted;
   const Row = ({ label, value, onPress, right }: { label: string; value?: string | null; onPress?: () => void; right?: React.ReactNode }) => (
     <Pressable accessibilityRole={onPress ? 'button' : undefined} disabled={!onPress} onPress={onPress} style={[styles.row, { borderBottomColor: sep }]}>
       <Text style={[styles.label, { color: palette.text }]}>{label}</Text>
@@ -93,13 +93,13 @@ export default function ContactInfoScreen() {
 
 const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: 6, paddingVertical: 20 },
-  name: { fontSize: 22, lineHeight: 28, fontFamily: tokens.font.uiSemibold, textAlign: 'center' },
-  sub: { fontSize: 15 },
+  name: { ...tokens.type.title2, textAlign: 'center' },
+  sub: { ...tokens.type.subhead },
   group: { marginHorizontal: 16, marginBottom: 16, borderRadius: 14, overflow: 'hidden' },
   row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth },
-  label: { fontSize: 16, flexShrink: 0 },
-  value: { fontSize: 16, flexShrink: 1, textAlign: 'right' },
-  section: { fontSize: 13, marginHorizontal: 32, marginBottom: 6, textTransform: 'uppercase' },
+  label: { ...tokens.type.body, flexShrink: 0 },
+  value: { ...tokens.type.body, flexShrink: 1, textAlign: 'right' },
+  section: { ...tokens.type.footnote, marginHorizontal: 32, marginBottom: 6, textTransform: 'uppercase' },
   photos: { gap: 8, paddingHorizontal: 16, paddingBottom: 16 },
   photo: { width: 96, height: 96, borderRadius: 10 }
 });
