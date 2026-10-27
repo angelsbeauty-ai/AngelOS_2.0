@@ -13,11 +13,11 @@ Sprint 11 is accepted when the subscription lifecycle, founder controls, and pri
 - Production card charging is **not** claimed until a real billing provider is connected.
 - Development-only demo activation is gated by `BILLING_DEMO_MODE=true` and is rejected in production.
 
-## Student discount
+## Beta tester discount
 
-- Founder can generate a private, high-entropy, one-time student token.
+- Founder can generate a private, high-entropy, one-time beta / TestFlight discount token.
 - Only the SHA-256 hash is stored; the raw token is returned once to the founder.
-- Default verified Angels Beauty student/alumni discount is 20%.
+- Default verified beta / early-tester discount is 20%.
 - Optional email binding prevents redemption by a different account.
 - A redeemed token cannot be reused.
 - The discount is attached to the workspace subscription and persists until program terms are intentionally changed later.
@@ -48,8 +48,8 @@ Sprint 11 is accepted when the subscription lifecycle, founder controls, and pri
 1. New subscriber creates a workspace.
 2. The workspace receives a 14-day `trialing` subscription automatically.
 3. Subscriber can use normal write workflows during trial.
-4. Founder creates a private 20% student token; verified student redeems it once.
-5. Subscription pricing reflects the discount without creating a separate public student plan.
+4. Founder creates a private 20% beta / TestFlight token; verified tester redeems it once.
+5. Subscription pricing reflects the discount without creating a separate public plan.
 6. Subscriber cancels; workspace becomes read-only for 60 days and mutations are rejected.
 7. Founder Admin shows the workspace as read-only and can see aggregate usage/health, but cannot browse private business content.
 8. Founder pauses `content_publishing`; publish actions fail safely while CRM, Calendar, and other unrelated features remain usable.
