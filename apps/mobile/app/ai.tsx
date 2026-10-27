@@ -269,7 +269,7 @@ export default function AiScreen() {
       </ScrollView>
       <View style={[styles.bottom, { paddingBottom: bottomPad }]}>
         {chips.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
-          {chips.map((tool) => <Pressable key={tool.key} accessibilityRole="button" onPress={() => setComposer(tool.example)} style={styles.chip}><Sparkle size={14} color={P.text} weight="fill" /><Text style={styles.chipText}>{tool.label}</Text></Pressable>)}
+          {chips.map((tool) => <Pressable key={tool.key} accessibilityRole="button" onPress={() => setComposer(t(`aip.toolEx_${tool.key}`, tool.example))} style={styles.chip}><Sparkle size={14} color={P.text} weight="fill" /><Text style={styles.chipText}>{t(`aip.tool_${tool.key}`, tool.label)}</Text></Pressable>)}
         </ScrollView> : null}
         <ChatBar value={composer} onChangeText={setComposer} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy} onPlus={() => setShowAllTools(!showAllTools)} onVoice={() => router.push('/voice' as any)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
         <Text style={styles.approvalNote}>{t('aip.stillNeedApproval', 'Changes and messages still need your approval.')}</Text>

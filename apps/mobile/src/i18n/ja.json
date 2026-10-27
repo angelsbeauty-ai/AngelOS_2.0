@@ -1641,7 +1641,17 @@
     "doneChecked": "完了して、確認もしたよ。",
     "cancelled": "キャンセルしたよ。何も変わってないよ。",
     "crashTitle": "うまくいかなかったよ",
-    "crashBody": "アシスタントで問題が起きたよ。何も送ったり変えたりしてないよ。"
+    "crashBody": "アシスタントで問題が起きたよ。何も送ったり変えたりしてないよ。",
+    "tool_create_post_draft": "SNS投稿の下書きを作る",
+    "toolEx_create_post_draft": "リップブラッシュの治り方について投稿を作って",
+    "tool_draft_client_message": "お客さまへのメッセージを下書き（送る前に確認できるよ）",
+    "toolEx_draft_client_message": "ユキさんにリタッチの時期だよって連絡して",
+    "tool_block_time": "時間をブロック・お休みを追加",
+    "toolEx_block_time": "明日の14〜16時をブロックして",
+    "tool_propose_memory": "好みを覚えてもらう",
+    "toolEx_propose_memory": "金曜は18時に閉めるって覚えておいて",
+    "tool_update_assistant_name": "アシスタントの名前を変える",
+    "toolEx_update_assistant_name": "名前をミカにして"
   },
   "sys": {
     "s0": "セーフティセンター",
@@ -1684,7 +1694,13 @@
     "st_connected": "接続済み",
     "st_ready_to_connect": "接続できるよ",
     "st_not_connected": "まだつないでないよ",
-    "st_needs_meta_approval": "Metaの承認待ち"
+    "st_needs_meta_approval": "Metaの承認待ち",
+    "manualLabel": "メッセージを貼り付け（どのアプリでも）",
+    "d_manual": "お客さまのメッセージを貼り付けるとAIが下書きを作るよ。確認したら、LINE・Instagram・Facebookに自分でコピーしてね。",
+    "d_connected": "つながってるよ。新しいメッセージはメッセージに届くよ。",
+    "d_meta": "まだ使えないよ。先にMetaがAngelOSのメッセージ機能を承認する必要があるよ。",
+    "d_ready": "つなぐ準備ができてるよ。",
+    "d_off": "まだつないでないよ。"
   },
   "mkt": {
     "s0": "成長の方向性",
@@ -2273,7 +2289,8 @@
     "pickDateHint": "日付と時刻のピッカーを開きます",
     "previews": "プラットフォーム別プレビュー",
     "previewOn": "{{p}}でのプレビュー",
-    "noPhoto": "テキストのみ"
+    "noPhoto": "テキストのみ",
+    "ruleSrc": "沖縄の投稿ルールブック（日本時間）"
   },
   "nt": {
     "activity": "アクティビティ",

@@ -203,7 +203,7 @@ export function PostScheduleSheet({ ws, post, at, sched, onChanged, onClose, onR
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {best.times.map((b) => { const on = hhmm(when) === b; return <Pressable key={b} accessibilityRole="button" accessibilityState={{ selected: on }} accessibilityLabel={t('sched.bestAt', { defaultValue: 'Best time {{t}}', t: b })} onPress={() => setTimeStr(b)} style={[s.chip, { borderColor: palette.border }, on && { backgroundColor: palette.text }]}><Text style={[s.chipText, { color: on ? palette.bg : palette.text }]}>✦ {b}</Text></Pressable>; })}
       </View>
-      <Text style={[s.small, mut]}>{t('sched.bestSource', { defaultValue: 'From: {{src}}', src: BEST_TIME_SOURCE })}</Text>
+      <Text style={[s.small, mut]}>{t('sched.bestSource', { defaultValue: 'From: {{src}}', src: t('sched.ruleSrc', BEST_TIME_SOURCE) })}</Text>
     </View> : null}
     {inline ? <Text accessibilityLiveRegion="assertive" style={[s.sub, { color: red }]}>{inline}</Text> : null}
 

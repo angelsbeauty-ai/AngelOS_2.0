@@ -389,7 +389,7 @@ export default function NewPostScreen() {
       {(() => { const rule = bestTimes(platforms, day); const best = own ? { times: own.times, goodDay: rule.goodDay } : rule; return <View style={{ gap: 6 }}>
         <Text style={styles.label}>{t('sched.bestTime', 'Best time')}{best.goodDay ? '' : ` · ${t('sched.quietDay', 'quieter day')}`}</Text>
         <View style={styles.chips}>{best.times.map((value) => <Chip key={`b-${value}`} label={`✦ ${value}`} a11y={t('sched.bestAt', { defaultValue: 'Best time {{t}}', t: value })} selected={time === value} onPress={() => setTime(value)} />)}</View>
-        <SupportText>{own ? t('sched.bestOwn', { n: own.posts }) : t('sched.bestRule', { src: BEST_TIME_SOURCE })}</SupportText>
+        <SupportText>{own ? t('sched.bestOwn', { n: own.posts }) : t('sched.bestRule', { src: t('sched.ruleSrc', BEST_TIME_SOURCE) })}</SupportText>
       </View>; })()}
 
       {showRepost ? <View style={{ gap: 8 }}>

@@ -1641,7 +1641,17 @@
     "doneChecked": "Done and checked.",
     "cancelled": "Cancelled. Nothing changed.",
     "crashTitle": "Something went wrong",
-    "crashBody": "The assistant hit a problem. Nothing was sent or changed."
+    "crashBody": "The assistant hit a problem. Nothing was sent or changed.",
+    "tool_create_post_draft": "Make a social post draft",
+    "toolEx_create_post_draft": "Make a post about lip blush healing",
+    "tool_draft_client_message": "Write a client message draft (you approve before it is sent)",
+    "toolEx_draft_client_message": "Message Yuki that her touch-up is due",
+    "tool_block_time": "Block time or add a day off",
+    "toolEx_block_time": "Block tomorrow 2-4pm",
+    "tool_propose_memory": "Remember a preference",
+    "toolEx_propose_memory": "Remember that I close at 6 on Fridays",
+    "tool_update_assistant_name": "Change my name",
+    "toolEx_update_assistant_name": "Call yourself Mika"
   },
   "sys": {
     "s0": "Safety Center",
@@ -1684,7 +1694,13 @@
     "st_connected": "Connected",
     "st_ready_to_connect": "Ready to connect",
     "st_not_connected": "Not connected yet",
-    "st_needs_meta_approval": "Needs Meta approval"
+    "st_needs_meta_approval": "Needs Meta approval",
+    "manualLabel": "Paste a message (any app)",
+    "d_manual": "Paste a client message, get an AI draft, approve it, then copy it into LINE, Instagram or Facebook yourself.",
+    "d_connected": "Connected. New messages appear in Messages.",
+    "d_meta": "Not available yet. Meta has to approve AngelOS for messages first.",
+    "d_ready": "Ready to connect.",
+    "d_off": "Not connected yet."
   },
   "mkt": {
     "s0": "Marketing",
@@ -2273,7 +2289,8 @@
     "pickDateHint": "Opens the date and time picker",
     "previews": "Previews per platform",
     "previewOn": "Preview on {{p}}",
-    "noPhoto": "Text only"
+    "noPhoto": "Text only",
+    "ruleSrc": "Posting rulebook (Okinawa), JST"
   },
   "nt": {
     "activity": "Activity",

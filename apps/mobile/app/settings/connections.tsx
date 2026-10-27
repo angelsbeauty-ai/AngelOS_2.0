@@ -18,6 +18,12 @@ const STATE_LABEL: Record<ConnectionStatus['state'], string> = {
 
 export default function ConnectionsScreen() {
   const { t } = useTranslation();
+  /** Owner-facing status line per provider and state; the server detail is technical setup text. */
+  const plainDetail = (item: ConnectionStatus) => item.provider === 'manual' ? t('conn.d_manual', 'Paste a client message, get an AI draft, approve it, then copy it into LINE, Instagram or Facebook yourself.')
+    : item.connected ? (item.provider === 'line' ? t('conn.lineOkBody', 'New LINE messages will appear in Messages. Replies are only sent after you tap Approve.') : t('conn.d_connected', 'Connected. New messages appear in Messages.'))
+    : item.state === 'needs_meta_approval' ? t('conn.d_meta', 'Not available yet. Meta has to approve AngelOS for messages first.')
+    : item.state === 'ready_to_connect' ? t('conn.d_ready', 'Ready to connect.')
+    : t('conn.d_off', 'Not connected yet.');
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [items, setItems] = useState<ConnectionStatus[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
@@ -45,12 +51,12 @@ export default function ConnectionsScreen() {
 
     {items.map((item) => <Card key={item.provider}>
       <View style={styles.head}>
-        <Text style={styles.title}>{item.label}</Text>
+        <Text style={styles.title}>{item.provider === 'manual' ? t('conn.manualLabel', item.label) : item.label}</Text>
         <Text style={[styles.state, item.connected ? styles.ok : styles.off]}>{t(`conn.st_${item.state}`, STATE_LABEL[item.state])}</Text>
       </View>
       {item.accountName ? <SupportText>{t('conn.account', "Account: ")}{item.accountName}</SupportText> : null}
-      <SupportText>{item.detail}</SupportText>
-      {item.needs.length && !item.connected ? <View style={{ gap: 2 }}><Text style={styles.needsLabel}>{t('conn.s3')}</Text>{item.needs.filter((need) => !/project key|admin key/i.test(need)).map((need) => <SupportText key={need}>• {need}</SupportText>)}</View> : null}
+      <SupportText>{plainDetail(item)}</SupportText>
+      {/* Server 'needs' are setup notes for Angel (developer app, App Review, server settings), not owner copy. */}
       {item.provider === 'line' && item.canConnect ? <ActionButton kind="primary" label={busy ? t('conn.connecting', "Connecting\u2026") : t('conn.connectLine', "Connect LINE")} disabled={busy} onPress={() => void connect()} /> : null}
     </Card>)}
 
