@@ -44,7 +44,7 @@ export function AppTabBar() {
   const barHeight = 49 + bottom;
   return <View style={[styles.bar, { height: barHeight, paddingBottom: bottom, borderTopColor: palette.border, backgroundColor: palette.bg }]} accessibilityRole="tablist">
     {items.map(({ href, label, glyph }) => {
-      const active = on === href; const color = active ? palette.text : '#9A9A9F';
+      const active = on === href; const color = active ? palette.text : palette.muted;
       return <Pressable key={href} accessibilityRole="tab" accessibilityState={{ selected: active }} accessibilityLabel={label} onPress={() => router.navigate(href as any)} style={[styles.item, active && styles.itemOn]}>
         <TabIcon active={active} badge={href === '/messages' ? unread : 0}><TabGlyph name={glyph} active={active} color={color} /></TabIcon><Text style={[styles.label, { color }]}>{label}</Text>
       </Pressable>;

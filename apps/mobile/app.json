@@ -112,7 +112,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D0D0E"
+      "backgroundColor": "#F6F1EC"
     },
     "locales": {
       "en": "./locales/en.json",

@@ -13,10 +13,10 @@ import { useAppearance } from '../src/design/appearance';
 
 export default function SignupScreen() {
   const { t } = useTranslation();
-  const { mode } = useAppearance();
+  const { mode, palette } = useAppearance();
   const night = mode === 'night';
-  const titleC = night ? '#F4F4F5' : ui.colors.primaryText;
-  const subC = night ? '#C7C7CC' : ui.colors.secondaryText;
+  const titleC = palette.text;
+  const subC = palette.muted;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -58,6 +58,6 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', padding: tokens.space.screen },
   col: { width: '100%', maxWidth: 420, alignSelf: 'center', alignItems: 'center', gap: 6 },
   title: { fontFamily: tokens.font.display, fontSize: 34, lineHeight: 40, color: ui.colors.primaryText, textAlign: 'center' },
-  sub: { fontFamily: tokens.font.ui, fontSize: 14, color: ui.colors.secondaryText, textAlign: 'center', marginBottom: 12 },
+  sub: { ...tokens.type.subhead, color: ui.colors.secondaryText, textAlign: 'center', marginBottom: 12 },
   form: { width: '100%', gap: 12 }
 });
