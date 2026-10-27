@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { useEffect, useMemo, useState } from 'react';
-import { Switch, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { ActionButton, Chip } from '../src/components/MessagingBits';
 import { TimeField } from '../src/components/DateField';
 import { Field, fieldStyles } from '../src/components/Field';
-import { BodyText, Card, Pill, ScreenTitle, SectionTitle, SupportText } from '../src/components/ui';
+import { AccentSwitch, BodyText, Card, Pill, ScreenTitle, SectionTitle, SupportText } from '../src/components/ui';
 import { apiFetch } from '../src/lib/api';
 import { getBetaAccess, redeemBetaInvite, type BetaAccess } from '../src/lib/beta';
 import { createService, setBusinessHours } from '../src/lib/bookings';
@@ -117,7 +117,7 @@ export default function OnboardingScreen() {
       <ScreenTitle>{t('onb.s7')}</ScreenTitle>
       <SupportText>{t('onb.s8')}</SupportText>
       {services.map((s, i) => <Card key={i}>
-        <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{s.name || 'Service'}</Text><Switch accessibilityLabel={`Offer ${s.name}`} value={s.on} onValueChange={(on) => setServices(services.map((x, j) => (j === i ? { ...x, on } : x)))} /></View>
+        <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{s.name || 'Service'}</Text><AccentSwitch accessibilityLabel={`Offer ${s.name}`} value={s.on} onValueChange={(on) => setServices(services.map((x, j) => (j === i ? { ...x, on } : x)))} /></View>
         {s.on ? <>
           <Field label={t('onb.s13')} value={s.name} onChangeText={(name) => setServices(services.map((x, j) => (j === i ? { ...x, name } : x)))} />
           <View style={fieldStyles.row}>
@@ -131,7 +131,7 @@ export default function OnboardingScreen() {
     {step === 3 ? <>
       <ScreenTitle>{t('onb.s9')}</ScreenTitle>
       {hours.map((h, i) => <Card key={h.dayOfWeek}>
-        <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{DAYS[h.dayOfWeek]}</Text><Switch accessibilityLabel={`${DAYS[h.dayOfWeek]} open`} value={h.open} onValueChange={(open) => setHours(hours.map((x, j) => (j === i ? { ...x, open } : x)))} /></View>
+        <View style={fieldStyles.line}><Text style={fieldStyles.strong}>{DAYS[h.dayOfWeek]}</Text><AccentSwitch accessibilityLabel={`${DAYS[h.dayOfWeek]} open`} value={h.open} onValueChange={(open) => setHours(hours.map((x, j) => (j === i ? { ...x, open } : x)))} /></View>
         {h.open ? <View style={fieldStyles.row}><TimeField label={t('onb.s16')} value={h.startTime} onChange={(startTime) => setHours(hours.map((x, j) => (j === i ? { ...x, startTime } : x)))} /><TimeField label={t('onb.s17')} value={h.endTime} onChange={(endTime) => setHours(hours.map((x, j) => (j === i ? { ...x, endTime } : x)))} /></View> : null}
       </Card>)}
       <View style={fieldStyles.row}><ActionButton kind="primary" label={saving ? 'Saving…' : 'Next'} disabled={saving} onPress={() => void saveHours()} /><ActionButton kind="quiet" label={t('onb.s15')} onPress={() => setStep(4)} /></View>

@@ -1,8 +1,8 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AccessibilityInfo, Animated, ActivityIndicator, Platform, StyleSheet, Text, TextInput, View, Pressable, type TextInputProps, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radius, shadow, spacing, tokens, typography, webGlass } from '../design/theme';
+import { AccessibilityInfo, Animated, ActivityIndicator, Platform, StyleSheet, Text, TextInput, View, Pressable, type TextInputProps, type StyleProp, type ViewStyle, Switch, type SwitchProps } from 'react-native';
+import { D, N, accent, colors, radius, shadow, spacing, tokens, typography, webGlass } from '../design/theme';
 import { useAppearance } from '../design/appearance';
 
 const palette = colors.light;
@@ -144,6 +144,13 @@ export function ListRow({ title, subtitle, leading, trailing, onPress, chevron =
       {onPress && chevron ? <Text style={[styles.chevron, { color: ink.muted }]}>›</Text> : null}
     </Pressable>
   );
+}
+
+/** On/off switch in AngelOS tokens: rose-gold accent track when on (Day/Night variant), white thumb, grey track when off (3:1+ against the card so the off state is visible). */
+export function AccentSwitch(props: Omit<SwitchProps, 'trackColor' | 'thumbColor' | 'ios_backgroundColor'>) {
+  const { night } = useInk();
+  const off = night ? N.muted : D.faint;
+  return <Switch {...props} trackColor={{ false: off, true: accent(night) }} ios_backgroundColor={off} thumbColor={tokens.color.onCharcoal} />;
 }
 
 /** Big-number tile (Cormorant tabular numerals). */

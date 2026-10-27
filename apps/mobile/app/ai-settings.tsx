@@ -2,11 +2,11 @@ import { router } from 'expo-router';
 import { ListRow } from '../src/components/ui';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { Screen } from '../src/components/Screen';
 import { ErrorState } from '../src/components/ErrorState';
-import { Card, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
+import { AccentSwitch, Card, ScreenTitle, SectionTitle, SupportText, ui } from '../src/components/ui';
 import { ActionButton, Banner, BilingualBlock, Chip } from '../src/components/MessagingBits';
 import { dialog } from '../src/lib/dialog';
 import { friendlyText } from '../src/lib/friendly-error';
@@ -121,7 +121,7 @@ export default function AiSettingsScreen() {
     <Card>
       <View style={styles.toggleRow}>
         <View style={{ flex: 1, gap: 2 }}><SectionTitle>{t('aiset.s10')}</SectionTitle><SupportText>{t('aiset.s11')}</SupportText></View>
-        <Switch accessibilityLabel={t('aiset.s10')} value={style?.learn_from_replies ?? true} disabled={busy || Boolean(styleMigration)} onValueChange={(value) => void saveStyle({ learnFromReplies: value })} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(style?.learn_from_replies ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
+        <AccentSwitch accessibilityLabel={t('aiset.s10')} value={style?.learn_from_replies ?? true} disabled={busy || Boolean(styleMigration)} onValueChange={(value) => void saveStyle({ learnFromReplies: value })} />
       </View>
       {learned.sampleCount ? <View style={styles.learned}>
         <Text style={styles.learnedTitle}>{t('aiset.learnedFrom', { defaultValue: "What it learned from {{n}} replies", n: learned.sampleCount })}</Text>
@@ -164,7 +164,7 @@ export default function AiSettingsScreen() {
       <SectionTitle>{t('aiset.roles', "Roles")}</SectionTitle>
       {ROLE_COPY.map((role) => <View key={role.key} style={styles.toggleRow}>
         <View style={{ flex: 1, gap: 2 }}><Text style={styles.learnedTitle}>{t(`aiset.role.${role.key}.l`, role.label)}</Text><SupportText>{t(`aiset.role.${role.key}.d`, role.description)}</SupportText></View>
-        <Switch accessibilityLabel={t(`aiset.role.${role.key}.l`, role.label)} value={roleMap.get(role.key) ?? true} disabled={busy} onValueChange={(value) => void act(() => updateAssistantRoles(workspaceId, { [role.key]: value }), (result) => setRoles(result.roles))} trackColor={{ false: ui.colors.border, true: ui.colors.softGold }} thumbColor={(roleMap.get(role.key) ?? true) ? tokens.color.tide : ui.colors.secondaryText} />
+        <AccentSwitch accessibilityLabel={t(`aiset.role.${role.key}.l`, role.label)} value={roleMap.get(role.key) ?? true} disabled={busy} onValueChange={(value) => void act(() => updateAssistantRoles(workspaceId, { [role.key]: value }), (result) => setRoles(result.roles))} />
       </View>)}
     </Card>
 
@@ -181,8 +181,8 @@ export default function AiSettingsScreen() {
 
     <Card>
       <SectionTitle>{t('aiset.s20')}</SectionTitle>
-      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>{t('aiset.s21')}</Text></View><Switch accessibilityLabel={t('aiset.s21')} value={profile.guidance_questions_enabled} onValueChange={(value) => void saveProfile({ guidanceQuestionsEnabled: value })} /></View>
-      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>{t('aiset.s22')}</Text></View><Switch accessibilityLabel={t('aiset.s22')} value={profile.explain_recommendations} onValueChange={(value) => void saveProfile({ explainRecommendations: value })} /></View>
+      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>{t('aiset.s21')}</Text></View><AccentSwitch accessibilityLabel={t('aiset.s21')} value={profile.guidance_questions_enabled} onValueChange={(value) => void saveProfile({ guidanceQuestionsEnabled: value })} /></View>
+      <View style={styles.toggleRow}><View style={{ flex: 1 }}><Text style={styles.learnedTitle}>{t('aiset.s22')}</Text></View><AccentSwitch accessibilityLabel={t('aiset.s22')} value={profile.explain_recommendations} onValueChange={(value) => void saveProfile({ explainRecommendations: value })} /></View>
     </Card>
   </Screen>;
 }
