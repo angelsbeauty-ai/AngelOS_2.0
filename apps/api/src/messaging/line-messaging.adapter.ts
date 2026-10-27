@@ -183,18 +183,25 @@ export class LineMessagingAdapter implements MessagingProviderAdapter {
   }
 
   /** Friend count for the daily numbers pull (LINE data is for the previous day, JST). Never throws. */
+  /**
+   * Friend count from LINE insight. LINE only finishes a day's numbers some hours after midnight JST (status "unready"),
+   * so yesterday is often not ready yet: fall back to the day before (up to 3 days) instead of showing nothing.
+   */
   async followers(now = new Date()): Promise<{ followers: number | null; targetedReaches: number | null; blocks: number | null; date: string }> {
-    const jst = new Date(now.getTime() + 9 * 3600000 - 86400000);
-    const date = jst.toISOString().slice(0, 10).replace(/-/g, '');
-    const out = { followers: null as number | null, targetedReaches: null as number | null, blocks: null as number | null, date };
+    const dayStr = (back: number) => new Date(now.getTime() + 9 * 3600000 - back * 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+    const out = { followers: null as number | null, targetedReaches: null as number | null, blocks: null as number | null, date: dayStr(1) };
     if (!this.status().ready) return out;
-    try {
-      const r = await this.fetchImpl(`${this.config.apiBase}/v2/bot/insight/followers?date=${date}`, { headers: { Authorization: `Bearer ${this.config.channelAccessToken}` } });
-      if (!r.ok) return out;
-      const json = (await r.json()) as any;
-      if (json.status !== 'ready') return out;
-      return { followers: Number(json.followers ?? 0), targetedReaches: json.targetedReaches == null ? null : Number(json.targetedReaches), blocks: json.blocks == null ? null : Number(json.blocks), date };
-    } catch { return out; }
+    for (const back of [1, 2, 3]) {
+      const date = dayStr(back);
+      try {
+        const r = await this.fetchImpl(`${this.config.apiBase}/v2/bot/insight/followers?date=${date}`, { headers: { Authorization: `Bearer ${this.config.channelAccessToken}` } });
+        if (!r.ok) return out;
+        const json = (await r.json()) as any;
+        if (json.status !== 'ready') continue;
+        return { followers: Number(json.followers ?? 0), targetedReaches: json.targetedReaches == null ? null : Number(json.targetedReaches), blocks: json.blocks == null ? null : Number(json.blocks), date };
+      } catch { return out; }
+    }
+    return out;
   }
 
   async getProfileName(userId: string): Promise<string | undefined> { return (await this.getProfile(userId)).displayName; }
