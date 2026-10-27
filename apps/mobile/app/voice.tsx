@@ -16,7 +16,7 @@ import { VoiceOrb } from '../src/components/VoiceOrb';
 import { AnswerCard } from '../src/components/AnswerCard';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing } from '../src/lib/home';
-import { D, tokens } from '../src/design/theme';
+import { D, N, tokens } from '../src/design/theme';
 import { useAppearance } from '../src/design/appearance';
 
 /** Voice (final-D2 07): top row, orb (placeholder), live caption, hint, mute + close. Voice can only draft replies; sending needs her tap. */
@@ -43,7 +43,8 @@ export default function VoiceScreen() {
 
   return <View style={[styles.page, { backgroundColor: palette.bg }]}>
     <View style={styles.topRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={styles.iconBtn}><X size={22} color={palette.text} /></Pressable>
+      {/* One close only: the big end button below. This keeps the label centred. */}
+      <View style={styles.iconBtn} />
       <Text style={[styles.label, { color: palette.muted }]} numberOfLines={1}>{top}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('voice.captions', 'Captions')} accessibilityState={{ selected: cc }} onPress={() => setCc(!cc)} style={styles.iconBtn}><ClosedCaptioning size={24} color={cc ? palette.text : palette.muted} /></Pressable>
     </View>
@@ -74,7 +75,7 @@ export default function VoiceScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel={voice.muted ? t('voice.unmute', 'Unmute') : t('voice.mute', 'Mute')} accessibilityState={{ selected: voice.muted }} disabled={!live} onPress={() => voice.setMuted(!voice.muted)} style={[styles.round, styles.mute, { backgroundColor: palette.glass, borderColor: palette.border }, !live && { opacity: 0.5 }]}>
         {voice.muted ? <MicrophoneSlash size={24} color={palette.text} /> : <Microphone size={24} color={palette.text} />}
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={[styles.round, styles.end]}><X size={24} color="#FFFFFF" /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={[styles.round, { backgroundColor: palette.text }]}><X size={24} color={palette.bg} /></Pressable>
     </View>
       </View>;
 }
@@ -83,30 +84,29 @@ const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: D.bg, paddingHorizontal: 16, paddingTop: 48, paddingBottom: 72 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  label: { flex: 1, textAlign: 'center', fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase', color: D.listening },
+  label: { flex: 1, textAlign: 'center', ...tokens.type.overline, fontFamily: tokens.font.uiSemibold, letterSpacing: 1.2, textTransform: 'uppercase', color: D.listening },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 },
   caption: { fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 32, color: D.text, textAlign: 'center', maxWidth: 340, marginTop: 24 },
-  hint: { fontFamily: tokens.font.ui, fontSize: 15, color: D.muted, textAlign: 'center' },
+  hint: { ...tokens.type.subhead, fontFamily: tokens.font.ui, color: D.muted, textAlign: 'center' },
   settingsBtn: { minHeight: 44, paddingHorizontal: 24, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   draft: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 16, padding: 16, gap: 8 },
-  draftLabel: { fontFamily: tokens.font.uiSemibold, fontSize: 13 },
+  draftLabel: { ...tokens.type.footnote, fontFamily: tokens.font.uiSemibold },
   draftBody: { fontFamily: tokens.font.ui, fontSize: 16, lineHeight: 22 },
   draftRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
   draftBtn: { minHeight: 44, paddingHorizontal: 18, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  settingsText: { fontFamily: tokens.font.uiSemibold, fontSize: 16 },
+  settingsText: { ...tokens.type.body, fontFamily: tokens.font.uiSemibold },
   buttons: { flexDirection: 'row', justifyContent: 'center', gap: 40 },
   round: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
-  mute: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: D.hairline },
-  end: { backgroundColor: D.text },
+  mute: { backgroundColor: D.surface, borderWidth: 1, borderColor: D.hairline },
 });
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
   if (__DEV__) console.warn(error);
   const t = (k: string, d: string) => i18nInstance.t(k, d);
-  return <EBView style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 24 }}>
-    <EBText style={{ color: '#fff', fontSize: 18, marginBottom: 12 }}>{t('aip.crashTitle', 'Something went wrong')}</EBText>
-    <EBText style={{ color: '#bbb', fontSize: 14, marginBottom: 20 }}>{t('aip.crashBody', 'Please try again.')}</EBText>
-    <EBPressable accessibilityRole="button" onPress={() => { void retry(); }}><EBText style={{ color: '#fff', fontSize: 16 }}>{t('common.tryAgain', 'Try again')}</EBText></EBPressable>
-    <EBPressable accessibilityRole="button" onPress={() => (ebRouter.canGoBack() ? ebRouter.back() : ebRouter.replace('/ai' as any))} style={{ marginTop: 16 }}><EBText style={{ color: '#fff', fontSize: 16 }}>{t('common.goBack', 'Go back')}</EBText></EBPressable>
+  return <EBView style={{ flex: 1, backgroundColor: N.bg, justifyContent: 'center', padding: 24 }}>
+    <EBText style={{ color: N.text, ...tokens.type.headline, marginBottom: 12 }}>{t('aip.crashTitle', 'Something went wrong')}</EBText>
+    <EBText style={{ color: N.text2, ...tokens.type.subhead, marginBottom: 20 }}>{t('aip.crashBody', 'Please try again.')}</EBText>
+    <EBPressable accessibilityRole="button" onPress={() => { void retry(); }} style={{ minHeight: 44, justifyContent: 'center' }}><EBText style={{ color: N.text, ...tokens.type.body }}>{t('common.tryAgain', 'Try again')}</EBText></EBPressable>
+    <EBPressable accessibilityRole="button" onPress={() => (ebRouter.canGoBack() ? ebRouter.back() : ebRouter.replace('/ai' as any))} style={{ marginTop: 8, minHeight: 44, justifyContent: 'center' }}><EBText style={{ color: N.text, ...tokens.type.body }}>{t('common.goBack', 'Go back')}</EBText></EBPressable>
   </EBView>;
 }

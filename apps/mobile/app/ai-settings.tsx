@@ -16,7 +16,9 @@ import {
 } from '../src/lib/ai';
 import { translateText, type SavedReply } from '../src/lib/messaging';
 import { getActiveWorkspace } from '../src/lib/workspace';
-import { tokens } from '../src/design/theme';
+import { D, N, tokens } from '../src/design/theme';
+import { useAppearance } from '../src/design/appearance';
+import { Eye } from 'phosphor-react-native/src/icons/Eye';
 
 const ROLE_COPY: Array<{ key: AssistantRoleKey; label: string; description: string }> = [
   { key: 'personal_assistant', label: 'Personal assistant', description: 'Organises your day and priorities.' },
@@ -86,7 +88,7 @@ export default function AiSettingsScreen() {
     <ScreenTitle>{t('aiset.s1')}</ScreenTitle>
     <SupportText>{t('aiset.s2')}</SupportText>
 
-    <ListRow title={t('aiAccess.title', 'What AngelOS can see')} subtitle={t('aiAccess.rowSub', 'Areas it can read in chat and voice')} onPress={() => router.push('/ai-access' as any)} />
+    <ListRow leading={<AccessIcon />} title={t('aiAccess.title', 'What AngelOS can see')} subtitle={t('aiAccess.rowSub', 'Areas it can read in chat and voice')} onPress={() => router.push('/ai-access' as any)} />
 
     <Card premium>
       <SectionTitle>{t('aiset.s3')}</SectionTitle>
@@ -198,3 +200,9 @@ const styles = StyleSheet.create({
   memoryRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: ui.colors.border },
   count: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: ui.colors.secondaryText }
 });
+
+/** Leading icon for "What AngelOS can see" (was a plain letter 'W'): the line eye from the app's icon set on a neutral disc. */
+function AccessIcon() {
+  const { palette, mode } = useAppearance();
+  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: mode === 'night' ? N.card : D.fill }}><Eye size={22} color={palette.text} /></View>;
+}
