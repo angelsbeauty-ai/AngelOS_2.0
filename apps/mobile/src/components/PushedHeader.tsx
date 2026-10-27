@@ -4,11 +4,12 @@ import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { useAppearance } from '../design/appearance';
 import { tokens } from '../design/theme';
 
-/** Shared pushed header: back chevron + one Messages-style title. Visible in Day and Night. */
+/** Shared pushed header: back chevron + one Messages-style title. Visible in Day and Night.
+ * Screens that use it set headerShown: false in app/_layout.tsx so there is only one back button. */
 export function PushedHeader({ title, right }: { title: string; right?: React.ReactNode }) {
   const { palette, mode } = useAppearance();
   return <View style={styles.wrap}>
-    <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => router.back()} hitSlop={8} style={[styles.back, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => { if (router.canGoBack()) router.back(); else router.replace('/profile' as any); }} hitSlop={8} style={[styles.back, { backgroundColor: palette.glass, borderColor: palette.border }]}>
       <CaretLeft size={20} color={palette.icon} weight="bold" />
     </Pressable>
     <Text accessibilityRole="header" style={[styles.title, { color: palette.text }]}>{title}</Text>

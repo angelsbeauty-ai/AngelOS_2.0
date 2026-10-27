@@ -48,6 +48,7 @@ import {
 } from '../src/lib/ai';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { ChatBar } from '../src/components/ChatBar';
+import { useInsets } from '../src/lib/insets';
 import { useDictation } from '../src/lib/dictation';
 import { AnswerCard, type ToolCard } from '../src/components/AnswerCard';
 
@@ -56,6 +57,11 @@ export default function AiScreen() {
   const { t, i18n } = useTranslation();
   const { palette: P, mode } = useAppearance(); const night = mode === 'night';
   const styles = useMemo(() => makeStyles(P, night), [P, night]);
+  // The app tab bar (49pt + home-indicator inset) sits over this screen: keep the composer and the approval note above it.
+  // iOS SafeAreaView already pads the bottom inset, so only the rest is added there.
+  const insets = useInsets();
+  const tabBar = 49 + Math.max(insets.bottom, 34);
+  const bottomPad = tabBar - (Platform.OS === 'ios' ? insets.bottom : 0) + 8;
   const params = useLocalSearchParams<{ screen?: string; entityType?: string; entityId?: string; entityLabel?: string; contextScreen?: string; contextEntityType?: string; contextEntityId?: string }>();
   const screenContext: AiScreenContext = {
     // content/[id] sends contextEntityType/contextEntityId; accept both so post context is not lost.
@@ -256,7 +262,7 @@ export default function AiScreen() {
           </View>)}
         {busy && messages.length ? <Text style={styles.note}>…</Text> : null}
       </ScrollView>
-      <View style={styles.bottom}>
+      <View style={[styles.bottom, { paddingBottom: bottomPad }]}>
         {chips.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
           {chips.map((tool) => <Pressable key={tool.key} accessibilityRole="button" onPress={() => setComposer(tool.example)} style={styles.chip}><Sparkle size={14} color={P.text} weight="fill" /><Text style={styles.chipText}>{tool.label}</Text></Pressable>)}
         </ScrollView> : null}
