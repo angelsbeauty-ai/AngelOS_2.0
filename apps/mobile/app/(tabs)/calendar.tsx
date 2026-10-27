@@ -308,6 +308,7 @@ export default function CalendarTab() {
   const postTitle = (p: ContentPost) => (p.title?.trim() || p.variants?.[0]?.caption?.split('\n')[0] || t('sched.post', 'Post')).trim();
   const label = (it: Item) => it.kind === 'booking' ? `${it.a.client?.display_name ?? ''} ${it.a.service_name}`.trim() : postTitle(it.p);
   const bookingStatus = (st: string) => st === 'confirmed' ? t('cal.stConfirmed', 'Confirmed') : PENDING.test(st) ? t('cal.stPending', 'Pending') : st === 'completed' ? t('cal.stDone', 'Done') : st === 'no_show' ? t('cal.stNoShow', 'No-show') : t('cal.stBooked', 'Booked');
+  const headCompact = (mode === 'month' || mode === 'list' ? base : anchor).toLocaleDateString(LOC, { month: 'short', year: 'numeric' });
   const headTitle = (mode === 'month' || mode === 'list' ? base : anchor).toLocaleDateString(LOC, { month: 'long' });
   const headYear = (mode === 'month' || mode === 'list' ? base : anchor).getFullYear();
   const listItems = useMemo(() => Array.from({ length: 31 }, (_, i) => addD(todayStart, i)).map((d) => ({ d, items: (byDay.get(key(d)) ?? []).filter((it) => key(d) !== key(now) || (it.kind === 'booking' ? it.end : it.at).getTime() >= now.getTime() - 3600000) })).filter((g) => g.items.length),
@@ -316,17 +317,13 @@ export default function CalendarTab() {
 
   const header = <View style={{ paddingHorizontal: 16, paddingBottom: 4, gap: 8 }}>
     <View style={styles.headRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prevMonth', 'Previous month')} onPress={() => shiftMonth(-1)} style={styles.icon}><CaretLeft size={20} color={palette.icon} /></Pressable>
-      <Text style={[styles.year, { color: palette.text }]}>{headYear}</Text>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('cal.nextMonth', 'Next month')} onPress={() => shiftMonth(1)} style={styles.icon}><CaretRight size={20} color={palette.icon} /></Pressable>
+      <Text accessibilityRole="header" maxFontSizeMultiplier={1.4} numberOfLines={1} style={[styles.compactTitle, { color: palette.text }]}>{headCompact}</Text>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('cal.prevMonth', 'Previous month')} onPress={() => shiftMonth(-1)} style={styles.iconSm}><CaretLeft size={18} color={palette.icon} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={t('cal.nextMonth', 'Next month')} onPress={() => shiftMonth(1)} style={styles.iconSm}><CaretRight size={18} color={palette.icon} /></Pressable>
       <View style={{ flex: 1 }} />
       <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.addNew', 'Add a post or task')} onPress={() => openChoice(mode === 'month' || mode === 'list' ? (offset === 0 ? todayStart : base) : anchor, null)} style={styles.icon}><Plus size={26} color={palette.icon} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.filter', 'Show')} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThreeVertical size={24} color={palette.icon} weight="bold" /></Pressable>
-    </View>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8 }}>
-      <Text accessibilityRole="header" maxFontSizeMultiplier={1.6} style={[styles.bigTitle, { flexShrink: 1 }, { color: palette.text }]}>{headTitle}</Text>
-      <Text style={[styles.rowSub, { color: palette.muted }]}>JST · 24h</Text>
     </View>
     <View style={[styles.seg, night && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
       {(['day', 'week', 'month', 'list'] as const).map((m) => <Pressable key={m} accessibilityRole="tab" accessibilityState={{ selected: mode === m }} hitSlop={{ top: 2, bottom: 2 }} onPress={() => { setView(m); void Haptics.selectionAsync().catch(() => undefined); }} style={[styles.segItem, mode === m && styles.segOn, mode === m && night && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
@@ -635,6 +632,8 @@ const styles = StyleSheet.create({
   rowSub: { fontFamily: tokens.font.ui, fontSize: 14, color: D.muted },
   head: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 48, marginTop: -4 },
   icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  iconSm: { width: 30, height: 44, alignItems: 'center', justifyContent: 'center' },
+  compactTitle: { fontFamily: tokens.font.uiBold, fontSize: 20, lineHeight: 26, marginLeft: 2, marginRight: 2 },
   arrow: { width: 28, height: 44, alignItems: 'center', justifyContent: 'center' },
   titleBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4, height: 44 },
   headTitle: { flexShrink: 1, fontFamily: tokens.font.uiBold, fontSize: 24, color: D.text },

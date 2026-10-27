@@ -1,3 +1,4 @@
+import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { getMediaViewUrl } from '../lib/media';
@@ -30,10 +31,12 @@ export function PostThumb({ workspaceId, post, size = 60, height, radius = 14, p
   if (words) return <View style={[box, styles.text, { backgroundColor: fill }]}>
     <Text numberOfLines={Math.max(2, Math.floor(((height ?? size) - 16) / tokens.type.footnote.lineHeight))} maxFontSizeMultiplier={1} style={[styles.words, { color: palette.text }]}>{words}</Text>
   </View>;
-  return <View style={[box, { backgroundColor: fill }]} />;
+  // No photo on this post yet: a calm picture icon, not an empty grey box. Posts with a photo show the photo above.
+  return <View style={[box, styles.icon, { backgroundColor: night ? N.field : 'rgba(0,0,0,0.05)' }]}><ImageSquare size={Math.round(Math.min(size, height ?? size) * 0.4)} color={palette.muted} weight="duotone" /></View>;
 }
 
 const styles = StyleSheet.create({
+  icon: { alignItems: 'center', justifyContent: 'center' },
   text: { padding: 8, justifyContent: 'center', overflow: 'hidden' },
   // Fixed size on purpose: the tile is a preview of the square, and VoiceOver reads the full title from the tile's label.
   words: { ...tokens.type.footnote, textAlign: 'center' },

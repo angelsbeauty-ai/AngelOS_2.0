@@ -45,6 +45,10 @@ function paintNight(root: ParentNode) {
     }
     const tag = el.tagName;
     if (tag === 'svg' || tag === 'path') {
+      // Icons sitting on a light button (e.g. the "+" on New post) keep their dark ink.
+      let up: HTMLElement | null = el.parentElement; let onLightBtn = false;
+      for (let i = 0; up && i < 5 && !onLightBtn; i++, up = up.parentElement) { const b = parseColor(getComputedStyle(up).backgroundColor); if (b && b.a > 0.7) { onLightBtn = lum(b) > 180 && !isPaper(b); break; } }
+      if (onLightBtn) return;
       const fill = parseColor(cs.fill);
       if (fill && isDarkInk(fill)) { el.dataset.nightTouched = '1'; el.style.fill = '#F4F4F5'; }
       return;

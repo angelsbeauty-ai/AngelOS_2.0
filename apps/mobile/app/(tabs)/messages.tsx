@@ -11,7 +11,8 @@ import { ReconnectError, startReconnect } from '../../src/lib/meta-connect';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
 import { ContactAvatar, BrandLogo } from '../../src/components/BrandBadge';
-import { Screen } from '../../src/components/Screen';
+import { AskInline, Screen } from '../../src/components/Screen';
+import { Bell } from 'phosphor-react-native/src/icons/Bell';
 import { ErrorState } from '../../src/components/ErrorState';
 import { NoStudio } from '../../src/components/NoStudio';
 import { Card, EmptyState, Skeleton, ui, screenHeader } from '../../src/components/ui';
@@ -207,18 +208,20 @@ export default function MessagesScreen() {
     if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ options: [...acts.map((a) => a[0]), cancel], cancelButtonIndex: acts.length, title: th.client?.display_name ?? th.contact_display_name ?? undefined }, (i) => acts[i]?.[1]());
     else Alert.alert(t('top.more', { defaultValue: 'More' }), undefined, [...acts.map(([text, onPress]) => ({ text, onPress })), { text: cancel, style: 'cancel' as const }]);
   }
+  const card = mode === 'night' ? N.card : '#FFFFFF';
   const anyConnected = connections.some((c) => c.connected) || accounts.some((a) => a.state !== 'not_connected');
   const noAccounts = state === 'ready' && !anyConnected && threads.length === 0;
 
-  return <View style={{ flex: 1 }}><Screen onRefresh={() => load(true)} onEndReached={seg === 'messages' ? () => void loadMore() : undefined} header={<View style={styles.pinned}>
+  return <View style={{ flex: 1 }}><Screen hideAsk onRefresh={() => load(true)} onEndReached={seg === 'messages' ? () => void loadMore() : undefined} header={<View style={styles.pinned}>
     <View style={screenHeader.row}>
       <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('messages.title')}</Text>
-      
+      <Pressable accessibilityRole="button" accessibilityLabel={t('pf.notifications', 'Notifications')} hitSlop={6} onPress={() => router.push('/notifications' as any)} style={styles.icon}><Bell size={24} color={palette.icon} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('inbox.filter')} hitSlop={6} onPress={() => setMenuOpen(true)} style={styles.icon}>
         <SlidersHorizontal size={24} color={palette.icon} weight={filter || plat !== 'all' ? 'bold' : 'regular'} /></Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={t('common2.search', { defaultValue: 'Search' })} hitSlop={6} onPress={() => { setSearchOpen(!searchOpen); setQuery(''); }} style={styles.icon}><MagnifyingGlass size={24} color={palette.icon} /></Pressable>
       {/* AngelOS V1: Broadcast is hidden (campaigns are not part of V1). */}
       <Pressable accessibilityRole="button" accessibilityLabel={t('top.more', { defaultValue: 'More' })} hitSlop={6} onPress={() => setMoreOpen(true)} style={styles.icon}><DotsThree size={26} color={palette.icon} weight="bold" /></Pressable>
+      <AskInline screen="messages" />
     </View>
     <View accessibilityRole="tablist" style={styles.segRow}>
       {(['messages', 'comments'] as const).map((k) => { const on = seg === k; const n = k === 'messages' ? threads.filter((x) => x.unread).length : null; return <Pressable key={k} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setSeg(k)} style={[styles.seg, on && { borderBottomColor: palette.text }]}>
@@ -284,7 +287,7 @@ export default function MessagesScreen() {
     {seg === 'messages' && plat === 'tiktok' && state === 'ready' ? <EmptyState title={t('messages.tiktokEmpty')} message={t('messages.tiktokMsg')} /> : null}
     {seg === 'messages' && plat !== 'tiktok' && state === 'ready' && !noAccounts && !platError && !needs.length && !reErr && visible.length === 0 ? <EmptyState title={plat === 'line' ? t('messages.lineEmpty') : threads.length ? t('messages.nothing') : t('messages.none')} message={plat === 'line' ? t('messages.lineTest') : threads.length ? t('messages.tryFilter') : t('messages.noneMsg')} /> : null}
 
-    {seg === 'messages' && !found && state === 'ready' && visible.length ? <View style={styles.list}>
+    {seg === 'messages' && !found && state === 'ready' && visible.length ? <View style={[styles.list, styles.card, { backgroundColor: card, borderColor: mode === 'night' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.05)' }]}>
       {visible.map((thread, idx) => {
         const name = thread.client?.display_name ?? thread.contact_display_name ?? t('messages.unknown');
         const avatarUri = thread.contact_avatar_url ?? null;
@@ -294,7 +297,7 @@ export default function MessagesScreen() {
           { key: 'done', label: t('messages.done'), icon: <Check size={24} color={fg} />, onPress: () => markDone(thread) },
           { key: 'unread', label: t('messages.unreadA', { defaultValue: 'Unread' }), icon: <EnvelopeSimple size={24} color={fg} />, onPress: () => void patch(thread, { unread: true }, { unread: true }) },
           { key: 'follow', label: t('messages.followUp', { defaultValue: 'Follow up' }), icon: <Star size={24} color={fg} weight={thread.status === 'follow_up_due' ? 'fill' : 'regular'} />, onPress: () => followUp(thread) }
-        ]}><Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} onLongPress={() => more(thread)} delayLongPress={350} style={({ pressed }) => [styles.row, { backgroundColor: palette.bg }, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+        ]}><Pressable accessibilityRole="button" accessibilityLabel={`${name}, ${thread.platform_label}${thread.unread ? ', unread' : ''}`} onPress={() => router.push(`/messages/${thread.id}` as any)} onLongPress={() => more(thread)} delayLongPress={350} style={({ pressed }) => [styles.row, { backgroundColor: card }, mode === 'night' && { borderBottomColor: 'rgba(255,255,255,0.08)' }, idx === visible.length - 1 && { borderBottomWidth: 0 }, pressed && { backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
           <ContactAvatar name={name} uri={avatarUri} platform={thread.platform} size={56} />
           <View style={styles.rowBody}>
             <Text numberOfLines={1} style={[styles.name, { color: palette.text }, thread.unread && { fontFamily: tokens.font.uiBold }]}>{name}{multiAcct.has(thread.platform) && thread.channel?.display_name ? <Text style={{ color: palette.muted, fontFamily: tokens.font.ui }}>{'  · '}{thread.channel.display_name}</Text> : null}{thread.pinned ? <Text accessibilityLabel={t('messages.pinned')} style={{ color: palette.muted }}>{'  '}{t('messages.pinnedMark')}</Text> : null}{thread.muted ? <Text accessibilityLabel={t('messages.muted')} style={{ color: palette.muted }}>{'  '}{t('messages.mutedMark')}</Text> : null}</Text>
@@ -346,7 +349,8 @@ const styles = StyleSheet.create({
   badgeText: { fontFamily: tokens.font.uiBold, fontSize: 12, fontVariant: ['tabular-nums'] },
   tabsWrap: { marginHorizontal: -16, flexGrow: 0 },
   tab: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  icon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  card: { marginHorizontal: 0, borderRadius: 22, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   unread: { width: 8, height: 8, borderRadius: 4 },
   previewRead: { fontFamily: tokens.font.ui },
   chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16 },

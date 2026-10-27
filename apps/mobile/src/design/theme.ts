@@ -102,7 +102,7 @@ void _P;
 
 /** final-D2 tokens (TOKENS.md). */
 export const D = {
-  bg: '#FFFFFF', surface: '#FFFFFF', bgTab: '#FFFFFF', fill: '#F2F2F2', fill2: '#EDEDED',
+  bg: '#F5F3EF', surface: '#FFFFFF', bgTab: '#FFFFFF', fill: '#F2F2F2', fill2: '#EDEDED',
   text: '#151515', text2: '#3A3A3C', muted: '#6C6C70', faint: '#76767A', disabled: '#C7C7CC',
   hairline: '#EDEDED', accent: '#B8A48A', accentDeep: '#8C7A64', accentTint: '#F5F5F5',
   pendingRule: '#8A8379', danger: '#B3261E', listening: '#75654F',
@@ -120,7 +120,7 @@ export const N = {
  * Colours are the values the approved thread already ships with; the packet's dark Day out-bubble was later changed to grey.
  */
 export const chat = {
-  day: { bg: '#F3F3F3', inc: '#FFFFFF', incText: '#151515', out: '#E4E4E6', outText: '#151515', quoteOnOut: '#3A3A3C', muted: '#6C6C70', pill: '#E4E4E6', banner: '#EBEBED', card: '#FFFFFF', avatar: '#D1D1D6', hair: 'rgba(0,0,0,0.08)' },
+  day: { bg: '#F5F3EF', inc: '#FFFFFF', incText: '#151515', out: '#E4E4E6', outText: '#151515', quoteOnOut: '#3A3A3C', muted: '#6C6C70', pill: '#E4E4E6', banner: '#EBEBED', card: '#FFFFFF', avatar: '#D1D1D6', hair: 'rgba(0,0,0,0.08)' },
   night: { bg: '#050505', inc: '#26262A', incText: '#F4F4F5', out: '#E9E9EB', outText: '#151515', quoteOnOut: '#3A3A3C', muted: '#9A9A9F', pill: '#2C2C2E', banner: '#0B0B0C', card: '#161618', avatar: '#3A3A3D', hair: 'rgba(255,255,255,0.10)' },
   /** Packet type: header name 17/22 600 · bubble 16/22 · meaning 12/16 · time 11/14 500 · day separator 12/16 500. */
   type: {

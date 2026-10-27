@@ -30,7 +30,7 @@ function gloss(rim: string, sheen: string, shadow: string): Record<string, unkno
 }
 
 const day: Palette = {
-  bg: '#F3F3F3',
+  bg: '#F5F3EF', // AngelOS Day: warm ivory (final-D2 mockups)
   text: '#151515',
   muted: '#6C6C70',
   glass: 'rgba(255,255,255,0.80)',
@@ -43,7 +43,7 @@ const day: Palette = {
   orb2: '#E6E6E6',
   orbEdge: '#CFCFCF',
   sphereOpacity: 0.9,
-  veil: 'rgba(243,243,243,0.18)',
+  veil: 'rgba(245,243,239,0.18)',
   gloss: gloss('rgba(255,255,255,0.90)', 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 40%)', '0 6px 22px rgba(0,0,0,0.055)')
 };
 

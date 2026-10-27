@@ -56,6 +56,15 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   </View></View>;
 }
 
+/** The AngelOS logo button placed inside a screen header (Messages, Profile) so it never covers rows, chevrons or badges. */
+export function AskInline({ screen }: { screen: string }) {
+  const { t } = useTranslation();
+  const { palette, mode } = useAppearance();
+  return <Pressable accessibilityRole="button" accessibilityLabel={t('ui.askLabel')} hitSlop={6} onPress={() => router.push({ pathname: '/ai', params: { screen } })} style={[styles.askInline, { backgroundColor: mode === 'night' ? N.card : palette.text }]}>
+    <Image accessibilityIgnoresInvertColors source={logo} style={[styles.askLogoSm, { tintColor: mode === 'night' ? N.text : '#FFFFFF' }]} resizeMode="contain" />
+  </Pressable>;
+}
+
 /** AngelOS logo button on every main screen: a neutral frosted glass circle. Opens the assistant with this screen as context. */
 function AskButton({ pathname, bottom, right }: { pathname: string; bottom?: number; right?: number }) {
   const { t } = useTranslation();
@@ -72,7 +81,7 @@ function AskButton({ pathname, bottom, right }: { pathname: string; bottom?: num
 
 const styles = StyleSheet.create({
   offline: { marginHorizontal: 20, marginTop: 8, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 14, overflow: 'hidden', fontFamily: tokens.font.uiSemibold, fontSize: 14, textAlign: 'center' },
-  bg: { flex: 1, backgroundColor: '#F3F4F6' },
+  bg: { flex: 1, backgroundColor: '#F5F3EF' },
   safe: { flex: 1, backgroundColor: 'transparent' },
   pinned: { zIndex: 2 },
   content: { padding: tokens.space.screen, paddingTop: 4, paddingBottom: 140, ...(Platform.OS === 'web' ? { alignItems: 'center', justifyContent: 'center' } : {}) },
@@ -82,5 +91,7 @@ const styles = StyleSheet.create({
   refresh: { alignSelf: 'flex-end', minHeight: 36, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 999, borderWidth: 1, borderColor: colors.light.border },
   refreshText: { color: colors.light.secondaryText, fontSize: 13, fontWeight: '600' },
   ask: { position: 'absolute', right: 16, bottom: Platform.OS === 'web' ? 24 : 16, width: 44, height: 44, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  askLogo: { width: 24, height: 24 }
+  askLogo: { width: 24, height: 24 },
+  askInline: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  askLogoSm: { width: 20, height: 20 }
 });

@@ -17,7 +17,7 @@ import { Heartbeat } from 'phosphor-react-native/src/icons/Heartbeat';
 import { Key } from 'phosphor-react-native/src/icons/Key';
 import { CreditCard } from 'phosphor-react-native/src/icons/CreditCard';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
-import { Screen } from '../../src/components/Screen';
+import { AskInline, Screen } from '../../src/components/Screen';
 import { screenHeader, Skeleton, SupportText, Button } from '../../src/components/ui';
 import { Chip, ROSE, SettingsGroup, SettingsRow } from '../../src/components/SettingsList';
 import { DeleteAccountSheet } from '../../src/components/DeleteAccountSheet';
@@ -79,8 +79,14 @@ export default function ProfileScreen() {
   const build = (Constants.nativeBuildVersion ?? Constants.expoConfig?.ios?.buildNumber ?? Constants.expoConfig?.android?.versionCode ?? '').toString();
   const checkedMin = health && health !== 'error' ? Math.max(0, Math.round((Date.now() - Math.max(...health.components.map((c) => Date.parse(c.last_checked_at) || 0), 0)) / 60000)) : null;
 
-  return <Screen onRefresh={load}>
-    <View style={screenHeader.row}><Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('pf.title')}</Text></View>
+  return <Screen hideAsk onRefresh={load}>
+    <View style={[screenHeader.row, { minHeight: 40 }]}><AskInline screen="profile" /></View>
+    <View style={{ gap: 2 }}>
+      <Text style={[styles.overline, { color: palette.muted }]}>{t('pf.overline', 'Profile & settings').toUpperCase()}</Text>
+      <Text accessibilityRole="header" numberOfLines={1} style={[screenHeader.title, { color: palette.text }]}>{t('pf.title')}</Text>
+    </View>
+
+    {me && ws ? <AiMeter workspaceId={ws.id} founder={Boolean(me.founder)} /> : null}
 
     {state === 'loading' ? <Skeleton rows={1} height={96} /> : null}
     {state === 'error' ? <View style={styles.card}><SupportText>{t('pf.loadFail')}</SupportText><Button small variant="secondary" label={t('pf.tryAgain')} onPress={() => { setState('loading'); void load(); }} /></View> : null}
@@ -104,7 +110,7 @@ export default function ProfileScreen() {
 
     {/* AngelOS V1: Clients, Money, Tasks, New business, Services, Business hours, Days off and Automations are hidden (code kept). */}
     {owner ? <SettingsGroup title={t('pf.app')}>
-      <SettingsRow icon={<Link {...ink} />} title={t('pf.connected')} value={connected} onPress={() => router.push('/settings/connections')} />
+      <SettingsRow icon={<Link {...ink} />} title={t('pf.connected')} value={connected} onPress={() => router.push('/content/accounts' as any)} />
       <SettingsRow icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />
       <SettingsRow last icon={<Bell {...ink} />} title={t('pf.notifications')} onPress={() => router.push('/notifications' as any)} />
     </SettingsGroup> : null}
@@ -123,8 +129,6 @@ export default function ProfileScreen() {
       <SettingsRow icon={<ChatText {...ink} />} title={t('pf.beta')} trailing={newFeedback ? <Chip label={t('pf.newN', { count: newFeedback })} /> : null} onPress={() => router.push('/founder-admin')} />
       <SettingsRow last icon={<CreditCard {...ink} />} title={t('pf.billing')} sub={t('pf.viewOnly')} onPress={() => router.push('/subscription')} />
     </SettingsGroup> : null}
-
-    {me && ws ? <AiMeter workspaceId={ws.id} founder={Boolean(me.founder)} /> : null}
 
     <View style={{ gap: 10 }}>
       <Button variant="secondary" label={t('pf.logout')} onPress={() => void logout()} />
@@ -156,6 +160,7 @@ const styles = StyleSheet.create({
   name: { fontFamily: tokens.font.uiSemibold, fontSize: 18, color: '#151515' },
   studio: { ...tokens.type.footnote, fontFamily: tokens.font.ui, color: '#6C6C70' },
   edit: { ...tokens.type.subhead, fontFamily: tokens.font.uiSemibold, lineHeight: 44, color: ROSE },
+  overline: { ...tokens.type.overline, fontFamily: tokens.font.uiSemibold, letterSpacing: 0.8 },
   version: { textAlign: 'center', ...tokens.type.overline, fontFamily: tokens.font.ui, color: '#6C6C70', marginTop: 4 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   sheet: { gap: 10, padding: 20, paddingBottom: 36, borderTopLeftRadius: 28, borderTopRightRadius: 28, backgroundColor: '#FFFFFF' },
