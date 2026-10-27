@@ -23,7 +23,7 @@ export function Screen({ children, header, hideAsk, askBottom, askRight, onRefre
   const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useRef<ScrollView>(null); const didY = useRef<number | undefined>(undefined);
   const { t } = useTranslation();
-  async function refresh() { setRefreshing(true); try { await onRefresh?.(); } finally { setRefreshing(false); } }
+  async function refresh() { setRefreshing(true); const t0 = Date.now(); try { await onRefresh?.(); } finally { /* iOS leaves the spinner and its empty gap stuck if refreshing flips back too fast. */ const wait = Math.max(0, 700 - (Date.now() - t0)); setTimeout(() => setRefreshing(false), wait); } }
   const pathname = usePathname() ?? '/';
   const role = useRole();
   // B9 route guard: students only reach their own profile and settings.
