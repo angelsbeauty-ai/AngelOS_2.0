@@ -399,7 +399,7 @@ export default function CalendarTab() {
       </View>)}
     </View>
     <View style={styles.legend} importantForAccessibility="no-hide-descendants">
-      <View style={[styles.mkBook, { backgroundColor: palette.text, marginTop: 0 }]} /><Text style={[styles.legendText, { color: palette.muted }]}>{t('cal.legendBooking', 'Booking')}</Text>
+      {V1_BOOKINGS ? <><View style={[styles.mkBook, { backgroundColor: palette.text, marginTop: 0 }]} /><Text style={[styles.legendText, { color: palette.muted }]}>{t('cal.legendBooking', 'Booking')}</Text></> : null}
       <View style={[styles.mkPost, { marginTop: 0 }]}>{[0, 1, 2, 3].map((i) => <View key={i} style={[styles.mkDot, { backgroundColor: palette.muted }]} />)}</View><Text style={[styles.legendText, { color: palette.muted }]}>{t('cal.legendPost', 'Post')}</Text>
     </View>
   </View>;

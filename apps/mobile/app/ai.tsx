@@ -52,6 +52,9 @@ import { useInsets } from '../src/lib/insets';
 import { useDictation } from '../src/lib/dictation';
 import { AnswerCard, type ToolCard } from '../src/components/AnswerCard';
 
+/** AngelOS V1 tool suggestions: bookings, money and automations are not part of V1, so their chips are not offered. */
+const V1_TOOL_KEYS = new Set(['create_post_draft', 'draft_client_message', 'block_time', 'propose_memory', 'update_assistant_name']);
+
 export default function AiScreen() {
   const toast = useToast();
   const { t, i18n } = useTranslation();
@@ -126,7 +129,7 @@ export default function AiScreen() {
       ]);
       const conversation = { id: opened.id };
       setAssistantName(profile.display_name);
-      void listAiTools(workspace.id).then((r) => setTools(r.tools)).catch(() => undefined);
+      void listAiTools(workspace.id).then((r) => setTools(r.tools.filter((tool) => V1_TOOL_KEYS.has(tool.key)))).catch(() => undefined);
       void getHomeSummary(workspace.id, 'day').then((h) => { setAlerts(h.messages.alerts.filter((x) => x.needsReply || x.unread)); setApprovals(h.assistant.pendingApprovals); }).catch(() => setAlerts([]));
       void getMe().then((m: any) => setOwner(((m?.displayName ?? '') as string).trim().split(/\s+/)[0] || null)).catch(() => undefined);
       setConversationId(conversation.id);
