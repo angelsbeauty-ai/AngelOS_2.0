@@ -2403,7 +2403,19 @@
     "tapStart": "オーブをタップしてスタート",
     "title": "アシスタントと話す",
     "unmute": "ミュート解除",
-    "openSettings": "設定を開く"
+    "openSettings": "設定を開く",
+    "errReason": "理由",
+    "errStep": "止まった所",
+    "errCheck": "サーバー確認",
+    "err": {
+      "mic": "AngelOSのマイクがオフになってるよ。",
+      "limit": "AIの利用上限に達したよ。",
+      "quota": "音声サービスが混んでいるか、利用枠が足りないよ。",
+      "network": "AngelOSにつながらないよ。",
+      "off": "今は音声が使えないよ。",
+      "server": "サーバーで音声を始められなかったよ。",
+      "generic": "音声を始められなかったよ。"
+    }
   },
   "asst": {
     "tone_warm_professional": "あたたかく丁寧",

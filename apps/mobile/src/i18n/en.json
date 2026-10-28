@@ -2403,7 +2403,19 @@
     "tapStart": "Tap the orb to start",
     "title": "Talk to your assistant",
     "unmute": "Unmute",
-    "openSettings": "Open Settings"
+    "openSettings": "Open Settings",
+    "errReason": "Reason",
+    "errStep": "Stopped at",
+    "errCheck": "Server check",
+    "err": {
+      "mic": "Microphone is off for AngelOS.",
+      "limit": "AI usage limit reached.",
+      "quota": "The voice service is busy or out of quota.",
+      "network": "No connection to AngelOS.",
+      "off": "Voice is not available right now.",
+      "server": "The server could not start voice.",
+      "generic": "Voice could not start."
+    }
   },
   "asst": {
     "tone_warm_professional": "Warm & professional",

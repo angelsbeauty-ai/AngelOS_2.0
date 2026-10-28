@@ -5,6 +5,7 @@ import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
 import { getActiveWorkspace, listWorkspaces, setActiveWorkspace, type WorkspaceSummary } from '../lib/workspace';
 import { useAppearance } from '../design/appearance';
 import { tokens } from '../design/theme';
+import { V1_HIDDEN } from '../lib/me';
 
 export function BusinessSwitcher({ onChanged }: { onChanged?: () => void }) {
   const { palette } = useAppearance();
@@ -42,9 +43,10 @@ export function BusinessSwitcher({ onChanged }: { onChanged?: () => void }) {
               <Text style={[styles.optionText, { color: palette.text }, w.id === current.id && { color: '#FFFFFF' }]}>{w.name}</Text>
             </Pressable>
           ))}
-          <Pressable accessibilityRole="button" onPress={() => { setOpen(false); router.push('/workspaces/new' as any); }} style={styles.option}>
+          {/* V1: no New business while /workspaces/new is hidden. */}
+          {!V1_HIDDEN.test('/workspaces/new') ? <Pressable accessibilityRole="button" onPress={() => { setOpen(false); router.push('/workspaces/new' as any); }} style={styles.option}>
             <Text style={[styles.optionText, { color: palette.text }]}>+ New business</Text>
-          </Pressable>
+          </Pressable> : null}
         </View>
       </Pressable>
     </Modal>

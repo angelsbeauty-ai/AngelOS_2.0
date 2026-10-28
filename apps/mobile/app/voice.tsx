@@ -16,6 +16,8 @@ import { VoiceOrb } from '../src/components/VoiceOrb';
 import { AnswerCard } from '../src/components/AnswerCard';
 import { getActiveWorkspace } from '../src/lib/workspace';
 import { getBriefing } from '../src/lib/home';
+import { getVoiceStatus } from '../src/lib/ai';
+import { ApiError } from '../src/lib/api';
 import { D, N, tokens } from '../src/design/theme';
 import { useAppearance } from '../src/design/appearance';
 
@@ -32,11 +34,34 @@ export default function VoiceScreen() {
   const voice = useLiveVoice(ws, 'home', facts);
   const close = () => { voice.stop(); if (router.canGoBack()) router.back(); else router.replace('/'); };
   const off = voice.status && !voice.status.available;
+  // Display only: show the real reason voice stopped (the message from the voice code, the last voice step, and a read-only status check).
+  const errKind = voiceErrorKind(voice.error);
+  const [diag, setDiag] = useState<{ step: string | null; check: string | null }>({ step: null, check: null });
+  const failed = voice.state === 'error' || !!off;
+  useEffect(() => {
+    if (!failed || !ws) { setDiag({ step: null, check: null }); return; }
+    let alive = true;
+    void (async () => {
+      const lines = (await readCrumbs()).split('\n').map((l) => l.trim()).filter(Boolean);
+      const at = lines.map((l) => l.includes(' caught: ')).lastIndexOf(true);
+      const step = at > 0 ? lines[at - 1].replace(/^\S+\s+/, '') : null;
+      const check = await getVoiceStatus(ws)
+        .then((s) => (s.available ? 'OK (available)' : `off: ${s.reason ?? '-'}`))
+        .catch((e) => (e instanceof ApiError ? `HTTP ${e.status || 'network'}: ${e.message}` : String(e instanceof Error ? e.message : e)));
+      if (alive) setDiag({ step, check });
+    })();
+    return () => { alive = false; };
+  }, [failed, ws, voice.error]);
+  const details = failed && !noWs ? [
+    voice.state === 'error' ? `${t('voice.errReason', 'Reason')}: ${voice.error ?? '-'}` : null,
+    voice.state === 'error' && diag.step ? `${t('voice.errStep', 'Stopped at')}: ${diag.step}` : null,
+    diag.check ? `${t('voice.errCheck', 'Server check')}: ${diag.check}` : null,
+  ].filter(Boolean).join('\n') : '';
   const live = voice.state === 'live';
   const top = live ? (voice.muted ? t('voice.muted', 'Muted') : t('voice.listening', 'Listening')) : voice.state === 'connecting' ? t('voice.connecting', 'Connecting…') : t('voice.title', 'Talk to your assistant');
   const caption = noWs ? t('voice.noStudio', 'Set up your studio first, then you can talk to your assistant.')
     : off ? (voice.status?.reason ?? t('voice.off', 'Voice is not available right now.'))
-    : voice.state === 'error' ? t('voice.error', 'Voice could not start. Check microphone permission in Settings.')
+    : voice.state === 'error' ? t(`voice.err.${errKind}`, ERR_HEADLINE[errKind])
     : live ? (voice.caption ? `“${voice.caption}”` : t('voice.listenCopy', "I'm listening. Take your time."))
     : null;
   const hint = live ? t('voice.tapPause', 'Tap the orb to pause') : t('voice.tapStart', 'Tap the orb to start');
@@ -53,7 +78,8 @@ export default function VoiceScreen() {
         <VoiceOrb state={voice.state} dimmed={!!off || noWs} level={voice.getLevel} />
       </Pressable>
       {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{caption}</Text> : null}
-      {voice.state === 'error' ? (
+      {details ? <Text selectable style={[styles.details, { color: palette.muted, borderColor: palette.border }]}>{details}</Text> : null}
+      {voice.state === 'error' && errKind === 'mic' ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('voice.openSettings', "Open Settings")} onPress={() => void Linking.openSettings()} style={[styles.settingsBtn, { backgroundColor: palette.text }]}>
           <Text style={[styles.settingsText, { color: palette.bg }]}>{t('voice.openSettings', "Open Settings")}</Text>
         </Pressable>
@@ -87,6 +113,7 @@ const styles = StyleSheet.create({
   label: { flex: 1, textAlign: 'center', ...tokens.type.overline, fontFamily: tokens.font.uiSemibold, letterSpacing: 1.2, textTransform: 'uppercase', color: D.listening },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 },
   caption: { fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 32, color: D.text, textAlign: 'center', maxWidth: 340, marginTop: 24 },
+  details: { ...tokens.type.footnote, fontFamily: tokens.font.ui, textAlign: 'left', maxWidth: 340, alignSelf: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   hint: { ...tokens.type.subhead, fontFamily: tokens.font.ui, color: D.muted, textAlign: 'center' },
   settingsBtn: { minHeight: 44, paddingHorizontal: 24, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   draft: { alignSelf: 'stretch', borderWidth: 1, borderRadius: 16, padding: 16, gap: 8 },
@@ -99,6 +126,28 @@ const styles = StyleSheet.create({
   round: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   mute: { backgroundColor: D.surface, borderWidth: 1, borderColor: D.hairline },
 });
+
+type VoiceErrKind = 'mic' | 'limit' | 'quota' | 'network' | 'off' | 'server' | 'generic';
+const ERR_HEADLINE: Record<VoiceErrKind, string> = {
+  mic: 'Microphone is off for AngelOS.',
+  limit: 'AI usage limit reached.',
+  quota: 'The voice service is busy or out of quota.',
+  network: 'No connection to AngelOS.',
+  off: 'Voice is not available right now.',
+  server: 'The server could not start voice.',
+  generic: 'Voice could not start.',
+};
+/** Picks the headline from the real error text. Mic is blamed only when the microphone itself failed. */
+function voiceErrorKind(msg: string | null): VoiceErrKind {
+  const m = (msg ?? '').toLowerCase();
+  if (/microphone is off|notallowederror|permission denied/.test(m)) return 'mic';
+  if (/ai uses|usage limit|too many voice sessions/.test(m)) return 'limit';
+  if (/\((429|402)\)|quota/.test(m)) return 'quota';
+  if (/network|failed to fetch|timed? ?out|abort/.test(m)) return 'network';
+  if (/not available|not set up|live voice is off/.test(m)) return 'off';
+  if (/could not (start|connect)|\(\d{3}\)|workspace not found|status \d{3}/.test(m)) return 'server';
+  return 'generic';
+}
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
   if (__DEV__) console.warn(error);

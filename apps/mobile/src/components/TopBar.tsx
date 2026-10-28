@@ -7,6 +7,7 @@ import { Heart } from 'phosphor-react-native/src/icons/Heart';
 import { List } from 'phosphor-react-native/src/icons/List';
 import { GlassSurface } from './Glass';
 import { colors, D } from '../design/theme';
+import { V1_HIDDEN } from '../lib/me';
 import { CalendarPlus } from 'phosphor-react-native/src/icons/CalendarPlus';
 import { ChatCircle } from 'phosphor-react-native/src/icons/ChatCircle';
 import { ImageSquare } from 'phosphor-react-native/src/icons/ImageSquare';
@@ -41,7 +42,7 @@ function Sheet({ title, items, onClose }: { title: string; items: Item[]; onClos
   </Modal>;
 }
 
-/** Instagram-style top bar on the main tab screens: + (create) left, heart (notifications) and ☰ (quick settings) right. */
+/** (Not mounted in V1.) Links to V1-hidden screens are filtered out. Instagram-style top bar on the main tab screens: + (create) left, heart (notifications) and ☰ (quick settings) right. */
 export function TopBar() {
   const { t } = useTranslation();
   const [open, setOpen] = useState<null | 'create' | 'menu'>(null);
@@ -57,14 +58,14 @@ export function TopBar() {
       { label: t('top.newMessage', { defaultValue: 'New message' }), href: '/messages/new', Icon: ChatCircle },
       { label: t('top.newPost', { defaultValue: 'New post' }), href: '/content/new', Icon: ImageSquare },
       { label: t('top.newStory', { defaultValue: 'New story' }), href: '/content/new?format=story', Icon: PlusCircle },
-    ]} /> : null}
+    ].filter((i) => !V1_HIDDEN.test(i.href))} /> : null}
     {open === 'menu' ? <Sheet title={t('top.quick', { defaultValue: 'Quick settings' })} onClose={() => setOpen(null)} items={[
       { label: t('nav3.accounts'), href: '/social/accounts' },
       { label: t('nav.assistant'), href: '/ai-settings' },
       { label: t('nav.money'), href: '/finance' },
       { label: t('account.language'), href: '/settings/account' },
       { label: t('top.profileSettings', { defaultValue: 'Profile & settings' }), href: '/profile' },
-    ]} /> : null}
+    ].filter((i) => !V1_HIDDEN.test(i.href))} /> : null}
   </View>;
 }
 

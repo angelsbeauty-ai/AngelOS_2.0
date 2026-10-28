@@ -17,6 +17,7 @@ import { getActivity, getNotificationPrefs, updateNotificationPrefs, type Activi
 import { registerForPush } from '../src/lib/push';
 import { toFriendly } from '../src/lib/friendly-error';
 import { dialog } from '../src/lib/dialog';
+import { V1_HIDDEN } from '../src/lib/me';
 
 type Prefs = { messages: boolean; bookings: boolean; ai: boolean };
 const DEFAULT: Prefs = { messages: true, bookings: true, ai: true };
@@ -40,7 +41,7 @@ export default function NotificationsScreen() {
       setWorkspaceId(ws);
       const [next, act] = await Promise.all([getNotificationPrefs(ws).catch(() => null), getActivity(ws)]);
       if (next) setPrefs({ messages: next.messages, bookings: next.bookings, ai: next.ai });
-      setItems(act.filter((it) => it.kind !== 'booking')); setState('ready'); // AngelOS V1: bookings are hidden
+      setItems(act.filter((it) => it.kind !== 'booking' || !V1_HIDDEN.test('/bookings'))); setState('ready'); // AngelOS V1: bookings are hidden
     } catch (error) { const f = toFriendly(error, { action: 'load' }); setErr({ title: f.title, message: f.message }); setState('error'); }
   }, []);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
@@ -71,7 +72,10 @@ export default function NotificationsScreen() {
   const line = (it: ActivityItem) => it.kind === 'message' ? { icon: <ChatCircle {...ink} />, title: it.title || t('nt.client'), detail: it.detail || t('nt.photo') }
     : it.kind === 'booking' ? { icon: <CalendarBlank {...ink} />, title: it.status === 'cancelled' ? t('nt.bookingCancelled', { name: it.title }) : t('nt.booking', { name: it.title }), detail: it.detail }
     : { icon: <ImageSquare {...ink} />, title: it.status === 'failed' ? t('nt.postFailed') : t('nt.postPosted'), detail: PLAT[it.title] ?? '' };
-  const open = (it: ActivityItem) => router.push((it.kind === 'message' ? `/messages/${it.target}` : it.kind === 'booking' ? `/bookings/${it.target}` : '/content') as any);
+  // V1: a booking item only opens when the bookings screen is part of the app; otherwise it is shown without a link (never a bounce to Messages).
+  const target = (it: ActivityItem) => it.kind === 'message' ? `/messages/${it.target}` : it.kind === 'booking' ? `/bookings/${it.target}` : '/content';
+  const canOpen = (it: ActivityItem) => !V1_HIDDEN.test(target(it));
+  const open = (it: ActivityItem) => { if (canOpen(it)) router.push(target(it) as any); };
   const card = { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss };
 
   return <Screen onRefresh={load}>
@@ -86,7 +90,7 @@ export default function NotificationsScreen() {
     {state === 'loading' ? <Skeleton rows={4} height={64} />
       : state === 'error' && err ? <ErrorState title={err.title} message={err.message} onRetry={() => { setState('loading'); void load(); }} />
       : !items.length ? <EmptyState icon={<BellSimple size={28} color={palette.muted} />} title={t('nt.emptyTitle')} message={t('nt.emptyBody')} />
-      : <View style={[styles.list, card]}>{items.map((it, i) => { const l = line(it); return <Pressable key={it.id} accessibilityRole="button" accessibilityLabel={`${l.title}, ${l.detail}, ${fmt(it.at)}`} onPress={() => open(it)} style={[styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }]}>
+      : <View style={[styles.list, card]}>{items.map((it, i) => { const l = line(it); return <Pressable key={it.id} accessibilityRole={canOpen(it) ? 'button' : 'text'} accessibilityLabel={`${l.title}, ${l.detail}, ${fmt(it.at)}`} disabled={!canOpen(it)} onPress={() => open(it)} style={[styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }]}>
           <View style={styles.icon}>{l.icon}</View>
           <View style={{ flex: 1, gap: 2 }}>
             <Text numberOfLines={1} style={[styles.label, { color: palette.text }]}>{l.title}</Text>

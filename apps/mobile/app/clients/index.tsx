@@ -14,6 +14,10 @@ import { toFriendly, type FriendlyResult } from '../../src/lib/friendly-error';
 import { label } from '../../src/lib/labels';
 import { useAppearance } from '../../src/design/appearance';
 import { confirm } from '../../src/lib/dialog';
+import { V1_HIDDEN } from '../../src/lib/me';
+
+/** V1: no Book action while bookings are hidden. */
+const BOOKINGS_ON = !V1_HIDDEN.test('/bookings');
 
 const FILTER_IDS: ClientFilter[] = ['all', 'new', 'active', 'touch_up', 'archived'];
 
@@ -59,8 +63,8 @@ export default function ClientsScreen() {
     {!busy && loadError ? <ErrorState title={loadError.title} message={loadError.message} onRetry={() => void load()} /> : null}
     {!busy && !loadError && !noStudio && clients.length === 0 ? <EmptyState title={search || filter !== 'all' ? t('clients.noMatch') : t('clients.none')} message={search || filter !== 'all' ? undefined : t('clients.noneHint')} action={search || filter !== 'all' ? undefined : { label: t('clients.newClient'), onPress: () => router.push('/clients/new') }} /> : null}
     {clients.map((client) => <RowMenu key={client.id} accessibilityHint={t('clients.holdHint')} onPress={() => router.push(`/clients/${client.id}` as any)}
-      actions={[{ id: 'book', title: t('clients.book') }, { id: 'edit', title: t('clients.edit') }, { id: 'archive', title: client.archived_at ? t('clients.unarchive') : t('clients.archive') }]}
-      onAction={(action) => { if (action === 'book') router.push({ pathname: '/bookings/new', params: { clientId: client.id } }); if (action === 'edit') router.push(`/clients/${client.id}/edit` as any); if (action === 'archive') void archive(client); }}>
+      actions={[...(BOOKINGS_ON ? [{ id: 'book', title: t('clients.book') }] : []), { id: 'edit', title: t('clients.edit') }, { id: 'archive', title: client.archived_at ? t('clients.unarchive') : t('clients.archive') }]}
+      onAction={(action) => { if (action === 'book' && BOOKINGS_ON) router.push({ pathname: '/bookings/new', params: { clientId: client.id } }); if (action === 'edit') router.push(`/clients/${client.id}/edit` as any); if (action === 'archive') void archive(client); }}>
       <View style={[styles.clientRow, night && { backgroundColor: '#161618', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' }]}>
         <Avatar name={client.display_name} />
         <View style={styles.clientCopy}><Text style={[styles.clientName, night && { color: '#F4F4F5' }]}>{client.display_name}</Text><View style={{ flexDirection: 'row' }}><Badge status={client.status === 'lead' ? 'request' : 'confirmed'} label={client.status === 'lead' ? t('clients.chipLead') : t('clients.chipClient')} /></View>{client.phone || client.email ? <SupportText>{client.phone ?? client.email}</SupportText> : null}</View>

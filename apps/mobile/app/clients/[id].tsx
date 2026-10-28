@@ -15,6 +15,10 @@ import { getActiveWorkspace } from '../../src/lib/workspace';
 import { confirm, dialog } from '../../src/lib/dialog';
 import { useAppearance } from '../../src/design/appearance';
 import { friendlyText } from '../../src/lib/friendly-error';
+import { V1_HIDDEN } from '../../src/lib/me';
+
+/** V1: bookings are hidden, so Book and booking links are hidden too. They come back when V1_HIDDEN stops listing /bookings. */
+const BOOKINGS_ON = !V1_HIDDEN.test('/bookings');
 
 const METHODS = [['cash', 'cd.cash'], ['card', 'cd.card'], ['paypay', 'cd.paypay'], ['bank_transfer', 'cd.bank']] as const;
 
@@ -75,15 +79,15 @@ export default function ClientDetailScreen() {
     </View>
     <View style={styles.actions}>
       <Pressable accessibilityRole="button" accessibilityLabel={t('cd.message')} onPress={() => router.push({ pathname: '/messages/new', params: { clientId: id } } as any)} style={[styles.chip, night && { borderColor: 'rgba(255,255,255,0.18)' }]}><Text style={[styles.chipText, { color: palette.text }]}>{t('cd.message')}</Text></Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={t('cd.book')} onPress={() => router.push({ pathname: '/bookings/new', params: { clientId: id } })} style={[styles.chip, night && { borderColor: 'rgba(255,255,255,0.18)' }]}><Text style={[styles.chipText, { color: palette.text }]}>{t('cd.book')}</Text></Pressable>
+      {BOOKINGS_ON ? <Pressable accessibilityRole="button" accessibilityLabel={t('cd.book')} onPress={() => router.push({ pathname: '/bookings/new', params: { clientId: id } })} style={[styles.chip, night && { borderColor: 'rgba(255,255,255,0.18)' }]}><Text style={[styles.chipText, { color: palette.text }]}>{t('cd.book')}</Text></Pressable> : null}
       <Pressable accessibilityRole="button" accessibilityLabel={t('cd.addNote')} onPress={() => setNoteOpen(true)} style={[styles.chip, night && { borderColor: 'rgba(255,255,255,0.18)' }]}><Text style={[styles.chipText, { color: palette.text }]}>{t('cd.addNote')}</Text></Pressable>
     </View>
     {contacts.length ? <View style={fieldStyles.row}>{contacts.map(([label, url]) => <Chip key={label} label={label} onPress={() => void Linking.openURL(url).catch(() => undefined)} />)}</View> : null}
 
-    <Card>
+    {BOOKINGS_ON ? <Card>
       <SectionTitle>{t('cd.next')}</SectionTitle>
       {upcoming.length ? upcoming.slice(0, 3).map((a) => <Text key={a.id} style={styles.link} onPress={() => router.push(`/bookings/${a.id}` as any)}>{new Date(a.start_at).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · {a.service_name}</Text>) : <SupportText>{t('cd.nothing')}</SupportText>}
-    </Card>
+    </Card> : null}
     <Card>
       <SectionTitle>{t('cd.history')}</SectionTitle>
       {detail.treatments.length === 0 ? <SupportText>{t('cd.noTreat')}</SupportText> : null}
@@ -115,10 +119,10 @@ export default function ClientDetailScreen() {
       <View style={fieldStyles.row}>{METHODS.map(([v, l]) => <Chip key={v} label={t(l)} selected={method === v} onPress={() => setMethod(v)} />)}</View>
       <ActionButton kind="primary" label={t('cd.record')} disabled={!(Number(amount) > 0)} onPress={() => void run(t('cd.payFail'), async () => { await recordFinanceEntry(workspaceId, { clientId: id, entryType: 'payment', amount: Number(amount), method, idempotencyKey: `client-payment:${id}:${Date.now()}` }); setAmount(''); })} />
     </Card>
-    <Card>
+    {BOOKINGS_ON ? <Card>
       <SectionTitle>{t('cd.bookings')}</SectionTitle>
       {past.length ? past.slice(0, 20).map((a) => <Text key={a.id} style={styles.link} onPress={() => router.push(`/bookings/${a.id}` as any)}>{new Date(a.start_at).toLocaleDateString()} · {a.service_name} · {label(t, 'st', a.status)}</Text>) : <SupportText>{t('cd.noPast')}</SupportText>}
-    </Card>
+    </Card> : null}
     <ActionButton label={client.archived_at ? t('cd.unarchive') : t('cd.archive')} kind="quiet" onPress={async () => {
       if (!client.archived_at && !(await confirm({ title: t('cd.archiveQ', { name: client.display_name }), message: t('cd.archiveMsg'), confirmText: t('cd.archiveBtn') }))) return;
       void run(t('cd.updateFail'), () => setClientArchived(workspaceId, id, !client.archived_at));
