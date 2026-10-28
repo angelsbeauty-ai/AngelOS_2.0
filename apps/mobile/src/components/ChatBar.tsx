@@ -82,10 +82,11 @@ export function ChatBar({
         ) : null}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={voiceOnly ? (onHoldStart ? t('messages.holdToDictate', { defaultValue: 'Hold to dictate' }) : t('messages.voiceSoon', { defaultValue: 'Voice messages' })) : t('messages.send', { defaultValue: 'Send' })}
+          accessibilityLabel={voiceOnly ? (onVoice ? t('home.voice', { defaultValue: 'Talk to your assistant' }) : onHoldStart ? t('messages.holdToDictate', { defaultValue: 'Hold to dictate' }) : t('messages.voiceSoon', { defaultValue: 'Voice messages' })) : t('messages.send', { defaultValue: 'Send' })}
           accessibilityState={{ disabled: !active }}
           disabled={!active}
-          onPressIn={voiceOnly && onHoldStart ? () => { holding.current = true; onHoldStart(); } : undefined}
+          /* When the screen has live voice (onVoice), a tap on the waveform opens voice; dictation stays on the mic in the field. */
+          onPressIn={voiceOnly && onHoldStart && !onVoice ? () => { holding.current = true; onHoldStart(); } : undefined}
           onPressOut={() => { if (holding.current) { onHoldEnd?.(); } }}
           onPress={() => {
             // A release after holding to dictate must never send.

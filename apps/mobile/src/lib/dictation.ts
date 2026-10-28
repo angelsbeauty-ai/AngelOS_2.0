@@ -11,6 +11,8 @@ export function useDictation(getText: () => string, setText: (text: string) => v
   const [error, setError] = useState<string | null>(null);
   const base = useRef('');
   const active = useRef(false);
+  // A release that comes before the async start finished must still stop it, or the mic stays on (continuous mode).
+  const released = useRef(false);
 
   useSpeechRecognitionEvent('start', () => setListening(true));
   useSpeechRecognitionEvent('end', () => { active.current = false; setListening(false); void setAudioModeAsync({ allowsRecording: false }).catch(() => undefined); });
@@ -28,10 +30,12 @@ export function useDictation(getText: () => string, setText: (text: string) => v
 
   async function start() {
     setError(null);
+    released.current = false;
     try {
       const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
       if (!perm.granted) { setError('permission'); return; }
       await setAudioModeAsync({ allowsRecording: true }).catch(() => undefined);
+      if (released.current) { await setAudioModeAsync({ allowsRecording: false }).catch(() => undefined); return; }
       base.current = getText();
       active.current = true;
       ExpoSpeechRecognitionModule.start({ lang: lang === 'ja' ? 'ja-JP' : 'en-US', interimResults: true, continuous: true, addsPunctuation: true });
@@ -39,6 +43,7 @@ export function useDictation(getText: () => string, setText: (text: string) => v
   }
 
   function stop() {
+    released.current = true;
     if (!active.current && !listening) return;
     try { ExpoSpeechRecognitionModule.stop(); } catch { /* ignore */ }
   }
