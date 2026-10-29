@@ -123,13 +123,15 @@ export default function MessageThreadScreen() {
   const firstUnread = useRef<string | null | undefined>(undefined);
   const visible = useMemo(() => (detail?.messages ?? []).filter((m) => m.status !== 'cancelled' && !(m.sender_type === 'ai' && m.status === 'pending_approval')), [detail]);
 
-  async function run(label: string, task: () => Promise<unknown>, after = true) {
+  async function run(label: string, task: () => Promise<unknown>, after = true, action: 'save' | 'send' = 'save') {
     if (!workspaceId) return;
     setBusy(label);
     try { await task(); if (after) await load(); }
     catch (error) {
-      const friendly = friendlyText(error, { action: 'save' });
+      // A refused or failed send shows the server's real reason; the draft text stays in the field.
+      const friendly = friendlyText(error, { action }, action === 'send' ? t('messages.notSentTitle') : undefined);
       void dialog.notify(friendly.title, friendly.message);
+      if (action === 'send') await load().catch(() => undefined);
     } finally { setBusy(null); }
   }
 
@@ -148,6 +150,8 @@ export default function MessageThreadScreen() {
   const firstName = name.split(/[\s\u3000]+/)[0];
   const appName = APP_NAME[thread.platform] || t('messages.theApp', 'the app');
   const live = thread.delivery === 'live';
+  // Live channel that the server says can't deliver right now (e.g. Instagram not connected / sending off): explain before Send.
+  const sendBlocked = live && thread.send_status?.canSend === false;
   const incBg = C.inc;
   const incText = C.incText;
   const outBg = C.out;
@@ -156,6 +160,7 @@ export default function MessageThreadScreen() {
   async function send() {
     const text = reply.trim();
     if (!text) return;
+    if (sendBlocked) { void dialog.notify(t('messages.sendOffTitle'), t('messages.sendOff', { app: appName })); return; }
     const meaning = isJapanese(text) && appLang === 'en' ? (await translateText(workspaceId!, text, 'en').catch(() => null))?.translation : null;
     const message = meaning ? t('messages.confirmMeaning', { text, meaning }) : live ? t('messages.confirmLive', { name, app: appName }) : t('messages.confirmManual', { app: appName });
     const ok = await dialog.confirm({ title: t('messages.send'), message, confirmText: t('messages.send') });
@@ -171,7 +176,7 @@ export default function MessageThreadScreen() {
       if (pendingDraft && text === pendingDraft.body && !replyTo) await approveReply(workspaceId!, pendingDraft.id);
       else await createMessageReply(workspaceId!, thread.id, text, true, replyTo ? { replyToMessageId: replyTo.id } : undefined);
       setReply(''); setDraftOpen(false); setReplyTo(null);
-    });
+    }, true, 'send');
   }
 
   async function openSaved() {
@@ -230,6 +235,7 @@ export default function MessageThreadScreen() {
   // Locked: Meta refuses after 7 days; LINE has no free reply token and the monthly quota is used up.
   const locked = live && (win?.metaWindow === 'closed' || (thread.platform === 'line' && quotaLeft === 0 && !win?.lineReplyFree));
   const banner = !live ? null
+    : sendBlocked ? t('messages.sendOff', { app: appName })
     : win?.metaWindow === 'closed' ? t('messages.windowClosed', { app: appName })
     : win?.metaWindow === 'human_agent' ? t('messages.windowAgent')
     : locked ? t('messages.lineQuotaOut')
@@ -238,13 +244,16 @@ export default function MessageThreadScreen() {
     : null;
   const chips = (saved ?? []).slice(0, 3);
   async function retry(message: ClientMessage) {
+    if (sendBlocked) { void dialog.notify(t('messages.sendOffTitle'), t('messages.sendOff', { app: appName })); return; }
     const ok = await dialog.confirm({ title: t('messages.retry'), message: t('messages.confirmLive', { name, app: appName }), confirmText: t('messages.send') });
-    if (ok) await run(`retry-${message.id}`, () => approveReply(workspaceId!, message.id));
+    if (ok) await run(`retry-${message.id}`, () => approveReply(workspaceId!, message.id), true, 'send');
   }
+  /** A live reply still "queued" after 2 minutes never went out (older server builds left refused sends like this). */
+  function stuck(m: ClientMessage) { return m.status === 'queued' && m.metadata?.delivery !== 'manual' && Date.now() - Date.parse(m.created_at) > 120_000; }
   function statusLabel(m: ClientMessage) {
     if (m.status === 'sent') return t('messages.stSent');
     if (m.status === 'queued' && m.metadata?.delivery === 'manual') return t('messages.stManual');
-    if (m.status === 'queued' || busy === `retry-${m.id}`) return t('messages.stSending');
+    if (busy === `retry-${m.id}` || (m.status === 'queued' && !stuck(m))) return t('messages.stSending');
     return null;
   }
 
@@ -292,9 +301,10 @@ export default function MessageThreadScreen() {
                 </View>
                 {detail.reactions?.[message.id]?.length ? <Text accessibilityLabel={t('messages.reactions', { list: detail.reactions[message.id].join(' ') })} style={[styles.reacts, { backgroundColor: C.inc }]}>{detail.reactions[message.id].join(' ')}</Text> : null}
                 {tr?.shown ? <Text style={[styles.meaning, { color: C.muted }]}>{tr.text}</Text> : null}
-                {out && message.status === 'failed' ? (
+                {out && (message.status === 'failed' || stuck(message)) ? (
                   <Pressable accessibilityRole="button" accessibilityLabel={t('messages.retryA11y')} onPress={() => void retry(message)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }} style={styles.failRow}>
                     <Text style={[styles.time, { color: palette.text, fontFamily: tokens.font.uiSemibold }]}>{t('messages.stFailed')} · {t('messages.retry')}</Text>
+                    {typeof message.metadata?.send_error === 'string' && message.metadata.send_error ? <Text style={[styles.time, { color: C.muted }]}>{message.metadata.send_error}</Text> : null}
                   </Pressable>
                 ) : (
                   <Text style={[styles.time, { color: C.muted }]}>{timeLabel(message.created_at)}{out && statusLabel(message) ? ` · ${statusLabel(message)}` : ''}</Text>

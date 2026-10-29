@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
+import { useSignedIn } from '../../src/lib/session';
 import { StyleSheet } from 'react-native';
 import { useRole } from '../../src/lib/me';
 import { GlassSurface } from '../../src/components/Glass';
@@ -20,6 +21,7 @@ export default function TabsLayout() {
   const unread = useUnreadCount();
   const { palette } = useAppearance();
   const insets = useSafeAreaInsets();
+  const signedIn = useSignedIn();
   const studio = student ? { href: null } : {};
   const tabBarOptions = {
     headerShown: false,
@@ -35,6 +37,10 @@ export default function TabsLayout() {
     // A1 .tab.on: raised white pill behind the active tab.
     tabBarActiveBackgroundColor: 'transparent',
   };
+
+  // No session: the studio tabs never mount (and never call the API); straight to login.
+  if (signedIn === false) return <Redirect href="/login" />;
+  if (signedIn === null) return null;
 
   return (
     <Tabs screenOptions={tabBarOptions}>

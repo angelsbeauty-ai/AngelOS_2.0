@@ -1,5 +1,6 @@
 import { Linking, Platform, Share } from 'react-native';
 import { apiFetch } from './api';
+import { isDemoSeed } from './clients';
 
 export type MessagingPlatform = 'line' | 'instagram' | 'facebook' | 'tiktok' | 'other' | 'manual';
 
@@ -55,6 +56,8 @@ export interface MessageThreadDetail {
   thread: MessageThreadSummary & {
     external_thread_id: string; reply_language: 'en' | 'ja';
     /** Delivery limits from the server: Meta 24h window, LINE free reply + monthly quota. */
+    /** Server check: can AngelOS actually deliver a reply in this thread right now (channel connected + sending on). */
+    send_status?: { canSend: boolean; reason: string | null };
     send_window?: { lastInboundAt: string | null; metaWindow: 'open' | 'human_agent' | 'closed' | null; lineReplyFree: boolean | null; lineQuota: { quota: number | null; used: number | null } | null };
   };
   messages: ClientMessage[];
@@ -96,7 +99,12 @@ export const THREAD_PAGE = 30;
 export const MESSAGE_PAGE = 40;
 /** M17: pass `before` (oldest last_message_at shown) to get the next, older page. */
 export const listMessageThreads = (workspaceId: string, view: 'active' | 'archived' = 'active', page?: { before?: string | null; limit?: number }) =>
-  apiFetch<MessageThreadSummary[]>(`${base(workspaceId)}/threads?view=${view}${page?.limit ? `&limit=${page.limit}` : ''}${page?.before ? `&before=${encodeURIComponent(page.before)}` : ''}`);
+  apiFetch<MessageThreadSummary[]>(`${base(workspaceId)}/threads?view=${view}${page?.limit ? `&limit=${page.limit}` : ''}${page?.before ? `&before=${encodeURIComponent(page.before)}` : ''}`)
+    .then((rows) => (rows ?? []).filter((t) => !isDemoSeedThread(t)));
+/** Client-side guard matching the server filter: threads of demo / proof / test seed contacts never show. */
+export const isDemoSeedThread = (t: Pick<MessageThreadSummary, 'contact_display_name' | 'client'>) =>
+  isDemoSeed({ display_name: t.client?.display_name ?? '', source: (t.client as { source?: string | null } | null)?.source ?? null }) ||
+  isDemoSeed({ display_name: t.contact_display_name ?? '', source: null });
 /** M17: with `limit`, only the newest messages (older than `before`) come back; hasMoreMessages says if there are more. */
 export const getMessageThread = (workspaceId: string, threadId: string, page?: { before?: string | null; limit?: number }) =>
   apiFetch<MessageThreadDetail>(`${base(workspaceId)}/threads/${threadId}${page?.limit ? `?limit=${page.limit}${page.before ? `&before=${encodeURIComponent(page.before)}` : ''}` : ''}`);

@@ -88,7 +88,19 @@ export function EmptyState({ title, message, action, icon }: { title: string; me
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 /** A1 button: charcoal pill (primary), outline (secondary), text (ghost), red outline (danger). Min 44pt. */
-export function Button({ label, onPress, variant = 'primary', loading, disabled, small, style, accessibilityLabel }: { label: string; onPress: () => void; variant?: ButtonVariant; loading?: boolean; disabled?: boolean; small?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel?: string }) {
+/**
+ * Icon ink for a control's background. Native has no Night repaint pass (night-web.ts is web only), so light buttons
+ * (primary in Night is #F4F4F5) must pass this colour to their icon explicitly.
+ */
+export function iconInkOn(bg: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(bg.trim());
+  if (!m) return '#151515';
+  const n = parseInt(m[1], 16);
+  const l = (((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255)) / 3;
+  return l > 180 ? '#151515' : '#F4F4F5';
+}
+
+export function Button({ label, onPress, variant = 'primary', loading, disabled, small, style, accessibilityLabel, icon }: { label: string; onPress: () => void; variant?: ButtonVariant; loading?: boolean; disabled?: boolean; small?: boolean; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; /** Gets the exact ink colour for this button in Day and Night. */ icon?: (color: string) => ReactNode }) {
   const ink = useInk();
   const off = disabled || loading;
   // Night danger is a filled red pill with white text (6.54:1): red text on black is only 3.12:1.
@@ -96,7 +108,7 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? label} accessibilityState={{ disabled: !!off, busy: !!loading }} disabled={off} onPress={onPress}
       style={({ pressed }) => [styles.btn, small && styles.btnSmall, variant === 'primary' && { backgroundColor: ink.primaryBg }, variant === 'secondary' && { borderWidth: 1, borderColor: ink.border, backgroundColor: 'transparent' }, variant === 'danger' && styles.btnDanger, variant === 'danger' && ink.night && { backgroundColor: palette.critical }, variant === 'ghost' && styles.btnGhost, pressed && !off && { transform: [{ scale: 0.97 }] }, style]}>
-      {loading ? <ActivityIndicator color={fg} size="small" /> : <Text {...textProps} numberOfLines={1} style={[styles.btnText, { color: fg }]}>{label}</Text>}
+      {loading ? <ActivityIndicator color={fg} size="small" /> : icon ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>{icon(variant === 'primary' ? iconInkOn(ink.primaryBg) : fg)}<Text {...textProps} numberOfLines={1} style={[styles.btnText, { color: fg }]}>{label}</Text></View> : <Text {...textProps} numberOfLines={1} style={[styles.btnText, { color: fg }]}>{label}</Text>}
     </Pressable>
   );
 }

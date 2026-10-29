@@ -30,6 +30,10 @@ export function toFriendly(error: unknown, ctx: FriendlyContext): FriendlyResult
  */
 export function friendlyText(error: unknown, ctx: FriendlyContext, title?: string): { title: string; message: string } {
   const f = toFriendly(error, ctx);
-  const own = error instanceof ApiError && error.status >= 400 && error.status < 500 && ![401, 403, 404, 429].includes(error.status) && typeof error.message === 'string' && error.message.trim() && !/^(unknown|internal|undefined|null|\[object)/i.test(error.message.trim()) ? error.message.trim() : null;
+  // Sending also shows the server's own sentence for 5xx (e.g. a 503 "Message sending is temporarily unavailable"), unless it is technical.
+  const okStatus = error instanceof ApiError && error.status >= 400 && ![401, 403, 404, 429].includes(error.status) && (error.status < 500 || ctx.action === 'send');
+  const text = error instanceof ApiError && typeof error.message === 'string' ? error.message.trim() : '';
+  const technical = /exception|stack|ECONN|supabase|status code|\bSQL\b|syntax|undefined is not|Cannot read|service_role|PGRST|JWT|violates|relation "|<html|\{.*\}/i.test(text);
+  const own = okStatus && text && !technical && text.length <= 300 && !/^(unknown|internal|undefined|null|\[object|request failed with status)/i.test(text) ? text : null;
   return { title: title ?? f.title, message: own ?? f.message };
 }

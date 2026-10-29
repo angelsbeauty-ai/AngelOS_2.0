@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { runtimeConfig } from './runtime-config';
-import { handleSessionExpired } from './session';
+import { handleSessionExpired, handleSignedOut401 } from './session';
 
 const apiUrl = runtimeConfig.apiUrl.replace(/\/$/, '');
 
@@ -27,6 +27,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit, retried = fa
     // O33: a token that expired while the phone slept (or was refreshed on another device) gets one silent refresh + retry first.
     if (!retried) { const { data: fresh } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } })); if (fresh.session?.access_token && fresh.session.access_token !== token) return apiFetch<T>(path, init, true); }
     await handleSessionExpired();
+  } else if (response.status === 401) {
+    // Signed out (no token): go to /login instead of showing "couldn't load" on a studio screen.
+    handleSignedOut401();
   }
   if (!response.ok) {
     const message = typeof payload === 'object' && payload && 'message' in payload ? String((payload as any).message) : raw || `Request failed with status ${response.status}`;

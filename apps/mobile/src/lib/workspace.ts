@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiFetch } from './api';
+import { apiFetch, ApiError } from './api';
+import { hasSession } from './session';
 
 const ACTIVE_KEY = 'angelos.activeWorkspaceId';
 
@@ -14,6 +15,8 @@ export interface WorkspaceSummary {
 }
 
 export async function listWorkspaces(): Promise<WorkspaceSummary[]> {
+  // Signed out (e.g. on the login screen): no point asking the API, it can only answer 401.
+  if (!(await hasSession())) throw new ApiError(401, null, 'Signed out');
   return apiFetch<WorkspaceSummary[]>('/workspaces');
 }
 
