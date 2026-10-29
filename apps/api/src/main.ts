@@ -2,6 +2,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { validateRuntimeEnvironment } from './config/env';
 
 async function bootstrap() {
@@ -26,6 +27,8 @@ async function bootstrap() {
     transform: true,
     forbidUnknownValues: true
   }));
+  // Every 4xx/5xx is logged (method, route, status; stack for 5xx). Bodies and tokens are redacted.
+  app.useGlobalFilters(new AllExceptionsFilter(app.getHttpAdapter()));
   app.enableShutdownHooks();
 
   await app.listen(runtime.port, '0.0.0.0');

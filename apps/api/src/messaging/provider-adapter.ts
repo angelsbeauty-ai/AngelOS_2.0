@@ -45,6 +45,8 @@ export interface AdapterStatus {
   ready: boolean;
   state: 'ready' | 'disabled' | 'needs_setup' | 'needs_meta_approval' | 'manual';
   detail: string;
+  /** False when the inbox works but sending from AngelOS is switched off (e.g. META_MESSAGING_SEND_ENABLED). Missing = same as ready. */
+  canSend?: boolean;
 }
 
 export interface MessagingProviderAdapter {

@@ -18,6 +18,7 @@ import { lineConfigForWorkspace } from './line-workspace-config';
 import { ManualMessagingAdapter, type MessagingProviderAdapter, type NormalizedInboundMessage } from './provider-adapter';
 import { buildClientReplyInstructions, buildTranslateInstructions } from './reply-prompt';
 import { hasUnfilledPlaceholder, isMissingRelation, migrationNeeded } from './saved-replies.service';
+import { isDemoSeedThread } from '../clients/demo-seed';
 
 const SENSITIVE_PATTERNS = [/complain/i, /refund/i, /unhappy/i, /angry/i, /legal/i, /wrong/i, /scam/i, /emergency/i, /返金/, /クレーム/, /痛い/, /腫れ/];
 const PLATFORM_LABEL: Record<string, string> = { line: 'LINE', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', other: 'Other', manual: 'Manual' };
@@ -153,14 +154,14 @@ export class MessagingService {
     const pageSize = Math.min(Math.max(Math.floor(Number(page.limit) || 100), 1), 100);
     let query = supabase
       .from('message_threads')
-      .select('*,channel:messaging_channels(id,provider,display_name,status),client:clients(id,display_name,language,do_not_auto_message)')
+      .select('*,channel:messaging_channels(id,provider,display_name,status),client:clients(id,display_name,language,do_not_auto_message,source)')
       .eq('workspace_id', workspaceId);
     if (before) query = query.lt('last_message_at', before);
     const { data, error } = await query
       .order('last_message_at', { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) throw new InternalServerErrorException(error.message);
-    const threads = (data ?? []).filter((row: any) => !row.deleted_at).filter((row: any) => view === 'all' ? true : view === 'archived' ? Boolean(row.archived_at) : !row.archived_at)
+    const threads = (data ?? []).filter((row: any) => !row.deleted_at).filter((row: any) => !isDemoSeedThread(row)).filter((row: any) => view === 'all' ? true : view === 'archived' ? Boolean(row.archived_at) : !row.archived_at)
       .filter((row: any) => !before || !row.pinned_at)
       .sort((a: any, b: any) => (b.pinned_at ? 1 : 0) - (a.pinned_at ? 1 : 0));
     const ids = threads.map((row: any) => row.id);
@@ -224,7 +225,7 @@ export class MessagingService {
     const attachments = await this.attachmentViews(workspaceId, list);
     return {
       reactions, attachments, reactionsAvailable: !reactionRows.error, hasMoreMessages,
-      thread: { ...decorated, reply_language: chooseReplyLanguage(latestInbound?.body, (thread as any).client?.language), send_window: sendWindow },
+      thread: { ...decorated, reply_language: chooseReplyLanguage(latestInbound?.body, (thread as any).client?.language), send_window: sendWindow, send_status: await this.sendAvailability(workspaceId, (thread as any).channel) },
       messages: list.map((m: any) => m.metadata?.reply_token ? { ...m, metadata: { ...m.metadata, reply_token: undefined } } : m),
       internalNotes: notes.data ?? []
     };
@@ -513,7 +514,13 @@ export class MessagingService {
     }).select('*').single();
     if (error) throw new InternalServerErrorException(error.message);
     if (!dto.sendNow) return { message: data, sent: false };
-    return this.sendMessage(user, workspaceId, data.id, true);
+    try {
+      return await this.sendMessage(user, workspaceId, data.id, true);
+    } catch (error) {
+      // Refused or failed: the reply must never look sent (or stay "sending"). Keep it as Failed with the reason, so Retry works.
+      await this.markSendFailed(workspaceId, data.id, error);
+      throw error;
+    }
   }
 
   /** Approve tap. An edited AI draft is saved first, then approved. */
@@ -626,7 +633,10 @@ export class MessagingService {
 
     const adapter = await this.adapterForWorkspace(thread.channel.provider, workspaceId);
     const adapterStatus = adapter.status();
-    if (!adapterStatus.ready || thread.channel.status !== 'connected') {
+    if (!adapterStatus.ready || adapterStatus.canSend === false || thread.channel.status !== 'connected') {
+      if (message.sender_type !== 'ai' || !['pending_approval', 'draft'].includes(message.status)) {
+        await this.markSendFailed(workspaceId, message.id, `${PLATFORM_LABEL[thread.channel.provider] ?? 'This app'} is not connected yet, so nothing was sent.`);
+      }
       throw new ConflictException(`${PLATFORM_LABEL[thread.channel.provider] ?? 'This app'} is not connected yet, so nothing was sent. ${adapterStatus.detail}`);
     }
 
@@ -660,7 +670,7 @@ export class MessagingService {
     }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
     if (attemptError) throw new InternalServerErrorException(attemptError.message);
     if (result.status !== 'sent') {
-      await service.from('client_messages').update({ status: 'failed' }).eq('id', message.id);
+      await this.markSendFailed(workspaceId, message.id, result.error ?? 'Message delivery could not be verified');
       throw new InternalServerErrorException(result.error ?? 'Message delivery could not be verified');
     }
     const sentAt = new Date().toISOString();
@@ -669,6 +679,30 @@ export class MessagingService {
     await service.from('message_threads').update({ status: 'waiting_client', needs_owner: false, last_message_at: sentAt, updated_at: sentAt }).eq('id', thread.id);
     await this.afterOwnerApproval(workspaceId);
     return { message: sentMessage, sent: true, duplicatePrevented: false, delivery: 'sent' };
+  }
+
+  /** A reply that did not go out: status failed + the reason (shown under the bubble with Retry). Never touches a sent one. */
+  private async markSendFailed(workspaceId: string, messageId: string, reason: unknown) {
+    const text = reason instanceof Error ? reason.message : String(reason ?? '');
+    const service = createServiceSupabaseClient();
+    const { data: row } = await service.from('client_messages').select('status,metadata').eq('workspace_id', workspaceId).eq('id', messageId).maybeSingle();
+    if (!row || row.status === 'sent' || row.status === 'cancelled') return;
+    await service.from('client_messages').update({ status: 'failed', metadata: { ...((row as any).metadata ?? {}), send_error: text.slice(0, 300), failed_at: new Date().toISOString() } })
+      .eq('workspace_id', workspaceId).eq('id', messageId).neq('status', 'sent');
+  }
+
+  /** Whether a reply typed in this thread can actually be delivered by AngelOS right now (shown before Send). */
+  private async sendAvailability(workspaceId: string, channel: any): Promise<{ canSend: boolean; reason: string | null }> {
+    const provider = channel?.provider;
+    if (!provider || provider === 'manual') return { canSend: true, reason: null };
+    const label = PLATFORM_LABEL[provider] ?? 'This app';
+    try {
+      const st = (await this.adapterForWorkspace(provider, workspaceId)).status();
+      if (st.ready && st.canSend !== false && channel.status === 'connected') return { canSend: true, reason: null };
+      return { canSend: false, reason: `${label} sending is not connected yet, so replies can't be sent from AngelOS. ${st.detail ?? ''}`.trim() };
+    } catch {
+      return { canSend: false, reason: `${label} sending is not connected yet, so replies can't be sent from AngelOS.` };
+    }
   }
 
   /** Signed https URL (1 h) for a chat photo; platforms fetch it once when delivering. */

@@ -44,7 +44,7 @@ export class MetaGraphMessagingAdapter implements MessagingProviderAdapter {
     const name = this.provider === 'instagram' ? 'Instagram' : 'Facebook';
     if (!this.c.messagingEnabled) return { provider: this.provider, ready: false, state: 'needs_meta_approval', detail: `${name} messages need Meta setup and App Review. Not connected.` };
     if (!this.c.appSecret || !this.c.pageToken || (this.provider === 'instagram' && !this.c.igUserId) || (this.provider === 'facebook' && !this.c.pageId)) return { provider: this.provider, ready: false, state: 'needs_setup', detail: `${name} is switched on but keys are missing on the server.` };
-    return { provider: this.provider, ready: true, state: 'ready', detail: this.c.sendEnabled ? `${name} messages connected.` : `${name} inbox connected. Sending is switched off; copy replies yourself.` };
+    return { provider: this.provider, ready: true, state: 'ready', canSend: this.c.sendEnabled, detail: this.c.sendEnabled ? `${name} messages connected.` : `${name} inbox connected. Sending is switched off; copy replies yourself.` };
   }
 
   async send(input: MessagingSendInput): Promise<MessagingSendResult> {
