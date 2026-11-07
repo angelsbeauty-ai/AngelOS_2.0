@@ -485,7 +485,8 @@
     "markDone": "Mark as done",
     "platform": "Platform",
     "theApp": "the app",
-    "unreadDot": "Unread"
+    "unreadDot": "Unread",
+    "voiceChat": "Talk about this chat"
   },
   "booking": {
     "newTitle": "New booking",
@@ -2418,7 +2419,8 @@
       "off": "Voice is not available right now.",
       "server": "The server could not start voice.",
       "generic": "Voice could not start."
-    }
+    },
+    "draftMeaning": "Means: {{text}}"
   },
   "asst": {
     "tone_warm_professional": "Warm & professional",

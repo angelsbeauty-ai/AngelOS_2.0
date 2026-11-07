@@ -485,7 +485,8 @@
     "markDone": "対応済みにする",
     "platform": "アプリ",
     "theApp": "アプリ",
-    "unreadDot": "未読"
+    "unreadDot": "未読",
+    "voiceChat": "このチャットについて話す"
   },
   "booking": {
     "newTitle": "新しい予約",
@@ -2418,7 +2419,8 @@
       "off": "今は音声が使えないよ。",
       "server": "サーバーで音声を始められなかったよ。",
       "generic": "音声を始められなかったよ。"
-    }
+    },
+    "draftMeaning": "意味: {{text}}"
   },
   "asst": {
     "tone_warm_professional": "あたたかく丁寧",

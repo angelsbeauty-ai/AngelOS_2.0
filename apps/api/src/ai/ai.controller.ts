@@ -60,7 +60,7 @@ export class AiController {
   }
   @Get('usage') usage(@CurrentUser() user: AuthUser) { return usageFor(user.id).then((u) => u ?? { ...limitState(0, 0), unavailable: true }); }
   @Get('voice/status') voiceStatus() { return this.voice.status(); }
-  @Post('voice/session') voiceSession(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() body: { screen?: string; context?: string }) { return this.voice.createSession(user, workspaceId, typeof body?.screen === 'string' ? body.screen.slice(0, 60) : null, typeof body?.context === 'string' ? body.context.slice(0, 1500) : null); }
+  @Post('voice/session') voiceSession(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() body: { screen?: string; context?: string; threadId?: string }) { return this.voice.createSession(user, workspaceId, typeof body?.screen === 'string' ? body.screen.slice(0, 60) : null, typeof body?.context === 'string' ? body.context.slice(0, 1500) : null, typeof body?.threadId === 'string' && /^[0-9a-f-]{36}$/i.test(body.threadId) ? body.threadId : null); }
   @Get('profile')
   getProfile(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
     return this.ai.getProfile(user, workspaceId);

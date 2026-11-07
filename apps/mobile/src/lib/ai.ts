@@ -166,7 +166,7 @@ export const listAiTools = (workspaceId: string) => apiFetch<{ tools: AiTool[] }
 export interface VoiceSession {
   provider?: 'livekit' | 'openai' | null; available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; token: string | null; url: string | null; room: string | null; expiresAt: number | null; model: string | null; stored: false }
 export const getVoiceStatus = (workspaceId: string) => apiFetch<Pick<VoiceSession, 'available' | 'mode' | 'reason' | 'stored'>>(`/workspaces/${workspaceId}/ai/voice/status`);
-export const createVoiceSession = (workspaceId: string, screen?: string, context?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen, context }) });
+export const createVoiceSession = (workspaceId: string, screen?: string, context?: string, threadId?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen, context, threadId }) });
 
 export type DataArea = 'bookings' | 'clients' | 'messages' | 'posts' | 'analytics' | 'money' | 'services' | 'campaigns';
 /** What AngelOS can see: per-area read switches (all on until changed). */

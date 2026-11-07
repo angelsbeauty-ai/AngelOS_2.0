@@ -20,7 +20,7 @@ function voiceToolCall(ev: any): { name: string; callId: string; args: string } 
   return null;
 }
 
-export type VoiceDraft = { messageId: string; threadId: string; body: string; state: 'ready' | 'sending' | 'sent' | 'manual' | 'error' };
+export type VoiceDraft = { messageId: string; threadId: string; body: string; meaning?: string; state: 'ready' | 'sending' | 'sent' | 'manual' | 'error' };
 
 const READ_TOOLS = new Set(['get_bookings', 'search_clients', 'list_threads', 'list_posts', 'get_analytics', 'get_money', 'list_services_prices', 'list_campaigns_tasks']);
 
@@ -52,7 +52,8 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string, onDr
       if (!threadId || !body) return JSON.stringify({ drafted: false, error: 'Missing the conversation or the reply.' });
       // Voice may only save a draft. Sending happens only when she taps Approve on the card.
       const result = await createMessageReply(workspaceId, threadId, body, false);
-      onDraft?.({ messageId: result.message.id, threadId, body, state: 'ready' });
+      const meaning = String(args.meaning ?? '').trim() || undefined;
+      onDraft?.({ messageId: result.message.id, threadId, body, meaning, state: 'ready' });
       return JSON.stringify({ drafted: true, sent: false, note: 'Draft saved. It is on her screen with an Approve button. It is not sent until she taps Approve.' });
     }
     return JSON.stringify({ error: 'Unknown voice tool.' });
@@ -62,7 +63,7 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string, onDr
 }
 
 /** Realtime voice over WebRTC. Nothing is recorded or saved by AngelOS. */
-export function useLiveVoice(workspaceId: string | null, screen?: string, context?: string) {
+export function useLiveVoice(workspaceId: string | null, screen?: string, context?: string, threadId?: string) {
   const [status, setStatus] = useState<{ available: boolean; reason: string | null } | null>(null);
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +171,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     try {
       if (!workspaceId) throw new Error('No studio selected.');
       await crumb('session');
-      const session = await createVoiceSession(workspaceId, screen, context);
+      const session = await createVoiceSession(workspaceId, screen, context, threadId);
       setStatus({ available: session.available, reason: session.reason });
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (!session.clientSecret) throw new Error('Voice is not available right now.');

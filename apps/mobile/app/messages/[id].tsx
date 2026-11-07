@@ -18,6 +18,7 @@ import { BrandLogo, contactInitials } from '../../src/components/BrandBadge';
 import { SwipeReply } from '../../src/components/SwipeReply';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { Sparkle } from 'phosphor-react-native/src/icons/Sparkle';
+import { Waveform } from 'phosphor-react-native/src/icons/Waveform';
 import { DotsThree } from 'phosphor-react-native/src/icons/DotsThree';
 import { X } from 'phosphor-react-native/src/icons/X';
 import { dialog } from '../../src/lib/dialog';
@@ -269,6 +270,10 @@ export default function MessageThreadScreen() {
             <Text numberOfLines={1} style={[styles.name, { color: palette.text }]}>{name}</Text>
             {thread.platform !== 'other' ? <BrandLogo platform={thread.platform === 'facebook' ? 'messenger' : thread.platform as any} size={18} /> : null}
           </View>
+          {/* Live voice about THIS chat: it reads these messages, explains them in English, and drafts a reply. Only Approve sends. */}
+          {Platform.OS !== 'web' ? <Pressable accessibilityRole="button" accessibilityLabel={t('messages.voiceChat', { defaultValue: 'Talk about this chat' })} onPress={() => router.push({ pathname: '/voice', params: { threadId: thread.id } } as any)} style={styles.back}>
+            <Waveform size={24} color={palette.text} weight="bold" />
+          </Pressable> : null}
           <Pressable accessibilityRole="button" accessibilityLabel={t('messages.aiDraft', { defaultValue: 'AI draft' })} disabled={Boolean(busy)} onPress={() => { setDraftHidden(false); if (pendingDraft) setDraftOpen(true); else void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id); setDraftOpen(true); }); }} style={styles.back}>
             <Sparkle size={24} color={palette.text} />
           </Pressable>

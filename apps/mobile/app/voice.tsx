@@ -2,7 +2,7 @@ import { Pressable as EBPressable, Text as EBText, View as EBView } from 'react-
 import { router as ebRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../src/i18n';
 import { X } from 'phosphor-react-native/src/icons/X';
@@ -31,7 +31,10 @@ export default function VoiceScreen() {
   const [cc, setCc] = useState(true);
   useEffect(() => { void crumb('voice screen shown'); }, []);
   useEffect(() => { void getActiveWorkspace().then(async (w) => { setWs(w.id); const b = await getBriefing(w.id).catch(() => null); setFacts(b?.facts?.join('\n')); }).catch(() => setNoWs(true)); }, []);
-  const voice = useLiveVoice(ws, 'home', facts);
+  // Opened from a client chat: voice reads that one conversation (server-side, with her own login) instead of the day summary.
+  const { threadId } = useLocalSearchParams<{ threadId?: string }>();
+  const chatId = typeof threadId === 'string' && threadId ? threadId : undefined;
+  const voice = useLiveVoice(ws, chatId ? 'chat' : 'home', chatId ? undefined : facts, chatId);
   const close = () => { voice.stop(); if (router.canGoBack()) router.back(); else router.replace('/'); };
   const off = voice.status && !voice.status.available;
   // Display only: show the real reason voice stopped (the message from the voice code, the last voice step, and a read-only status check).
@@ -89,6 +92,7 @@ export default function VoiceScreen() {
       {voice.drafts.map((d) => <View key={d.messageId} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
         <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftTitle', 'Reply draft. Not sent yet.')}</Text>
         <Text style={[styles.draftBody, { color: palette.text }]}>{d.body}</Text>
+        {d.meaning ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftMeaning', { defaultValue: 'Means: {{text}}', text: d.meaning })}</Text> : null}
         {d.state === 'sent' ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftSent', 'Sent')}</Text>
           : d.state === 'manual' ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftManual', 'Approved. Send it from the chat, this app is not connected yet.')}</Text>
           : <View style={styles.draftRow}>
