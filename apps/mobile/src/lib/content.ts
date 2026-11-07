@@ -16,6 +16,7 @@ export interface ContentVariant {
   scheduled_for: string | null;
   status: 'draft' | 'approved' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'archived';
   live_url?: string | null;
+  capabilities_snapshot?: { imported?: boolean; preview_url?: string | null };
   /** Latest publish attempt's plain failure reason (from the API). */
   publish_error?: string | null;
   publish_error_code?: string | null;
@@ -45,8 +46,12 @@ export interface ContentReview {
   candidates: Array<{ id: string; filename: string; mediaType: string; score: number; role: string; clientName: string | null }>;
 }
 
+export function listContentPage(workspaceId: string, offset = 0) {
+  return apiFetch<ContentPost[]>(`/workspaces/${workspaceId}/content?offset=${offset}`);
+}
+
 export function listContent(workspaceId: string) {
-  return apiFetch<ContentPost[]>(`/workspaces/${workspaceId}/content`);
+  return listContentPage(workspaceId);
 }
 
 export function getContentPost(workspaceId: string, postId: string) {

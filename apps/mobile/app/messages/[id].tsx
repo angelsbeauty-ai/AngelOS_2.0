@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import VoiceScreen from '../voice';
 import { useKeyboardOpen } from '../../src/lib/useKeyboardOpen';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -51,6 +53,7 @@ export default function MessageThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [detail, setDetail] = useState<MessageThreadDetail | null>(null);
+  const detailRef = useRef(detail); detailRef.current = detail;
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [busy, setBusy] = useState<string | null>(null);
   const [reply, setReply] = useState('');
@@ -65,6 +68,17 @@ export default function MessageThreadScreen() {
   // P05: the reply bar and chips shrink the list; keep the last bubble in view above them.
   const [bottomH, setBottomH] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const voiceScroll = useRef<number | null>(null);
+  const scrollY = useRef(0);
+  const preserveVoiceScroll = useRef(false);
+  const openVoice = useCallback(() => { voiceScroll.current = scrollY.current; preserveVoiceScroll.current = true; setVoiceOpen(true); }, []);
+  useEffect(() => {
+    if (voiceOpen || !preserveVoiceScroll.current || voiceScroll.current == null) return;
+    const y = voiceScroll.current;
+    const frame = requestAnimationFrame(() => scrollRef.current?.scrollTo({ y, animated: false }));
+    return () => cancelAnimationFrame(frame);
+  }, [voiceOpen]);
   const [menuFor, setMenuFor] = useState<ClientMessage | null>(null);
   const online = useOnline();
   const outbox = useOutbox(id);
@@ -111,9 +125,10 @@ export default function MessageThreadScreen() {
         if (firstUnread.current === undefined) { const ms = next.messages ?? []; let i = ms.length; while (i > 0 && ms[i - 1].direction === 'inbound') i -= 1; firstUnread.current = ms[i]?.id ?? null; }
         void markThreadRead(ws, id).catch(() => undefined);
       } else if (firstUnread.current === undefined) firstUnread.current = null;
-    } catch { setState('error'); }
+    } catch { if (detailRef.current?.thread.id !== id) setState('error'); }
   }, [id, workspaceId]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
+  const dismissVoice = useCallback(() => { setVoiceOpen(false); void load(); }, [load]);
   // Saved replies power the suggestion chips (real, approved replies only).
   useEffect(() => {
     if (!workspaceId || saved !== null) return;
@@ -127,6 +142,7 @@ export default function MessageThreadScreen() {
   async function run(label: string, task: () => Promise<unknown>, after = true, action: 'save' | 'send' = 'save') {
     if (!workspaceId) return;
     setBusy(label);
+    if (action === 'send') preserveVoiceScroll.current = false;
     try { await task(); if (after) await load(); }
     catch (error) {
       // A refused or failed send shows the server's real reason; the draft text stays in the field.
@@ -252,6 +268,7 @@ export default function MessageThreadScreen() {
   /** A live reply still "queued" after 2 minutes never went out (older server builds left refused sends like this). */
   function stuck(m: ClientMessage) { return m.status === 'queued' && m.metadata?.delivery !== 'manual' && Date.now() - Date.parse(m.created_at) > 120_000; }
   function statusLabel(m: ClientMessage) {
+    if (m.status === 'draft') return t('voice.draftTitle', 'Reply draft. Not sent yet.');
     if (m.status === 'sent') return t('messages.stSent');
     if (m.status === 'queued' && m.metadata?.delivery === 'manual') return t('messages.stManual');
     if (busy === `retry-${m.id}` || (m.status === 'queued' && !stuck(m))) return t('messages.stSending');
@@ -260,6 +277,9 @@ export default function MessageThreadScreen() {
 
   return (
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Modal visible={voiceOpen} animationType="slide" presentationStyle="pageSheet" allowSwipeDismissal onRequestClose={dismissVoice}>
+        {voiceOpen ? <SafeAreaProvider><VoiceScreen conversationId={thread.id} onDismiss={dismissVoice} /></SafeAreaProvider> : null}
+      </Modal>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { paddingTop: insets.top, backgroundColor: C.bg, borderBottomColor: C.hair }]}>
         <View style={styles.headerRow}>
@@ -271,9 +291,9 @@ export default function MessageThreadScreen() {
             {thread.platform !== 'other' ? <BrandLogo platform={thread.platform === 'facebook' ? 'messenger' : thread.platform as any} size={18} /> : null}
           </View>
           {/* Live voice about THIS chat: it reads these messages, explains them in English, and drafts a reply. Only Approve sends. */}
-          {Platform.OS !== 'web' ? <Pressable accessibilityRole="button" accessibilityLabel={t('messages.voiceChat', { defaultValue: 'Talk about this chat' })} onPress={() => router.push({ pathname: '/voice', params: { threadId: thread.id } } as any)} style={styles.back}>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('messages.voiceChat', { defaultValue: 'Talk about this chat' })} onPress={openVoice} style={styles.back}>
             <Waveform size={24} color={palette.text} weight="bold" />
-          </Pressable> : null}
+          </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={t('messages.aiDraft', { defaultValue: 'AI draft' })} disabled={Boolean(busy)} onPress={() => { setDraftHidden(false); if (pendingDraft) setDraftOpen(true); else void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id); setDraftOpen(true); }); }} style={styles.back}>
             <Sparkle size={24} color={palette.text} />
           </Pressable>
@@ -291,7 +311,7 @@ export default function MessageThreadScreen() {
           return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
         for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } if (m.id === firstUnread.current) { items.push({ kind: 'day', key: 'unread', label: t('messages.newDivider') }); lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
         const initials = contactInitials(name);
-        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" maintainVisibleContentPosition={{ minIndexForVisible: 0 }} scrollEventThrottle={64} onScroll={(e) => { if (e.nativeEvent.contentOffset.y < 200) void loadOlder(); }} onContentSizeChange={() => { if (prepending.current) { prepending.current = false; return; } scrollRef.current?.scrollToEnd({ animated: false }); }}>
+        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onScrollBeginDrag={() => { preserveVoiceScroll.current = false; }} maintainVisibleContentPosition={{ minIndexForVisible: 0 }} scrollEventThrottle={64} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; if (!voiceOpen && e.nativeEvent.contentOffset.y < 200) void loadOlder(); }} onContentSizeChange={() => { if (preserveVoiceScroll.current && voiceScroll.current != null) { scrollRef.current?.scrollTo({ y: voiceScroll.current, animated: false }); return; } if (prepending.current) { prepending.current = false; return; } scrollRef.current?.scrollToEnd({ animated: false }); }}>
           {loadingOlder ? <ActivityIndicator style={{ marginVertical: 12 }} color={palette.muted} /> : null}
           {items.map((x) => {
             if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: C.pill, color: palette.text }]}>{x.label}</Text></View>;

@@ -1861,7 +1861,7 @@
     "title": "Instagram grid",
     "intro": "How your profile will look: scheduled posts on top, then what is already posted.",
     "empty": {
-      "grid": "No posts here yet",
+      "grid": "No posts yet",
       "reels": "No reels here yet",
       "stories": "No stories here yet"
     },
@@ -2369,7 +2369,9 @@
     "emptyTitle": "No {{name}} posts yet",
     "errBody": "Check your connection and try again.",
     "errTitle": "Posts did not load",
-    "title": "{{name}} posts"
+    "title": "{{name}} posts",
+    "loadMore": "Load more",
+    "retryPhoto": "Retry photo"
   },
   "top": {
     "create": "Create",

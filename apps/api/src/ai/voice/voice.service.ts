@@ -37,6 +37,25 @@ const VOICE_TOOLS = [
   }
 ];
 
+/** A chat session has no studio-wide read tools and can draft only in its own thread. */
+export function voiceTools(threadId?: string | null) {
+  if (!threadId) return VOICE_TOOLS;
+  return [{
+    type: 'function',
+    name: 'draft_reply',
+    description: 'Save a reply draft for this conversation only. Only the owner tapping Approve sends it.',
+    parameters: {
+      type: 'object',
+      properties: {
+        threadId: { type: 'string', enum: [threadId] },
+        body: { type: 'string', description: 'The reply in the client\'s language only. Never include the English meaning here.' },
+        meaning: { type: 'string', description: 'Plain English meaning for the owner only. Never sent to the client.' }
+      },
+      required: ['threadId', 'body', 'meaning']
+    }
+  }];
+}
+
 /** Live voice instructions. Voice is never recorded or stored and no transcript is kept. */
 export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null; context?: string | null; thread?: string | null }) {
   if (input.thread) return [
@@ -69,11 +88,12 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
 async function threadContext(supabase: ReturnType<typeof createUserSupabaseClient>, workspaceId: string, threadId: string): Promise<string> {
   const { data: t } = await supabase.from('message_threads').select('id,contact_display_name,channel:messaging_channels(provider),client:clients(display_name)').eq('workspace_id', workspaceId).eq('id', threadId).maybeSingle();
   if (!t) throw new HttpException('Conversation not found', HttpStatus.NOT_FOUND);
-  const { data: rows } = await supabase.from('client_messages').select('body,direction,sender_type,status,created_at')
+  const { data: rows, error: messagesError } = await supabase.from('client_messages').select('body,direction,sender_type,status,created_at')
     .eq('workspace_id', workspaceId).eq('thread_id', threadId).neq('status', 'cancelled').order('created_at', { ascending: false }).limit(20);
+  if (messagesError) throw new HttpException('Conversation messages could not load. Try again.', HttpStatus.BAD_GATEWAY);
   const who = (t as any).client?.display_name || (t as any).contact_display_name || 'the client';
   const lines = (rows ?? []).reverse().filter((m: any) => m.body).map((m: any) => {
-    const by = m.direction === 'inbound' ? who : m.sender_type === 'ai' && m.status !== 'sent' ? 'unsent draft' : 'studio';
+    const by = m.direction === 'inbound' ? who : ['sent', 'delivered', 'read'].includes(m.status) ? 'studio' : 'unsent draft';
     return `[${String(m.created_at ?? '').slice(0, 16).replace('T', ' ')}] ${by}: ${String(m.body).replace(/\s+/g, ' ').slice(0, 400)}`;
   });
   const jp = (rows ?? []).filter((m: any) => m.direction === 'inbound').some((m: any) => (String(m.body ?? '').match(/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/g) ?? []).length >= 2);
@@ -135,7 +155,7 @@ export class VoiceService {
     // Chat voice: read that one conversation with HER login (same row access as the chat screen). Nothing is widened.
     const thread = threadId ? await threadContext(supabase, workspaceId, threadId) : null;
 
-    if (status.provider === 'openai') return this.openaiSession(user, workspaceId, status, voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context, thread }));
+    if (status.provider === 'openai') return this.openaiSession(user, workspaceId, status, voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context, thread }), threadId);
 
     const url = process.env.LIVEKIT_URL as string;
     const apiKey = process.env.LIVEKIT_API_KEY as string;
@@ -169,12 +189,12 @@ export class VoiceService {
   }
 
   /** Mints a 2-minute OpenAI Realtime client secret. The main key never leaves the server; audio goes phone/browser <-> OpenAI directly. */
-  private async openaiSession(user: AuthUser, workspaceId: string, status: ReturnType<VoiceService['status']>, instructions: string) {
+  private async openaiSession(user: AuthUser, workspaceId: string, status: ReturnType<VoiceService['status']>, instructions: string, threadId?: string | null) {
     const model = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime';
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'OpenAI-Safety-Identifier': createHash('sha256').update(user.id).digest('hex') },
-      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 600 }, session: { type: 'realtime', model, instructions, tools: VOICE_TOOLS, audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
+      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 600 }, session: { type: 'realtime', model, instructions, tools: voiceTools(threadId), audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
     });
     if (!response.ok) throw new BadGatewayException(`Voice could not start (${response.status}).`);
     const payload = (await response.json()) as any;

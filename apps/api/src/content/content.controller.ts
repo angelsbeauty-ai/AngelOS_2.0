@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { SocialService } from './social.service';
 import { CreateCampaignDto, HashtagSetDto, LineBroadcastDto, LineDraftDto, MarkPostedDto, PlanDaysDto } from './dto/social.dto';
 import { ComposeCaptionDto } from './dto/compose-caption.dto';
@@ -35,8 +35,10 @@ export class ContentController {
   @Post('variants/:variantId/line-broadcast') lineBroadcast(@CurrentUser() user: AuthUser, @Param('workspaceId') ws: string, @Param('variantId') id: string, @Body() dto: LineBroadcastDto) { return this.social.lineBroadcast(user, ws, id, dto.confirm); }
 
   @Get()
-  list(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string) {
-    return this.content.list(user, workspaceId);
+  list(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Query('offset') offset?: string) {
+    const pageOffset = Number(offset ?? 0);
+    if (!Number.isSafeInteger(pageOffset) || pageOffset < 0) throw new BadRequestException('Choose a valid page.');
+    return this.content.list(user, workspaceId, pageOffset);
   }
 
   @Get(':contentPostId')

@@ -32,9 +32,9 @@ export function isCarousel(p: ContentPost) { return (p.media ?? []).length > 1; 
 export function isVideo(p: ContentPost) { return formatOf(p, igVariant(p)) === 'reel' || (p.media ?? []).some((m) => m.asset?.media_type === 'video'); }
 
 /** Instagram posts for a tab + filter, newest first (latest scheduled at the top, like the profile will look). */
-export function gridPosts(all: ContentPost[], tab: GridTab, filter: GridFilter): ContentPost[] {
+export function gridPosts(all: ContentPost[], tab: GridTab, filter: GridFilter, allPlatforms = false): ContentPost[] {
   const want = STATUSES[filter];
-  return all.filter((p) => igVariant(p) && tabOf(p) === tab && want.includes(stateOf(p)))
+  return all.filter((p) => (allPlatforms ? p.variants?.length : igVariant(p)) && tabOf(p) === tab && want.includes(stateOf(p)))
     .sort((a, b) => (gridDate(b)?.getTime() ?? 0) - (gridDate(a)?.getTime() ?? 0));
 }
 

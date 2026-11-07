@@ -22,14 +22,15 @@ export function withPublishErrors<T extends { variants?: any[] | null }>(post: T
 export class ContentService {
   constructor(private readonly aiProvider: AiProviderService) {}
 
-  async list(user: AuthUser, workspaceId: string) {
+  async list(user: AuthUser, workspaceId: string, offset = 0) {
     const supabase = createUserSupabaseClient(user.accessToken);
     const { data, error } = await supabase
       .from('content_posts')
       .select('*,media:content_post_media(id,position,role,asset:media_assets(id,original_filename,media_type,content_status,marketing_permission)),variants:content_variants(*,attempts:content_publish_attempts(status,error_message))')
       .eq('workspace_id', workspaceId)
       .order('updated_at', { ascending: false })
-      .limit(100);
+      .order('id', { ascending: true })
+      .range(offset, offset + 99);
     if (error) throw new InternalServerErrorException(error.message);
     return (data ?? []).map(withPublishErrors);
   }

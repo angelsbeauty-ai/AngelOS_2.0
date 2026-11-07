@@ -222,12 +222,20 @@ export class SocialSyncService implements OnModuleInit {
   /** Real posts → content_posts + one Posted variant each. No duplicates: keyed by the platform post id. */
   private async importPosts(db: Db, workspaceId: string, platform: 'facebook' | 'instagram', posts: SyncedPost[]): Promise<number> {
     if (!posts.length) return 0;
-    const { data: known, error } = await db.from('content_variants').select('provider_post_id').eq('workspace_id', workspaceId).eq('platform', platform).in('provider_post_id', posts.map((p) => p.id));
+    const { data: known, error } = await db.from('content_variants').select('id,provider_post_id,capabilities_snapshot').eq('workspace_id', workspaceId).eq('platform', platform).in('provider_post_id', posts.map((p) => p.id));
     if (error) throw new Error(error.message);
-    const seen = new Set((known ?? []).map((r: any) => String(r.provider_post_id)));
+    const seen = new Map((known ?? []).map((r: any) => [String(r.provider_post_id), r]));
     let added = 0;
     for (const p of posts) {
-      if (seen.has(p.id)) continue;
+      const existing = seen.get(p.id);
+      // Refresh expiring CDN previews on every sync, including posts imported before previews existed.
+      const snapshot = { ...(existing?.capabilities_snapshot ?? {}), imported: true, source: `sync:${platform}`, preview_url: p.previewUrl ?? null };
+      if (existing) {
+        const { error: previewError } = await db.from('content_variants').update({ capabilities_snapshot: snapshot })
+          .eq('workspace_id', workspaceId).eq('id', existing.id);
+        if (previewError) throw new Error(previewError.message);
+        continue;
+      }
       const { data: post, error: postError } = await db.from('content_posts').insert({
         workspace_id: workspaceId, title: postTitle(p.caption, platform, p.createdAt), objective: 'engagement', primary_format: p.format, status: 'published',
         source_goal: 'imported', created_at: p.createdAt, updated_at: p.createdAt
@@ -236,7 +244,7 @@ export class SocialSyncService implements OnModuleInit {
       const { error: variantError } = await db.from('content_variants').insert({
         workspace_id: workspaceId, content_post_id: post.id, platform, format: p.format, caption: p.caption, status: 'published',
         scheduled_for: p.createdAt, published_at: p.createdAt, provider_post_id: p.id, live_url: p.permalink,
-        capabilities_snapshot: { imported: true, source: `sync:${platform}` }, created_at: p.createdAt, updated_at: p.createdAt
+        capabilities_snapshot: snapshot, created_at: p.createdAt, updated_at: p.createdAt
       });
       if (variantError) { await db.from('content_posts').delete().eq('id', post.id); throw new Error(variantError.message); }
       added += 1;

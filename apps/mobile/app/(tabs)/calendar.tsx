@@ -6,9 +6,6 @@ import { useTranslation } from 'react-i18next';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
-import { Tray } from 'phosphor-react-native/src/icons/Tray';
-import { CalendarDots } from 'phosphor-react-native/src/icons/CalendarDots';
-import { SatinGlyph } from '../../src/components/SatinGlyph';
 import { CaretLeft } from 'phosphor-react-native/src/icons/CaretLeft';
 import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
 import { MagnifyingGlass } from 'phosphor-react-native/src/icons/MagnifyingGlass';
@@ -439,7 +436,7 @@ export default function CalendarTab() {
   };
 
   return <View style={{ flex: 1 }}>
-    {/* One floating row in Week/Day: Today pill, the 3-icon pill and the assistant button share a line, clear of the grid. */}
+    {/* One floating row in Week/Day: Today pill and the assistant button stay, clear of the grid. */}
     <Screen askBottom={mode !== 'month' ? 94 : undefined} onRefresh={load} scrollEnabled={!dragging} scrollY={state !== 'ready' ? undefined : mode === 'day' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') && tlDays.some((d) => key(d) === key(now)) ? Math.max(0, (now.getHours() - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') ? (8 - HOURS[0]) * HOUR_H : undefined} header={header}>
       <Animated.View {...pinch.panHandlers} style={pinchStyle} accessibilityHint={t('cal.pinchHint', 'Pinch to switch between month, week and day')}><View {...swipe.panHandlers}>
       {!online && state === 'ready' ? <Text accessibilityLiveRegion="polite" style={[styles.offline, { color: palette.text, backgroundColor: palette.fill }]}>{t('sched.offlineBar', "You're offline · showing what was last loaded")}</Text> : null}
@@ -459,11 +456,6 @@ export default function CalendarTab() {
     {dragHint ? <View pointerEvents="none" style={styles.hintWrap}><Text style={styles.hint}>{dragHint}</Text></View> : null}
     {mode !== 'month' && !dragHint ? <View pointerEvents="box-none" style={[styles.bottomBar, { right: 68 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel={t('cal.goToday', 'Go to today')} onPress={goToday} style={[styles.pill, { backgroundColor: night ? N.card : D.surface, borderColor: palette.border }]}><Text style={[styles.pillText, { color: palette.text }]}>{t('cal.today', 'Today')}</Text></Pressable>
-      <View style={[styles.pill, styles.pillPair, { backgroundColor: night ? N.card : D.surface, borderColor: palette.border }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.drafts', 'Drafts')} onPress={() => router.push('/content' as any)} style={styles.pillIcon}><Tray size={22} color={palette.icon} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('grid.preview')} onPress={() => router.push('/content/grid' as any)} style={styles.pillIcon}><SatinGlyph name="grid" size={22} color={palette.icon} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('cal.month', 'Month')} onPress={() => setView('month')} style={styles.pillIcon}><CalendarDots size={22} color={palette.icon} /></Pressable>
-      </View>
     </View> : null}
 
     <Modal visible={!!choice} transparent animationType="slide" onRequestClose={() => setChoice(null)}>
@@ -691,8 +683,6 @@ const styles = StyleSheet.create({
   hint: { overflow: 'hidden', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: N.card, color: N.text, fontFamily: tokens.font.uiSemibold, fontSize: 15 },
   bottomBar: { position: 'absolute', left: 16, right: 16, bottom: 92, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   pill: { minHeight: 48, minWidth: 48, paddingHorizontal: 20, borderRadius: 24, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
-  pillPair: { flexDirection: 'row', paddingHorizontal: 4 },
-  pillIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   pillText: { fontFamily: tokens.font.uiSemibold, fontSize: 17 },
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, backgroundColor: 'rgba(127,127,127,0.4)', marginBottom: 4 },
   offline: { fontFamily: tokens.font.uiMedium, fontSize: 14, textAlign: 'center', paddingVertical: 8, borderRadius: 10, marginBottom: 6, overflow: 'hidden' },

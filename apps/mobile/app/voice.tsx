@@ -1,8 +1,8 @@
 import { Pressable as EBPressable, Text as EBText, View as EBView } from 'react-native';
 import { router as ebRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../src/i18n';
 import { X } from 'phosphor-react-native/src/icons/X';
@@ -20,11 +20,13 @@ import { getVoiceStatus } from '../src/lib/ai';
 import { ApiError } from '../src/lib/api';
 import { D, N, tokens } from '../src/design/theme';
 import { useAppearance } from '../src/design/appearance';
+import { useInsets } from '../src/lib/insets';
 
-/** Voice (final-D2 07): top row, orb (placeholder), live caption, hint, mute + close. Voice can only draft replies; sending needs her tap. */
-export default function VoiceScreen() {
+/** Voice (final-D2 07): top row, orb, live caption, hint, mute + close. Voice can only draft replies; sending needs her tap. */
+export default function VoiceScreen({ conversationId, onDismiss }: { conversationId?: string; onDismiss?: () => void } = {}) {
   const { t } = useTranslation();
   const { palette } = useAppearance();
+  const insets = useInsets();
   const [ws, setWs] = useState<string | null>(null);
   const [facts, setFacts] = useState<string | undefined>(undefined);
   const [noWs, setNoWs] = useState(false);
@@ -33,9 +35,30 @@ export default function VoiceScreen() {
   useEffect(() => { void getActiveWorkspace().then(async (w) => { setWs(w.id); const b = await getBriefing(w.id).catch(() => null); setFacts(b?.facts?.join('\n')); }).catch(() => setNoWs(true)); }, []);
   // Opened from a client chat: voice reads that one conversation (server-side, with her own login) instead of the day summary.
   const { threadId } = useLocalSearchParams<{ threadId?: string }>();
-  const chatId = typeof threadId === 'string' && threadId ? threadId : undefined;
+  const chatId = conversationId ?? (typeof threadId === 'string' && threadId ? threadId : undefined);
   const voice = useLiveVoice(ws, chatId ? 'chat' : 'home', chatId ? undefined : facts, chatId);
-  const close = () => { voice.stop(); if (router.canGoBack()) router.back(); else router.replace('/'); };
+  const navigation = useNavigation();
+  const stop = voice.stop;
+  const stopLater = useCallback(() => {
+    setTimeout(() => { try { stop(); } catch { /* Never trap navigation on native teardown. */ } }, 0);
+  }, [stop]);
+  const close = useCallback(() => {
+    // Leave immediately. Native/audio teardown must never block a dismissal.
+    if (onDismiss) onDismiss();
+    else if (navigation.canGoBack()) navigation.goBack();
+    else if (chatId) router.replace({ pathname: '/messages/[id]', params: { id: chatId } });
+    else router.replace('/messages');
+    stopLater();
+  }, [navigation, stopLater, chatId, onDismiss]);
+  useEffect(() => {
+    if (onDismiss) return; // The in-chat Modal owns back and swipe-down.
+    return navigation.addListener('beforeRemove', stopLater);
+  }, [navigation, stopLater, onDismiss]);
+  useEffect(() => {
+    if (onDismiss) return;
+    const back = BackHandler.addEventListener('hardwareBackPress', () => { close(); return true; });
+    return () => back.remove();
+  }, [close, onDismiss]);
   const off = voice.status && !voice.status.available;
   // Display only: show the real reason voice stopped (the message from the voice code, the last voice step, and a read-only status check).
   const errKind = voiceErrorKind(voice.error);
@@ -69,14 +92,13 @@ export default function VoiceScreen() {
     : null;
   const hint = live ? t('voice.tapPause', 'Tap the orb to pause') : t('voice.tapStart', 'Tap the orb to start');
 
-  return <View style={[styles.page, { backgroundColor: palette.bg }]}>
+  return <View onAccessibilityEscape={close} style={[styles.page, { backgroundColor: palette.bg, paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 16) + 24 }]}>
     <View style={styles.topRow}>
-      {/* One close only: the big end button below. This keeps the label centred. */}
-      <View style={styles.iconBtn} />
+      <Pressable accessibilityRole="button" accessibilityLabel={t('voice.close', 'Close')} onPress={close} style={styles.iconBtn}><X size={24} color={palette.text} /></Pressable>
       <Text style={[styles.label, { color: palette.muted }]} numberOfLines={1}>{top}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel={t('voice.captions', 'Captions')} accessibilityState={{ selected: cc }} onPress={() => setCc(!cc)} style={styles.iconBtn}><ClosedCaptioning size={24} color={cc ? palette.text : palette.muted} /></Pressable>
     </View>
-    <View style={styles.center}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.center}>
       <Pressable accessibilityRole="button" accessibilityLabel={live ? t('voice.stop', 'Stop') : t('voice.start', 'Start talking')} disabled={noWs || !!off || voice.state === 'connecting'} onPress={() => (live ? voice.stop() : void voice.start())}>
         <VoiceOrb state={voice.state} dimmed={!!off || noWs} level={voice.getLevel} />
       </Pressable>
@@ -100,7 +122,7 @@ export default function VoiceScreen() {
             <Pressable accessibilityRole="button" accessibilityLabel={t('voice.draftApprove', 'Approve and send')} disabled={d.state === 'sending'} onPress={() => void voice.approveDraft(d.messageId)} style={[styles.draftBtn, { backgroundColor: palette.text }]}><Text style={[styles.settingsText, { color: palette.bg }]}>{d.state === 'sending' ? t('voice.draftSending', 'Sending…') : d.state === 'error' ? t('voice.draftRetry', 'Try again') : t('voice.draftApprove', 'Approve and send')}</Text></Pressable>
           </View>}
       </View>)}
-    </View>
+    </ScrollView>
     <View style={styles.buttons}>
       <Pressable accessibilityRole="button" accessibilityLabel={voice.muted ? t('voice.unmute', 'Unmute') : t('voice.mute', 'Mute')} accessibilityState={{ selected: voice.muted }} disabled={!live} onPress={() => voice.setMuted(!voice.muted)} style={[styles.round, styles.mute, { backgroundColor: palette.glass, borderColor: palette.border }, !live && { opacity: 0.5 }]}>
         {voice.muted ? <MicrophoneSlash size={24} color={palette.text} /> : <Microphone size={24} color={palette.text} />}
@@ -111,11 +133,11 @@ export default function VoiceScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: D.bg, paddingHorizontal: 16, paddingTop: 48, paddingBottom: 72 },
+  page: { flex: 1, backgroundColor: D.bg, paddingHorizontal: 16, paddingTop: 0, paddingBottom: 0 },
   topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   iconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   label: { flex: 1, textAlign: 'center', ...tokens.type.overline, fontFamily: tokens.font.uiSemibold, letterSpacing: 1.2, textTransform: 'uppercase', color: D.listening },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20 },
+  center: { flexGrow: 1, paddingVertical: 20, alignItems: 'center', justifyContent: 'center', gap: 20 },
   caption: { fontFamily: tokens.font.uiBold, fontSize: 24, lineHeight: 32, color: D.text, textAlign: 'center', maxWidth: 340, marginTop: 24 },
   details: { ...tokens.type.footnote, fontFamily: tokens.font.ui, textAlign: 'left', maxWidth: 340, alignSelf: 'center', borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 },
   hint: { ...tokens.type.subhead, fontFamily: tokens.font.ui, color: D.muted, textAlign: 'center' },

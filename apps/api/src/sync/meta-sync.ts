@@ -5,7 +5,7 @@
 export interface GraphError { status: number; code?: number; message: string }
 export interface SyncedMessage { id: string; fromId: string; fromName: string | null; body: string; createdAt: string }
 export interface SyncedConversation { contactId: string; contactName: string | null; messages: SyncedMessage[] }
-export interface SyncedPost { id: string; caption: string; createdAt: string; permalink: string | null; format: 'reel' | 'story' | 'carousel' | 'photo' }
+export interface SyncedPost { id: string; caption: string; createdAt: string; permalink: string | null; previewUrl?: string | null; format: 'reel' | 'story' | 'carousel' | 'photo' }
 
 type Fetch = typeof fetch;
 
@@ -117,23 +117,47 @@ export function toConversation(row: any, ownId: string, pageId: string): SyncedC
   return { contactId: String(contact.id), contactName: contact.name ?? contact.username ?? null, messages };
 }
 
+/** Meta CDN image only: a reel's poster, a carousel's first image, or a Page post's full picture. */
+export function postPreviewUrl(row: any, platform: 'facebook' | 'instagram'): string | null {
+  const first = row?.children?.data?.[0];
+  const candidate = platform === 'facebook' ? row?.full_picture
+    : row?.media_type === 'VIDEO' ? row?.thumbnail_url
+    : row?.media_type === 'CAROUSEL_ALBUM' ? (first?.media_type === 'VIDEO' ? first?.thumbnail_url : first?.media_url) ?? row?.media_url
+    : row?.media_url;
+  if (typeof candidate !== 'string') return null;
+  try { const url = new URL(candidate); return url.protocol === 'https:' && !url.searchParams.has('access_token') ? url.href : null; } catch { return null; }
+}
+
 /** Last N days of Facebook Page posts. */
 export async function fetchFacebookPosts(input: { graphBase: string; pageId: string; token: string; days: number }, fetchImpl: Fetch = fetch, now = Date.now()): Promise<SyncedPost[]> {
   const since = Math.floor((now - input.days * 86400000) / 1000);
-  const params = new URLSearchParams({ fields: 'id,message,created_time,permalink_url', since: String(since), limit: '25', access_token: input.token });
+  const params = new URLSearchParams({ fields: 'id,message,created_time,permalink_url,full_picture', since: String(since), limit: '25', access_token: input.token });
   const rows = await graphPaged(`${input.graphBase}/${input.pageId}/published_posts?${params}`, fetchImpl, 20, undefined, 500);
-  return rows.filter((p) => p?.id && p?.created_time).map((p) => ({ id: String(p.id), caption: String(p.message ?? ''), createdAt: new Date(p.created_time).toISOString(), permalink: p.permalink_url ?? null, format: 'photo' as const }));
+  return rows.filter((p) => p?.id && p?.created_time).map((p) => ({ id: String(p.id), caption: String(p.message ?? ''), createdAt: new Date(p.created_time).toISOString(), permalink: p.permalink_url ?? null, previewUrl: postPreviewUrl(p, 'facebook'), format: 'photo' as const }));
 }
 
 /** Last N days of Instagram media (newest first, stops at the cutoff). */
 export async function fetchInstagramPosts(input: { graphBase: string; igUserId: string; token: string; days: number }, fetchImpl: Fetch = fetch, now = Date.now()): Promise<SyncedPost[]> {
   const cutoff = now - input.days * 86400000;
-  const params = new URLSearchParams({ fields: 'id,caption,media_type,media_product_type,timestamp,permalink', limit: '25', access_token: input.token });
+  const params = new URLSearchParams({ fields: 'id,caption,media_type,media_product_type,timestamp,permalink,media_url,thumbnail_url', limit: '25', access_token: input.token });
   const rows = await graphPaged(`${input.graphBase}/${input.igUserId}/media?${params}`, fetchImpl, 20, (m) => Date.parse(m?.timestamp) < cutoff, 500);
-  return rows.filter((m) => m?.id && m?.timestamp).map((m) => ({
-    id: String(m.id), caption: String(m.caption ?? ''), createdAt: new Date(m.timestamp).toISOString(), permalink: m.permalink ?? null,
-    format: m.media_product_type === 'REELS' || m.media_type === 'VIDEO' ? 'reel' as const : m.media_product_type === 'STORY' ? 'story' as const : m.media_type === 'CAROUSEL_ALBUM' ? 'carousel' as const : 'photo' as const
-  }));
+  const posts: SyncedPost[] = [];
+  for (const m of rows.filter((m) => m?.id && m?.timestamp)) {
+    let previewUrl = postPreviewUrl(m, 'instagram');
+    // Keep the bulk query shallow (Meta code 1). Only ask for a carousel child when its cover is absent.
+    if (!previewUrl && m.media_type === 'CAROUSEL_ALBUM') {
+      try {
+        const params = new URLSearchParams({ fields: 'media_type,media_url,thumbnail_url', limit: '1', access_token: input.token });
+        const children = await graphPaged(`${input.graphBase}/${encodeURIComponent(m.id)}/children?${params}`, fetchImpl, 1, undefined, 1);
+        previewUrl = postPreviewUrl({ ...m, children: { data: children } }, 'instagram');
+      } catch { /* Keep importing captions; the next sync retries the unavailable cover. */ }
+    }
+    posts.push({
+      id: String(m.id), caption: String(m.caption ?? ''), createdAt: new Date(m.timestamp).toISOString(), permalink: m.permalink ?? null, previewUrl,
+      format: m.media_product_type === 'REELS' || m.media_type === 'VIDEO' ? 'reel' : m.media_product_type === 'STORY' ? 'story' : m.media_type === 'CAROUSEL_ALBUM' ? 'carousel' : 'photo'
+    });
+  }
+  return posts;
 }
 
 /** Short title for an imported post: first line of the caption. */

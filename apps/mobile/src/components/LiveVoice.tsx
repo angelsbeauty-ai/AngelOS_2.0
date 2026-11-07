@@ -24,10 +24,11 @@ export type VoiceDraft = { messageId: string; threadId: string; body: string; me
 
 const READ_TOOLS = new Set(['get_bookings', 'search_clients', 'list_threads', 'list_posts', 'get_analytics', 'get_money', 'list_services_prices', 'list_campaigns_tasks']);
 
-async function runVoiceTool(workspaceId: string, name: string, raw: string, onDraft?: (d: VoiceDraft) => void, onCard?: (c: ToolCard) => void): Promise<string> {
+async function runVoiceTool(workspaceId: string, name: string, raw: string, onDraft?: (d: VoiceDraft) => void, onCard?: (c: ToolCard) => void, chatThreadId?: string): Promise<string> {
   let args: any = {};
   try { args = raw ? JSON.parse(raw) : {}; } catch { args = {}; }
   try {
+    if (chatThreadId && name !== 'draft_reply') return JSON.stringify({ error: 'This voice session is only for the open conversation.' });
     if (name === 'look_up_studio') {
       const home = await getHomeSummary(workspaceId, 'day');
       if (args.topic === 'today') {
@@ -50,9 +51,10 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string, onDr
       const threadId = String(args.threadId ?? '');
       const body = String(args.body ?? '').trim();
       if (!threadId || !body) return JSON.stringify({ drafted: false, error: 'Missing the conversation or the reply.' });
+      const meaning = String(args.meaning ?? '').trim() || undefined;
+      if (chatThreadId && (threadId !== chatThreadId || !meaning)) return JSON.stringify({ drafted: false, error: 'Use the open conversation and include its plain English meaning.' });
       // Voice may only save a draft. Sending happens only when she taps Approve on the card.
       const result = await createMessageReply(workspaceId, threadId, body, false);
-      const meaning = String(args.meaning ?? '').trim() || undefined;
       onDraft?.({ messageId: result.message.id, threadId, body, meaning, state: 'ready' });
       return JSON.stringify({ drafted: true, sent: false, note: 'Draft saved. It is on her screen with an Approve button. It is not sent until she taps Approve.' });
     }
@@ -72,6 +74,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const pcRef = useRef<any>(null); const micRef = useRef<any>(null); const outRef = useRef<any>(null);
   const levelRef = useRef(0); const meterRef = useRef<{ stop: () => void } | null>(null);
   const mutedRef = useRef(false);
+  const generation = useRef(0);
   const [drafts, setDrafts] = useState<VoiceDraft[]>([]);
   const [cards, setCards] = useState<ToolCard[]>([]);
   const addCard = useCallback((c: ToolCard) => setCards((list) => [...list.slice(-2), c]), []);
@@ -85,16 +88,21 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const dismissDraft = (id: string) => setDrafts((list) => list.filter((x) => x.messageId !== id));
   const getLevel = useCallback(() => levelRef.current, []);
 
-  function stop() {
-    meterRef.current?.stop(); meterRef.current = null; levelRef.current = 0;
-    try { micRef.current?.getTracks?.().forEach((t: any) => t.stop()); } catch { /* ignore */ }
-    try { pcRef.current?.close?.(); } catch { /* ignore */ }
-    if (outRef.current) { outRef.current.srcObject = null; outRef.current.remove?.(); }
-    pcRef.current = null; micRef.current = null; outRef.current = null;
+  const stop = useCallback(() => {
+    // Invalidate pending session/mic requests as well as an established call.
+    generation.current += 1;
+    const meter = meterRef.current; const mic = micRef.current; const peer = pcRef.current; const out = outRef.current;
+    meterRef.current = null; micRef.current = null; pcRef.current = null; outRef.current = null;
+    levelRef.current = 0;
+    // Detach first: native close events can arrive synchronously and re-enter cleanup.
+    try { meter?.stop(); } catch { /* continue cleanup */ }
+    try { mic?.getTracks?.().forEach((t: any) => t.stop()); } catch { /* continue cleanup */ }
+    try { peer?.close?.(); } catch { /* continue cleanup */ }
+    try { if (out) { out.srcObject = null; out.remove?.(); } } catch { /* continue cleanup */ }
     void stopVoiceAudio().catch(() => undefined);
     setMutedState(false); mutedRef.current = false;
     setState('idle');
-  }
+  }, []);
 
   function setMuted(m: boolean) {
     setMutedState(m); mutedRef.current = m;
@@ -107,29 +115,37 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       .then((session) => setStatus({ available: session.available, reason: session.reason }))
       .catch(() => setStatus({ available: false, reason: 'Voice status is not available right now.' }));
     return () => stop();
-  }, [workspaceId]);
+  }, [workspaceId, stop]);
 
-  async function startOpenAI(secret: string) {
+  async function startOpenAI(secret: string, run: number) {
+    const ensureCurrent = () => { if (generation.current !== run) throw new Error('Voice session closed.'); };
     const g: any = globalThis as any;
     await crumb('webrtc load');
+    ensureCurrent();
     const audio = await startVoiceAudio();
+    ensureCurrent();
     if (!audio.ok) throw new Error(audio.error ?? 'Could not start the microphone. Check Settings.');
     if (!g.RTCPeerConnection || !g.navigator?.mediaDevices?.getUserMedia) throw new Error('This device does not support live voice.');
     await crumb('new peer');
+    ensureCurrent();
     const peer = new g.RTCPeerConnection({ iceServers: [] });
     pcRef.current = peer;
     if (Platform.OS === 'web') { const el = g.document.createElement('audio'); el.autoplay = true; outRef.current = el; peer.ontrack = (e: any) => { el.srcObject = e.streams[0]; }; }
     // iOS: open the play-and-record audio session before asking for the mic, or the track comes back silent.
     setLoudSpeaker(true);
     await crumb('mic');
+    ensureCurrent();
     let stream: any;
     try { stream = await g.navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
     catch { throw new Error('Microphone is off for AngelOS. Turn it on in Settings, then try again.'); }
+    if (generation.current !== run) { stream.getTracks().forEach((t: any) => t.stop()); ensureCurrent(); }
     if (mutedRef.current) stream.getTracks().forEach((t: any) => { t.enabled = false; });
     micRef.current = stream;
     await crumb('add track');
+    ensureCurrent();
     stream.getTracks().forEach((t: any) => peer.addTrack(t, stream));
     await crumb('data channel');
+    ensureCurrent();
     const dc = peer.createDataChannel('oai-events', { ordered: true, protocol: 'oai' });
     const answered = new Set<string>();
     dc.onmessage = (e: any) => {
@@ -137,10 +153,10 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
         const ev = JSON.parse(e.data);
         if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) setCaption(ev.transcript.trim());
         const call = voiceToolCall(ev);
-        if (!call || !workspaceId || answered.has(call.callId)) return;
+        if (generation.current !== run || !call || !workspaceId || answered.has(call.callId)) return;
         answered.add(call.callId);
         const studioId = workspaceId;
-        void runVoiceTool(studioId, call.name, call.args, addDraft, addCard).then((output) => {
+        void runVoiceTool(studioId, call.name, call.args, addDraft, addCard, threadId).then((output) => {
           if (dc.readyState !== 'open') return;
           dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
           dc.send(JSON.stringify({ type: 'response.create' }));
@@ -148,23 +164,35 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       } catch { /* ignore */ }
     };
     await crumb('offer');
+    ensureCurrent();
     const offer = await peer.createOffer({ offerToReceiveAudio: true });
+    ensureCurrent();
     await peer.setLocalDescription(offer);
+    ensureCurrent();
     await crumb('openai call');
+    ensureCurrent();
     const res = await fetch('https://api.openai.com/v1/realtime/calls', { method: 'POST', body: offer.sdp, headers: { Authorization: `Bearer ${secret}`, 'Content-Type': 'application/sdp' } });
+    ensureCurrent();
     if (!res.ok) throw new Error(`Voice could not connect (${res.status}).`);
     const answer = await res.text();
+    ensureCurrent();
     await crumb('answer');
+    ensureCurrent();
     await peer.setRemoteDescription(Platform.OS === 'web' ? { type: 'answer', sdp: answer } : new g.RTCSessionDescription({ type: 'answer', sdp: answer }));
+    ensureCurrent();
     await crumb('meter');
+    ensureCurrent();
     meterRef.current = startMeter({ pc: peer, mic: stream, out: () => outRef.current?.srcObject ?? null }, levelRef, mutedRef);
-    peer.addEventListener?.('connectionstatechange', () => { if (['failed', 'closed'].includes(peer.connectionState)) stop(); });
+    peer.addEventListener?.('connectionstatechange', () => { if (pcRef.current === peer && ['failed', 'closed'].includes(peer.connectionState)) stop(); });
     await crumb('live');
+    ensureCurrent();
     setLoudSpeaker(true);
     setState('live');
   }
 
   async function start() {
+    stop();
+    const run = generation.current;
     installCrashGuard();
     setError(null);
     setState('connecting');
@@ -172,12 +200,15 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       if (!workspaceId) throw new Error('No studio selected.');
       await crumb('session');
       const session = await createVoiceSession(workspaceId, screen, context, threadId);
+      if (generation.current !== run) return;
       setStatus({ available: session.available, reason: session.reason });
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (!session.clientSecret) throw new Error('Voice is not available right now.');
-      await startOpenAI(session.clientSecret);
+      await startOpenAI(session.clientSecret, run);
     } catch (e) {
+      if (generation.current !== run) return;
       await crumb(`caught: ${e instanceof Error ? e.message : String(e)}`);
+      if (generation.current !== run) return;
       stop();
       setState('error');
       setError(e instanceof Error ? e.message : 'Voice could not start. Check microphone permission in Settings.');

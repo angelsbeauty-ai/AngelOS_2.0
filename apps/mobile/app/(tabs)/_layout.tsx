@@ -48,7 +48,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="analytics" options={{ ...studio, title: t('tabs.analytics'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><TabGlyph name="analytics" active={focused} color={focused ? palette.text : palette.muted} /></TabIcon> }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: ({ color, focused }) => <TabIcon active={focused}><TabGlyph name="profile" active={focused} color={focused ? palette.text : palette.muted} /></TabIcon> }} />
       {/* Tab bar: Home, Messages, Calendar, Analytics, Profile (locked 2026-10-16). Academy is not part of V1. */}
-      {/* Moved out of the tab bar (NAV V1): Clients lives under Profile, Social posts under Calendar. Routes stay reachable. */}
+      {/* Moved out of the tab bar (NAV V1): Clients lives under Profile, Social posts live in Analytics → Profile pages. Routes stay reachable. */}
       <Tabs.Screen name="clients" options={{ href: null, title: t('tabs.clients') }} />
       <Tabs.Screen name="social" options={{ href: null, title: t('tabs.social') }} />
     </Tabs>

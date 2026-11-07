@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import Svg, { Circle, G, Polygon, Polyline } from 'react-native-svg';
 import { CaretDown } from 'phosphor-react-native/src/icons/CaretDown';
@@ -11,7 +11,7 @@ import { Skeleton, screenHeader, SupportText } from '../../src/components/ui';
 import { PostThumb } from '../../src/components/PostThumb';
 import { BrandLogo } from '../../src/components/BrandBadge';
 import { getInsights, PLATFORM_NAME, type InsightCard, type Insights } from '../../src/lib/social';
-import { listContent, contentPostDate, type ContentPost } from '../../src/lib/content';
+import ProfileFeed from '../../src/components/ProfileFeed';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { tokens, D } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
@@ -29,20 +29,20 @@ export default function AnalyticsScreen() {
   const nc = look === 'night' ? { backgroundColor: palette.glass, borderColor: palette.border, shadowOpacity: 0, ...palette.gloss } : null;
   const { t, i18n } = useTranslation();
   const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
-  const [view, setView] = useState<Pane>('analytics');
+  const params = useLocalSearchParams<{ pane?: string }>();
+  const [view, setView] = useState<Pane>(params.pane === 'profile' ? 'profile' : 'analytics');
+  useEffect(() => { if (params.pane === 'profile') setView('profile'); }, [params.pane]);
+  const [feedRefresh, setFeedRefresh] = useState(0);
   const [plat, setPlat] = useState<Plat>('all');
   const [ws, setWs] = useState<string | null>(null);
   const [data, setData] = useState<Insights | null>(null);
-  const [posts, setPosts] = useState<ContentPost[]>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'nostudio'>('loading');
   const [tab, setTab] = useState<'views' | 'interactions' | 'follows'>('views');
   const [pickOpen, setPickOpen] = useState(false);
   const load = useCallback(async (p: Plat = plat) => {
     try {
       const w = await getActiveWorkspace(); setWs(w.id);
-      const [ins, list] = await Promise.all([getInsights(w.id, p), listContent(w.id).catch(() => [] as ContentPost[])]);
-      setData(ins);
-      setPosts(list.filter((x) => x.status !== 'archived').sort((a, b) => (contentPostDate(b)?.getTime() ?? 0) - (contentPostDate(a)?.getTime() ?? 0)));
+      setData(await getInsights(w.id, p));
       setState('ready');
     }
     catch (e) { setState(isNoWorkspace(e) ? 'nostudio' : 'error'); }
@@ -57,7 +57,7 @@ export default function AnalyticsScreen() {
   const noAccounts = state === 'ready' && data && !data.connected.length;
   const noData = state === 'ready' && data && data.connected.length > 0 && h == null;
 
-  return <Screen onRefresh={() => load()}>
+  return <Screen onRefresh={() => view === 'profile' ? setFeedRefresh((n) => n + 1) : load()}>
     <View style={[styles.seg, look === 'night' && { backgroundColor: 'rgba(255,255,255,0.06)' }]} accessibilityRole="tablist">
       {(['analytics', 'profile'] as const).map((v) => <Pressable key={v} accessibilityRole="tab" accessibilityState={{ selected: view === v }} onPress={() => setView(v)} style={[styles.segItem, view === v && styles.segOn, view === v && look === 'night' && { backgroundColor: 'rgba(255,255,255,0.16)' }]}>
         <Text style={[styles.segText, look === 'night' && { color: palette.text }, view !== v && { color: look === 'night' ? palette.muted : D.text2 }]}>{v === 'analytics' ? t('an2.analytics') : t('an2.profilePages')}</Text></Pressable>)}
@@ -67,15 +67,7 @@ export default function AnalyticsScreen() {
       <View style={{ gap: 12, paddingTop: 8 }}>
         <Text style={[styles.headline, nt]}>{t('an2.profilePages')}</Text>
         <SupportText>{t('an2.feedNote')}</SupportText>
-        {state === 'loading' ? <Skeleton rows={2} height={80} /> : null}
-        {!posts.length && state === 'ready' ? <SupportText>{t('an2.noPosts')}</SupportText> : null}
-        {posts.slice(0, 12).map((p) => <Pressable key={p.id} onPress={() => router.push(`/content/${p.id}` as any)} style={[styles.card, { width: '100%', minHeight: 0, flexDirection: 'row', alignItems: 'center', gap: 12 }, nc]}>
-          <PostThumb workspaceId={ws} post={p} size={56} radius={12} />
-          <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[styles.cardTitle, nt, { minHeight: 0 }]}>{p.title || p.variants?.[0]?.caption || t('an2.post')}</Text>
-            <Text style={[styles.muted, nm]}>{contentPostDate(p)?.toLocaleDateString(locale) ?? ''}</Text>
-          </View>
-        </Pressable>)}
+        <ProfileFeed reloadKey={feedRefresh} />
       </View>
     ) : <>
     <View style={screenHeader.row}>
@@ -114,7 +106,7 @@ export default function AnalyticsScreen() {
       </View>)}</View>
 
       <View style={styles.topHead}><Text style={[styles.h2, nt]}>{t('ins.topBy', 'Top content by')} {tab === 'views' ? t('ins.viewsLc', 'views') : tab === 'interactions' ? t('ins.interLc', 'interactions') : t('ins.followsLc', 'follows')}</Text>
-        <Pressable onPress={() => router.push({ pathname: '/calendar' } as any)}><Text style={[styles.seeAll, nt]}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
+        <Pressable onPress={() => setView('profile')}><Text style={[styles.seeAll, nt]}>{t('ins.seeAll', 'See all')}</Text></Pressable></View>
       <View style={styles.tabs}>{(['views', 'interactions', 'follows'] as const).map((k) => <Pressable key={k} onPress={() => setTab(k)} style={[styles.tab, nc, tab === k && styles.tabOn, tab === k && look === 'night' && { backgroundColor: '#F4F4F5', borderColor: '#F4F4F5' }]}><Text style={[styles.tabText, nt, tab === k && { color: look === 'night' ? '#151515' : '#FFFFFF' }]}>{k === 'views' ? t('ins.views', 'Views') : k === 'interactions' ? t('ins.interShort', 'Interactions') : t('ins.follows', 'Follows')}</Text></Pressable>)}</View>
       {top.length ? <View style={styles.tiles}>{top.slice(0, 3).map((p) => <Pressable key={p.variantId} style={[styles.tile, look === 'night' && { backgroundColor: palette.glass }]} onPress={() => p.post?.id && router.push(`/content/${p.post.id}` as any)}>
         {p.post ? <PostThumb workspaceId={ws} post={p.post} size={112} radius={12} /> : <View style={[styles.tileBlank]} />}

@@ -2369,7 +2369,9 @@
     "emptyTitle": "{{name}}の投稿はまだないよ",
     "errBody": "接続を確認して、もう一度試してね。",
     "errTitle": "投稿を読み込めなかったよ",
-    "title": "{{name}}の投稿"
+    "title": "{{name}}の投稿",
+    "loadMore": "もっと見る",
+    "retryPhoto": "写真を再読み込み"
   },
   "top": {
     "create": "作成",
