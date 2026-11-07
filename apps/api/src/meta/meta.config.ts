@@ -13,6 +13,8 @@
 export interface MetaConfig {
   publishingEnabled: boolean; messagingEnabled: boolean; sendEnabled: boolean;
   appSecret?: string; verifyToken?: string; pageId?: string; pageToken?: string; igUserId?: string; tokenExpiresAt?: string;
+  /** Set when the connected Facebook Page belongs to another brand (e.g. the Academy): Facebook send/publish stay off. */
+  pageBlockedReason?: string;
   graphBase: string;
 }
 const on = (v?: string) => String(v ?? '').trim().toLowerCase() === 'true';

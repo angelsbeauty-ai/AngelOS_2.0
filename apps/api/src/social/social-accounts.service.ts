@@ -1,3 +1,4 @@
+import { guardPageBrand } from '../meta/meta-workspace-config';
 import { BadRequestException, ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import type { AuthUser } from '../auth/auth-user';
@@ -112,7 +113,7 @@ export class SocialAccountsService {
     if (!row) return base;
     if ((row.status !== 'connected' && row.status !== 'needs_reconnect') || !row.page_token_enc) return { ...base, pageToken: undefined, pageId: undefined, igUserId: undefined };
     try {
-      return { ...base, pageId: row.page_id, igUserId: row.ig_user_id ?? undefined, pageToken: decryptToken(row.page_token_enc), tokenExpiresAt: row.token_expires_at ?? undefined };
+      return guardPageBrand({ ...base, pageId: row.page_id, igUserId: row.ig_user_id ?? undefined, pageToken: decryptToken(row.page_token_enc), tokenExpiresAt: row.token_expires_at ?? undefined }, row.page_name);
     } catch (e) {
       this.logger.warn(`Meta token could not be opened for a workspace: ${e instanceof Error ? e.message : 'unknown'}`);
       return { ...base, pageToken: undefined, pageId: undefined, igUserId: undefined };

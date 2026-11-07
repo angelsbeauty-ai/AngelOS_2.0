@@ -122,7 +122,10 @@ export class SocialPublisherService {
     const now = new Date().toISOString();
     if (!already) {
       await service.from('content_publish_attempts').update(o.status === 'published'
-        ? { status: 'published', provider_response: o.raw ?? null, error_message: null, verification: { verified: true, transport: `auto-${variant.platform}`, providerPostId: o.providerPostId ?? null, verifiedAt: now } }
+        ? { status: 'published', provider_response: o.raw ?? null, error_message: null, verification: (o.raw as any)?.transport === 'postiz-scheduled'
+          // Postiz holds it and posts it itself; AngelOS has no per-post check, so this is handed off, not proven live.
+          ? { verified: false, transport: `postiz-${variant.platform}`, providerPostId: o.providerPostId ?? null, handedOffAt: now, note: 'Scheduled at Postiz; not confirmed live by AngelOS.' }
+          : { verified: true, transport: `auto-${variant.platform}`, providerPostId: o.providerPostId ?? null, verifiedAt: now } }
         : { status: o.status, provider_response: o.raw ?? null, error_message: (o.reason ?? 'Failed').slice(0, 500) }).eq('workspace_id', ws).eq('idempotency_key', `content:${variant.id}`);
     }
     await service.from('content_variants').update(o.status === 'published'

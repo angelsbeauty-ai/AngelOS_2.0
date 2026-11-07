@@ -9,6 +9,8 @@ import type { ReviewContentMediaDto } from './dto/review-content-media.dto';
 import type { UpdateContentVariantDto } from './dto/update-content-variant.dto';
 import { PostizPublishingAdapter, postizReady, publishRoute } from './postiz-publishing.adapter';
 import { metaConfigForWorkspace } from '../meta/meta-workspace-config';
+import { LineMessagingAdapter } from '../messaging/line-messaging.adapter';
+import { lineConfigForWorkspace } from '../messaging/line-workspace-config';
 import { MetaPublishingAdapter, metaPublishingReady } from '../meta/meta-publishing.adapter';
 
 /** Adds the plain failure reason (latest content_publish_attempts.error_message) and needs_check to each variant. */
@@ -385,7 +387,12 @@ export class ContentService {
     const post = (variant as any).post;
     if (!['approved','scheduled','publishing','failed'].includes(post?.status)) throw new ConflictException('Content must be approved before publishing');
     if (!['approved','scheduled','publishing','failed'].includes(variant.status)) throw new ConflictException('This platform version is not approved for publishing');
-    const live = metaPublishingReady(variant.platform);
+    // Each platform posts through its real route: Meta (studio's own connection), Postiz (TikTok/Threads) or LINE broadcast.
+    const platform = String(variant.platform).replace(/^instagram_.*/, 'instagram');
+    const route = platform === 'line' ? 'line' : publishRoute(platform);
+    const metaCfg = route === 'meta' ? await metaConfigForWorkspace(workspaceId) : undefined;
+    const lineAdapter = route === 'line' ? new LineMessagingAdapter(await lineConfigForWorkspace(workspaceId)) : undefined;
+    const live = route === 'meta' ? metaPublishingReady(platform, metaCfg) : route === 'postiz' ? postizReady() : route === 'line' ? lineAdapter!.status().ready : false;
     // S12/O22: no demo publisher. Not connected → a clear 409 the phone shows as "Connect … first"; never a fake post.
     if (!live) throw new ConflictException({ statusCode: 409, code: 'not_connected', platform: variant.platform, message: 'This account is not connected, so nothing was posted.' });
 
@@ -416,8 +423,14 @@ export class ContentService {
     let imageUrl: string | undefined;
     const photo = assets.find((a: any) => a.media_type === 'image' && a.storage_path);
     if (photo) { const signed = await service.storage.from(photo.storage_bucket ?? 'media').createSignedUrl(photo.storage_path, 3600); imageUrl = signed.data?.signedUrl; }
-    const publisher = new MetaPublishingAdapter();
-    const result = await publisher.publish({ platform: variant.platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey, imageUrl });
+    const input = { platform: variant.platform, format: variant.format, caption: variant.caption, hook: variant.hook, cta: variant.cta, hashtags: variant.hashtags ?? [], scheduledFor: variant.scheduled_for, idempotencyKey, imageUrl };
+    let result: { status: string; providerPostId?: string; liveUrl?: string; raw?: Record<string, unknown> | unknown; error?: string };
+    if (route === 'postiz') result = await new PostizPublishingAdapter().publish(input);
+    else if (route === 'line') {
+      const text = [variant.caption, (variant.hashtags ?? []).join(' ')].filter(Boolean).join('\n\n');
+      const r = await lineAdapter!.broadcast(text, idempotencyKey);
+      result = r.status === 'sent' ? { status: 'published', providerPostId: r.externalMessageId, raw: r.raw } : { status: 'failed', error: r.error ?? 'LINE broadcast failed. Nothing was sent.', raw: r.raw };
+    } else result = await new MetaPublishingAdapter(metaCfg).publish(input);
     if (result.status !== 'published') {
       await service.from('content_publish_attempts').update({ status: result.status === 'failed' ? 'failed' : 'unknown', provider_response: result.raw ?? null, error_message: result.error ?? null }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
       await service.from('content_variants').update({ status: 'failed', updated_at: new Date().toISOString() }).eq('id', variant.id);
@@ -426,7 +439,7 @@ export class ContentService {
     }
 
     const publishedAt = new Date().toISOString();
-    const verification = { verified: true, transport: `meta-${variant.platform}`, providerPostId: result.providerPostId, verifiedAt: publishedAt };
+    const verification = { verified: true, transport: `${route}-${variant.platform}`, providerPostId: result.providerPostId, verifiedAt: publishedAt };
     await service.from('content_publish_attempts').update({ status: 'published', provider_response: result.raw ?? null, verification, error_message: null }).eq('workspace_id', workspaceId).eq('idempotency_key', idempotencyKey);
     const { data: publishedVariant, error: updateError } = await service.from('content_variants').update({ status: 'published', provider_post_id: result.providerPostId, live_url: result.liveUrl, published_at: publishedAt, updated_at: publishedAt }).eq('id', variant.id).select('*').single();
     if (updateError || !publishedVariant) throw new InternalServerErrorException(updateError?.message ?? 'Could not finalize published content');

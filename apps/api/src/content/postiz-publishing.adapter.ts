@@ -18,7 +18,9 @@ export function publishRoute(platform: string): PublishRoute {
 
 export interface ScheduleResult { ok: boolean; providerPostId?: string; error?: string; code?: 'not_configured' | 'no_channel' | 'auth' | 'provider'; raw?: unknown }
 
-type Integration = { id: string; identifier: string; disabled?: boolean };
+type Integration = { id: string; identifier: string; disabled?: boolean; name?: string; profile?: string };
+/** Never post to another brand's account (Angel's Beauty Academy is separate). */
+const otherBrand = (x: Integration) => /academy|アカデミー/i.test(`${x.name ?? ''} ${x.profile ?? ''}`);
 
 const TYPE: Record<string, string> = {
   instagram: 'instagram',
@@ -26,6 +28,13 @@ const TYPE: Record<string, string> = {
   tiktok: 'tiktok',
   threads: 'threads'
 };
+
+/** Short provider reason for the phone (no keys, max 160 chars). */
+function providerMessage(json: any): string {
+  const m = json?.message ?? json?.error?.message ?? json?.error;
+  const t = Array.isArray(m) ? m.join('; ') : typeof m === 'string' ? m : '';
+  return t ? `: ${t.slice(0, 160)}` : '';
+}
 
 export function postizReady(env: NodeJS.ProcessEnv = process.env): boolean {
   return Boolean(env.POSTIZ_API_KEY?.trim());
@@ -48,7 +57,7 @@ export class PostizPublishingAdapter implements SocialPublishingAdapter {
     if (!want) return null;
     const r = await this.call('/integrations');
     if (!r.ok || !Array.isArray(r.json)) return null;
-    const rows = r.json as Integration[];
+    const rows = (r.json as Integration[]).filter((x) => !otherBrand(x));
     return rows.find((x) => x.identifier === want && !x.disabled)
       ?? rows.find((x) => x.identifier === `${want}-standalone` && !x.disabled)
       ?? null;
@@ -72,7 +81,7 @@ export class PostizPublishingAdapter implements SocialPublishingAdapter {
     const integration = await this.integrationFor(platform);
     if (!integration) return { ok: false, code: 'no_channel', error: `No connected ${platform} account yet.` };
     const r = await this.call('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.body('schedule', input.scheduledFor, integration, platform, input)) });
-    if (!r.ok) return { ok: false, code: r.status === 401 ? 'auth' : 'provider', error: `Scheduling failed (${r.status})`, raw: r.json };
+    if (!r.ok) return { ok: false, code: r.status === 401 ? 'auth' : 'provider', error: `Scheduling failed (${r.status}${providerMessage(r.json)})`, raw: r.json };
     const first = Array.isArray(r.json) ? r.json[0] : r.json;
     const id = String(first?.postId ?? first?.id ?? '');
     return id ? { ok: true, providerPostId: id, raw: { integration: integration.id } } : { ok: false, code: 'provider', error: 'Scheduling returned no post id', raw: r.json };
@@ -102,8 +111,11 @@ export class PostizPublishingAdapter implements SocialPublishingAdapter {
 
     const body = this.body('now', new Date().toISOString(), integration, platform, input);
     const r = await this.call('/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) return { status: 'failed', error: `It didn't post (error ${r.status}). Tap Try again.`, raw: r.json };
+    if (!r.ok) return { status: 'failed', error: `It didn't post (error ${r.status}${providerMessage(r.json)}). Tap Try again.`, raw: r.json };
     const first = Array.isArray(r.json) ? r.json[0] : r.json;
-    return { status: 'published', providerPostId: String(first?.postId ?? first?.id ?? ''), raw: { transport: 'postiz', integration: integration.id } };
+    const id = String(first?.postId ?? first?.id ?? '');
+    // No post id = no proof Postiz took it. Never report that as posted.
+    if (!id) return { status: 'failed', error: 'The posting service gave no post id, so this was not confirmed. Check TikTok/Threads before trying again.', raw: r.json };
+    return { status: 'published', providerPostId: id, raw: { transport: 'postiz', integration: integration.id } };
   }
 }
