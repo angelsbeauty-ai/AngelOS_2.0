@@ -17,6 +17,12 @@ import { Heartbeat } from 'phosphor-react-native/src/icons/Heartbeat';
 import { Key } from 'phosphor-react-native/src/icons/Key';
 import { CreditCard } from 'phosphor-react-native/src/icons/CreditCard';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
+import { Scissors } from 'phosphor-react-native/src/icons/Scissors';
+import { ChartLine } from 'phosphor-react-native/src/icons/ChartLine';
+import { Users } from 'phosphor-react-native/src/icons/Users';
+import { CurrencyJpy } from 'phosphor-react-native/src/icons/CurrencyJpy';
+import { Clock } from 'phosphor-react-native/src/icons/Clock';
+import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
 import { AskInline, Screen } from '../../src/components/Screen';
 import { screenHeader, Skeleton, SupportText, Button } from '../../src/components/ui';
 import { Chip, ROSE, SettingsGroup, SettingsRow } from '../../src/components/SettingsList';
@@ -108,7 +114,16 @@ export default function ProfileScreen() {
       <SettingsRow last icon={<Translate {...ink} />} title={t('pf.language')} value={i18n.language === 'ja' ? '日本語' : 'English'} onPress={() => setLangOpen(true)} />
     </SettingsGroup>
 
-    {/* AngelOS V1: Clients, Money, Tasks, New business, Services, Business hours, Days off and Automations are hidden (code kept). */}
+    {/* New business and Automations stay hidden in V1 (code kept). */}
+    {owner ? <SettingsGroup title={t('pf.business')}>
+      <SettingsRow icon={<Users {...ink} />} title={t('tabs.clients')} onPress={() => router.push('/clients')} />
+      <SettingsRow icon={<CurrencyJpy {...ink} />} title={t('pf.money')} onPress={() => router.push('/finance')} />
+      <SettingsRow icon={<ListChecks {...ink} />} title={t('pf.tasks')} onPress={() => router.push('/tasks' as any)} />
+      <SettingsRow icon={<Scissors {...ink} />} title={t('pf.services')} onPress={() => router.push('/services')} />
+      <SettingsRow icon={<Clock {...ink} />} title={t('pf.hours')} onPress={() => router.push('/business-hours' as any)} />
+      <SettingsRow last icon={<Clock {...ink} />} title={t('pf.daysOff')} onPress={() => router.push('/time-off' as any)} />
+    </SettingsGroup> : null}
+
     {owner ? <SettingsGroup title={t('pf.app')}>
       <SettingsRow icon={<Link {...ink} />} title={t('pf.connected')} value={connected} onPress={() => router.push('/content/accounts' as any)} />
       <SettingsRow icon={<Robot {...ink} />} title={t('pf.aiAssistant')} onPress={() => router.push('/assistant' as any)} />

@@ -51,7 +51,7 @@ const mon = (d: Date) => (d.getDay() + 6) % 7;
 const addD = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 type PostItem = { kind: 'post'; p: ContentPost; at: Date; platforms: string[] };
 /** AngelOS V1: bookings are not part of V1, so appointments are not drawn and cannot be created here (posts, tasks and days off stay). */
-const V1_BOOKINGS = false;
+const V1_BOOKINGS = true;
 type Item = { kind: 'booking'; a: CalendarAppointment; at: Date; end: Date } | PostItem;
 const FS = Math.min(1.6, Math.max(1, PixelRatio.getFontScale()));
 const HOURS = Array.from({ length: 24 }, (_, i) => i); const HOUR_H = Math.round(52 * FS); const GUTTER = 48;
