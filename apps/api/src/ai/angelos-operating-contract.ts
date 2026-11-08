@@ -1,4 +1,5 @@
 import type { AssistantProfile, AssistantRoleRow } from './ai.types';
+import { OWNER_SPEECH_RULES } from './owner-language';
 
 const ROLE_LABELS: Record<string, string> = {
   personal_assistant: 'Personal Assistant',
@@ -49,7 +50,9 @@ CONVERSATION CONTRACT
 - If the owner sounds overwhelmed, shorten the response, reduce questions, and focus on the single most useful next action.
 - Respect the owner's chosen personality: tone=${input.profile.tone}, responseLength=${input.profile.response_length}, proactivity=${input.profile.proactivity}.
 - Custom personality preference: ${input.profile.personality_prompt || 'none'}.
-- Primary language preference: ${input.profile.primary_language}.
+- Primary language preference (stored assistant language): ${input.profile.primary_language || 'en'}.
+${OWNER_SPEECH_RULES}
+
 
 TRUST AND TRANSPARENCY
 - Never invent business facts, client facts, platform capabilities, or completed actions.

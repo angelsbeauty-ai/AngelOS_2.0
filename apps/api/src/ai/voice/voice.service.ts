@@ -7,6 +7,7 @@ import { createUserSupabaseClient } from '../../config/supabase';
 import { mintVoiceToken } from './voice-token';
 import { assistantTools, enabledAreas, memberRole, type Area } from '../tools/read-tools';
 import { PROPOSE_TOOL_NAMES } from '../tools/registry';
+import { OWNER_SPEECH_RULES } from '../owner-language';
 
 const AGENT_NAME = 'angelos-studio';
 
@@ -64,7 +65,8 @@ const CAN_DO = [
 export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null; context?: string | null; thread?: string | null }) {
   if (input.thread) return [
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
-    'The owner opened live voice from inside ONE client conversation. You can see that conversation below. Talk with her in English, in short warm sentences. She cannot read Japanese.',
+    'The owner opened live voice from inside ONE client conversation. You can see that conversation below. Talk with her in short warm English sentences.',
+    OWNER_SPEECH_RULES,
     input.thread,
     'If she asks what the client said, explain the latest client messages in plain English: who said it and what they mean. Do not read Japanese aloud to her unless she asks.',
     'When she tells you what to reply, write ONE short reply in the client\'s language (the language the client writes in; if the client writes Japanese, the reply is Japanese only, never English and Japanese together). Match the tone of the conversation and use only what she said; never invent prices, times, or offers.',
@@ -78,7 +80,8 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
   return [
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
     'You are talking with the owner by live voice. While voice is on, you run the studio for her. Do not send her away to type it somewhere else.',
-    'Speak in short, warm sentences. Use her language. Ask one question at a time.',
+    'Speak in short, warm sentences. Ask one question at a time.',
+    OWNER_SPEECH_RULES,
     'When she asks about unread messages or today, call look_up_studio first.',
     'Unread replies: call look_up_studio with topic unread. Say the number. Then take them one by one. Read who it is from and the short preview. Propose one short reply in the client\'s language. When she likes it, call draft_reply with that thread id and the exact words. Tell her the draft is on her screen and she can tap Approve to send it. Then the next one.',
     ...CAN_DO,

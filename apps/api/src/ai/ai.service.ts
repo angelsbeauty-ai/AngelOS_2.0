@@ -5,6 +5,7 @@ import { createServiceSupabaseClient, createUserSupabaseClient } from '../config
 import { PROPOSE_TOOL_NAMES, planTool, proposalFromArgs, type PlannedTool } from './tools/registry';
 import { AssistantToolsService } from './tools/assistant-tools.service';
 import { buildOperatingInstructions } from './angelos-operating-contract';
+import { assistantLanguageFromUtterance } from './owner-language';
 import { AiProviderService } from './ai-provider.service';
 import { StyleLearningService } from './style/style-learning.service';
 import { BrainService } from './brain/brain.service';
@@ -174,6 +175,11 @@ export class AiService {
 
     if (workspaceResult.error || !workspaceResult.data) throw new NotFoundException('Workspace not found');
     if (profileResult.error || !profileResult.data) throw new NotFoundException('Assistant profile not found');
+    // Honor "talk in English" immediately and remember it as her assistant language.
+    if (assistantLanguageFromUtterance(message) === 'en' && (profileResult.data as AssistantProfile).primary_language !== 'en') {
+      await supabase.from('ai_assistant_profiles').update({ primary_language: 'en', updated_at: new Date().toISOString() }).eq('workspace_id', workspaceId);
+      (profileResult.data as AssistantProfile).primary_language = 'en';
+    }
     if (rolesResult.error) throw new InternalServerErrorException(rolesResult.error.message);
     if (memoryResult.error) throw new InternalServerErrorException(memoryResult.error.message);
     if (historyResult.error) throw new InternalServerErrorException(historyResult.error.message);
