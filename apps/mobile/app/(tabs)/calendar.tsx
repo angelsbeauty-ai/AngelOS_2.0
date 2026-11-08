@@ -28,6 +28,7 @@ import { PLATFORM_NAME } from '../../src/lib/social';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
 import { accent, onAccent, tokens, D, N } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
+import { usePersistentVoiceOptional } from '../../src/components/PersistentVoice';
 
 const ROSE = D.text;
 const TAGS = [
@@ -77,6 +78,7 @@ export default function CalendarTab() {
   const sheetBg = { backgroundColor: night ? N.card : D.surface };
   const toast = useToast();
   const online = useOnline();
+  const persist = usePersistentVoiceOptional();
   const reduceMotion = useReducedMotion();
   const params = useLocalSearchParams<{ day?: string; at?: string }>();
   const now = jNow();
@@ -440,6 +442,11 @@ export default function CalendarTab() {
     <Screen askBottom={mode !== 'month' ? 94 : undefined} onRefresh={load} scrollEnabled={!dragging} scrollY={state !== 'ready' ? undefined : mode === 'day' && params.at && /^\d{2}:\d{2}$/.test(String(params.at)) ? Math.max(0, (Number(String(params.at).slice(0, 2)) - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') && tlDays.some((d) => key(d) === key(now)) ? Math.max(0, (now.getHours() - HOURS[0] - 2) * HOUR_H) : (mode === 'week' || mode === 'day') ? (8 - HOURS[0]) * HOUR_H : undefined} header={header}>
       <Animated.View {...pinch.panHandlers} style={pinchStyle} accessibilityHint={t('cal.pinchHint', 'Pinch to switch between month, week and day')}><View {...swipe.panHandlers}>
       {!online && state === 'ready' ? <Text accessibilityLiveRegion="polite" style={[styles.offline, { color: palette.text, backgroundColor: palette.fill }]}>{t('sched.offlineBar', "You're offline · showing what was last loaded")}</Text> : null}
+      {(persist?.voice.drafts ?? []).some((d) => d.state !== 'sent' && d.state !== 'manual') ? <Pressable accessibilityRole="button" accessibilityLabel="Return to review an unsent reply" onPress={() => {
+        const d = persist?.voice.drafts.find((x) => x.state !== 'sent' && x.state !== 'manual');
+        if (d?.deferred) persist?.voice.restoreDraft(d.messageId);
+        if (d?.threadId) router.push(`/messages/${d.threadId}` as any);
+      }} style={[styles.offline, { backgroundColor: palette.glass, borderColor: palette.border }]}><Text style={{ color: palette.text, fontFamily: tokens.font.uiSemibold }}>{`Return to review${persist?.voice.drafts.find((x) => x.recipient)?.recipient ? ` · ${persist.voice.drafts.find((x) => x.recipient)?.recipient}` : ''}`}</Text><Text style={{ color: palette.muted }}>{'Unsent client reply. Nothing was sent.'}</Text></Pressable> : null}
       {state === 'nostudio' ? <NoStudio /> : null}
       {state === 'loading' ? <Skeleton rows={5} height={80} /> : null}
       {state === 'ready' && (mode === 'day' || mode === 'week') ? grid() : null}

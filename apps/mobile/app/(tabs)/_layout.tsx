@@ -34,6 +34,7 @@ export default function TabsLayout() {
     tabBarIconStyle: { minHeight: 24 },
     // A1 .tab.on: raised white pill behind the active tab.
     tabBarActiveBackgroundColor: 'transparent',
+    tabBarHideOnKeyboard: true,
   };
 
   // No session: the studio tabs never mount (and never call the API); straight to login.

@@ -45,14 +45,14 @@ for (const idle of [true, false]) test(`Minimize, hardware back and gesture keep
     '../src/design/theme': { D: {}, N: {}, tokens: { type: {}, font: {} } }
   });
   const tree = h.render(screen.default); h.effects.forEach(fn => fn());
-  const minimize = nodes(tree).find(n => n.props?.accessibilityLabel === 'Minimize');
+  const minimize = nodes(tree).find(n => n.props?.accessibilityLabel === 'Minimize voice; keep this session');
   assert.ok(minimize);
   assert.doesNotThrow(() => minimize.props.onPress()); assert.equal(backs, 1);
   assert.doesNotThrow(() => hardware()); assert.equal(backs, 2);
   assert.ok(events.beforeRemove); events.beforeRemove();
   assert.equal(stops, 0, 'Minimize must not stop voice');
   await new Promise(resolve => setTimeout(resolve, 5)); assert.equal(stops, 0);
-  const end = nodes(tree).find(n => n.props?.accessibilityLabel === 'End voice');
+  const end = nodes(tree).find(n => n.props?.accessibilityLabel === 'End voice session');
   assert.ok(end);
   assert.doesNotThrow(() => end.props.onPress()); assert.equal(stops, 1); assert.equal(backs, 3);
 });
@@ -156,10 +156,10 @@ test('in-chat header Minimize uses the supplied conversation and does not tear d
     '../src/lib/api': {ApiError:class extends Error{}},'../src/lib/insets': {useInsets:()=>({top:44,bottom:34})},'../src/design/appearance': {useAppearance:()=>({palette:{}})},'../src/design/theme': {D:{},N:{},tokens:{type:{},font:{}}}
   });
   const tree=h.render(()=>Screen({conversationId:'same-open-thread',onDismiss(){dismissed++;}}));h.effects.forEach(fn=>fn());
-  const minimize=nodes(tree).filter(n=>n.props?.accessibilityLabel==='Minimize');assert.ok(minimize.length>=1);assert.equal(minimize[0].props.style.height,44);assert.equal(minimize[0].props.style.minWidth ?? minimize[0].props.style.width,44);
+  const minimize=nodes(tree).filter(n=>n.props?.accessibilityLabel==='Minimize voice; keep this session');assert.ok(minimize.length>=1);assert.equal(minimize[0].props.style.height,44);assert.equal(minimize[0].props.style.minWidth ?? minimize[0].props.style.width,44);
   minimize[0].props.onPress();assert.equal(scoped,'same-open-thread');assert.equal(dismissed,1);assert.equal(stopped,0);
   await new Promise(resolve=>setTimeout(resolve,5));assert.equal(stopped,0);
-  const end=nodes(tree).find(n=>n.props?.accessibilityLabel==='End voice');assert.ok(end);
+  const end=nodes(tree).find(n=>n.props?.accessibilityLabel==='End voice session');assert.ok(end);
   end.props.onPress();assert.equal(stopped,1);assert.equal(dismissed,2);
 });
 test('failed imported media shows a retry control, never caption text, and re-reads its real preview', async () => {
@@ -174,4 +174,30 @@ test('failed imported media shows a retry control, never caption text, and re-re
   render().props.onError();let tree=render();assert.equal(tree.type,'Pressable');assert.equal(tree.props.accessibilityLabel,'Retry photo');
   tree.props.onPress({stopPropagation(){}});await tick();tree=render();assert.equal(tree.type,'Image');assert.equal(tree.props.source.uri,'https://cdn.example/refreshed-real-image.jpg');
   props.post.variants[0].capabilities_snapshot.preview_url='https://cdn.example/next-sync-real-image.jpg';assert.equal(render().props.source.uri,'https://cdn.example/next-sync-real-image.jpg');
+});
+
+test('interrupt sends response.cancel and does not tear down the session', async () => {
+  const harness = liveHarness(async () => ({ available: true, clientSecret: 'test-only' }));
+  let voice = harness.render(); await voice.start();
+  voice = harness.render();
+  const sent = [];
+  harness.channels[0].send = (payload) => { sent.push(payload); };
+  voice.interrupt();
+  assert.match(sent.join('\n'), /response\.cancel/);
+  assert.deepEqual(harness.counts(), { peers: 1, closed: 0, stopped: 0 });
+  assert.equal(harness.render().state, 'live');
+  voice.stop();
+});
+test('Not now defers a draft instead of deleting it', async () => {
+  const harness = liveHarness(async () => ({ available: true, clientSecret: 'test-only' }));
+  let voice = harness.render(); await voice.start();
+  harness.channels[0].onmessage({ data: JSON.stringify({ type: 'response.function_call_arguments.done', name: 'draft_reply', call_id: 'd1', arguments: JSON.stringify({ threadId: 'same-thread', body: '今日14時の眉の予約、確認したよ。待ってるね。', meaning: 'Your brow appointment is confirmed for today at 14:00. See you soon.' }) }) });
+  await tick();
+  voice = harness.render();
+  assert.equal(voice.drafts[0].deferred, undefined);
+  voice.deferDraft(voice.drafts[0].messageId);
+  voice = harness.render();
+  assert.equal(voice.drafts[0].deferred, true);
+  assert.equal(voice.drafts.length, 1);
+  voice.stop();
 });

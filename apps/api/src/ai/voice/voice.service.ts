@@ -30,7 +30,7 @@ function voiceDraftReply(threadId?: string | null) {
       type: 'object',
       properties: {
         threadId: threadId ? { type: 'string', enum: [threadId] } : { type: 'string', description: 'A thread id from list_threads or look_up_studio' },
-        body: { type: 'string', description: 'The exact reply for the client, in the client\'s language only. Never two languages stacked, never the English meaning.' },
+        body: { type: 'string', description: 'The exact reply for the client, in the client\'s language only. Never two languages stacked, never the English meaning. Japanese must be casual and natural like a local studio owner texting a client, not stiff keigo.' },
         meaning: { type: 'string', description: 'Plain English meaning of the reply, shown to the owner only. Never sent.' }
       },
       required: threadId ? ['threadId', 'body', 'meaning'] : ['threadId', 'body']
@@ -69,7 +69,7 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
     OWNER_SPEECH_RULES,
     input.thread,
     'If she asks what the client said, explain the latest client messages in plain English: who said it and what they mean. Do not read Japanese aloud to her unless she asks.',
-    'When she tells you what to reply, write ONE short reply in the client\'s language (the language the client writes in; if the client writes Japanese, the reply is Japanese only, never English and Japanese together). Match the tone of the conversation and use only what she said; never invent prices, times, or offers.',
+    'When she tells you what to reply, write ONE short reply in the client\'s language (the language the client writes in; if the client writes Japanese, the reply is Japanese only, never English and Japanese together). Japanese must be casual and natural like she texts a client, not stiff keigo. Match the tone of the conversation and use only what she said; never invent prices, times, or offers.',
     'Then call draft_reply with this conversation\'s threadId, the exact reply as body, and its plain English meaning as meaning. Tell her the English meaning out loud and say the draft is on her screen; it sends only when she taps Approve.',
     'If she wants changes, call draft_reply again with the new wording.',
     'You can never send a message yourself, even if she says yes or send. Only her tap on Approve sends. Never claim a message was sent.',

@@ -39,11 +39,15 @@ test('home and client-chat voice always talk TO the owner in English, even with 
     assert.match(p, /permanent-makeup studio in Japan/);
     assert.doesNotMatch(p, /Use her language/);
     assert.match(p, /does not mean you speak Japanese to the owner/);
+    assert.match(p, /casual, local and natural/);
+    assert.match(p, /Do not use stiff keigo/);
+    assert.match(p, /Never read a Japanese draft aloud as the primary spoken reply/);
   }
   assert.match(chat, /reply is Japanese only/);
   assert.match(chat, /plain English meaning/);
   assert.match(chat, /Do not speak the Japanese draft to her as if it were the reply to her/);
   assert.match(chat, /Only her tap on Approve sends/);
+  assert.match(chat, /not stiff keigo/);
 });
 
 test('text operating contract honors English-to-owner even when stored preference is Japanese', () => {

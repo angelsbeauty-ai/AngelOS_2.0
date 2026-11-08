@@ -158,6 +158,14 @@ export default function MessageThreadScreen() {
     toast.show({ title: dictation.error === 'permission' ? t('messages.dictatePerm') : t('messages.dictateFail'), tone: 'error' });
     dictation.clearError();
   }, [dictation.error]);
+  useEffect(() => {
+    if (!detail) return;
+    const thread = detail.thread;
+    const who = thread.client?.display_name ?? thread.contact_display_name;
+    const channel = APP_NAME[thread.platform] || 'the app';
+    if (!who) return;
+    persist.voice.drafts.filter((d) => d.threadId === id && !d.recipient).forEach((d) => persist.voice.annotateDraft?.(d.messageId, { recipient: who, channel }));
+  }, [detail, id, persist.voice]);
   if (state === 'error') return <View style={[styles.fill, { backgroundColor: C.bg, paddingTop: insets.top }]}><Text style={[styles.err, { color: palette.text }]}>{t('messages.openFail')}</Text><Pressable accessibilityRole="button" onPress={() => { setState('loading'); void load(); }} style={styles.retryBig}><Text style={{ color: palette.text, fontFamily: tokens.font.uiSemibold, fontSize: tokens.type.body.fontSize }}>{t('messages.tryAgain')}</Text></Pressable><Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.replace('/messages' as any))} style={styles.retryBig}><Text style={{ color: palette.text, fontFamily: tokens.font.uiSemibold, fontSize: tokens.type.body.fontSize }}>{t('common.goBack', 'Go back')}</Text></Pressable></View>;
   if (!detail || !workspaceId) return <View style={[styles.fill, { backgroundColor: C.bg, paddingTop: insets.top }]}><View style={{ padding: 16, paddingTop: 70 }}><Skeleton rows={6} height={48} /></View></View>;
 
@@ -287,8 +295,9 @@ export default function MessageThreadScreen() {
             {thread.platform !== 'other' ? <BrandLogo platform={thread.platform === 'facebook' ? 'messenger' : thread.platform as any} size={18} /> : null}
           </View>
           {/* Live voice about THIS chat: it reads these messages, explains them in English, and drafts a reply. Only Approve sends. */}
-          <Pressable accessibilityRole="button" accessibilityLabel={t('messages.voiceChat', { defaultValue: 'Talk about this chat' })} onPress={openVoice} style={styles.back}>
+          <Pressable accessibilityRole="button" accessibilityLabel="AngelOS" accessibilityHint="Talk to AngelOS about this chat. This is not a call to the client." onPress={openVoice} style={styles.back}>
             <Waveform size={24} color={palette.text} weight="bold" />
+            <Text style={[styles.voiceCap, { color: palette.muted }]}>AngelOS</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel={t('messages.aiDraft', { defaultValue: 'AI draft' })} disabled={Boolean(busy)} onPress={() => { setDraftHidden(false); if (pendingDraft) setDraftOpen(true); else void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id); setDraftOpen(true); }); }} style={styles.back}>
             <Sparkle size={24} color={palette.text} />
@@ -318,10 +327,19 @@ export default function MessageThreadScreen() {
                 <View style={[styles.bubble, { backgroundColor: out ? outBg : incBg }, detail.attachments?.[message.id] && !message.body && { padding: 4 }]}>
                   {message.metadata?.reply_to ? <View style={[styles.inQuote, { borderLeftColor: out ? outText : incText }]}><Text numberOfLines={2} style={[styles.inQuoteText, { color: out ? C.quoteOnOut : C.muted }]}>{message.metadata.reply_to.body}</Text></View> : null}
                   {detail.attachments?.[message.id] ? <Image accessibilityLabel={t('messages.photo')} source={{ uri: detail.attachments[message.id] }} style={styles.photo} resizeMode="cover" /> : message.metadata?.attachment ? <Text style={[styles.body, { color: out ? outText : incText }]}>{t('messages.photoUnavailable')}</Text> : null}
-                  {message.body ? <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text> : null}
+                  {(() => {
+                    const meaning = tr?.text || (message as any).translated_body;
+                    const inboundJa = !out && isJapanese(message.body) && meaning;
+                    if (inboundJa) return <>
+                      <Text style={[styles.body, { color: incText }]}>{`Means: ${meaning}`}</Text>
+                      <Text style={[styles.meaning, { color: C.muted, marginTop: 8 }]}>Original · Japanese</Text>
+                      <Text style={[styles.body, { color: incText }, JP_FONT(message.body)]}>{message.body}</Text>
+                    </>;
+                    return message.body ? <Text style={[styles.body, { color: out ? outText : incText }, JP_FONT(message.body)]}>{message.body}</Text> : null;
+                  })()}
                 </View>
                 {detail.reactions?.[message.id]?.length ? <Text accessibilityLabel={t('messages.reactions', { list: detail.reactions[message.id].join(' ') })} style={[styles.reacts, { backgroundColor: C.inc }]}>{detail.reactions[message.id].join(' ')}</Text> : null}
-                {tr?.shown ? <Text style={[styles.meaning, { color: C.muted }]}>{tr.text}</Text> : null}
+                {tr?.shown && (out || !isJapanese(message.body)) ? <Text style={[styles.meaning, { color: C.muted }]}>{tr.text}</Text> : null}
                 {out && (message.status === 'failed' || stuck(message)) ? (
                   <Pressable accessibilityRole="button" accessibilityLabel={t('messages.retryA11y')} onPress={() => void retry(message)} hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }} style={styles.failRow}>
                     <Text style={[styles.time, { color: palette.text, fontFamily: tokens.font.uiSemibold }]}>{t('messages.stFailed')} · {t('messages.retry')}</Text>
@@ -374,7 +392,7 @@ export default function MessageThreadScreen() {
           </Pressable>
         </View>
       ) : null}
-      {!replyTo && !reply && !locked && !pendingDraft ? (
+      {!replyTo && !reply && !locked && !pendingDraft && !persist.voice.drafts.some((d) => d.threadId === id && !d.deferred && d.state !== 'sent' && d.state !== 'manual') ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.suggest} keyboardShouldPersistTaps="handled">
           {(['times', 'price', 'thanks'] as const).map((k) => <Pressable key={k} accessibilityRole="button" accessibilityLabel={t('messages.aiChipA11y', { label: t(`messages.ai_${k}`) })} accessibilityHint={t('messages.aiChipHint')} disabled={Boolean(busy) || !online} onPress={() => { setDraftHidden(false); void run('draft', async () => { await createAiReplyDraft(workspaceId, thread.id, k); setDraftOpen(true); }); }} style={[styles.suggestChip, { backgroundColor: C.card, borderColor: C.hair }, (Boolean(busy) || !online) && { opacity: 0.5 }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{busy === 'draft' ? t('messages.aiChipBusy') : `✦ ${t(`messages.ai_${k}`)}`}</Text></Pressable>)}
           {chips.map((item) => <Pressable key={item.id} accessibilityRole="button" accessibilityLabel={t('messages.useSaved', { title: item.title })} onPress={() => insertSaved(item)} style={[styles.suggestChip, { backgroundColor: C.card, borderColor: C.hair }]}><Text numberOfLines={1} style={[styles.chipText, { color: palette.text }]}>{item.title}</Text></Pressable>)}
@@ -384,9 +402,34 @@ export default function MessageThreadScreen() {
       {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: C.muted, backgroundColor: C.banner }]}>{banner}</Text> : null}
       {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, ...tokens.type.footnote, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
       {persist.voice.drafts.filter((d) => !id || d.threadId === id).map((d) => (
-        <VoiceApproveCard key={d.messageId} draft={d} recipient={name} onApprove={() => void persist.voice.approveDraft(d.messageId)} onNotNow={() => persist.voice.dismissDraft(d.messageId)} onEdit={() => { setReply(d.body); persist.voice.dismissDraft(d.messageId); }} />
+        <VoiceApproveCard
+          key={d.messageId}
+          draft={d}
+          recipient={name}
+          channel={appName}
+          onApprove={() => void persist.voice.approveDraft(d.messageId)}
+          onNotNow={() => persist.voice.deferDraft(d.messageId)}
+          onEdit={() => persist.voice.beginEdit(d.messageId)}
+          onCancelEdit={() => persist.voice.cancelEdit(d.messageId)}
+          onChangeMeaning={(text) => persist.voice.setDraftMeaning(d.messageId, text)}
+          onReturn={() => persist.voice.restoreDraft(d.messageId)}
+          onReviewRevision={() => {
+            const latest = persist.voice.drafts.find((x) => x.messageId === d.messageId) ?? d;
+            void (async () => {
+              if (!workspaceId) return;
+              persist.voice.markDraft(latest.messageId, 'preparing');
+              try {
+                const result = await translateText(workspaceId, (latest.meaning ?? '').trim(), 'ja');
+                persist.voice.applyRevision(latest.messageId, result.translation, latest.meaning ?? '');
+              } catch {
+                persist.voice.markDraft(latest.messageId, 'editing');
+              }
+            })();
+          }}
+        />
       ))}
-      <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
+      <ChatBar value={reply} onChangeText={setReply} placeholder={persist.voice.drafts.some((d) => d.threadId === id) ? `Message ${name.split(' ')[0] || name} · draft` : t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => { persist.voice.interrupt?.(); void send(); }} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
+      {persist.voice.drafts.some((d) => d.threadId === id && d.state !== 'sent') ? <Text style={[styles.time, { color: C.muted, textAlign: 'center', paddingBottom: 6 }]}>Unsent client draft · review before sending</Text> : null}
       </View>
 
       <Modal visible={Boolean(menuFor)} transparent animationType="fade" onRequestClose={() => setMenuFor(null)}>
@@ -422,6 +465,7 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   header: { borderBottomWidth: StyleSheet.hairlineWidth },
   headerRow: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8 },
+  voiceCap: { fontFamily: tokens.font.ui, fontSize: 9, lineHeight: 11, marginTop: -2 },
   titleWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingLeft: 44 },
   quote: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 16, paddingVertical: 6 },
   quoteLine: { width: 3, alignSelf: 'stretch', borderRadius: 2 },

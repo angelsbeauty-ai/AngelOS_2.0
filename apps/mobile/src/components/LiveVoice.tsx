@@ -20,7 +20,13 @@ function voiceToolCall(ev: any): { name: string; callId: string; args: string } 
   return null;
 }
 
-export type VoiceDraft = { messageId: string; threadId: string; body: string; meaning?: string; state: 'ready' | 'sending' | 'sent' | 'manual' | 'error' };
+export type VoiceDraftState = 'ready' | 'sending' | 'sent' | 'manual' | 'error' | 'editing' | 'preparing' | 'checking';
+export type VoiceDraft = {
+  messageId: string; threadId: string; body: string; meaning?: string; state: VoiceDraftState;
+  recipient?: string; channel?: string; deferred?: boolean;
+  previous?: { body: string; meaning?: string };
+};
+export type VoiceNotice = 'thinking' | 'didnt-catch' | 'quiet-pause' | 'barge-in' | null;
 
 /** An Approve card from voice (same approve-gated tools as text chat). Nothing changes until she taps Approve. */
 export type VoiceAction = { id: string; summary: string; state: 'ready' | 'saving' | 'done' | 'error' };
@@ -97,6 +103,18 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     try { const r = await approveReply(workspaceId, id); patchDraft(id, r.sent ? 'sent' : 'manual'); } catch { patchDraft(id, 'error'); }
   }
   const dismissDraft = (id: string) => setDrafts((list) => list.filter((x) => x.messageId !== id));
+  const deferDraft = (id: string) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, deferred: true } : x)));
+  const restoreDraft = (id: string) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, deferred: false } : x)));
+  const beginEdit = (id: string) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, state: 'editing', deferred: false, previous: x.previous ?? { body: x.body, meaning: x.meaning } } : x)));
+  const cancelEdit = (id: string) => setDrafts((list) => list.map((x) => {
+    if (x.messageId !== id) return x;
+    const prev = x.previous;
+    return { ...x, state: 'ready', body: prev?.body ?? x.body, meaning: prev?.meaning ?? x.meaning, previous: undefined };
+  }));
+  const setDraftMeaning = (id: string, meaning: string) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, meaning } : x)));
+  const applyRevision = (id: string, body: string, meaning: string) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, body, meaning, state: 'ready', previous: undefined, deferred: false } : x)));
+  const markDraft = (id: string, state: VoiceDraft['state']) => patchDraft(id, state);
+  const annotateDraft = (id: string, extra: Partial<Pick<VoiceDraft, 'recipient' | 'channel'>>) => setDrafts((list) => list.map((x) => (x.messageId === id ? { ...x, ...extra } : x)));
   const [actions, setActions] = useState<VoiceAction[]>([]);
   const addAction = useCallback((a: VoiceAction) => setActions((list) => [...list.filter((x) => x.id !== a.id), a]), []);
   const patchAction = (id: string, state: VoiceAction['state']) => setActions((list) => list.map((x) => (x.id === id ? { ...x, state } : x)));
@@ -112,14 +130,63 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
   const kindsRef = useRef<Map<string, ToolKind>>(new Map());
   const sessionThreadRef = useRef(threadId);
   const [speaking, setSpeaking] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [notice, setNotice] = useState<VoiceNotice>(null);
+  const [ownerCaption, setOwnerCaption] = useState<string | null>(null);
+  const [processing, setProcessing] = useState(false);
+  const dcRef = useRef<any>(null);
+  const speakingRef = useRef(false);
+  const processingRef = useRef(false);
   const getLevel = useCallback(() => levelRef.current, []);
+
+  useEffect(() => {
+    if (state !== 'live' || speaking || processing || paused) return;
+    const timer = setTimeout(() => setNotice('quiet-pause'), 12000);
+    return () => clearTimeout(timer);
+  }, [state, speaking, processing, paused, ownerCaption, caption]);
+
+  const sendEvent = useCallback((payload: Record<string, unknown>) => {
+    const dc = dcRef.current;
+    if (!dc || dc.readyState !== 'open') return false;
+    try { dc.send(JSON.stringify(payload)); return true; } catch { return false; }
+  }, []);
+
+  const interrupt = useCallback(() => {
+    sendEvent({ type: 'response.cancel' });
+    speakingRef.current = false;
+    processingRef.current = false;
+    setSpeaking(false);
+    setProcessing(false);
+    setNotice('barge-in');
+  }, [sendEvent]);
+
+  const pause = useCallback(() => {
+    try { micRef.current?.getTracks?.().forEach((t: any) => { t.enabled = false; }); } catch { /* keep paused */ }
+    try { const out = outRef.current; if (out) { out.muted = true; out.pause?.(); } } catch { /* keep paused */ }
+    speakingRef.current = false;
+    processingRef.current = false;
+    setSpeaking(false);
+    setProcessing(false);
+    setPaused(true);
+  }, []);
+
+  const resume = useCallback(() => {
+    if (!mutedRef.current) {
+      try { micRef.current?.getTracks?.().forEach((t: any) => { t.enabled = true; }); } catch { /* stay paused visually if tracks fail */ }
+    }
+    try { const out = outRef.current; if (out) { out.muted = false; out.play?.(); } } catch { /* ignore */ }
+    setPaused(false);
+    setNotice(null);
+  }, []);
 
   const teardown = useCallback(() => {
     // Invalidate pending session/mic requests as well as an established call.
     generation.current += 1;
     const meter = meterRef.current; const mic = micRef.current; const peer = pcRef.current; const out = outRef.current;
-    meterRef.current = null; micRef.current = null; pcRef.current = null; outRef.current = null;
+    meterRef.current = null; micRef.current = null; pcRef.current = null; outRef.current = null; dcRef.current = null;
     levelRef.current = 0;
+    speakingRef.current = false; processingRef.current = false;
+    setPaused(false); setProcessing(false); setNotice(null);
     // Detach first: native close events can arrive synchronously and re-enter cleanup.
     try { meter?.stop(); } catch { /* continue cleanup */ }
     try { mic?.getTracks?.().forEach((t: any) => t.stop()); } catch { /* continue cleanup */ }
@@ -184,19 +251,55 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     await crumb('data channel');
     ensureCurrent();
     const dc = peer.createDataChannel('oai-events', { ordered: true, protocol: 'oai' });
+    dcRef.current = dc;
     const answered = new Set<string>();
     dc.onmessage = (e: any) => {
       try {
         const ev = JSON.parse(e.data);
-        if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) {
-          const spoken = ev.transcript.trim();
-          setCaption(spoken);
-          if (workspaceId && /input_audio_transcription/.test(ev.type ?? '') && (/\b(talk|speak|reply|respond|write|answer|chat)\b[\s\S]{0,40}\bin english\b/i.test(spoken) || /\b(use|switch to|keep|stay in)\s+english\b/i.test(spoken))) {
-            void updateAssistantProfile(workspaceId, { primaryLanguage: 'en' }).catch(() => undefined);
+        if (ev.type === 'input_audio_buffer.speech_started') {
+          if (speakingRef.current || processingRef.current) {
+            sendEvent({ type: 'response.cancel' });
+            speakingRef.current = false;
+            processingRef.current = false;
+            setSpeaking(false);
+            setProcessing(false);
+            setNotice('barge-in');
+          } else {
+            setNotice(null);
           }
         }
-        if (ev.type === 'output_audio_buffer.started' || ev.type === 'response.output_audio.delta' || ev.type === 'response.audio.delta') setSpeaking(true);
-        if (ev.type === 'output_audio_buffer.stopped' || ev.type === 'response.done' || ev.type === 'response.output_audio.done') setSpeaking(false);
+        if (ev.type === 'response.created' || ev.type === 'response.function_call_arguments.delta') {
+          processingRef.current = true;
+          setProcessing(true);
+          setNotice('thinking');
+        }
+        if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '')) {
+          const spoken = typeof ev.transcript === 'string' ? ev.transcript.trim() : '';
+          const isOwner = /input_audio_transcription/.test(ev.type ?? '');
+          if (isOwner && !spoken) setNotice('didnt-catch');
+          if (spoken) {
+            if (isOwner) {
+              setOwnerCaption(spoken);
+              setNotice(null);
+            } else {
+              setCaption(spoken);
+            }
+            if (workspaceId && isOwner && (/\b(talk|speak|reply|respond|write|answer|chat)\b[\s\S]{0,40}\bin english\b/i.test(spoken) || /\b(use|switch to|keep|stay in)\s+english\b/i.test(spoken))) {
+              void updateAssistantProfile(workspaceId, { primaryLanguage: 'en' }).catch(() => undefined);
+            }
+          }
+        }
+        if (ev.type === 'response.audio_transcript.delta' || ev.type === 'response.output_audio_transcript.delta') {
+          if (typeof ev.delta === 'string' && ev.delta) setCaption((c) => (c ?? '') + ev.delta);
+        }
+        if (ev.type === 'output_audio_buffer.started' || ev.type === 'response.output_audio.delta' || ev.type === 'response.audio.delta') {
+          speakingRef.current = true; processingRef.current = false;
+          setSpeaking(true); setProcessing(false); setNotice(null);
+        }
+        if (ev.type === 'output_audio_buffer.stopped' || ev.type === 'response.done' || ev.type === 'response.output_audio.done') {
+          speakingRef.current = false; processingRef.current = false;
+          setSpeaking(false); setProcessing(false);
+        }
         const call = voiceToolCall(ev);
         if (generation.current !== run || !call || !workspaceId || answered.has(call.callId)) return;
         answered.add(call.callId);
@@ -245,6 +348,9 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     installCrashGuard();
     setError(null);
     setSpeaking(false);
+    setPaused(false);
+    setNotice(null);
+    setProcessing(false);
     setState('connecting');
     try {
       if (!workspaceId) throw new Error('No studio selected.');
@@ -266,7 +372,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop, muted, setMuted, caption, speaking, getLevel, drafts, approveDraft, dismissDraft, cards, actions, approveAction, dismissAction };
+  return { status, state, error, start, stop, interrupt, pause, resume, paused, notice, processing, ownerCaption, muted, setMuted, caption, speaking, getLevel, drafts, approveDraft, dismissDraft, deferDraft, restoreDraft, beginEdit, cancelEdit, setDraftMeaning, applyRevision, markDraft, annotateDraft, cards, actions, approveAction, dismissAction };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {

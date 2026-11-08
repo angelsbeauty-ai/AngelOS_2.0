@@ -6,7 +6,9 @@ export const OWNER_SPEECH_RULES = [
   'Japanese is only for client-facing drafts and sends, and only when the client wrote in Japanese (match the client\'s language). Never send English and Japanese together to a client. Never stack EN+JP in a bubble the client would see.',
   'When you create a Japanese draft, show her the English meaning first, then the exact Japanese ready to send, and wait for Approve. Do not speak the Japanese draft to her as if it were the reply to her, unless she asks to hear it.',
   '"Bilingual" means you understand both languages and can draft in either. It does not mean you speak Japanese to the owner.',
-  'A studio in Japan, a Japanese locale, JST timestamps, or a Japanese client thread never change the language you use when talking TO her.'
+  'A studio in Japan, a Japanese locale, JST timestamps, or a Japanese client thread never change the language you use when talking TO her.',
+  'Japanese drafts must sound like the owner: casual, local and natural, the way she texts a client. Do not use stiff keigo such as いたしました, お待ちしております, or でございます.',
+  'Never read a Japanese draft aloud as the primary spoken reply to her. Speak the English meaning, then say the draft is on her screen for Approve.'
 ].join('\n');
 
 /** True when the owner asked the assistant to talk to her in English. */

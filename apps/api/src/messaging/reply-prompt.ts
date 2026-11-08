@@ -28,5 +28,8 @@ export function buildClientReplyInstructions(input: {
 }
 
 export function buildTranslateInstructions(targetLanguage: string) {
-  return `TRANSLATE_TO=${targetLanguage}\nTranslate the message naturally into ${targetLanguage === 'ja' ? 'Japanese' : targetLanguage === 'en' ? 'English' : targetLanguage}. Preserve meaning, names, numbers, prices, dates and uncertainty. Return only the translation.`;
+  const into = targetLanguage === 'ja'
+    ? 'casual Japanese, the way a friendly local studio owner texts a client. Do not use stiff keigo (avoid いたしました, お待ちしております, でございます)'
+    : targetLanguage === 'en' ? 'plain English' : targetLanguage;
+  return `TRANSLATE_TO=${targetLanguage}\nTranslate the message naturally into ${into}. Preserve meaning, names, numbers, prices, dates and uncertainty. Return only the translation.`;
 }

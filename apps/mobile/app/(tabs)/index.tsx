@@ -1,7 +1,8 @@
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, findNodeHandle } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, findNodeHandle } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
@@ -60,7 +61,20 @@ export default function HomeScreen() {
   const [tools, setTools] = useState<AiTool[]>([]);
   const [toolsOpen, setToolsOpen] = useState(false);
   const persist = usePersistentVoice();
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [stagedImage, setStagedImage] = useState<{ uri: string; state: 'uploading' | 'ready' | 'failed' } | null>(null);
+  const [photoAccess, setPhotoAccess] = useState(false);
+  const [awayFromLive, setAwayFromLive] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    const fx = typeof globalThis !== 'undefined' ? (globalThis as any).__ANGELOS_FIXTURE__ : null;
+    if (!fx) return;
+    if (fx.stagedImage) setStagedImage(fx.stagedImage);
+    if (fx.attachOpen) setAttachOpen(true);
+    if (typeof fx.composer === 'string') setComposer(fx.composer);
+    if (fx.imagePermission) setPhotoAccess(true);
+    if (fx.scrollUp) setAwayFromLive(true);
+  }, []);
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const keepScroll = useRef<number | null>(null);
@@ -117,6 +131,7 @@ export default function HomeScreen() {
 
   /** Sending only asks the assistant. Anything it proposes comes back as a card that needs Approve. */
   async function send(again?: string) {
+    persist.voice.interrupt?.();
     const text = (again ?? composer).trim();
     if (!text || !ws || !conversationId || busy) return;
     const id = ws;
@@ -205,7 +220,8 @@ export default function HomeScreen() {
       </Pressable>
     </View>
     {noStudio ? <View style={{ padding: 16 }}><NoStudio /></View> : <>
-      {/* Pinned Today strip */}
+      {/* Pinned Today strip: one compact line while typing so the keyboard does not hide the conversation. */}
+      {keyboardOpen && facts.state === 'ready' ? <Text style={[styles.compact, { color: muted }]}>{`Today · ${facts.sum.schedule.items.filter((it) => it.status !== 'cancelled').length} bookings · ${facts.sum.messages.unread} unread · ${facts.failed || facts.sum.assistant.pendingApprovals ? '1 needs you' : 'all clear'}`}</Text> : <>
       <View style={styles.todayRow}>
         <Text accessibilityRole="header" style={[styles.today, { color: text }]}>{t('home.today', 'Today')}</Text>
         <Text style={[styles.date, { color: muted }]}>{dateLine}</Text>
@@ -220,9 +236,10 @@ export default function HomeScreen() {
         </View>
         : <Facts sum={facts.sum} failed={facts.failed} />}
       </View>
+      </>}
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.chat} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.chat} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'} onScroll={(e) => { const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent; setAwayFromLive(contentOffset.y + layoutMeasurement.height < contentSize.height - 80); }} scrollEventThrottle={16}
           scrollEventThrottle={64} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
           refreshControl={Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={muted} /> : undefined}>
           <View style={styles.assistantRow}>
@@ -257,6 +274,12 @@ export default function HomeScreen() {
             </View>
           </View> : null}
 
+          {persist.justEnded ? <View style={[styles.chatErr, card]}><Text style={[styles.small, { color: muted }]}>Voice ended · transcript and drafts kept</Text></View> : null}
+          {persist.voice.drafts.some((d) => d.state !== 'sent' && d.state !== 'manual') ? <Pressable accessibilityRole="button" accessibilityLabel="Review unsent reply in Messages" onPress={() => {
+            const d = persist.voice.drafts.find((x) => x.state !== 'sent' && x.state !== 'manual');
+            if (d?.deferred) persist.voice.restoreDraft(d.messageId);
+            if (d?.threadId) router.push(`/messages/${d.threadId}` as any);
+          }} style={[styles.chatErr, card]}><Text style={[styles.small, { color: text }]}>{`1 unsent reply${persist.voice.drafts.find((x) => x.recipient)?.recipient ? ` to ${persist.voice.drafts.find((x) => x.recipient)?.recipient.split(' ')[0]}` : ''} · Review in Messages`}</Text></Pressable> : null}
           {chat === 'ready' ? messages.map((m) => m.author_type === 'user'
             ? <View key={m.id} style={[styles.mine, { backgroundColor: night ? '#2C2C2E' : '#151515' }]}><Text style={[styles.mineText, { color: '#FFFFFF' }]}>{m.content}</Text></View>
             : m.author_type === 'system_action' ? <Text key={m.id} style={[styles.small, { color: muted }]}>{m.content}</Text>
@@ -282,14 +305,50 @@ export default function HomeScreen() {
           </View> : null}
         </ScrollView>
 
+        {awayFromLive ? <Pressable accessibilityRole="button" accessibilityLabel="Latest reply" onPress={() => scrollRef.current?.scrollToEnd({ animated: true })} style={[styles.chatErr, card, { alignSelf: 'center', marginBottom: 8 }]}><Text style={[styles.small, { color: text }]}>Latest reply</Text></Pressable> : null}
         {/* Pinned composer: + (assistant tools), Ask AngelOS, hold-to-dictate mic, tap waveform for live voice. */}
         <View style={{ backgroundColor: palette.bg, paddingBottom: keyboardOpen ? 8 : tabH }}>
           {toolsOpen && tools.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.tools}>
             {tools.map((x) => <Pressable key={x.key} accessibilityRole="button" onPress={() => { setComposer(t(`aip.toolEx_${x.key}`, x.example)); setToolsOpen(false); }} style={[styles.chip, card]}><Text style={[styles.chipText, { color: text }]}>{t(`aip.tool_${x.key}`, x.label)}</Text></Pressable>)}
           </ScrollView> : null}
+          {stagedImage ? <View style={[styles.chatErr, card, { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16 }]}>
+            <Image source={{ uri: stagedImage.uri }} style={{ width: 48, height: 48, borderRadius: 10 }} />
+            <Text style={[styles.small, { color: text, flex: 1 }]}>{stagedImage.state === 'uploading' ? 'Adding image…' : stagedImage.state === 'failed' ? 'Image couldn’t be added.' : 'Image ready for AngelOS. Voice stays on.'}</Text>
+            {stagedImage.state === 'failed' ? <Pressable accessibilityRole="button" accessibilityLabel="Retry image" onPress={() => setStagedImage((s) => s && { ...s, state: 'ready' })}><Text style={[styles.retryText, { color: text }]}>Retry</Text></Pressable> : null}
+            <Pressable accessibilityRole="button" accessibilityLabel="Remove image" onPress={() => setStagedImage(null)}><Text style={[styles.retryText, { color: text }]}>Remove</Text></Pressable>
+          </View> : null}
+          {photoAccess ? <View style={[styles.chatErr, card, { marginHorizontal: 16 }]}>
+            <Text style={[styles.errTitle, { color: text }]}>Camera access is off</Text>
+            <Text style={[styles.small, { color: muted }]}>Choose from Photos or open Settings. Voice stays on.</Text>
+            <View style={styles.actRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Choose from Photos" onPress={() => { setPhotoAccess(false); void ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, selectionLimit: 1 }).then((picked) => { if (!picked.canceled && picked.assets[0]) setStagedImage({ uri: picked.assets[0].uri, state: 'ready' }); }); }} style={styles.actBtn}><Text style={[styles.retryText, { color: text }]}>Photos</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Open Settings" onPress={() => { setPhotoAccess(false); }} style={styles.actBtn}><Text style={[styles.retryText, { color: text }]}>Settings</Text></Pressable>
+            </View>
+          </View> : null}
           <ChatBar value={composer} onChangeText={(v) => { setComposer(v); if (sendError) setSendError(null); }} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy || chat !== 'ready'}
-            onPlus={() => setToolsOpen((o) => !o)} plusLabel={t('home2.tools', 'Assistant tools')} onVoice={openVoice} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} bottomInset={2} />
-          <Text style={[styles.note, { color: muted }]}>{t('home2.approvalNote', 'Nothing is sent or posted without your approval.')}</Text>
+            onPlus={() => persist.presentation !== 'hidden' ? setAttachOpen(true) : setToolsOpen((o) => !o)} plusLabel={persist.presentation !== 'hidden' ? 'Add an image' : t('home2.tools', 'Assistant tools')} onVoice={openVoice} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} bottomInset={2} />
+          <Text style={[styles.note, { color: muted }]}>{persist.presentation !== 'hidden' ? 'Same conversation · voice stays on' : t('home2.approvalNote', 'Nothing is sent or posted without your approval.')}</Text>
+          <Modal visible={attachOpen} transparent animationType="slide" onRequestClose={() => setAttachOpen(false)}>
+            <Pressable accessibilityLabel="Close" style={styles.sheetBackdrop} onPress={() => setAttachOpen(false)}>
+              <Pressable style={[styles.sheet, card]} onPress={() => undefined}>
+                <Text style={[styles.errTitle, { color: text }]}>Add an image</Text>
+                <Text style={[styles.small, { color: muted }]}>To AngelOS, not to a client. Voice stays on.</Text>
+                <Pressable accessibilityRole="button" accessibilityLabel="Choose from Photos" onPress={() => { setAttachOpen(false); void (async () => {
+                  const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, selectionLimit: 1 });
+                  if (picked.canceled || !picked.assets[0]) return;
+                  setStagedImage({ uri: picked.assets[0].uri, state: 'ready' });
+                })(); }} style={[styles.retry, { borderColor: palette.border, alignSelf: 'stretch', justifyContent: 'center' }]}><Text style={[styles.retryText, { color: text }]}>Choose from Photos</Text></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Take a photo" onPress={() => { setAttachOpen(false); void (async () => {
+                  const permission = await ImagePicker.requestCameraPermissionsAsync();
+                  if (!permission.granted) { setPhotoAccess(true); return; }
+                  const taken = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+                  if (taken.canceled || !taken.assets[0]) return;
+                  setStagedImage({ uri: taken.assets[0].uri, state: 'ready' });
+                })(); }} style={[styles.retry, { borderColor: palette.border, alignSelf: 'stretch', justifyContent: 'center' }]}><Text style={[styles.retryText, { color: text }]}>Take a photo</Text></Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Cancel" onPress={() => setAttachOpen(false)} style={[styles.retry, { borderColor: palette.border, alignSelf: 'stretch', justifyContent: 'center' }]}><Text style={[styles.retryText, { color: text }]}>Cancel</Text></Pressable>
+              </Pressable>
+            </Pressable>
+          </Modal>
         </View>
       </KeyboardAvoidingView>
     </>}
@@ -374,5 +433,8 @@ const styles = StyleSheet.create({
   actRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' },
   actBtn: { minHeight: 44, minWidth: 44, paddingHorizontal: 16, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   tools: { gap: 8, paddingHorizontal: 16, paddingTop: 6 },
-  note: { fontFamily: tokens.font.ui, fontSize: 11, lineHeight: 14, textAlign: 'center', paddingBottom: 6 }
+  note: { fontFamily: tokens.font.ui, fontSize: 11, lineHeight: 14, textAlign: 'center', paddingBottom: 6 },
+  compact: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, paddingHorizontal: 16, paddingVertical: 10 },
+  sheetBackdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.35)' },
+  sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, gap: 12 },
 });
