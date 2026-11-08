@@ -122,6 +122,15 @@ export default function VoiceScreen({ conversationId, onDismiss }: { conversatio
             <Pressable accessibilityRole="button" accessibilityLabel={t('voice.draftApprove', 'Approve and send')} disabled={d.state === 'sending'} onPress={() => void voice.approveDraft(d.messageId)} style={[styles.draftBtn, { backgroundColor: palette.text }]}><Text style={[styles.settingsText, { color: palette.bg }]}>{d.state === 'sending' ? t('voice.draftSending', 'Sending…') : d.state === 'error' ? t('voice.draftRetry', 'Try again') : t('voice.draftApprove', 'Approve and send')}</Text></Pressable>
           </View>}
       </View>)}
+      {voice.actions.map((a) => <View key={a.id} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+        <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.actionTitle', 'Waiting for your Approve. Nothing is saved yet.')}</Text>
+        <Text style={[styles.draftBody, { color: palette.text }]}>{a.summary}</Text>
+        {a.state === 'done' ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.actionDone', 'Approved and saved')}</Text>
+          : <View style={styles.draftRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('voice.draftDismiss', 'Not now')} onPress={() => voice.dismissAction(a.id)} style={styles.draftBtn}><Text style={[styles.settingsText, { color: palette.text }]}>{t('voice.draftDismiss', 'Not now')}</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('voice.actionApprove', 'Approve')} disabled={a.state === 'saving'} onPress={() => void voice.approveAction(a.id)} style={[styles.draftBtn, { backgroundColor: palette.text }]}><Text style={[styles.settingsText, { color: palette.bg }]}>{a.state === 'saving' ? t('voice.actionSaving', 'Saving…') : a.state === 'error' ? t('voice.draftRetry', 'Try again') : t('voice.actionApprove', 'Approve')}</Text></Pressable>
+          </View>}
+      </View>)}
     </ScrollView>
     <View style={styles.buttons}>
       <Pressable accessibilityRole="button" accessibilityLabel={voice.muted ? t('voice.unmute', 'Unmute') : t('voice.mute', 'Mute')} accessibilityState={{ selected: voice.muted }} disabled={!live} onPress={() => voice.setMuted(!voice.muted)} style={[styles.round, styles.mute, { backgroundColor: palette.glass, borderColor: palette.border }, !live && { opacity: 0.5 }]}>

@@ -45,12 +45,23 @@ export async function memberRole(db: Db, workspaceId: string, userId: string): P
   return roles.find((r) => STUDIO_ROLES.has(r)) ?? roles[0] ?? null;
 }
 
+import { proposeToolDefs } from './registry';
+
 const fn = (t: ReadToolDef) => ({ type: 'function', name: t.name, description: t.description, parameters: t.parameters });
 /** OpenAI Responses API function-tool format. Voice (Realtime) uses the same shape (read tools only). */
-export const functionTools = (enabled: Set<Area> = new Set(AREAS), opts: { role?: string | null; drafts?: boolean } = {}) => {
+export const functionTools = (enabled: Set<Area> = new Set(AREAS), opts: { role?: string | null; drafts?: boolean; proposals?: boolean } = {}) => {
   if (opts.role !== undefined && !STUDIO_ROLES.has(String(opts.role))) return [];
-  return [...READ_TOOLS, ...(opts.drafts ? DRAFT_TOOLS : [])].filter((t) => enabled.has(t.area)).map(fn);
+  const base: Array<Record<string, any>> = [...READ_TOOLS, ...(opts.drafts ? DRAFT_TOOLS : [])].filter((t) => enabled.has(t.area)).map(fn);
+  // Approve-gated registry tools: each call only creates an Approve card.
+  const proposals = opts.proposals ? proposeToolDefs().filter((t) => t.name !== 'draft_client_message' || enabled.has('messages')) : [];
+  return [...base, ...proposals];
 };
+
+/**
+ * THE assistant tool set: every read tool, every draft tool and every approve-gated proposal.
+ * Text chat and live voice both build from this, so a tool added here works in both.
+ */
+export const assistantTools = (enabled: Set<Area> = new Set(AREAS), role?: string | null) => functionTools(enabled, { role, drafts: true, proposals: true });
 
 /**
  * Runs a draft tool. `draftReply` is the messaging ai-draft logic (MessagingService.draftReply); nothing else

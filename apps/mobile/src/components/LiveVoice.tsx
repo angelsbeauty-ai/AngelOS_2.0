@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
-import { createVoiceSession, getVoiceStatus } from '../lib/ai';
+import { approveAiAction, cancelAiAction, createVoiceSession, getVoiceStatus, proposeVoiceAction } from '../lib/ai';
 import { getHomeSummary } from '../lib/home';
 import { apiFetch } from '../lib/api';
 import type { ToolCard } from './AnswerCard';
@@ -22,13 +22,23 @@ function voiceToolCall(ev: any): { name: string; callId: string; args: string } 
 
 export type VoiceDraft = { messageId: string; threadId: string; body: string; meaning?: string; state: 'ready' | 'sending' | 'sent' | 'manual' | 'error' };
 
-const READ_TOOLS = new Set(['get_bookings', 'search_clients', 'list_threads', 'list_posts', 'get_analytics', 'get_money', 'list_services_prices', 'list_campaigns_tasks']);
+/** An Approve card from voice (same approve-gated tools as text chat). Nothing changes until she taps Approve. */
+export type VoiceAction = { id: string; summary: string; state: 'ready' | 'saving' | 'done' | 'error' };
 
-async function runVoiceTool(workspaceId: string, name: string, raw: string, onDraft?: (d: VoiceDraft) => void, onCard?: (c: ToolCard) => void, chatThreadId?: string): Promise<string> {
+type ToolKind = 'read' | 'draft' | 'propose' | 'summary';
+
+async function runVoiceTool(workspaceId: string, name: string, raw: string, kinds: Map<string, ToolKind>, onDraft?: (d: VoiceDraft) => void, onCard?: (c: ToolCard) => void, chatThreadId?: string, onAction?: (a: VoiceAction) => void): Promise<string> {
   let args: any = {};
   try { args = raw ? JSON.parse(raw) : {}; } catch { args = {}; }
+  // The server picks the tools (same set as text chat); the phone only runs what that session was given.
+  const kind = kinds.get(name);
   try {
-    if (chatThreadId && name !== 'draft_reply') return JSON.stringify({ error: 'This voice session is only for the open conversation.' });
+    if (!kind) return JSON.stringify({ error: 'Unknown voice tool.' });
+    if (kind === 'propose') {
+      const { action } = await proposeVoiceAction(workspaceId, name, args ?? {});
+      onAction?.({ id: action.id, summary: action.summary ?? name, state: 'ready' });
+      return JSON.stringify({ proposed: true, saved: false, sent: false, summary: action.summary, note: 'An Approve card is on her screen. Nothing is saved or changed until she taps Approve.' });
+    }
     if (name === 'look_up_studio') {
       const home = await getHomeSummary(workspaceId, 'day');
       if (args.topic === 'today') {
@@ -41,7 +51,7 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string, onDr
       const conversations = home.messages.alerts.filter((item) => item.unread || item.needsReply).slice(0, 7).map((item) => ({ threadId: item.id, name: item.name, platform: item.platform, preview: item.preview, unread: item.unread, needsReply: item.needsReply }));
       return JSON.stringify({ unread: home.messages.unread, needsReply: home.messages.needsReply, conversations });
     }
-    if (READ_TOOLS.has(name)) {
+    if (kind === 'read') {
       // Same shared read tools and switches as text chat. The card is drawn from this JSON, not from speech.
       const data = await apiFetch<Record<string, any>>(`/workspaces/${workspaceId}/ai/tools/${name}`, { method: 'POST', body: JSON.stringify(args ?? {}) });
       if (!data?.off) onCard?.({ tool: name, data });
@@ -86,6 +96,19 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     try { const r = await approveReply(workspaceId, id); patchDraft(id, r.sent ? 'sent' : 'manual'); } catch { patchDraft(id, 'error'); }
   }
   const dismissDraft = (id: string) => setDrafts((list) => list.filter((x) => x.messageId !== id));
+  const [actions, setActions] = useState<VoiceAction[]>([]);
+  const addAction = useCallback((a: VoiceAction) => setActions((list) => [...list.filter((x) => x.id !== a.id), a]), []);
+  const patchAction = (id: string, state: VoiceAction['state']) => setActions((list) => list.map((x) => (x.id === id ? { ...x, state } : x)));
+  async function approveAction(id: string) {
+    if (!workspaceId) return;
+    patchAction(id, 'saving');
+    try { await approveAiAction(workspaceId, id); patchAction(id, 'done'); } catch { patchAction(id, 'error'); }
+  }
+  function dismissAction(id: string) {
+    setActions((list) => list.filter((x) => x.id !== id));
+    if (workspaceId) void cancelAiAction(workspaceId, id).catch(() => undefined);
+  }
+  const kindsRef = useRef<Map<string, ToolKind>>(new Map());
   const getLevel = useCallback(() => levelRef.current, []);
 
   const stop = useCallback(() => {
@@ -156,7 +179,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
         if (generation.current !== run || !call || !workspaceId || answered.has(call.callId)) return;
         answered.add(call.callId);
         const studioId = workspaceId;
-        void runVoiceTool(studioId, call.name, call.args, addDraft, addCard, threadId).then((output) => {
+        void runVoiceTool(studioId, call.name, call.args, kindsRef.current, addDraft, addCard, threadId, addAction).then((output) => {
           if (dc.readyState !== 'open') return;
           dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
           dc.send(JSON.stringify({ type: 'response.create' }));
@@ -204,6 +227,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
       setStatus({ available: session.available, reason: session.reason });
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
       if (!session.clientSecret) throw new Error('Voice is not available right now.');
+      kindsRef.current = new Map((session.tools ?? []).map((t) => [t.name, t.kind] as [string, ToolKind]));
       await startOpenAI(session.clientSecret, run);
     } catch (e) {
       if (generation.current !== run) return;
@@ -215,7 +239,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop, muted, setMuted, caption, getLevel, drafts, approveDraft, dismissDraft, cards };
+  return { status, state, error, start, stop, muted, setMuted, caption, getLevel, drafts, approveDraft, dismissDraft, cards, actions, approveAction, dismissAction };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {

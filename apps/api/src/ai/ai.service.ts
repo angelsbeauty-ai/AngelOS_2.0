@@ -1,8 +1,8 @@
-import { DRAFT_TOOL_NAMES, enabledAreas, functionTools, memberRole, runDraftTool, runReadTool } from './tools/read-tools';
+import { DRAFT_TOOL_NAMES, STUDIO_ROLES, assistantTools, enabledAreas, memberRole, runDraftTool, runReadTool } from './tools/read-tools';
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import type { AuthUser } from '../auth/auth-user';
 import { createServiceSupabaseClient, createUserSupabaseClient } from '../config/supabase';
-import { planTool } from './tools/registry';
+import { PROPOSE_TOOL_NAMES, planTool, proposalFromArgs, type PlannedTool } from './tools/registry';
 import { AssistantToolsService } from './tools/assistant-tools.service';
 import { buildOperatingInstructions } from './angelos-operating-contract';
 import { AiProviderService } from './ai-provider.service';
@@ -201,12 +201,20 @@ export class AiService {
     // Real function calling over the shared read tools (same list voice uses). Write tools stay approval cards.
     const enabled = await enabledAreas(supabase, workspaceId);
     const role = await memberRole(supabase, workspaceId, user.id);
+    let toolAction: any = null;
     const withTools = planned && planned.kind !== 'read' ? null : await this.provider.generateWithTools(
-      { instructions: `${instructions}\nUse the read tools for any question about her studio. Numbers must come from tool results. If a tool returns null for a value, say it is unavailable. Never guess.`, input: transcript || `Owner: ${message}`, userId: user.id },
-      functionTools(enabled, { role, drafts: true }),
-      (name, args) => DRAFT_TOOL_NAMES.has(name)
-        ? runDraftTool({ db: supabase, workspaceId, role, enabled, draftReply: (threadId, ins) => this.tools.draftReply(user, workspaceId, threadId, ins) }, name, args as Record<string, any>)
-        : runReadTool(supabase, workspaceId, name, args as Record<string, any>, new Date(), enabled, role)
+      { instructions: `${instructions}\nUse the read tools for any question about her studio. Numbers must come from tool results. If a tool returns null for a value, say it is unavailable. Never guess.\nTo change anything (block time, expense, post draft, client message draft, add or change a skill or rule, remember something, rename, automation) call that tool: it only shows her an Approve card. Say it is waiting for her Approve; never say it is done or saved.`, input: transcript || `Owner: ${message}`, userId: user.id },
+      assistantTools(enabled, role),
+      async (name, args) => {
+        if (PROPOSE_TOOL_NAMES.has(name)) {
+          if (toolAction) return { error: 'One Approve card per message. Tell her to approve this one first.' };
+          toolAction = await this.insertProposal(user, workspaceId, conversationId, proposalFromArgs(name, args as Record<string, any>, new Date(), timeZone));
+          return { proposed: true, requires_approval: true, saved: false, sent: false, summary: toolAction.summary };
+        }
+        return DRAFT_TOOL_NAMES.has(name)
+          ? runDraftTool({ db: supabase, workspaceId, role, enabled, draftReply: (threadId, ins) => this.tools.draftReply(user, workspaceId, threadId, ins) }, name, args as Record<string, any>)
+          : runReadTool(supabase, workspaceId, name, args as Record<string, any>, new Date(), enabled, role);
+      }
     );
     const providerResponse = withTools ?? (planned?.kind === 'read'
       ? { text: await this.tools.read(user, workspaceId, planned, timeZone), provider: 'angelos-tools', model: 'records' }
@@ -214,7 +222,7 @@ export class AiService {
     const cards = (withTools?.toolResults ?? []).filter((r) => r.name === 'get_analytics' || r.name === 'list_threads' || r.name === 'get_money' || r.name === 'get_bookings' || r.name === 'draft_reply').map((r) => ({ tool: r.name, data: r.result }));
 
     const plannedAction = planned && planned.kind !== 'read' ? { actionKey: planned.key, riskLevel: planned.risk, input: planned.input, summary: planned.summary, kind: planned.kind } : null;
-    let actionRun: any = null;
+    let actionRun: any = toolAction;
     if (plannedAction) {
       const serviceSupabase = createServiceSupabaseClient();
       const { data, error } = await serviceSupabase
@@ -255,6 +263,29 @@ export class AiService {
     if (assistantMessageError) throw new InternalServerErrorException(assistantMessageError.message);
 
     return { message: assistantMessage, action: actionRun };
+  }
+
+  /** Saves one proposal as an Approve card (status 'proposed'). Nothing else changes until approveAction. */
+  private async insertProposal(user: AuthUser, workspaceId: string, conversationId: string | null, planned: PlannedTool) {
+    const { data, error } = await createServiceSupabaseClient().from('ai_action_runs').insert({
+      workspace_id: workspaceId, conversation_id: conversationId, requested_by: user.id,
+      action_key: planned.key, risk_level: planned.risk, status: 'proposed', input: planned.input
+    }).select('*').single();
+    if (error) throw new InternalServerErrorException(error.message);
+    return { ...data, summary: planned.summary, kind: planned.kind, requiresApproval: true };
+  }
+
+  /** Live voice: the same approve-gated tools as text chat. Returns the Approve card; never executes. */
+  async proposeFromVoice(user: AuthUser, workspaceId: string, key: string, args: Record<string, any>) {
+    if (!PROPOSE_TOOL_NAMES.has(key)) throw new NotFoundException('Unknown tool');
+    const supabase = createUserSupabaseClient(user.accessToken);
+    await this.assertWorkspaceAccess(supabase, workspaceId);
+    if (!STUDIO_ROLES.has(String(await memberRole(supabase, workspaceId, user.id)))) throw new BadRequestException('Studio tools are for the studio owner and staff only.');
+    const { data: ws } = await supabase.from('workspaces').select('timezone').eq('id', workspaceId).maybeSingle();
+    let planned: PlannedTool;
+    try { planned = proposalFromArgs(key, args ?? {}, new Date(), (ws as any)?.timezone || 'Asia/Tokyo'); }
+    catch (e) { throw new BadRequestException(e instanceof Error ? e.message : 'That could not be prepared.'); }
+    return { action: await this.insertProposal(user, workspaceId, null, planned) };
   }
 
   async approveAction(user: AuthUser, workspaceId: string, actionId: string) {

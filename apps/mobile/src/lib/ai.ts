@@ -164,8 +164,11 @@ export const getBrainSummaries = (workspaceId: string) =>
 export interface AiTool { key: string; kind: 'read' | 'draft' | 'change'; risk: 'low' | 'medium' | 'high'; label: string; example: string; touchesClients: boolean }
 export const listAiTools = (workspaceId: string) => apiFetch<{ tools: AiTool[] }>(`/workspaces/${workspaceId}/ai/tools`);
 export interface VoiceSession {
-  provider?: 'livekit' | 'openai' | null; available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; token: string | null; url: string | null; room: string | null; expiresAt: number | null; model: string | null; stored: false }
+  provider?: 'livekit' | 'openai' | null; available: boolean; mode: 'live' | 'mock'; reason: string | null; clientSecret: string | null; token: string | null; url: string | null; room: string | null; expiresAt: number | null; model: string | null; stored: false;
+  /** Server-chosen tools (same set as text chat) and how the phone runs each one. */
+  tools?: Array<{ name: string; kind: 'read' | 'draft' | 'propose' | 'summary' }> }
 export const getVoiceStatus = (workspaceId: string) => apiFetch<Pick<VoiceSession, 'available' | 'mode' | 'reason' | 'stored'>>(`/workspaces/${workspaceId}/ai/voice/status`);
+export const proposeVoiceAction = (workspaceId: string, key: string, args: Record<string, unknown>) => apiFetch<{ action: AiActionProposal }>(`/workspaces/${workspaceId}/ai/voice/propose/${encodeURIComponent(key)}`, { method: 'POST', body: JSON.stringify(args ?? {}) });
 export const createVoiceSession = (workspaceId: string, screen?: string, context?: string, threadId?: string) => apiFetch<VoiceSession>(`/workspaces/${workspaceId}/ai/voice/session`, { method: 'POST', body: JSON.stringify({ screen, context, threadId }) });
 
 export type DataArea = 'bookings' | 'clients' | 'messages' | 'posts' | 'analytics' | 'money' | 'services' | 'campaigns';

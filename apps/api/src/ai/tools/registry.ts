@@ -118,3 +118,78 @@ export function planTool(message: string, now: Date, timeZone: string): PlannedT
   }
   return null;
 }
+
+/**
+ * Function-calling schemas for every approve-gated tool in TOOLS (text chat AND live voice use these).
+ * Each call only PROPOSES: it becomes an Approve card (ai_action_runs status 'proposed'); nothing changes until her tap.
+ * A new non-read TOOLS entry must add its schema here, or proposeToolDefs() throws (and the test fails), so it can never be text-only.
+ */
+const s = (properties: Record<string, unknown>, required: string[] = []) => ({ type: 'object', properties, required, additionalProperties: false });
+const PROPOSE_SCHEMAS: Record<string, { description: string; parameters: Record<string, unknown> }> = {
+  block_time: { description: 'Propose blocking time or a day off in her calendar. Shows an Approve card; nothing is blocked until she taps Approve.', parameters: s({ day: { type: 'string', description: 'YYYY-MM-DD' }, from: { type: 'string', description: 'HH:MM, omit for the whole day' }, to: { type: 'string', description: 'HH:MM, omit for the whole day' }, title: { type: 'string' } }, ['day']) },
+  record_expense: { description: 'Propose recording an expense. Shows an Approve card; nothing is saved until she taps Approve.', parameters: s({ amount: { type: 'number', description: 'Amount in yen' }, category: { type: 'string', enum: ['supplies', 'rent', 'marketing', 'education', 'equipment', 'fees', 'other'] }, note: { type: 'string' } }, ['amount']) },
+  create_post_draft: { description: 'Propose a social post DRAFT about a topic. Shows an Approve card; never posts.', parameters: s({ topic: { type: 'string' }, day: { type: 'string', description: 'Optional planned day YYYY-MM-DD' } }, ['topic']) },
+  draft_client_message: { description: 'Propose a new message DRAFT to a client by name (not a reply in an open thread; use draft_reply for that). Shows an Approve card; it is never sent by this tool.', parameters: s({ clientName: { type: 'string' }, about: { type: 'string', description: 'What the message should say, in English' } }, ['clientName', 'about']) },
+  propose_memory: { description: 'Propose adding a skill, rule, preference, or fact for the assistant (e.g. "add a skill that…", "change the rule that…", "remember that…"). Shows an Approve card; it is saved only after she taps Approve.', parameters: s({ kind: { type: 'string', enum: ['skill', 'rule', 'preference', 'business_knowledge'] }, content: { type: 'string', description: 'The full skill or rule text, as it should be saved' } }, ['kind', 'content']) },
+  update_assistant_name: { description: 'Propose changing the assistant name. Shows an Approve card.', parameters: s({ displayName: { type: 'string' } }, ['displayName']) },
+  create_automation: { description: 'Propose saving a repeating task as an automation (saved OFF). Shows an Approve card.', parameters: s({ task: { type: 'string' } }, ['task']) }
+};
+
+/** Every approve-gated (non-read) registry tool as a function tool. */
+export function proposeToolDefs() {
+  return TOOLS.filter((t) => t.kind !== 'read').map((t) => {
+    const schema = PROPOSE_SCHEMAS[t.key];
+    if (!schema) throw new Error(`Approve-gated tool ${t.key} has no function schema`);
+    return { type: 'function', name: t.key, description: schema.description, parameters: schema.parameters };
+  });
+}
+export const PROPOSE_TOOL_NAMES = new Set(TOOLS.filter((t) => t.kind !== 'read').map((t) => t.key));
+
+const MEMORY_CATEGORY: Record<string, string> = { skill: 'workflow', rule: 'preference', preference: 'preference', business_knowledge: 'business_knowledge' };
+
+/** Turns a model function call into the same PlannedTool the text planner makes. Pure; throws on bad input. */
+export function proposalFromArgs(key: string, args: Record<string, any>, now: Date, timeZone: string): PlannedTool {
+  if (!PROPOSE_TOOL_NAMES.has(key)) throw new Error(`Unknown tool: ${key}`);
+  const def = TOOLS.find((x) => x.key === key)!;
+  const str = (v: unknown, max = 300) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+  const make = (input: Record<string, any>, summary: string): PlannedTool => ({ key, kind: def.kind, risk: def.risk, input, summary });
+  const day = (v: unknown) => (/^\d{4}-\d{2}-\d{2}$/.test(str(v)) ? str(v) : null);
+  const hm = (v: unknown) => (/^\d{2}:\d{2}$/.test(str(v)) ? str(v) : null);
+  if (key === 'block_time') {
+    const d = day(args.day); if (!d) throw new Error('Which day?');
+    const from = hm(args.from), to = hm(args.to);
+    const range = from && to && from < to ? [from, to] : null;
+    const title = str(args.title, 80) || (range ? 'Blocked' : 'Day off');
+    return make({ day: d, from: range?.[0] ?? null, to: range?.[1] ?? null, startAt: localIso(d, range ? range[0] : '00:00', timeZone), endAt: range ? localIso(d, range[1], timeZone) : localIso(addDays(d, 1), '00:00', timeZone), title, blockType: 'personal' },
+      range ? `Block ${d} ${range[0]}–${range[1]} (no bookings then)` : `Day off on ${d} (no bookings that day)`);
+  }
+  if (key === 'record_expense') {
+    const amount = Math.round(Number(args.amount));
+    if (!(amount > 0)) throw new Error('How much was it?');
+    const category = ['supplies', 'rent', 'marketing', 'education', 'equipment', 'fees', 'other'].includes(args.category) ? args.category : 'other';
+    const note = str(args.note, 80) || null;
+    return make({ amount, category, note }, `Record expense ¥${amount.toLocaleString('en-US')} · ${category}${note ? ` (${note})` : ''}`);
+  }
+  if (key === 'create_post_draft') {
+    const topic = str(args.topic, 160); if (!topic) throw new Error('What is the post about?');
+    const d = day(args.day);
+    return make({ topic, plannedFor: d ? localIso(d, '20:00', timeZone) : null }, `Make a post draft about “${topic}” (not posted)`);
+  }
+  if (key === 'draft_client_message') {
+    const clientName = str(args.clientName, 80), about = str(args.about);
+    if (!clientName || !about) throw new Error('Which client, and what should it say?');
+    return make({ clientName, about }, `Write a message draft to ${clientName}: “${about}”. You approve it again before it is sent.`);
+  }
+  if (key === 'propose_memory') {
+    const content = str(args.content, 240); if (content.length < 2) throw new Error('What should it say?');
+    const kind = MEMORY_CATEGORY[args.kind] ? String(args.kind) : 'preference';
+    const label = kind === 'skill' ? 'Add skill' : kind === 'rule' ? 'Add rule' : 'Remember';
+    return make({ category: MEMORY_CATEGORY[kind], content }, `${label}: “${content}” (saved only after you approve)`);
+  }
+  if (key === 'update_assistant_name') {
+    const displayName = str(args.displayName, 40); if (displayName.length < 2) throw new Error('Which name?');
+    return make({ displayName }, `Change my name to ${displayName}`);
+  }
+  const task = str(args.task, 500); if (!task) throw new Error('What should the automation do?');
+  return make({ task }, `Save an automation, off until you turn it on: “${task.slice(0, 160)}”`);
+}

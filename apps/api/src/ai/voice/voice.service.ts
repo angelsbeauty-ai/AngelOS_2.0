@@ -5,56 +5,60 @@ import { AccessToken, AgentDispatchClient } from 'livekit-server-sdk';
 import type { AuthUser } from '../../auth/auth-user';
 import { createUserSupabaseClient } from '../../config/supabase';
 import { mintVoiceToken } from './voice-token';
-import { functionTools } from '../tools/read-tools';
+import { assistantTools, enabledAreas, memberRole, type Area } from '../tools/read-tools';
+import { PROPOSE_TOOL_NAMES } from '../tools/registry';
 
 const AGENT_NAME = 'angelos-studio';
 
-const VOICE_TOOLS = [
-  ...functionTools(),
-  {
-    type: 'function',
-    name: 'look_up_studio',
-    description: 'Read real studio records. Call this before answering unread messages, who needs a reply, or what is booked today.',
-    parameters: {
-      type: 'object',
-      properties: { topic: { type: 'string', enum: ['unread', 'today'] } },
-      required: ['topic']
-    }
-  },
-  {
+const LOOK_UP_STUDIO = {
+  type: 'function',
+  name: 'look_up_studio',
+  description: 'Quick summary of unread messages or today. Call this before answering unread messages, who needs a reply, or what is booked today.',
+  parameters: { type: 'object', properties: { topic: { type: 'string', enum: ['unread', 'today'] } }, required: ['topic'] }
+};
+
+/** Voice speaks the exact reply, so its draft_reply saves her words (body) plus the English meaning. Same tool name and Approve gate as text. */
+function voiceDraftReply(threadId?: string | null) {
+  return {
     type: 'function',
     name: 'draft_reply',
-    description: 'Save one reply as a draft and show it on her screen with an Approve button. This never sends. Only her tap on Approve sends it.',
+    description: threadId
+      ? 'Save a reply draft for this conversation only. It shows on her screen with an Approve button. Never sends; only her tap on Approve sends.'
+      : 'Save one reply as a draft and show it on her screen with an Approve button. This never sends. Only her tap on Approve sends it.',
     parameters: {
       type: 'object',
       properties: {
-        threadId: { type: 'string' },
-        body: { type: 'string', description: 'The exact reply for the client, in the client\'s language only. Never two languages stacked.' },
+        threadId: threadId ? { type: 'string', enum: [threadId] } : { type: 'string', description: 'A thread id from list_threads or look_up_studio' },
+        body: { type: 'string', description: 'The exact reply for the client, in the client\'s language only. Never two languages stacked, never the English meaning.' },
         meaning: { type: 'string', description: 'Plain English meaning of the reply, shown to the owner only. Never sent.' }
       },
-      required: ['threadId', 'body']
+      required: threadId ? ['threadId', 'body', 'meaning'] : ['threadId', 'body']
     }
-  }
-];
-
-/** A chat session has no studio-wide read tools and can draft only in its own thread. */
-export function voiceTools(threadId?: string | null) {
-  if (!threadId) return VOICE_TOOLS;
-  return [{
-    type: 'function',
-    name: 'draft_reply',
-    description: 'Save a reply draft for this conversation only. Only the owner tapping Approve sends it.',
-    parameters: {
-      type: 'object',
-      properties: {
-        threadId: { type: 'string', enum: [threadId] },
-        body: { type: 'string', description: 'The reply in the client\'s language only. Never include the English meaning here.' },
-        meaning: { type: 'string', description: 'Plain English meaning for the owner only. Never sent to the client.' }
-      },
-      required: ['threadId', 'body', 'meaning']
-    }
-  }];
+  };
 }
+
+/**
+ * Live voice tools = the text-chat assistant tools (assistantTools: every read, draft and approve-gated tool),
+ * so any tool added for text works by voice too. In a chat session draft_reply is locked to that thread and needs
+ * the English meaning; everything else stays available (lookups and Approve-card proposals; nothing sends).
+ */
+export function voiceTools(threadId?: string | null, enabled?: Set<Area>, role?: string | null) {
+  const shared = assistantTools(enabled, role).map((t) => (t.name === 'draft_reply' ? voiceDraftReply(threadId) : t));
+  return threadId ? shared : [...shared, LOOK_UP_STUDIO];
+}
+
+/** How the phone runs each voice tool: read (shared /ai/tools), draft (reply draft) or propose (Approve card). */
+export function voiceToolKinds(tools: Array<Record<string, any>>) {
+  return tools.map((t) => ({ name: t.name, kind: t.name === 'draft_reply' ? 'draft' : PROPOSE_TOOL_NAMES.has(t.name) ? 'propose' : t.name === 'look_up_studio' ? 'summary' : 'read' }));
+}
+
+const CAN_DO = [
+  'You have the same tools as text chat. Use them; never say voice cannot do something a tool covers.',
+  'Look things up with the read tools (get_bookings, search_clients, list_threads, read_thread, list_posts, get_analytics, get_money, list_services_prices, list_campaigns_tasks). Numbers and names come only from tool results; a null value is unavailable. Never guess.',
+  'To change anything, call the matching tool. It only puts an Approve card on her screen: block_time, record_expense, create_post_draft, draft_client_message, propose_memory, update_assistant_name, create_automation.',
+  'If she asks to add or change a skill or rule (or says remember that…), call propose_memory with kind skill or rule and the full new text. Tell her the card is on her screen and it is saved only when she taps Approve. Never say you cannot add or change skills or rules.',
+  'Nothing is saved, changed or sent until she taps Approve. Never say something is done, saved or sent before that. You can never send a message yourself, even if she says yes or send. Never claim a message was sent.'
+];
 
 /** Live voice instructions. Voice is never recorded or stored and no transcript is kept. */
 export function voiceInstructions(input: { assistantName: string; workspaceName: string; screen?: string | null; context?: string | null; thread?: string | null }) {
@@ -67,18 +71,18 @@ export function voiceInstructions(input: { assistantName: string; workspaceName:
     'Then call draft_reply with this conversation\'s threadId, the exact reply as body, and its plain English meaning as meaning. Tell her the English meaning out loud and say the draft is on her screen; it sends only when she taps Approve.',
     'If she wants changes, call draft_reply again with the new wording.',
     'You can never send a message yourself, even if she says yes or send. Only her tap on Approve sends. Never claim a message was sent.',
-    'Settings stay off: account, password, billing, connected apps, and deleting anything.',
+    ...CAN_DO,
+    'Account, password, billing, connected apps and deleting things are not voice tools.',
     'Start by saying in one short English sentence who this chat is with and what their latest message means, then ask what she would like to reply.'
   ].join('\n');
   return [
     `You are ${input.assistantName}, the business assistant for ${input.workspaceName}, a permanent-makeup studio in Japan.`,
     'You are talking with the owner by live voice. While voice is on, you run the studio for her. Do not send her away to type it somewhere else.',
     'Speak in short, warm sentences. Use her language. Ask one question at a time.',
-    'For any other fact use the read tools (get_bookings, list_threads, get_analytics, get_money, list_posts, list_services_prices, search_clients, list_campaigns_tasks). Numbers come only from tool results; a null value is unavailable.',
-    'When she asks for a fact, call look_up_studio first. Never invent a count, a name, a price, an hour, or a booking.',
+    'When she asks about unread messages or today, call look_up_studio first.',
     'Unread replies: call look_up_studio with topic unread. Say the number. Then take them one by one. Read who it is from and the short preview. Propose one short reply in the client\'s language. When she likes it, call draft_reply with that thread id and the exact words. Tell her the draft is on her screen and she can tap Approve to send it. Then the next one.',
-    'You can never send a message yourself, even if she says yes or send. Only her tap on Approve sends. Never claim a message was sent.',
-    'Settings stay off: account, password, billing, connected apps, and deleting anything. If she clearly asks to change a setting, say voice cannot change settings.',
+    ...CAN_DO,
+    'Account, password, billing, connected apps and deleting things are not voice tools; for those, say she can do it in Settings.',
     input.screen ? `She opened voice from the "${input.screen}" screen.` : '',
     input.context ? `Start by greeting her and summarising today in 2-3 short sentences using ONLY these facts from AngelOS (do not add anything):\n${input.context}\nThen ask what she would like to do. If she interrupts, stop and listen.` : ''
   ].filter(Boolean).join('\n');
@@ -155,7 +159,9 @@ export class VoiceService {
     // Chat voice: read that one conversation with HER login (same row access as the chat screen). Nothing is widened.
     const thread = threadId ? await threadContext(supabase, workspaceId, threadId) : null;
 
-    if (status.provider === 'openai') return this.openaiSession(user, workspaceId, status, voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context, thread }), threadId);
+    // Same switches and studio role as text chat.
+    const tools = voiceTools(threadId, await enabledAreas(supabase, workspaceId), await memberRole(supabase, workspaceId, user.id));
+    if (status.provider === 'openai') return this.openaiSession(user, workspaceId, status, voiceInstructions({ assistantName: profile?.display_name ?? 'AngelOS', workspaceName: ws.name, screen, context, thread }), tools);
 
     const url = process.env.LIVEKIT_URL as string;
     const apiKey = process.env.LIVEKIT_API_KEY as string;
@@ -189,17 +195,17 @@ export class VoiceService {
   }
 
   /** Mints a 2-minute OpenAI Realtime client secret. The main key never leaves the server; audio goes phone/browser <-> OpenAI directly. */
-  private async openaiSession(user: AuthUser, workspaceId: string, status: ReturnType<VoiceService['status']>, instructions: string, threadId?: string | null) {
+  private async openaiSession(user: AuthUser, workspaceId: string, status: ReturnType<VoiceService['status']>, instructions: string, tools: Array<Record<string, any>>) {
     const model = process.env.OPENAI_REALTIME_MODEL || 'gpt-realtime';
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json', 'OpenAI-Safety-Identifier': createHash('sha256').update(user.id).digest('hex') },
-      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 600 }, session: { type: 'realtime', model, instructions, tools: voiceTools(threadId), audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
+      body: JSON.stringify({ expires_after: { anchor: 'created_at', seconds: 600 }, session: { type: 'realtime', model, instructions, tools, audio: { output: { voice: process.env.OPENAI_REALTIME_VOICE || 'marin' } } } })
     });
     if (!response.ok) throw new BadGatewayException(`Voice could not start (${response.status}).`);
     const payload = (await response.json()) as any;
     if (!payload?.value) throw new BadGatewayException('Voice could not start.');
     void recordAiUse('voice', { userId: user.id, workspaceId });
-    return { ...status, clientSecret: String(payload.value), token: null, url: null, room: null, expiresAt: payload.expires_at ?? null, model };
+    return { ...status, clientSecret: String(payload.value), token: null, url: null, room: null, expiresAt: payload.expires_at ?? null, model, tools: voiceToolKinds(tools) };
   }
 }

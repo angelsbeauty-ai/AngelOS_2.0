@@ -5,12 +5,13 @@ const { fetchInstagramPosts, fetchFacebookPosts, postPreviewUrl } = require('../
 const { SocialSyncService } = require('../dist/sync/social-sync.service.js');
 
 const thread = '11111111-1111-4111-8111-111111111111';
-test('chat voice exposes only a same-thread draft with mandatory English meaning; never a send tool', () => {
+test('chat voice keeps a same-thread draft with mandatory English meaning plus the shared tools; never a send tool', () => {
   const tools = voiceTools(thread);
-  assert.deepEqual(tools.map(t => t.name), ['draft_reply']);
-  assert.deepEqual(tools[0].parameters.properties.threadId.enum, [thread]);
-  assert.ok(tools[0].parameters.required.includes('meaning'));
-  assert.ok(!voiceTools().some(t => /send|approve/.test(t.name)));
+  const draft = tools.find(t => t.name === 'draft_reply');
+  assert.deepEqual(draft.parameters.properties.threadId.enum, [thread]);
+  assert.ok(draft.parameters.required.includes('meaning'));
+  for (const n of ['get_bookings', 'search_clients', 'read_thread', 'propose_memory']) assert.ok(tools.some(t => t.name === n), n);
+  assert.ok(![...tools, ...voiceTools()].some(t => /send|approve/.test(t.name)));
   const instructions = voiceInstructions({ assistantName: 'Assistant', workspaceName: 'Studio', thread: `Conversation threadId: ${thread}\nClient: 日本語のメッセージ` });
   assert.match(instructions, /plain English/);
   assert.match(instructions, /reply is Japanese only/);
@@ -80,7 +81,7 @@ test('voice reads only the requested studio/thread, last 20, with the owner logi
   usage.assertAiAllowed = async () => {};
   try {
     const service = new VoiceService(); service.status = () => ({ available: true, provider: 'openai' });
-    let minted = 0; service.openaiSession = async (_user,_ws,_status,instructions,id) => { minted++; assert.equal(id, thread); assert.match(instructions, /明日の予約時間/); return {}; };
+    let minted = 0; service.openaiSession = async (_user,_ws,_status,instructions,tools) => { minted++; assert.ok(Array.isArray(tools)); assert.match(instructions, /明日の予約時間/); return {}; };
     const user = { id: 'owner', accessToken: 'owner-login-fixture' };
     await service.createSession(user, 'studio', 'chat', null, thread);
     const messages = queries.find(q => q.table === 'client_messages');

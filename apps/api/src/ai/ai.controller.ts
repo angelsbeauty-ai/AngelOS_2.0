@@ -60,6 +60,10 @@ export class AiController {
   }
   @Get('usage') usage(@CurrentUser() user: AuthUser) { return usageFor(user.id).then((u) => u ?? { ...limitState(0, 0), unavailable: true }); }
   @Get('voice/status') voiceStatus() { return this.voice.status(); }
+  /** Live voice approve-gated tools (same registry as text chat). Creates an Approve card only. */
+  @Post('voice/propose/:key') voicePropose(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Param('key') key: string, @Body() args: Record<string, any>) {
+    return this.ai.proposeFromVoice(user, workspaceId, key, args ?? {});
+  }
   @Post('voice/session')
   voiceSession(@CurrentUser() user: AuthUser, @Param('workspaceId') workspaceId: string, @Body() body: { screen?: string; context?: string; threadId?: string }) {
     const threadId = body?.threadId;
