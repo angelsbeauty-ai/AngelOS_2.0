@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import VoiceScreen from '../voice';
+import { usePersistentVoice, VoiceApproveCard } from '../../src/components/PersistentVoice';
 import { useKeyboardOpen } from '../../src/lib/useKeyboardOpen';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -68,17 +67,17 @@ export default function MessageThreadScreen() {
   // P05: the reply bar and chips shrink the list; keep the last bubble in view above them.
   const [bottomH, setBottomH] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const [voiceOpen, setVoiceOpen] = useState(false);
+  const persist = usePersistentVoice();
   const voiceScroll = useRef<number | null>(null);
   const scrollY = useRef(0);
   const preserveVoiceScroll = useRef(false);
-  const openVoice = useCallback(() => { voiceScroll.current = scrollY.current; preserveVoiceScroll.current = true; setVoiceOpen(true); }, []);
+  const openVoice = useCallback(() => { voiceScroll.current = scrollY.current; preserveVoiceScroll.current = true; void persist.startOrExpand({ screen: 'chat', threadId: id }); }, [persist, id]);
   useEffect(() => {
-    if (voiceOpen || !preserveVoiceScroll.current || voiceScroll.current == null) return;
+    if (persist.presentation === 'overlay' || !preserveVoiceScroll.current || voiceScroll.current == null) return;
     const y = voiceScroll.current;
     const frame = requestAnimationFrame(() => scrollRef.current?.scrollTo({ y, animated: false }));
     return () => cancelAnimationFrame(frame);
-  }, [voiceOpen]);
+  }, [persist.presentation]);
   const [menuFor, setMenuFor] = useState<ClientMessage | null>(null);
   const online = useOnline();
   const outbox = useOutbox(id);
@@ -128,7 +127,7 @@ export default function MessageThreadScreen() {
     } catch { if (detailRef.current?.thread.id !== id) setState('error'); }
   }, [id, workspaceId]);
   useFocusEffect(useCallback(() => { void load(); }, [load]));
-  const dismissVoice = useCallback(() => { setVoiceOpen(false); void load(); }, [load]);
+  const dismissVoice = useCallback(() => { persist.minimize(); void load(); }, [persist, load]);
   // Saved replies power the suggestion chips (real, approved replies only).
   useEffect(() => {
     if (!workspaceId || saved !== null) return;
@@ -277,9 +276,6 @@ export default function MessageThreadScreen() {
 
   return (
     <KeyboardAvoidingView style={[styles.fill, { backgroundColor: C.bg }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Modal visible={voiceOpen} animationType="slide" presentationStyle="pageSheet" allowSwipeDismissal onRequestClose={dismissVoice}>
-        {voiceOpen ? <SafeAreaProvider><VoiceScreen conversationId={thread.id} onDismiss={dismissVoice} /></SafeAreaProvider> : null}
-      </Modal>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { paddingTop: insets.top, backgroundColor: C.bg, borderBottomColor: C.hair }]}>
         <View style={styles.headerRow}>
@@ -311,7 +307,7 @@ export default function MessageThreadScreen() {
           return d.toDateString() === n.toDateString() ? t('messages.today', 'Today') : d.toDateString() === y.toDateString() ? t('messages.yesterday', 'Yesterday') : d.toLocaleDateString(appLang === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); };
         for (const m of visible) { const day = new Date(m.created_at).toDateString(); if (day !== lastDay) { items.push({ kind: 'day', key: `d-${day}`, label: dayLabel(m.created_at) }); lastDay = day; lastDir = ''; } if (m.id === firstUnread.current) { items.push({ kind: 'day', key: 'unread', label: t('messages.newDivider') }); lastDir = ''; } items.push({ kind: 'msg', m, first: m.direction !== lastDir }); lastDir = m.direction; }
         const initials = contactInitials(name);
-        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onScrollBeginDrag={() => { preserveVoiceScroll.current = false; }} maintainVisibleContentPosition={{ minIndexForVisible: 0 }} scrollEventThrottle={64} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; if (!voiceOpen && e.nativeEvent.contentOffset.y < 200) void loadOlder(); }} onContentSizeChange={() => { if (preserveVoiceScroll.current && voiceScroll.current != null) { scrollRef.current?.scrollTo({ y: voiceScroll.current, animated: false }); return; } if (prepending.current) { prepending.current = false; return; } scrollRef.current?.scrollToEnd({ animated: false }); }}>
+        return <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.thread} refreshControl={<RefreshControl refreshing={refreshing} tintColor={palette.muted} onRefresh={() => { setRefreshing(true); void load().finally(() => setRefreshing(false)); }} />} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" onScrollBeginDrag={() => { preserveVoiceScroll.current = false; }} maintainVisibleContentPosition={{ minIndexForVisible: 0 }} scrollEventThrottle={64} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; if (persist.presentation !== 'overlay' && e.nativeEvent.contentOffset.y < 200) void loadOlder(); }} onContentSizeChange={() => { if (preserveVoiceScroll.current && voiceScroll.current != null) { scrollRef.current?.scrollTo({ y: voiceScroll.current, animated: false }); return; } if (prepending.current) { prepending.current = false; return; } scrollRef.current?.scrollToEnd({ animated: false }); }}>
           {loadingOlder ? <ActivityIndicator style={{ marginVertical: 12 }} color={palette.muted} /> : null}
           {items.map((x) => {
             if (x.kind === 'day') return <View key={x.key} style={styles.dayWrap} pointerEvents="none"><Text style={[styles.dayPill, { backgroundColor: C.pill, color: palette.text }]}>{x.label}</Text></View>;
@@ -387,6 +383,9 @@ export default function MessageThreadScreen() {
       {!online ? <Text accessibilityLiveRegion="polite" style={[styles.banner, { color: palette.text, backgroundColor: C.pill }]}>{t('messages.offline')}</Text> : null}
       {banner ? <Text accessibilityRole="text" style={[styles.banner, { color: C.muted, backgroundColor: C.banner }]}>{banner}</Text> : null}
       {dictation.listening ? <Text accessibilityLiveRegion="polite" style={{ textAlign: 'center', color: palette.muted, ...tokens.type.footnote, paddingTop: 6 }}>{t('messages.dictating')}</Text> : null}
+      {persist.voice.drafts.filter((d) => !id || d.threadId === id).map((d) => (
+        <VoiceApproveCard key={d.messageId} draft={d} recipient={name} onApprove={() => void persist.voice.approveDraft(d.messageId)} onNotNow={() => persist.voice.dismissDraft(d.messageId)} onEdit={() => { setReply(d.body); persist.voice.dismissDraft(d.messageId); }} />
+      ))}
       <ChatBar value={reply} onChangeText={setReply} placeholder={t('messages.placeholder', { defaultValue: 'Message' })} onSend={() => void send()} disabled={Boolean(busy) || locked} onPlus={() => setShowPlus(true)} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} />
       </View>
 

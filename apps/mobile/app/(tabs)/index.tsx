@@ -1,12 +1,11 @@
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, findNodeHandle } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, findNodeHandle } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
 import { ArrowsClockwise } from 'phosphor-react-native/src/icons/ArrowsClockwise';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NoStudio } from '../../src/components/NoStudio';
 import { BusinessSwitcher } from '../../src/components/BusinessSwitcher';
 import { ChatBar } from '../../src/components/ChatBar';
@@ -24,7 +23,7 @@ import { useInsets } from '../../src/lib/insets';
 import { timeJst } from '../../src/lib/jst';
 import { tokens } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
-import VoiceScreen from '../voice';
+import { usePersistentVoice } from '../../src/components/PersistentVoice';
 
 export const GREEN = '#151515';
 
@@ -60,7 +59,7 @@ export default function HomeScreen() {
   const [actionBusy, setActionBusy] = useState(false);
   const [tools, setTools] = useState<AiTool[]>([]);
   const [toolsOpen, setToolsOpen] = useState(false);
-  const [voiceOpen, setVoiceOpen] = useState(false);
+  const persist = usePersistentVoice();
   const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
@@ -155,19 +154,17 @@ export default function HomeScreen() {
     setAction(null);
   }
 
-  const openVoice = useCallback(() => { keepScroll.current = scrollY.current; setVoiceOpen(true); }, []);
-  // Voice X / swipe-down / back / escape: close first, then the voice screen tears audio down (dismiss-before-teardown).
-  const closeVoice = useCallback(() => setVoiceOpen(false), []);
+  const openVoice = useCallback(() => { keepScroll.current = scrollY.current; void persist.startOrExpand({ screen: 'home' }); }, [persist]);
   useEffect(() => {
-    if (voiceOpen || keepScroll.current == null) return;
+    if (persist.presentation === 'overlay' || keepScroll.current == null) return;
     const y = keepScroll.current;
     const frame = requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ y, animated: false });
       const node = Platform.OS !== 'web' && orbRef.current ? findNodeHandle(orbRef.current) : null;
-      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+      if (node && persist.presentation === 'hidden') AccessibilityInfo.setAccessibilityFocus(node);
     });
     return () => cancelAnimationFrame(frame);
-  }, [voiceOpen]);
+  }, [persist.presentation]);
 
   // A new answer, card or error scrolls into view (voice open/close never triggers this, so Home keeps its scroll).
   useEffect(() => {
@@ -234,7 +231,7 @@ export default function HomeScreen() {
               <Text accessibilityRole="header" style={[styles.name, { color: text }]}>{assistantName}</Text>
               <Text style={[styles.sub, { color: muted }]}>{t('home2.chatOrTalk', 'Chat or talk, right here.')}</Text>
             </View>
-            <Pressable ref={orbRef} accessibilityRole="button" accessibilityLabel={t('home2.talkLive', 'Talk live')} accessibilityHint={t('home2.talkHint', 'Opens live voice. Close returns to Home.')} onPress={openVoice} style={styles.orbHit}>
+            <Pressable ref={orbRef} accessibilityRole="button" accessibilityLabel={t('home2.talkLive', 'Talk live')} accessibilityHint="Talk live. Minimize keeps voice on. End stops voice." onPress={openVoice} style={styles.orbHit}>
               <View style={styles.orbBox}><View style={{ transform: [{ scale: ORB / 300 }] }}><VoiceOrb size={260} /></View></View>
               <Text style={[styles.talk, { color: muted }]}>{t('home2.talkLive', 'Talk live')}</Text>
             </Pressable>
@@ -297,9 +294,6 @@ export default function HomeScreen() {
       </KeyboardAvoidingView>
     </>}
     {/* Home live voice: Home-scoped (not a client chat). Every dismissal returns to this same Home; draft and scroll stay. */}
-    <Modal visible={voiceOpen} animationType="slide" presentationStyle="pageSheet" allowSwipeDismissal onRequestClose={closeVoice}>
-      {voiceOpen ? <SafeAreaProvider><VoiceScreen onDismiss={closeVoice} /></SafeAreaProvider> : null}
-    </Modal>
   </View>;
 }
 

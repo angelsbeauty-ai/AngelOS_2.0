@@ -16,6 +16,7 @@ import { HeaderBack, parentFor } from '../src/components/HeaderBack';
 import { View } from 'react-native';
 import { AppTabBar } from '../src/components/AppTabBar';
 import { AppServices } from '../src/components/AppServices';
+import { PersistentVoiceProvider } from '../src/components/PersistentVoice';
 
 function ChromeHeader({ options, route }: { options: any; route: { name: string } }) {
   const { palette } = useAppearance();
@@ -29,7 +30,7 @@ function ChromeHeader({ options, route }: { options: any; route: { name: string 
 export default function RootLayout() {
   const [loaded] = useFonts({ CormorantGaramond_500Medium, CormorantGaramond_500Medium_Italic, CormorantGaramond_600SemiBold, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold });
   if (!loaded) return <Splash />;
-  return <AppearanceProvider><RootStack /></AppearanceProvider>;
+  return <AppearanceProvider><PersistentVoiceProvider><RootStack /></PersistentVoiceProvider></AppearanceProvider>;
 }
 
 function RootStack() {

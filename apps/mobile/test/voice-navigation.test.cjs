@@ -21,8 +21,14 @@ function hooks() {
   return { react, effects, render(fn) { i = 0; return fn(); } };
 }
 const jsx = { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
-function nodes(node) { if (!node || typeof node !== 'object') return []; return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)]; }
-for (const idle of [true, false]) test(`X, hardware back and gesture dismiss the same thread (${idle ? 'idle' : 'live'}, even if cleanup throws)`, async () => {
+function nodes(node) {
+  if (!node || typeof node !== 'object') return [];
+  if (typeof node.type === 'function' && node.props) {
+    try { return nodes(node.type(node.props)); } catch { /* keep the host node */ }
+  }
+  return [node, ...[node.props?.children].flat(Infinity).flatMap(nodes)];
+}
+for (const idle of [true, false]) test(`Minimize, hardware back and gesture keep the session (${idle ? 'idle' : 'live'}, even if cleanup throws)`, async () => {
   const h = hooks(); let backs = 0; let stops = 0; const events = {}; let hardware;
   const screen = load('app/voice.tsx', {
     react: h.react, 'react/jsx-runtime': jsx,
@@ -39,13 +45,16 @@ for (const idle of [true, false]) test(`X, hardware back and gesture dismiss the
     '../src/design/theme': { D: {}, N: {}, tokens: { type: {}, font: {} } }
   });
   const tree = h.render(screen.default); h.effects.forEach(fn => fn());
-  const close = nodes(tree).find(n => n.props?.accessibilityLabel === 'Close');
-  assert.ok(close);
-  assert.doesNotThrow(() => close.props.onPress()); assert.equal(backs, 1);
+  const minimize = nodes(tree).find(n => n.props?.accessibilityLabel === 'Minimize');
+  assert.ok(minimize);
+  assert.doesNotThrow(() => minimize.props.onPress()); assert.equal(backs, 1);
   assert.doesNotThrow(() => hardware()); assert.equal(backs, 2);
   assert.ok(events.beforeRemove); events.beforeRemove();
-  assert.equal(stops, 0, 'dismissal must not wait for teardown');
-  await new Promise(resolve => setTimeout(resolve, 5)); assert.equal(stops, 3);
+  assert.equal(stops, 0, 'Minimize must not stop voice');
+  await new Promise(resolve => setTimeout(resolve, 5)); assert.equal(stops, 0);
+  const end = nodes(tree).find(n => n.props?.accessibilityLabel === 'End voice');
+  assert.ok(end);
+  assert.doesNotThrow(() => end.props.onPress()); assert.equal(stops, 1); assert.equal(backs, 3);
 });
 function liveHarness(session, media) {
   const h = hooks(); let peers = 0; let closed = 0; let stopped = 0; const channels = []; const drafts = []; const approvals = [];
@@ -135,7 +144,7 @@ test('old Content and visual-grid routes converge on Analytics, preserving compo
   const content = load('app/content/index.tsx', mocks).default();
   assert.equal(content.props.href.pathname, '/analytics'); assert.equal(content.props.href.params.filter, 'drafts');
 });
-test('in-chat header Close uses the supplied conversation and dismisses before any teardown or routing', async () => {
+test('in-chat header Minimize uses the supplied conversation and does not tear down; End voice stops', async () => {
   const h = hooks(); let dismissed = 0, stopped = 0, scoped;
   const { default: Screen } = load('app/voice.tsx', {
     react: h.react, 'react/jsx-runtime': jsx,
@@ -147,9 +156,11 @@ test('in-chat header Close uses the supplied conversation and dismisses before a
     '../src/lib/api': {ApiError:class extends Error{}},'../src/lib/insets': {useInsets:()=>({top:44,bottom:34})},'../src/design/appearance': {useAppearance:()=>({palette:{}})},'../src/design/theme': {D:{},N:{},tokens:{type:{},font:{}}}
   });
   const tree=h.render(()=>Screen({conversationId:'same-open-thread',onDismiss(){dismissed++;}}));h.effects.forEach(fn=>fn());
-  const close=nodes(tree).filter(n=>n.props?.accessibilityLabel==='Close');assert.equal(close.length,2);assert.equal(close[0].props.style.width,44);assert.equal(close[0].props.style.height,44);
-  close[0].props.onPress();assert.equal(scoped,'same-open-thread');assert.equal(dismissed,1);assert.equal(stopped,0);
-  await new Promise(resolve=>setTimeout(resolve,5));assert.equal(stopped,1);
+  const minimize=nodes(tree).filter(n=>n.props?.accessibilityLabel==='Minimize');assert.ok(minimize.length>=1);assert.equal(minimize[0].props.style.height,44);assert.equal(minimize[0].props.style.minWidth ?? minimize[0].props.style.width,44);
+  minimize[0].props.onPress();assert.equal(scoped,'same-open-thread');assert.equal(dismissed,1);assert.equal(stopped,0);
+  await new Promise(resolve=>setTimeout(resolve,5));assert.equal(stopped,0);
+  const end=nodes(tree).find(n=>n.props?.accessibilityLabel==='End voice');assert.ok(end);
+  end.props.onPress();assert.equal(stopped,1);assert.equal(dismissed,2);
 });
 test('failed imported media shows a retry control, never caption text, and re-reads its real preview', async () => {
   const h=hooks();

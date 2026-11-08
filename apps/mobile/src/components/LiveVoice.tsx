@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
 import { ActionButton, Banner } from './MessagingBits';
 import { Card, Pill, SectionTitle, SupportText } from './ui';
-import { approveAiAction, cancelAiAction, createVoiceSession, getVoiceStatus, proposeVoiceAction } from '../lib/ai';
+import { approveAiAction, cancelAiAction, createVoiceSession, getVoiceStatus, proposeVoiceAction, updateAssistantProfile } from '../lib/ai';
 import { getHomeSummary } from '../lib/home';
 import { apiFetch } from '../lib/api';
 import type { ToolCard } from './AnswerCard';
@@ -110,9 +110,11 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     if (workspaceId) void cancelAiAction(workspaceId, id).catch(() => undefined);
   }
   const kindsRef = useRef<Map<string, ToolKind>>(new Map());
+  const sessionThreadRef = useRef(threadId);
+  const [speaking, setSpeaking] = useState(false);
   const getLevel = useCallback(() => levelRef.current, []);
 
-  const stop = useCallback(() => {
+  const teardown = useCallback(() => {
     // Invalidate pending session/mic requests as well as an established call.
     generation.current += 1;
     const meter = meterRef.current; const mic = micRef.current; const peer = pcRef.current; const out = outRef.current;
@@ -125,8 +127,19 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     try { if (out) { out.srcObject = null; out.remove?.(); } } catch { /* continue cleanup */ }
     void stopVoiceAudio().catch(() => undefined);
     setMutedState(false); mutedRef.current = false;
-    setState('idle');
+    setSpeaking(false);
   }, []);
+
+  const stop = useCallback(() => {
+    teardown();
+    setState('idle');
+  }, [teardown]);
+
+  const fail = useCallback((message: string) => {
+    teardown();
+    setState('error');
+    setError(message);
+  }, [teardown]);
 
   function setMuted(m: boolean) {
     setMutedState(m); mutedRef.current = m;
@@ -175,12 +188,20 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     dc.onmessage = (e: any) => {
       try {
         const ev = JSON.parse(e.data);
-        if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) setCaption(ev.transcript.trim());
+        if (/transcript(ion)?\.(done|completed)$/.test(ev.type ?? '') && typeof ev.transcript === 'string' && ev.transcript.trim()) {
+          const spoken = ev.transcript.trim();
+          setCaption(spoken);
+          if (workspaceId && /input_audio_transcription/.test(ev.type ?? '') && (/\b(talk|speak|reply|respond|write|answer|chat)\b[\s\S]{0,40}\bin english\b/i.test(spoken) || /\b(use|switch to|keep|stay in)\s+english\b/i.test(spoken))) {
+            void updateAssistantProfile(workspaceId, { primaryLanguage: 'en' }).catch(() => undefined);
+          }
+        }
+        if (ev.type === 'output_audio_buffer.started' || ev.type === 'response.output_audio.delta' || ev.type === 'response.audio.delta') setSpeaking(true);
+        if (ev.type === 'output_audio_buffer.stopped' || ev.type === 'response.done' || ev.type === 'response.output_audio.done') setSpeaking(false);
         const call = voiceToolCall(ev);
         if (generation.current !== run || !call || !workspaceId || answered.has(call.callId)) return;
         answered.add(call.callId);
         const studioId = workspaceId;
-        void runVoiceTool(studioId, call.name, call.args, kindsRef.current, addDraft, addCard, threadId, addAction).then((output) => {
+        void runVoiceTool(studioId, call.name, call.args, kindsRef.current, addDraft, addCard, sessionThreadRef.current, addAction).then((output) => {
           if (dc.readyState !== 'open') return;
           dc.send(JSON.stringify({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: call.callId, output } }));
           dc.send(JSON.stringify({ type: 'response.create' }));
@@ -207,23 +228,28 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     await crumb('meter');
     ensureCurrent();
     meterRef.current = startMeter({ pc: peer, mic: stream, out: () => outRef.current?.srcObject ?? null }, levelRef, mutedRef);
-    peer.addEventListener?.('connectionstatechange', () => { if (pcRef.current === peer && ['failed', 'closed'].includes(peer.connectionState)) stop(); });
+    peer.addEventListener?.('connectionstatechange', () => { if (pcRef.current === peer && ['failed', 'closed'].includes(peer.connectionState)) fail('Voice connection was interrupted.'); });
     await crumb('live');
     ensureCurrent();
     setLoudSpeaker(true);
     setState('live');
   }
 
-  async function start() {
+  async function start(next?: { screen?: string; context?: string; threadId?: string }) {
     stop();
     const run = generation.current;
+    const s = next?.screen ?? screen;
+    const c = next?.context ?? context;
+    const t = next?.threadId ?? threadId;
+    sessionThreadRef.current = t;
     installCrashGuard();
     setError(null);
+    setSpeaking(false);
     setState('connecting');
     try {
       if (!workspaceId) throw new Error('No studio selected.');
       await crumb('session');
-      const session = await createVoiceSession(workspaceId, screen, context, threadId);
+      const session = await createVoiceSession(workspaceId, s, c, t);
       if (generation.current !== run) return;
       setStatus({ available: session.available, reason: session.reason });
       if (!session.available) throw new Error(session.reason ?? 'Live voice is off.');
@@ -240,7 +266,7 @@ export function useLiveVoice(workspaceId: string | null, screen?: string, contex
     }
   }
 
-  return { status, state, error, start, stop, muted, setMuted, caption, getLevel, drafts, approveDraft, dismissDraft, cards, actions, approveAction, dismissAction };
+  return { status, state, error, start, stop, muted, setMuted, caption, speaking, getLevel, drafts, approveDraft, dismissDraft, cards, actions, approveAction, dismissAction };
 }
 
 export function LiveVoice({ workspaceId, screen }: { workspaceId: string; screen?: string }) {
