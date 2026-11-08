@@ -1,7 +1,7 @@
 import { Pressable as EBPressable, Text as EBText, View as EBView } from 'react-native';
 import { router as ebRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { BackHandler, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, BackHandler, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import i18nInstance from '../src/i18n';
@@ -59,6 +59,14 @@ export default function VoiceScreen({ conversationId, onDismiss }: { conversatio
     const back = BackHandler.addEventListener('hardwareBackPress', () => { close(); return true; });
     return () => back.remove();
   }, [close, onDismiss]);
+  // Back from Settings: clear the microphone error so she can tap the orb again. Never starts recording by itself.
+  const micDenied = voice.state === 'error' && voiceErrorKind(voice.error) === 'mic';
+  useEffect(() => {
+    if (!micDenied) return;
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') stop(); });
+    return () => sub.remove();
+  }, [micDenied, stop]);
+  const homeScope = !chatId;
   const off = voice.status && !voice.status.available;
   // Display only: show the real reason voice stopped (the message from the voice code, the last voice step, and a read-only status check).
   const errKind = voiceErrorKind(voice.error);
@@ -102,14 +110,16 @@ export default function VoiceScreen({ conversationId, onDismiss }: { conversatio
       <Pressable accessibilityRole="button" accessibilityLabel={live ? t('voice.stop', 'Stop') : t('voice.start', 'Start talking')} disabled={noWs || !!off || voice.state === 'connecting'} onPress={() => (live ? voice.stop() : void voice.start())}>
         <VoiceOrb state={voice.state} dimmed={!!off || noWs} level={voice.getLevel} />
       </Pressable>
-      {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{caption}</Text> : null}
-      {details ? <Text selectable style={[styles.details, { color: palette.muted, borderColor: palette.border }]}>{details}</Text> : null}
+      {cc && caption ? <Text style={[styles.caption, { color: palette.text }]}>{micDenied ? t('voice.micOffTitle', 'Microphone access is off') : caption}</Text> : null}
+      {micDenied ? <Text style={[styles.hint, { color: palette.muted, maxWidth: 320 }]}>{t('voice.micOffBody', 'Allow AngelOS to use your microphone in Settings to talk live.')}</Text> : null}
+      {details && !micDenied ? <Text selectable style={[styles.details, { color: palette.muted, borderColor: palette.border }]}>{details}</Text> : null}
       {voice.state === 'error' && errKind === 'mic' ? (
         <Pressable accessibilityRole="button" accessibilityLabel={t('voice.openSettings', "Open Settings")} onPress={() => void Linking.openSettings()} style={[styles.settingsBtn, { backgroundColor: palette.text }]}>
           <Text style={[styles.settingsText, { color: palette.bg }]}>{t('voice.openSettings', "Open Settings")}</Text>
         </Pressable>
       ) : null}
-      <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>
+      {micDenied ? (homeScope ? <Text style={[styles.hint, { color: palette.muted }]}>{t('voice.stillType', 'You can still type on Home.')}</Text> : null) : <Text style={[styles.hint, { color: palette.muted }]}>{hint}</Text>}
+      {homeScope && !live && !micDenied && voice.state !== 'error' && !off && !noWs ? <Text style={[styles.hint, { color: palette.muted, maxWidth: 300 }]}>{t('voice.homeIdle', 'Ask about today, or tell me what you need help with.')}</Text> : null}
       {voice.cards.length ? <View style={{ alignSelf: 'stretch', marginHorizontal: 16 }}><AnswerCard card={voice.cards[voice.cards.length - 1]} /></View> : null}
       {voice.drafts.map((d) => <View key={d.messageId} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
         <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.draftTitle', 'Reply draft. Not sent yet.')}</Text>
@@ -122,7 +132,7 @@ export default function VoiceScreen({ conversationId, onDismiss }: { conversatio
             <Pressable accessibilityRole="button" accessibilityLabel={t('voice.draftApprove', 'Approve and send')} disabled={d.state === 'sending'} onPress={() => void voice.approveDraft(d.messageId)} style={[styles.draftBtn, { backgroundColor: palette.text }]}><Text style={[styles.settingsText, { color: palette.bg }]}>{d.state === 'sending' ? t('voice.draftSending', 'Sending…') : d.state === 'error' ? t('voice.draftRetry', 'Try again') : t('voice.draftApprove', 'Approve and send')}</Text></Pressable>
           </View>}
       </View>)}
-      {voice.actions.map((a) => <View key={a.id} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
+      {(voice.actions ?? []).map((a) => <View key={a.id} style={[styles.draft, { backgroundColor: palette.glass, borderColor: palette.border }]}>
         <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.actionTitle', 'Waiting for your Approve. Nothing is saved yet.')}</Text>
         <Text style={[styles.draftBody, { color: palette.text }]}>{a.summary}</Text>
         {a.state === 'done' ? <Text style={[styles.draftLabel, { color: palette.muted }]}>{t('voice.actionDone', 'Approved and saved')}</Text>

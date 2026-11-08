@@ -1,52 +1,112 @@
 import { Redirect, router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ArrowUpRight } from 'phosphor-react-native/src/icons/ArrowUpRight';
-import { CalendarBlank } from 'phosphor-react-native/src/icons/CalendarBlank';
-import { ChatCircleDots } from 'phosphor-react-native/src/icons/ChatCircleDots';
-import { ListChecks } from 'phosphor-react-native/src/icons/ListChecks';
-import { ShareNetwork } from 'phosphor-react-native/src/icons/ShareNetwork';
-import { CaretRight } from 'phosphor-react-native/src/icons/CaretRight';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, findNodeHandle } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Plus } from 'phosphor-react-native/src/icons/Plus';
 import { Bell } from 'phosphor-react-native/src/icons/Bell';
-import { Screen } from '../../src/components/Screen';
+import { ArrowsClockwise } from 'phosphor-react-native/src/icons/ArrowsClockwise';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NoStudio } from '../../src/components/NoStudio';
 import { BusinessSwitcher } from '../../src/components/BusinessSwitcher';
+import { ChatBar } from '../../src/components/ChatBar';
+import { VoiceOrb } from '../../src/components/VoiceOrb';
+import { AnswerCard, type ToolCard } from '../../src/components/AnswerCard';
 import { getActiveWorkspace, isNoWorkspace } from '../../src/lib/workspace';
-import { getMe } from '../../src/lib/me';
+import { useRole } from '../../src/lib/me';
 import { supabase } from '../../src/lib/supabase';
 import { getHomeSummary, type HomeSummary } from '../../src/lib/home';
-import { PLATFORM_NAME } from '../../src/lib/social';
+import { listContent, type ContentPost } from '../../src/lib/content';
+import { approveAiAction, cancelAiAction, createConversation, listAiMessages, listAiTools, sendAiMessage, type AiActionProposal, type AiMessage, type AiTool } from '../../src/lib/ai';
+import { useDictation } from '../../src/lib/dictation';
+import { useKeyboardOpen } from '../../src/lib/useKeyboardOpen';
+import { useInsets } from '../../src/lib/insets';
+import { timeJst } from '../../src/lib/jst';
 import { tokens } from '../../src/design/theme';
 import { useAppearance } from '../../src/design/appearance';
-import { timeJst } from '../../src/lib/jst';
+import VoiceScreen from '../voice';
 
 export const GREEN = '#151515';
 
+/** Tools offered behind the composer + (they only fill the composer; she still sends and approves). */
+const V1_TOOL_KEYS = new Set(['create_post_draft', 'draft_client_message', 'block_time', 'propose_memory', 'update_assistant_name']);
+const convKey = (ws: string) => `angelos.ai.lastConversation.${ws}`;
+const ORB = 88;
+
+type FactsState = { state: 'loading' } | { state: 'error' } | { state: 'ready'; sum: HomeSummary; failed: ContentPost | null };
+type ChatState = 'loading' | 'ready' | 'error';
+
+/** Locked mixed Home (2026-11-08): today's facts strip + the assistant conversation, live voice and a pinned composer. */
 export default function HomeScreen() {
   const { t, i18n } = useTranslation();
-  const { palette } = useAppearance();
-  const icon = { size: 16, color: palette.icon, weight: 'regular' as const };
+  const { palette, mode } = useAppearance();
+  const night = mode === 'night';
+  const insets = useInsets();
+  const keyboardOpen = useKeyboardOpen();
+  const role = useRole();
   const [sessionReady, setSessionReady] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const [ws, setWs] = useState<string | null>(null);
   const [noStudio, setNoStudio] = useState(false);
-  const [name, setName] = useState<string | null>(null);
-  const [sum, setSum] = useState<HomeSummary | null>(null);
-  const [sumErr, setSumErr] = useState(false);
+  const [facts, setFacts] = useState<FactsState>({ state: 'loading' });
+  const [chat, setChat] = useState<ChatState>('loading');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<AiMessage[]>([]);
+  const [assistantName] = useState('AngelOS');
+  const [composer, setComposer] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [action, setAction] = useState<AiActionProposal | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [tools, setTools] = useState<AiTool[]>([]);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const keepScroll = useRef<number | null>(null);
+  const orbRef = useRef<View>(null);
+  const wsRef = useRef<string | null>(null);
+  const composerRef = useRef(''); composerRef.current = composer;
+  const dictation = useDictation(() => composerRef.current, setComposer, i18n.language?.startsWith('ja') ? 'ja' : 'en');
+
+  /** Facts only: pull-down and Try again never touch the chat or the typed text. */
+  const loadFacts = useCallback(async (id: string) => {
+    setFacts((f) => (f.state === 'ready' ? f : { state: 'loading' }));
+    try {
+      const [sum, posts] = await Promise.all([getHomeSummary(id, 'day'), listContent(id).catch(() => [] as ContentPost[])]);
+      if (wsRef.current !== id) return; // a business change happened meanwhile; never mix studios
+      const failed = (posts ?? []).find((p) => p.status === 'failed' || (p.variants ?? []).some((v: any) => v.status === 'failed')) ?? null;
+      setFacts({ state: 'ready', sum, failed });
+    } catch { if (wsRef.current === id) setFacts({ state: 'error' }); }
+  }, []);
+
+  const loadChat = useCallback(async (id: string) => {
+    setChat('loading');
+    try {
+      const saved = await AsyncStorage.getItem(convKey(id)).catch(() => null);
+      let past: AiMessage[] = [];
+      let conv = saved;
+      if (saved) past = (await listAiMessages(id, saved).catch(() => null)) ?? [];
+      if (!saved || !past.length) { conv = (await createConversation(id, { screen: 'home' })).id; void AsyncStorage.setItem(convKey(id), conv).catch(() => undefined); past = []; }
+      if (wsRef.current !== id) return;
+      setConversationId(conv); setMessages(past); setChat('ready');
+    } catch { if (wsRef.current === id) setChat('error'); }
+  }, []);
 
   const load = useCallback(async () => {
     try {
-      const w = await getActiveWorkspace(); setWs(w.id); setNoStudio(false);
-      void getMe().then((m: any) => setName(((m?.displayName ?? '') as string).trim().split(/\s+/)[0] || null)).catch(() => undefined);
-      setSumErr(false);
-      await Promise.all([
-        getHomeSummary(w.id, 'day').then(setSum).catch(() => setSumErr(true)),
-        Promise.resolve()
-      ]);
-    } catch (e) { if (isNoWorkspace(e)) setNoStudio(true); else setSumErr(true); }
-  }, []);
+      const w = await getActiveWorkspace();
+      const changed = wsRef.current !== w.id;
+      wsRef.current = w.id; setWs(w.id); setNoStudio(false);
+      if (changed) {
+        // Another business: its own facts and conversation only. The typed draft stays hers.
+        setMessages([]); setAction(null); setConversationId(null); setFacts({ state: 'loading' }); setSendError(null);
+        void listAiTools(w.id).then((r) => setTools(r.tools.filter((x) => V1_TOOL_KEYS.has(x.key)))).catch(() => setTools([]));
+        await Promise.all([loadFacts(w.id), loadChat(w.id)]);
+      } else await loadFacts(w.id);
+    } catch (e) { if (isNoWorkspace(e)) setNoStudio(true); else setFacts({ state: 'error' }); }
+  }, [loadFacts, loadChat]);
 
   useEffect(() => {
     let mounted = true;
@@ -54,146 +114,271 @@ export default function HomeScreen() {
     const { data: l } = supabase.auth.onAuthStateChange((_e, s) => { if (!mounted) return; setSignedIn(Boolean(s)); setSessionReady(true); });
     return () => { mounted = false; l.subscription.unsubscribe(); };
   }, [load]);
+  useEffect(() => { if (role === 'student') router.replace('/profile' as any); }, [role]);
 
-  if (!sessionReady) return <Screen><Text style={styles.muted}>{t('today.loading')}</Text></Screen>;
+  /** Sending only asks the assistant. Anything it proposes comes back as a card that needs Approve. */
+  async function send(again?: string) {
+    const text = (again ?? composer).trim();
+    if (!text || !ws || !conversationId || busy) return;
+    const id = ws;
+    setBusy(true); setSendError(null);
+    const mine: AiMessage = { id: `local-${Date.now()}`, author_type: 'user', content: text, metadata: {}, created_at: new Date().toISOString() };
+    if (!again) setMessages((m) => [...m, mine]);
+    try {
+      const r = await sendAiMessage(id, conversationId, text, { screen: 'home' });
+      if (wsRef.current !== id) return;
+      if (!again) setComposer((c) => (c.trim() === text ? '' : c));
+      setMessages((m) => [...m, r.message]); setAction(r.action);
+    } catch {
+      // Keep her words in the composer so Retry or Edit never loses them.
+      if (!again) { setMessages((m) => m.filter((x) => x.id !== mine.id)); setComposer(text); }
+      setSendError(text);
+    } finally { setBusy(false); }
+  }
+
+  async function resolve(approved: boolean) {
+    if (!ws || !action) return;
+    setActionBusy(true);
+    try {
+      if (approved) await approveAiAction(ws, action.id); else await cancelAiAction(ws, action.id);
+      setMessages((m) => [...m, { id: `action-${action.id}`, author_type: 'system_action', metadata: {}, created_at: new Date().toISOString(),
+        content: approved ? (action.kind === 'draft' ? t('home2.doneDraft', 'Approved. The draft is ready for you to check. Nothing was sent or posted.') : t('home2.doneChange', 'Approved and saved.')) : t('home2.notNow', 'Not now. Nothing changed.') }]);
+      setAction(null);
+    } catch { setMessages((m) => [...m, { id: `action-err-${Date.now()}`, author_type: 'system_action', metadata: {}, created_at: new Date().toISOString(), content: t('home2.actionErr', 'That could not be saved. Nothing changed. Try again.') }]); }
+    finally { setActionBusy(false); }
+  }
+  function edit() {
+    if (!action) return;
+    const lastMine = [...messages].reverse().find((m) => m.author_type === 'user');
+    setComposer(lastMine?.content ?? action.summary ?? '');
+    if (ws) void cancelAiAction(ws, action.id).catch(() => undefined);
+    setAction(null);
+  }
+
+  const openVoice = useCallback(() => { keepScroll.current = scrollY.current; setVoiceOpen(true); }, []);
+  // Voice X / swipe-down / back / escape: close first, then the voice screen tears audio down (dismiss-before-teardown).
+  const closeVoice = useCallback(() => setVoiceOpen(false), []);
+  useEffect(() => {
+    if (voiceOpen || keepScroll.current == null) return;
+    const y = keepScroll.current;
+    const frame = requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y, animated: false });
+      const node = Platform.OS !== 'web' && orbRef.current ? findNodeHandle(orbRef.current) : null;
+      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [voiceOpen]);
+
+  // A new answer, card or error scrolls into view (voice open/close never triggers this, so Home keeps its scroll).
+  useEffect(() => {
+    if (!messages.length && !sendError && !action) return;
+    const frame = requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: false }));
+    return () => cancelAnimationFrame(frame);
+  }, [messages.length, sendError, action]);
+
+  async function refresh() {
+    if (!ws) return;
+    setRefreshing(true);
+    try { await load(); } finally { setRefreshing(false); }
+  }
+
+  if (!sessionReady) return <View style={[styles.fill, { backgroundColor: palette.bg }]} />;
   if (!signedIn) return <Redirect href="/login" />;
 
+  const tabH = 49 + Math.max(insets.bottom, 34);
   const now = new Date();
-  const h = now.getHours();
-  const hello = h < 5 ? t('home.evening2', 'Good evening!') : h < 12 ? t('home.morning2', 'Good morning!') : h < 18 ? t('home.afternoon2', 'Good afternoon!') : t('home.evening2', 'Good evening!');
-  const locale = i18n.language === 'ja' ? 'ja-JP' : 'en-US';
-  const time = (iso: string) => timeJst(iso);
-  const s = sum?.schedule; const m = sum?.messages; const so = sum?.social; const imp = sum?.important; const a = sum?.assistant;
-  const openReport = (section?: string) => router.push({ pathname: '/reports', params: section ? { section } : {} } as any);
-  const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
-  const tasks = imp?.tasks ?? (a ? a.pendingApprovals + a.suggestions.length : null);
+  const jaUi = i18n.language === 'ja';
+  const part = (o: Intl.DateTimeFormatOptions) => now.toLocaleDateString(jaUi ? 'ja-JP' : 'en-GB', { ...o, timeZone: 'Asia/Tokyo' });
+  const dateLine = `${jaUi ? part({ month: 'long', day: 'numeric', weekday: 'long' }) : `${part({ weekday: 'long' })}, ${part({ day: 'numeric', month: 'long' })}`} · JST`;
+  const sum = facts.state === 'ready' ? facts.sum : null;
+  const pendingApprovals = sum?.assistant.pendingApprovals ?? 0;
+  const chatEmpty = chat === 'ready' && messages.length === 0;
+  const prompts = [t('home2.p1', 'What’s on today?'), t('home2.p2', 'Any unread I should see?'), t('home2.p3', 'What needs me?')];
+  const text = palette.text, muted = palette.muted;
+  const card = { backgroundColor: palette.glass, borderColor: palette.border };
 
-  const dateLine = now.toLocaleDateString(i18n.language === 'ja' ? 'ja-JP' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
-  const upcoming = (s?.items ?? []).filter((it) => it.status !== 'cancelled' && new Date(it.end_at).getTime() > now.getTime()).slice(0, 4);
-  const live = (s?.items ?? []).filter((it) => it.status !== 'cancelled');
-  const confirmed = live.filter((it) => it.status === 'confirmed').length;
-  const pendingN = live.filter((it) => /pending|request|tentative|unconfirmed/i.test(it.status)).length;
-  const statusLabel = (st: string) => t(`home.stShort.${st}`, { defaultValue: st === 'confirmed' ? 'Confirmed' : /pending|request|unconfirmed/i.test(st) ? 'Pending' : st === 'completed' ? 'Done' : st === 'no_show' ? 'No-show' : st ? st.charAt(0).toUpperCase() + st.slice(1).replace(/_/g, ' ') : '' });
-  const na = t('home.unavailable', 'Unavailable');
-
-  return <Screen onRefresh={load} onSwipeUpAtEnd={() => openReport()} header={<View style={styles.pinned}>
-    <View style={styles.top}>
-      <View style={{ flex: 1 }}><BusinessSwitcher onChanged={() => void load()} /></View>
-      <View style={[styles.actions, { backgroundColor: palette.glass, borderColor: palette.border }]}>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('nav.newBooking', 'New booking')} onPress={() => router.push('/bookings/new' as any)} style={styles.actionHit}><Plus size={24} color={palette.text} /></Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={t('top.notifications', 'Notifications')} onPress={() => router.push('/notifications' as any)} style={styles.actionHit}><Bell size={24} color={palette.text} /></Pressable>
+  return <View style={[styles.fill, { backgroundColor: palette.bg, paddingTop: insets.top }]}>
+    {/* Header: business picker, New booking, Notifications */}
+    <View style={styles.header}>
+      <View style={{ flexShrink: 1 }}><BusinessSwitcher onChanged={() => void load()} /></View>
+      <View style={{ flex: 1 }} />
+      <Pressable accessibilityRole="button" accessibilityLabel={t('nav.newBooking', 'New booking')} onPress={() => router.push('/bookings/new' as any)} style={styles.hit}><Plus size={24} color={text} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={pendingApprovals ? t('home2.bellN', { defaultValue: 'Notifications, {{n}} new', n: pendingApprovals }) : t('top.notifications', 'Notifications')} onPress={() => router.push('/notifications' as any)} style={styles.hit}>
+        <Bell size={24} color={text} />{pendingApprovals ? <View style={[styles.dot, { backgroundColor: text, borderColor: palette.bg }]} /> : null}
+      </Pressable>
+    </View>
+    {noStudio ? <View style={{ padding: 16 }}><NoStudio /></View> : <>
+      {/* Pinned Today strip */}
+      <View style={styles.todayRow}>
+        <Text accessibilityRole="header" style={[styles.today, { color: text }]}>{t('home.today', 'Today')}</Text>
+        <Text style={[styles.date, { color: muted }]}>{dateLine}</Text>
       </View>
-    </View>
-    <View style={{ gap: 6 }}>
-      <Text accessibilityRole="header" style={[styles.big, { color: palette.text }]}>{t('home.today', 'Today')}</Text>
-      <Text style={[styles.sub, { color: palette.muted }]} numberOfLines={1}>{dateLine} · {name ? t('home.hiName', { defaultValue: 'Hi, {{name}}', name }) : t('home.hi', 'Hi')}</Text>
-    </View>
+      <View style={[styles.strip, card]}>
+        {facts.state === 'loading' ? [0, 1, 2].map((i) => <View key={i} accessible accessibilityLabel={i === 0 ? t('home2.loadingToday', 'Loading today') : undefined} style={[styles.cell, i > 0 && { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: palette.border }]}>
+          <Bone w="60%" h={14} /><Bone w="72%" h={20} /><Bone w="82%" h={10} /><Bone w="56%" h={10} />
+        </View>)
+        : facts.state === 'error' ? <View style={styles.errRow} accessibilityLiveRegion="polite">
+          <View style={{ flex: 1, gap: 4 }}><Text style={[styles.errTitle, { color: text }]}>{t('home2.factsErr', 'Today couldn’t load')}</Text><Text style={[styles.small, { color: muted }]}>{t('home2.stillWorks', 'Your assistant still works.')}</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel={t('home2.tryAgain', 'Try again')} onPress={() => ws && void loadFacts(ws)} style={[styles.retry, { borderColor: palette.border, backgroundColor: palette.bg }]}><ArrowsClockwise size={18} color={text} /><Text style={[styles.retryText, { color: text }]}>{t('home2.tryAgain', 'Try again')}</Text></Pressable>
+        </View>
+        : <Facts sum={facts.sum} failed={facts.failed} />}
+      </View>
 
-    </View>}>
-    {noStudio ? <NoStudio /> : <>
-      {sumErr && !sum ? <Text style={[styles.muted, { color: palette.muted }]}>{t('home.sumError', 'Your numbers could not load right now. Pull down to try again.')}</Text> : null}
-      <Text style={[styles.section, { color: palette.text }]}>{t('home.upNext', 'Up next')}</Text>
-      <View style={[styles.list, { backgroundColor: palette.glass, borderColor: palette.border }]}>
-        {!s ? <Text style={[styles.empty, { color: palette.muted }]}>{sumErr ? t('home.sumError', 'Your numbers could not load right now. Pull down to try again.') : t('today.loading')}</Text> : null}
-        {s && !upcoming.length ? <Text style={[styles.empty, { color: palette.muted }]}>{t('home.noMore', 'Nothing else booked today')}</Text> : null}
-        {upcoming.map((it, i) => <Pressable key={it.id} accessibilityRole="button" onPress={() => router.push(`/bookings/${it.id}` as any)} style={({ pressed }) => [styles.item, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
-          <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[styles.itemTitle, { color: palette.text }]}>{[it.client, it.service].filter(Boolean).join(' · ') || t('home.booking1', 'booking')}</Text>
-            <Text style={[styles.itemSub, { color: palette.muted }]}>{time(it.start_at)} – {time(it.end_at)}</Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView ref={scrollRef} style={{ flex: 1 }} contentContainerStyle={styles.chat} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          scrollEventThrottle={64} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+          refreshControl={Platform.OS !== 'web' ? <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={muted} /> : undefined}>
+          <View style={styles.assistantRow}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={[styles.overline, { color: muted }]}>{t('home2.yourAssistant', 'Your assistant')}</Text>
+              <Text accessibilityRole="header" style={[styles.name, { color: text }]}>{assistantName}</Text>
+              <Text style={[styles.sub, { color: muted }]}>{t('home2.chatOrTalk', 'Chat or talk, right here.')}</Text>
+            </View>
+            <Pressable ref={orbRef} accessibilityRole="button" accessibilityLabel={t('home2.talkLive', 'Talk live')} accessibilityHint={t('home2.talkHint', 'Opens live voice. Close returns to Home.')} onPress={openVoice} style={styles.orbHit}>
+              <View style={styles.orbBox}><View style={{ transform: [{ scale: ORB / 300 }] }}><VoiceOrb size={260} /></View></View>
+              <Text style={[styles.talk, { color: muted }]}>{t('home2.talkLive', 'Talk live')}</Text>
+            </Pressable>
           </View>
-          {statusLabel(it.status) ? <Text style={[styles.itemSub, { color: palette.muted, textAlign: 'right' }]}>{statusLabel(it.status)}</Text> : null}
-          <CaretRight size={16} color={palette.muted} />
-        </Pressable>)}
-      </View>
-      <View style={styles.grid}>
-        <Tile title={t('home.bookingsToday', 'Bookings today')} value={s ? String(live.length) : '—'} line={s ? `${confirmed} ${t('home.confirmed', 'confirmed')} · ${pendingN} ${t('home.pendingShort', 'pending')}` : ''} oneLine onPress={() => router.push('/calendar' as any)} />
-        <Tile title={t('home.booked', 'Booked')} value={live.length ? '—' : '¥0'} line={live.length ? t('home.thisWeek', 'this week') : t('home.noBookingsYet', 'No bookings yet')} onPress={() => openReport('schedule')} />
-        <Tile title={t('home.unreadTitle', 'Unread')} value={m ? String(m.unread) : na} line={t('home.chatsWaiting', 'chats waiting')} onPress={() => router.push('/messages' as any)} />
-        <Tile title={t('home.scheduled', 'Scheduled')} value={imp?.scheduledPosts != null ? String(imp.scheduledPosts) : na} line={imp?.scheduledPosts === 1 ? t('home.postToday', 'post today') : t('home.postsTodayS', 'posts today')} onPress={() => openReport('social')} />
-      </View>
+
+          {chat === 'loading' ? <View accessible accessibilityLabel={t('home2.loadingChat', 'Loading your conversation')} style={{ gap: 14 }}>
+            <View style={{ alignSelf: 'flex-end', width: '50%' }}><Bone w="100%" h={44} r={22} /></View>
+            <Bone w="76%" h={16} /><Bone w="94%" h={16} /><Bone w="88%" h={16} /><Bone w="68%" h={16} />
+            <Text style={[styles.small, { color: muted }]}>{t('home2.loadingConv', 'Loading your conversation…')}</Text>
+          </View> : null}
+          {chat === 'error' ? <View style={[styles.chatErr, card]} accessibilityLiveRegion="polite">
+            <Text style={[styles.errTitle, { color: text }]}>{t('home2.chatErr', 'Your conversation couldn’t load')}</Text>
+            <Text style={[styles.small, { color: muted }]}>{t('home2.chatErrSub', 'Your typed text is kept.')}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('home2.retryChat', 'Retry')} onPress={() => ws && void loadChat(ws)} style={[styles.retry, { borderColor: palette.border, backgroundColor: palette.bg, alignSelf: 'flex-start' }]}><ArrowsClockwise size={18} color={text} /><Text style={[styles.retryText, { color: text }]}>{t('home2.retryChat', 'Retry')}</Text></Pressable>
+          </View> : null}
+
+          {chatEmpty ? <View style={{ gap: 12 }}>
+            <Text style={[styles.help, { color: text }]}>{facts.state === 'error' ? t('home2.hereToHelp', 'I’m here to help.') : t('home2.howHelp', 'How can I help today?')}</Text>
+            <Text style={[styles.helpSub, { color: muted }]}>{facts.state === 'error' ? t('home2.factsMissing', 'Today’s facts haven’t loaded. You can still ask me a question.') : t('home2.askOrTap', 'Ask about your studio, or tap the orb to talk.')}</Text>
+            <View style={{ gap: 10, alignItems: 'flex-start', marginTop: 4 }}>
+              {/* Chips only fill the composer for review; they never run anything. */}
+              {prompts.map((p) => <Pressable key={p} accessibilityRole="button" accessibilityHint={t('home2.chipHint', 'Puts this in the message box')} onPress={() => setComposer(p)} style={[styles.chip, card]}><Text style={[styles.chipText, { color: text }]}>{p}</Text></Pressable>)}
+            </View>
+          </View> : null}
+
+          {chat === 'ready' ? messages.map((m) => m.author_type === 'user'
+            ? <View key={m.id} style={[styles.mine, { backgroundColor: night ? '#2C2C2E' : '#151515' }]}><Text style={[styles.mineText, { color: '#FFFFFF' }]}>{m.content}</Text></View>
+            : m.author_type === 'system_action' ? <Text key={m.id} style={[styles.small, { color: muted }]}>{m.content}</Text>
+            : <View key={m.id} style={{ gap: 10 }}>
+              <Text style={[styles.overline, { color: muted }]}>{assistantName.toUpperCase()}</Text>
+              <Text selectable style={[styles.reply, { color: text }]}>{m.content}</Text>
+              {Array.isArray((m.metadata as any)?.cards) ? (m.metadata as any).cards.map((c: ToolCard, i: number) => <AnswerCard key={i} card={c} />) : null}
+            </View>) : null}
+          {busy ? <ActivityIndicator accessibilityLabel={t('home2.thinking', 'Your assistant is answering')} color={muted} style={{ alignSelf: 'flex-start' }} /> : null}
+          {sendError && !busy ? <View style={[styles.chatErr, card]} accessibilityLiveRegion="polite">
+            <Text style={[styles.errTitle, { color: text }]}>{t('home2.sendErr', 'Your assistant couldn’t answer')}</Text>
+            <Text style={[styles.small, { color: muted }]}>{t('home2.sendErrSub', 'Your message is still in the box. Nothing was sent anywhere.')}</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel={t('home2.retryChat', 'Retry')} onPress={() => void send()} style={[styles.retry, { borderColor: palette.border, backgroundColor: palette.bg, alignSelf: 'flex-start' }]}><ArrowsClockwise size={18} color={text} /><Text style={[styles.retryText, { color: text }]}>{t('home2.retryChat', 'Retry')}</Text></Pressable>
+          </View> : null}
+          {action ? <View style={[styles.chatErr, card]}>
+            <Text style={[styles.small, { color: muted }]}>{action.kind === 'draft' ? t('home2.draftOnly', 'Draft only. Nothing is sent or posted until you approve it.') : t('home2.nothingChanges', 'Nothing changes until you tap Approve.')}</Text>
+            <Text style={[styles.reply, { color: text }]}>{action.summary ?? action.action_key}</Text>
+            <View style={styles.actRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('home2.edit', 'Edit')} disabled={actionBusy} onPress={edit} style={styles.actBtn}><Text style={[styles.retryText, { color: text }]}>{t('home2.edit', 'Edit')}</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('home2.notNowBtn', 'Not now')} disabled={actionBusy} onPress={() => void resolve(false)} style={styles.actBtn}><Text style={[styles.retryText, { color: text }]}>{t('home2.notNowBtn', 'Not now')}</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={t('home2.approve', 'Approve')} disabled={actionBusy} onPress={() => void resolve(true)} style={[styles.actBtn, { backgroundColor: text }]}><Text style={[styles.retryText, { color: palette.bg }]}>{t('home2.approve', 'Approve')}</Text></Pressable>
+            </View>
+          </View> : null}
+        </ScrollView>
+
+        {/* Pinned composer: + (assistant tools), Ask AngelOS, hold-to-dictate mic, tap waveform for live voice. */}
+        <View style={{ backgroundColor: palette.bg, paddingBottom: keyboardOpen ? 8 : tabH }}>
+          {toolsOpen && tools.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.tools}>
+            {tools.map((x) => <Pressable key={x.key} accessibilityRole="button" onPress={() => { setComposer(t(`aip.toolEx_${x.key}`, x.example)); setToolsOpen(false); }} style={[styles.chip, card]}><Text style={[styles.chipText, { color: text }]}>{t(`aip.tool_${x.key}`, x.label)}</Text></Pressable>)}
+          </ScrollView> : null}
+          <ChatBar value={composer} onChangeText={(v) => { setComposer(v); if (sendError) setSendError(null); }} placeholder={t('aip.askAngelos', 'Ask AngelOS')} onSend={() => void send()} disabled={busy || chat !== 'ready'}
+            onPlus={() => setToolsOpen((o) => !o)} plusLabel={t('home2.tools', 'Assistant tools')} onVoice={openVoice} recording={dictation.listening} onHoldStart={() => void dictation.start()} onHoldEnd={() => dictation.stop()} bottomInset={2} />
+          <Text style={[styles.note, { color: muted }]}>{t('home2.approvalNote', 'Nothing is sent or posted without your approval.')}</Text>
+        </View>
+      </KeyboardAvoidingView>
     </>}
-  </Screen>;
-}
-
-function Tile({ title, value, line, onPress, oneLine }: { title: string; value: string; line: string; onPress: () => void; oneLine?: boolean }) {
-  const { palette } = useAppearance();
-  const { t } = useTranslation();
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value}`} onPress={onPress} style={({ pressed }) => [styles.tile, { backgroundColor: palette.glass, borderColor: palette.border }, pressed && { backgroundColor: palette.fill }]}>
-    <Text numberOfLines={1} style={[styles.tileTitle, { color: palette.muted }]}>{title}</Text>
-    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} style={[(value === t('home.unavailable', 'Unavailable') || value === '—') ? styles.tileNa : styles.tileValue, { color: value === t('home.unavailable', 'Unavailable') ? palette.muted : palette.text }]}>{value}</Text>
-    {line ? <Text numberOfLines={oneLine ? 1 : 2} adjustsFontSizeToFit={oneLine} minimumFontScale={0.8} style={[styles.tileLine, oneLine && styles.tileLineTight, { color: palette.muted }]}>{line}</Text> : null}
-  </Pressable>;
-}
-
-function Box({ icon, title, value, unit, lines, onPress }: { icon: ReactNode; title: string; value: string; unit?: string; lines: string[]; onPress: () => void }) {
-  const { palette } = useAppearance();
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}, ${value} ${unit ?? ''}`} onPress={onPress} style={({ pressed }) => [styles.box, { backgroundColor: palette.glass, borderColor: palette.border, ...palette.gloss }, pressed && { backgroundColor: palette.fill }]}>
-    <View style={styles.titleRow}>{icon}<Text style={[styles.boxTitle, { color: palette.text }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text></View>
-    <Text style={[styles.value, { color: palette.text }]} numberOfLines={1} adjustsFontSizeToFit>{value}{unit ? <Text style={[styles.unit, { color: palette.muted }]}> {unit}</Text> : null}</Text>
-    <View style={{ gap: 4, flex: 1 }}>{lines.filter(Boolean).slice(0, 3).map((l, i) => <Text key={i} style={[styles.line, { color: palette.muted }]} numberOfLines={1}>{l}</Text>)}</View>
-    <View style={[styles.arrow, { backgroundColor: palette.fill }]}><ArrowUpRight size={18} color={palette.icon} weight="bold" /></View>
-  </Pressable>;
-}
-
-function Goal({ label, n, goal, of }: { label: string; n: number; goal: number; of: string }) {
-  const pct = goal > 0 ? Math.min(1, n / goal) : 0;
-  return <View style={{ gap: 6 }}>
-    <View style={styles.titleRow}><Text style={styles.goalLabel}>{label}</Text><Text style={styles.goalOf}>{of}</Text></View>
-    <View style={styles.track}><View style={[styles.fill, { width: `${Math.round(pct * 100)}%` }]} /></View>
+    {/* Home live voice: Home-scoped (not a client chat). Every dismissal returns to this same Home; draft and scroll stay. */}
+    <Modal visible={voiceOpen} animationType="slide" presentationStyle="pageSheet" allowSwipeDismissal onRequestClose={closeVoice}>
+      {voiceOpen ? <SafeAreaProvider><VoiceScreen onDismiss={closeVoice} /></SafeAreaProvider> : null}
+    </Modal>
   </View>;
 }
 
-function Practice({ title, sub, onPress, last }: { title: string; sub: string; onPress: () => void; last?: boolean }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={[styles.practice, !last && styles.practiceLine]}>
-    <View style={{ flex: 1, gap: 2 }}>
-      <Text style={styles.practiceTitle}>{title}</Text>
-      <Text style={styles.note}>{sub}</Text>
-    </View>
-    <CaretRight size={16} color="#000" />
-  </Pressable>;
+function Facts({ sum, failed }: { sum: HomeSummary; failed: ContentPost | null }) {
+  const { t } = useTranslation();
+  const { palette } = useAppearance();
+  const s = sum.schedule;
+  const live = s.items.filter((it) => it.status !== 'cancelled');
+  const next = s.next ?? live.find((it) => new Date(it.end_at).getTime() > Date.now()) ?? null;
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const unread = sum.messages.unread;
+  const approvals = sum.assistant.pendingApprovals;
+  const needs = failed
+    ? { value: t('home2.failedPost', '1 failed post'), lines: [t('home2.failedSub1', 'Scheduled post'), t('home2.failedSub2', 'Review needed')], go: () => router.push(`/content/${failed.id}` as any) }
+    : approvals
+      ? { value: t('home2.toApprove', { defaultValue: '{{n}} to approve', n: approvals }), lines: [t('home2.draftsReady', 'Drafts are ready')], go: () => router.push('/suggestions' as any) }
+      : null;
+  const cells = [
+    { title: t('home2.bookings', 'Bookings'), value: live.length ? t('home2.nToday', { defaultValue: '{{n}} today', n: live.length }) : t('home2.noBookings', 'No bookings'),
+      lines: live.length && next ? [`${t('home2.next', 'Next')} · ${timeJst(next.start_at)} JST`, next.service ?? next.client ?? ''] : [t('home2.todayOpen', 'Today is open')],
+      go: () => router.push({ pathname: '/calendar', params: { day: today } } as any) },
+    { title: t('home2.messages', 'Messages'), value: unread ? t('home2.nUnread', { defaultValue: '{{n}} unread', n: unread }) : t('home2.noUnread', 'No unread'),
+      lines: unread ? [t('home2.waiting', 'Waiting for your reply')] : [t('home2.caughtUp', 'All caught up')], go: () => router.push('/messages' as any) },
+    { title: t('home2.needsYou', 'Needs you'), value: needs?.value ?? t('home2.allClear', 'All clear'), lines: needs?.lines ?? [t('home2.nothingWaiting', 'Nothing waiting')], go: needs?.go ?? null }
+  ];
+  return <>{cells.map((c, i) => {
+    const body = <>
+      <Text style={[styles.cellTitle, { color: palette.muted }]}>{c.title}</Text>
+      <Text style={[styles.cellValue, { color: palette.text }]}>{c.value}</Text>
+      {c.lines.filter(Boolean).map((l, j) => <Text key={j} style={[styles.cellLine, { color: palette.muted }]}>{l}</Text>)}
+    </>;
+    const style = [styles.cell, i > 0 && { borderLeftWidth: StyleSheet.hairlineWidth, borderLeftColor: palette.border }];
+    // "All clear" is status text, not a dead button.
+    return c.go ? <Pressable key={i} accessibilityRole="button" accessibilityLabel={`${c.title}, ${c.value}. ${c.lines.join('. ')}`} onPress={c.go} style={({ pressed }) => [...style, pressed && { backgroundColor: palette.fill }]}>{body}</Pressable>
+      : <View key={i} accessible accessibilityLabel={`${c.title}, ${c.value}`} style={style}>{body}</View>;
+  })}</>;
+}
+
+function Bone({ w, h, r = 6 }: { w: number | `${number}%`; h: number; r?: number }) {
+  const { mode } = useAppearance();
+  return <View style={{ width: w, height: h, borderRadius: r, backgroundColor: mode === 'night' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }} />;
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  actions: { flexDirection: 'row', borderRadius: 26, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 4 },
-  actionHit: { width: 48, height: 52, alignItems: 'center', justifyContent: 'center' },
-  section: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, marginTop: 4 },
-  list: { borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden' },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64, paddingHorizontal: 16, paddingVertical: 10 },
-  itemTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 17 },
-  itemSub: { fontFamily: tokens.font.ui, fontSize: 15 },
-  itemStatus: { fontFamily: tokens.font.ui, fontSize: 16 },
-  empty: { fontFamily: tokens.font.ui, fontSize: 15, padding: 16 },
-  tile: { width: '48.4%', minHeight: 128, padding: 16, paddingHorizontal: 14, gap: 6, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth },
-  tileTitle: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
-  tileValue: { fontFamily: tokens.font.uiBold, fontSize: 28, lineHeight: 34 },
-  tileLine: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 17 },
-  tileLineTight: { fontSize: 12, letterSpacing: -0.1 },
-  tileNa: { fontFamily: tokens.font.uiSemibold, fontSize: 18, lineHeight: 34 },
-  pinned: { paddingHorizontal: 16, paddingBottom: 8, gap: 12 },
-  hello: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  hi: { fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#6C6C70' },
-  welcome: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
-  big: { fontFamily: tokens.font.uiBold, fontSize: 34, lineHeight: 41, color: '#151515', letterSpacing: -0.5 },
-  sub: { fontFamily: tokens.font.ui, fontSize: 17, lineHeight: 22, color: '#151515' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  box: { width: '48.4%', minHeight: 196, padding: 16, gap: 8, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EDEDED', shadowColor: '#151515', shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 } },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  boxTitle: { flex: 1, fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
-  value: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28, color: '#151515' },
-  unit: { fontFamily: tokens.font.uiMedium, fontSize: 14, color: '#6C6C70' },
-  line: { fontFamily: tokens.font.ui, fontSize: 13.5, lineHeight: 18, color: '#151515' },
-  arrow: { alignSelf: 'flex-end', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F2F2F2' },
-  card: { gap: 12, padding: 16, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F2F2F2' },
-  cardTitle: { fontFamily: tokens.font.uiBold, fontSize: 17, color: '#151515' },
-  goalLabel: { flex: 1, fontFamily: tokens.font.uiMedium, fontSize: 15, color: '#151515' },
-  goalOf: { fontFamily: tokens.font.uiSemibold, fontSize: 14, color: '#151515', fontVariant: ['tabular-nums'] },
-  track: { height: 3, borderRadius: 2, backgroundColor: '#F2F2F2', overflow: 'hidden' },
-  fill: { height: 3, backgroundColor: '#151515' },
-  inspire: { fontFamily: tokens.font.uiSemibold, fontSize: 16, lineHeight: 22, color: '#151515' },
-  practice: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
-  practiceLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F2F2F2' },
-  practiceTitle: { fontFamily: tokens.font.uiSemibold, fontSize: 15, color: '#151515' },
-  note: { fontFamily: tokens.font.ui, fontSize: 13, lineHeight: 18, color: '#6C6C70' },
-  muted: { fontFamily: tokens.font.ui, fontSize: 15, color: '#6C6C70' }
+  fill: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, minHeight: 56, gap: 4 },
+  hit: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  dot: { position: 'absolute', top: 9, right: 10, width: 8, height: 8, borderRadius: 4, borderWidth: 1 },
+  todayRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', paddingHorizontal: 16, marginTop: 8, gap: 8 },
+  today: { fontFamily: tokens.font.uiBold, fontSize: 20, lineHeight: 26 },
+  date: { fontFamily: tokens.font.ui, fontSize: 12, lineHeight: 16 },
+  strip: { flexDirection: 'row', marginHorizontal: 16, marginTop: 8, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, overflow: 'hidden', minHeight: 100 },
+  cell: { flex: 1, minHeight: 100, paddingHorizontal: 10, paddingVertical: 12, gap: 4 },
+  cellTitle: { fontFamily: tokens.font.uiMedium, fontSize: 13, lineHeight: 17 },
+  cellValue: { fontFamily: tokens.font.uiBold, fontSize: 15, lineHeight: 20, letterSpacing: -0.2 },
+  cellLine: { fontFamily: tokens.font.ui, fontSize: 11.5, lineHeight: 15 },
+  errRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+  errTitle: { fontFamily: tokens.font.uiBold, fontSize: 16, lineHeight: 21 },
+  retry: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth },
+  retryText: { fontFamily: tokens.font.uiSemibold, fontSize: 15 },
+  chat: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16, gap: 16 },
+  assistantRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  overline: { fontFamily: tokens.font.uiSemibold, fontSize: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
+  name: { fontFamily: tokens.font.uiBold, fontSize: 28, lineHeight: 34, letterSpacing: -0.3 },
+  sub: { fontFamily: tokens.font.ui, fontSize: 14, lineHeight: 19 },
+  orbHit: { alignItems: 'center', minWidth: 96, minHeight: 44, gap: 4 },
+  orbBox: { width: ORB, height: ORB, alignItems: 'center', justifyContent: 'center', overflow: 'visible' },
+  talk: { fontFamily: tokens.font.ui, fontSize: 12 },
+  help: { fontFamily: tokens.font.uiBold, fontSize: 22, lineHeight: 28 },
+  helpSub: { fontFamily: tokens.font.ui, fontSize: 15, lineHeight: 21 },
+  chip: { minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: StyleSheet.hairlineWidth, justifyContent: 'center' },
+  chipText: { fontFamily: tokens.font.uiMedium, fontSize: 15 },
+  mine: { alignSelf: 'flex-end', maxWidth: '82%', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11 },
+  mineText: { fontFamily: tokens.font.uiMedium, fontSize: 16, lineHeight: 21 },
+  reply: { fontFamily: tokens.font.ui, fontSize: 17, lineHeight: 24 },
+  small: { fontFamily: tokens.font.ui, fontSize: 13.5, lineHeight: 19 },
+  chatErr: { gap: 8, padding: 14, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth },
+  actRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' },
+  actBtn: { minHeight: 44, minWidth: 44, paddingHorizontal: 16, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  tools: { gap: 8, paddingHorizontal: 16, paddingTop: 6 },
+  note: { fontFamily: tokens.font.ui, fontSize: 11, lineHeight: 14, textAlign: 'center', paddingBottom: 6 }
 });

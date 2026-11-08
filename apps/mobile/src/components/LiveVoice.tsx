@@ -31,7 +31,8 @@ async function runVoiceTool(workspaceId: string, name: string, raw: string, kind
   let args: any = {};
   try { args = raw ? JSON.parse(raw) : {}; } catch { args = {}; }
   // The server picks the tools (same set as text chat); the phone only runs what that session was given.
-  const kind = kinds.get(name);
+  // An older API without the tool list: the original voice tools (read tools, look_up_studio, draft_reply).
+  const kind = kinds.size ? kinds.get(name) : name === 'draft_reply' ? 'draft' : name === 'look_up_studio' ? 'summary' : /^(get_|list_|search_|read_)/.test(name) ? 'read' : undefined;
   try {
     if (!kind) return JSON.stringify({ error: 'Unknown voice tool.' });
     if (kind === 'propose') {

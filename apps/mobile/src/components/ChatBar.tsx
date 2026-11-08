@@ -17,7 +17,7 @@ import { chat, tokens } from '../design/theme';
  * that turns into the send arrow once text is typed.
  */
 export function ChatBar({
-  value, onChangeText, placeholder, onSend, disabled, onPlus, onVoice, onHoldStart, onHoldEnd, recording
+  value, onChangeText, placeholder, onSend, disabled, onPlus, onVoice, onHoldStart, onHoldEnd, recording, bottomInset, plusLabel
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -31,6 +31,10 @@ export function ChatBar({
   onHoldStart?: () => void;
   onHoldEnd?: () => void;
   recording?: boolean;
+  /** Overrides the bottom padding (a screen that places its own note and tab-bar space below the bar). */
+  bottomInset?: number;
+  /** VoiceOver label for the round + (defaults to Add). */
+  plusLabel?: string;
 }) {
   const { t } = useTranslation();
   const { mode, palette } = useAppearance();
@@ -48,9 +52,9 @@ export function ChatBar({
   const voiceOnly = !hasText || Boolean(recording);
   const active = voiceOnly ? (Boolean(onVoice) || Boolean(onHoldStart)) && !disabled : canSend;
   return (
-    <View style={[styles.wrap, { backgroundColor: palette.bg, paddingBottom: keyboardOpen ? 8 : Math.max(insets.bottom, 8) }]}>
+    <View style={[styles.wrap, { backgroundColor: palette.bg, paddingBottom: bottomInset ?? (keyboardOpen ? 8 : Math.max(insets.bottom, 8)) }]}>
       {onPlus ? (
-        <Pressable accessibilityRole="button" accessibilityLabel={t('messages.add', { defaultValue: 'Add' })} onPress={onPlus} style={[styles.plus, { backgroundColor: fieldBg, borderColor: fieldBorder }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel={plusLabel ?? t('messages.add', { defaultValue: 'Add' })} onPress={onPlus} style={[styles.plus, { backgroundColor: fieldBg, borderColor: fieldBorder }]}>
           <Plus size={22} color={palette.text} />
         </Pressable>
       ) : null}
